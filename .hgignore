@@ -1,0 +1,6 @@
+objs
+.bam
+.depend
+
+config.lua
+pathfinder
