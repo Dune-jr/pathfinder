@@ -7,13 +7,13 @@ bool Operand::operator==(const Operand& opd) const
 		return false;
 	switch(kind)
 	{
-		case CONST:
+		case OPERAND_CONST:
 			return (*((int*)value) == *((int*)opd.value));
 			break;
-		case VAR:
+		case OPERAND_VAR:
 			return (*((unsigned int*)value) == *((unsigned int*)opd.value));
 			break;
-		case EXPR:
+		case OPERAND_ARITHEXPR:
 			return (*((ArithExpr*)value) == *((ArithExpr*)opd.value));
 			return true;
 			break;
@@ -26,15 +26,15 @@ std::ostream& operator<<(std::ostream& out, const Operand& opd)
 {
 	switch(opd.kind)
 	{
-		case CONST:
+		case OPERAND_CONST:
 			out << *((int*)opd.value);
 			break;
-		case VAR:
+		case OPERAND_VAR:
 			out << std::hex << std::uppercase; // Turn on caps hex mode (ex: 0xA3BFF)
 			out << "@0x" << *((unsigned int*)opd.value);
 			out << std::nouppercase << std::dec; // Turn off caps hex mode
 			break;
-		case EXPR:
+		case OPERAND_ARITHEXPR:
 			out << *((ArithExpr*)opd.value);
 			break;
 		default:
@@ -49,7 +49,7 @@ Operand::Operand(int value) // kind: CONST
 {
 	int* pValue = new(int);
 	*pValue = value;
-	this->kind = CONST;
+	this->kind = OPERAND_CONST;
 	this->value = (void*)pValue;
 }
 
@@ -60,11 +60,11 @@ Operand::Operand(unsigned int value) // kind: VAR
 	// TODO: maybe add a label in here later on
 	unsigned int* pValue = new(unsigned int);
 	*pValue = value;
-	this->kind = VAR;
+	this->kind = OPERAND_VAR;
 	this->value = (void*)pValue;
 }
 Operand::Operand(ArithExpr* value) // kind: ARITHEXPR
 {
-	this->kind = EXPR;
+	this->kind = OPERAND_ARITHEXPR;
 	this->value = (void*)value;
 }

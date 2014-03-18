@@ -2,11 +2,9 @@
 #include <elm/types.h>
 #include <otawa/otawa.h>
 
-using namespace elm;
-
-t::uint32 x;
-
 #include "predicate.h"
+
+using namespace elm;
 
 #define DEBUG_INFO() "[" << __FILE__ << ":" << __LINE__ << "] "
 #define DBG(str) std::cout << DEBUG_INFO() << str << std::endl;
