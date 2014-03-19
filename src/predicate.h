@@ -25,12 +25,11 @@ class Predicate
 {
 protected:
 	condoperator_t opr; // operator
-	Operand opd1;
-	Operand opd2;
+	Operand2& opd1;
+	Operand2& opd2;
 
 public:
-	// Predicate();
-	Predicate(condoperator_t opr, Operand opd1, Operand opd2);//Operand2 opd2 = Operand());
+	Predicate(condoperator_t opr, Operand2& opd1, Operand2& opd2);
 	bool isUnary() const; // No unary conditions?
 	bool isBinary() const;
 	

@@ -46,8 +46,7 @@ io::Output& operator<<(io::Output& out, const Predicate& p)
 	return out;
 }
 
-// Predicate::Predicate() { }
-Predicate::Predicate(condoperator_t opr, Operand opd1, Operand opd2)
+Predicate::Predicate(condoperator_t opr, Operand2& opd1, Operand2& opd2)
 	: opr(opr), opd1(opd1), opd2(opd2) { }
 bool Predicate::isUnary() const { return opr < CONDOPR_LT; }
 bool Predicate::isBinary() const { return opr >= CONDOPR_LT; }

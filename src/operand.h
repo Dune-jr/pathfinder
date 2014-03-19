@@ -97,22 +97,4 @@ public:
 	friend io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
 };
 
-// Operands of predicates (can be constant or variables)
-class Operand
-{
-private:
-	operand_kind_t kind;
-	void* value;
-	
-public:
-	Operand();
-	Operand(operand_kind_t kind, void* value);
-	Operand(int value); // Constant
-	Operand(unsigned int value); // Variable
-	Operand(ArithExpr* e); // An arithmetic expression
-	
-	bool operator==(const Operand& opd) const;
-	friend io::Output& operator<<(io::Output& out, const Operand& o);
-};
-
 #endif
