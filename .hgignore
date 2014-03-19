@@ -1,6 +1,7 @@
 objs
+doc
+
 .bam
 .depend
-
 config.lua
 pathfinder

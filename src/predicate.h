@@ -6,6 +6,7 @@
 
 using namespace elm;
 
+// Conditional operator enum
 enum condoperator_t
 {
 	// Unary
@@ -18,18 +19,20 @@ enum condoperator_t
 	CONDOPR_NE, // !=
 };
 
+// Printing conditional operators
 io::Output& operator<<(io::Output& out, const condoperator_t& opr);
 
+// Predicate class
 class Predicate
 {
 protected:
 	condoperator_t opr; // operator
-	Operand2& opd1;
-	Operand2& opd2;
+	Operand& opd1; // left operand
+	Operand& opd2; // right operand
 
 public:
-	Predicate(condoperator_t opr, Operand2& opd1, Operand2& opd2);
-	bool isUnary() const; // No unary conditions?
+	Predicate(condoperator_t opr, Operand& opd1, Operand& opd2);
+	bool isUnary() const; // No unary conditions yet though?
 	bool isBinary() const;
 	
 	bool operator== (const Predicate& p) const;

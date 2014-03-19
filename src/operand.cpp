@@ -1,13 +1,12 @@
 #include <elm/io/Output.h>
-
 #include "operand.h"
 
 using namespace elm;
 
-// Operands: constants
+// Operands: Constants
 OperandConst::OperandConst(t::uint32 value) : value(value) {}
 io::Output& OperandConst::print(io::Output& out) const { out << value; return out; }
-bool OperandConst::operator==(const Operand2& o) const
+bool OperandConst::operator==(const Operand& o) const
 {
 	if(o.kind() == kind())
 		return value == ((OperandConst&)o).value;
@@ -15,14 +14,14 @@ bool OperandConst::operator==(const Operand2& o) const
 		return false; // Operand types are not matching
 }
 
-// Operands: variables
+// Operands: Variables
 OperandVar::OperandVar(t::uint32 addr) : addr(addr) {}
 io::Output& OperandVar::print(io::Output& out) const
 {
 	out << "@0x" << io::hex(io::uppercase(addr));
 	return out; 
 }
-bool OperandVar::operator==(const Operand2& o) const
+bool OperandVar::operator==(const Operand& o) const
 {
 	if(o.kind() == kind())
 		return addr == ((OperandVar&)o).addr;
@@ -31,7 +30,7 @@ bool OperandVar::operator==(const Operand2& o) const
 }
 
 // Operands: Arithmetic Expressions
-OperandArithExpr::OperandArithExpr(arithoperator_t opr, Operand2& opd1, Operand2& opd2)
+OperandArithExpr::OperandArithExpr(arithoperator_t opr, Operand& opd1, Operand& opd2)
 	: opr(opr), opd1(opd1), opd2(opd2) {}
 io::Output& OperandArithExpr::print(io::Output& out) const
 {
@@ -60,7 +59,7 @@ io::Output& OperandArithExpr::print(io::Output& out) const
 	}
 	return out;
 }
-bool OperandArithExpr::operator==(const Operand2& o) const
+bool OperandArithExpr::operator==(const Operand& o) const
 {
 	if(o.kind() == kind())
 	{

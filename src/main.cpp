@@ -21,11 +21,11 @@ int main()
 	OperandArithExpr e1bis = OperandArithExpr(ARITHOPR_MUL, oprvar, oprconst);
 	Predicate p1 = Predicate(CONDOPR_EQ, oprvar, e1); // p1 := @0x4000 = e1
 	Predicate p2 = Predicate(CONDOPR_LE, oprconst, oprvar); // p2 := 2 <= @0x4000
-		
+	
 	DBG("--- Pretty printing of predicates ---")
 	DBG("p1:\t" << p1)
-	DBG("p2:\t" << p2)
-		
+	DBG("p2:\t" << p2 << io::endl)
+	
 	DBG("--- Equality over predicates ---")
 	DBG("p1 = p1:\t" << DBG_TEST(p1 == p1, true))
 	DBG("p2 = p2:\t" << DBG_TEST(p2 == p2, true))
@@ -39,7 +39,7 @@ int main()
 	OperandVar o4 = OperandVar(0x1008);
 	DBG("o1 = o1:\t" << DBG_TEST(o1 == o1, true))
 	DBG("o1 = o1':\t" << DBG_TEST(o1 == o1bis, true))
-	DBG("o1 = o2:\t" << DBG_TEST(o1 == o2, false) << io::endl)
+	DBG("o1 = o2:\t" << DBG_TEST(o1 == o2, false))
 	DBG("o1 = o3:\t" << DBG_TEST(o1 == o3, false))
 	DBG("o3 = o1:\t" << DBG_TEST(o3 == o1, false))
 	DBG("o3 = o3:\t" << DBG_TEST(o3 == o3, true))
