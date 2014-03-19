@@ -3,7 +3,6 @@
 
 #include <elm/io/Output.h>
 #include "operand.h"
-#include "ArithExpr.h"
 
 using namespace elm;
 
