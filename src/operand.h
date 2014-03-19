@@ -39,7 +39,7 @@ private:
 	
 public:
 	virtual operand_kind_t kind() const = 0;
-	// inline bool operator==(const Operand2& o) const { return false; } // Doesn't work properly
+	virtual bool operator==(const Operand2& o) const = 0;
 	friend io::Output& operator<<(io::Output& out, const Operand2& o) { return o.print(out); }
 };
 
@@ -54,7 +54,8 @@ public:
 	OperandConst(t::uint32 value);
 	
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
-	bool operator==(const OperandConst& o) const;
+	// bool operator==(const OperandConst& o) const;
+	bool operator==(const Operand2& o) const;
 	// TODO: This is... the opposite of pretty
 	friend io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 };
@@ -70,7 +71,8 @@ public:
 	OperandVar(t::uint32 addr);
 	
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
-	bool operator==(const OperandVar& o) const;
+	// bool operator==(const OperandVar& o) const;
+	bool operator==(const Operand2& o) const;
 	friend io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
 };
 
@@ -90,7 +92,8 @@ public:
 	bool isBinary() const;
 	
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
-	bool operator==(const OperandArithExpr& p) const;
+	// bool operator==(const OperandArithExpr& o) const;
+	bool operator==(const Operand2& o) const;
 	friend io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
 };
 

@@ -7,18 +7,22 @@ using namespace elm;
 
 OperandConst::OperandConst(t::uint32 value) : value(value) {}
 io::Output& OperandConst::print(io::Output& out) const { out << value; return out; }
-bool OperandConst::operator==(const OperandConst& o) const
+bool OperandConst::operator==(const Operand2& o) const
 {
-	if(kind() != o.kind()) return false;
-	return value == o.value;
+	if(o.kind() == kind())
+		return value == ((OperandConst&)o).value;
+	else
+		return false; // Operand types are not matching
 }
 
 OperandVar::OperandVar(t::uint32 addr) : addr(addr) {}
 io::Output& OperandVar::print(io::Output& out) const { out << addr; return out; }
-bool OperandVar::operator==(const OperandVar& o) const
+bool OperandVar::operator==(const Operand2& o) const
 {
-	if(kind() != o.kind()) return false;
-	return addr == o.addr;
+	if(o.kind() == kind())
+		return addr == ((OperandVar&)o).addr;
+	else
+		return false; // Operand types are not matching
 }
 
 OperandArithExpr::OperandArithExpr(arithoperator_t opr, Operand2& opd1, Operand2& opd2)
@@ -52,11 +56,15 @@ io::Output& OperandArithExpr::print(io::Output& out) const
 	return out;
 }
 
-bool OperandArithExpr::operator==(const OperandArithExpr& o) const
+bool OperandArithExpr::operator==(const Operand2& o) const
 {
-	// TODO: how to implement this???
-	// return (opr == o.opr) && (opd1 == o.opd1) && (opd2 == o.opd2);
-	return false;
+	if(o.kind() == kind())
+	{
+		OperandArithExpr& o_arith = (OperandArithExpr&)o; // Force conversion
+		return (opr == o_arith.opr) && (opd1 == o_arith.opd1) && (opd2 == o_arith.opd2);
+	}
+	else
+		return false; // Operand types are not matching
 }
 bool OperandArithExpr::isUnary() const { return opr < ARITHOPR_ADD; }
 bool OperandArithExpr::isBinary() const { return opr >= ARITHOPR_ADD; }
