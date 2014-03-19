@@ -1,3 +1,5 @@
+// This module is doomed to disappear
+
 #include "ArithExpr.h"
 #include "operand.h" 
 
@@ -7,7 +9,7 @@ bool ArithExpr::operator==(const ArithExpr& a) const
 	return (opr == a.opr) && (opd1 == a.opd1) && (opd2 == a.opd2);
 }
 
-std::ostream& operator<<(std::ostream& out, const ArithExpr& a)
+io::Output& operator<<(io::Output& out, const ArithExpr& a)
 {
 	switch(a.opr)
 	{

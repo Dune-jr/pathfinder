@@ -1,12 +1,14 @@
-#include <iostream>
+#include <elm/io/Output.h>
 #include "predicate.h"
+
+using namespace elm;
 
 bool Predicate::operator==(const Predicate& p) const
 {
 	return (opr == p.opr) && (opd1 == p.opd1) && (opd2 == p.opd2);
 }
 
-std::ostream& operator<<(std::ostream& out, const condoperator_t& opr)
+io::Output& operator<<(io::Output& out, const condoperator_t& opr)
 {
 	switch(opr)
 	{
@@ -35,7 +37,7 @@ std::ostream& operator<<(std::ostream& out, const condoperator_t& opr)
 	return out;
 }
 
-std::ostream& operator<<(std::ostream& out, const Predicate& p)
+io::Output& operator<<(io::Output& out, const Predicate& p)
 {
 	if(p.isUnary())
 		out << p.opr << "(" << p.opd1 << ")"; // *(...)
@@ -44,7 +46,7 @@ std::ostream& operator<<(std::ostream& out, const Predicate& p)
 	return out;
 }
 
-Predicate::Predicate() { }
+// Predicate::Predicate() { }
 Predicate::Predicate(condoperator_t opr, Operand opd1, Operand opd2)
 	: opr(opr), opd1(opd1), opd2(opd2) { }
 bool Predicate::isUnary() const { return opr < CONDOPR_LT; }

@@ -1,10 +1,25 @@
 #ifndef _OPERAND_H
 #define _OPERAND_H
 
-#include <elm/io.h> // iostream
-#include <iostream>
+#include <elm/io.h>
+#include <elm/io/Output.h>
 
 using namespace elm;
+
+enum arithoperator_t
+{
+	// Unary
+	ARITHOPR_NEG,
+	// ARITHOPR_NOT, // TODO (later): should we implement logical negation?
+	
+	// Binary
+	ARITHOPR_ADD,
+	ARITHOPR_SUB,
+	ARITHOPR_MUL,
+	ARITHOPR_DIV,
+	ARITHOPR_MOD,
+	// TODO (later): Should we add logical operators? (or, and, etc...)
+};
 
 enum operand_kind_t
 {
@@ -19,37 +34,64 @@ class ArithExpr;
 // Abstract class
 class Operand2
 {
+private:
+	virtual io::Output& print(io::Output& out) const = 0;
+	
+public:
 	virtual operand_kind_t kind() const = 0;
+	// inline bool operator==(const Operand2& o) const { return false; } // Doesn't work properly
+	friend io::Output& operator<<(io::Output& out, const Operand2& o) { return o.print(out); }
 };
 
+// Constant values
 class OperandConst : public Operand2
 {
 private:
 	t::uint32 value;
+	io::Output& print(io::Output& out) const;
 
 public:
 	OperandConst(t::uint32 value);
+	
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
+	bool operator==(const OperandConst& o) const;
+	// TODO: This is... the opposite of pretty
+	friend io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 };
 
+// Variables
 class OperandVar : public Operand2
 {
 private:
-	t::uint32 value;
+	t::uint32 addr;
+	io::Output& print(io::Output& out) const;
 	
 public:
-	OperandVar(t::uint32 value);
+	OperandVar(t::uint32 addr);
+	
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
+	bool operator==(const OperandVar& o) const;
+	friend io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
 };
 
+// Arithmetic Expressions
 class OperandArithExpr : public Operand2
 {
 private:
-	t::uint32 value;
+	arithoperator_t opr;
+	Operand2& opd1;
+	Operand2& opd2; // unused if operator is unary
+	
+	io::Output& print(io::Output& out) const;
 	
 public:
-	OperandArithExpr(t::uint32 value);
+	OperandArithExpr(arithoperator_t opr, Operand2& opd1, Operand2& opd2);
+	bool isUnary() const;
+	bool isBinary() const;
+	
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
+	bool operator==(const OperandArithExpr& p) const;
+	friend io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
 };
 
 // Operands of predicates (can be constant or variables)
@@ -58,7 +100,6 @@ class Operand
 private:
 	operand_kind_t kind;
 	void* value;
-	// We may have to add a "label" for the case where it is a variable, in the future
 	
 public:
 	Operand();
@@ -66,11 +107,9 @@ public:
 	Operand(int value); // Constant
 	Operand(unsigned int value); // Variable
 	Operand(ArithExpr* e); // An arithmetic expression
-	// TODO: we are forced here to use Operand* because Operand is incomplete type (not yet defined...)
-	//       should we do it this way or the other way around? (we include arithexpr from this file)
 	
-	bool operator==(const Operand& p) const;
-	friend std::ostream& operator<<(std::ostream& out, const Operand& o);
+	bool operator==(const Operand& opd) const;
+	friend io::Output& operator<<(io::Output& out, const Operand& o);
 };
 
 #endif
