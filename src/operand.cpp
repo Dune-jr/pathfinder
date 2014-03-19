@@ -21,8 +21,9 @@ io::Output& OperandVar::print(io::Output& out) const
 	out << "@0x" << io::hex(io::uppercase(addr));
 	return out; 
 }
+
 bool OperandVar::operator==(const Operand& o) const
-{
+{	
 	if(o.kind() == kind())
 		return addr == ((OperandVar&)o).addr;
 	else
@@ -34,8 +35,7 @@ OperandArithExpr::OperandArithExpr(arithoperator_t opr, Operand& opd1, Operand& 
 	: opr(opr), opd1(opd1), opd2(opd2) {}
 io::Output& OperandArithExpr::print(io::Output& out) const
 {
-	switch(opr)
-	{
+	switch(opr) {
 		case ARITHOPR_NEG:
 			out << "-(" << opd1 << ")";
 			break;

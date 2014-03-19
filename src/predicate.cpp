@@ -9,16 +9,8 @@ bool Predicate::operator==(const Predicate& p) const
 }
 
 io::Output& operator<<(io::Output& out, const condoperator_t& opr)
-{
-	switch(opr)
-	{
-		// Unary
-		/* case NOT:
-		 * out << "!";
-		 * break;
-		 */
-			
-		// Binary
+{	
+	switch(opr) {
 		case CONDOPR_LT:
 			out << "<";
 			break;
@@ -39,15 +31,11 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr)
 
 io::Output& operator<<(io::Output& out, const Predicate& p)
 {
-	if(p.isUnary())
-		out << p.opr << "(" << p.opd1 << ")"; // *(...)
-	else
-		out << "(" << p.opd1 << " "  << p.opr << " " << p.opd2 << ")"; // (... * ...)
+	// Only binary conditional operators in our implementation
+	out << "(" << p.opd1 << " "  << p.opr << " " << p.opd2 << ")"; // (... * ...)
 	return out;
 }
 
 Predicate::Predicate(condoperator_t opr, Operand& opd1, Operand& opd2)
 	: opr(opr), opd1(opd1), opd2(opd2) { }
-bool Predicate::isUnary() const { return opr < CONDOPR_LT; }
-bool Predicate::isBinary() const { return opr >= CONDOPR_LT; }
 

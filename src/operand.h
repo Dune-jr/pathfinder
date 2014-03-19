@@ -10,7 +10,7 @@ enum arithoperator_t
 {
 	// Unary
 	ARITHOPR_NEG, // (-)   Arithmetic negation
-	// ARITHOPR_NOT, // TODO (later): should we implement logical negation?
+	// ARITHOPR_NOT, // Should we implement bit inversion? // actually it's just 2^n - x - 1 !
 	
 	// Binary
 	ARITHOPR_ADD, // (+)   Addition
@@ -18,12 +18,13 @@ enum arithoperator_t
 	ARITHOPR_MUL, // (*)   Multiplication
 	ARITHOPR_DIV, // (/)   Division
 	ARITHOPR_MOD, // (mod) Modulo
-	// TODO (later): Should we add logical operators? (or, and, etc...)
+	// Should we add bit shifting operators? // Not needed, we can represent this with the existing
+	//   operators, it's just a * 2^n, n being a constant it can be reduced
+	// Should we add logical operators? (or, and, etc...) // That got to be complicated...
 };
 
 enum operand_kind_t
 {
-	OPERAND_UNDEF,     // Undefined
 	OPERAND_CONST,     // Constant
 	OPERAND_VAR,       // Variable
 	OPERAND_ARITHEXPR, // Arithmetic Expression
@@ -53,7 +54,6 @@ public:
 	
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
 	bool operator==(const Operand& o) const;
-	// TODO: This is... the opposite of pretty
 	friend io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 };
 
@@ -80,7 +80,6 @@ private:
 	Operand& opd1;
 	Operand& opd2; // unused if operator is unary	
 	io::Output& print(io::Output& out) const;
-	
 public:
 	OperandArithExpr(arithoperator_t opr, Operand& opd1, Operand& opd2);
 	bool isUnary() const;

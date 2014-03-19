@@ -9,10 +9,6 @@ using namespace elm;
 // Conditional operator enum
 enum condoperator_t
 {
-	// Unary
-	// NOT, // !
-
-	// Binary
 	CONDOPR_LT, // <
 	CONDOPR_LE, // <=
 	CONDOPR_EQ, // =
@@ -32,8 +28,6 @@ protected:
 
 public:
 	Predicate(condoperator_t opr, Operand& opd1, Operand& opd2);
-	bool isUnary() const; // No unary conditions yet though?
-	bool isBinary() const;
 	
 	bool operator== (const Predicate& p) const;
 	friend io::Output& operator<<(io::Output& out, const Predicate& p);
