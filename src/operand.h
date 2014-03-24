@@ -57,7 +57,7 @@ public:
 	
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
 	bool operator==(const Operand& o) const;
-	friend io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
+	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 };
 
 // Variables
@@ -72,7 +72,7 @@ public:
 	
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
 	bool operator==(const Operand& o) const;
-	friend io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
+	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
 };
 
 // Arithmetic Expressions
@@ -90,7 +90,7 @@ public:
 	
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	bool operator==(const Operand& o) const;
-	friend io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
+	friend inline io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
 };
 
 #endif

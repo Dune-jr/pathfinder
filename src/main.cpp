@@ -2,18 +2,41 @@
 #include <elm/io/Output.h>
 #include <elm/types.h>
 #include <otawa/otawa.h>
+#include <otawa/app/Application.h> // main Display class
+#include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
 
+#include "cfganalysis.h"
 #include "predicate.h"
+#include "debug.h"
 
 using namespace elm;
+using namespace otawa;
 
-#define DBG_INFO() "[" << __FILE__ << ":" << __LINE__ << "] "
-#define DBG(str) cout << DBG_INFO() << str << io::endl;
-#define DBG_TEST(tested_cond, expected_cond) \
-	(tested_cond == expected_cond ? "\033[32m" : "\033[31m") << \
-	(tested_cond ? "true" : "false") << "\033[0m"
-	
-int main()
+void testPredicates();
+void testOperands();
+void testCFGAnalysis();
+
+class Display: public Application {
+public:
+    Display(void): Application("display", Version(1, 0, 0)) { }
+
+protected:
+	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
+		// retrieving the main CFG
+		workspace()->require(COLLECTED_CFG_FEATURE, props);
+        const CFGCollection *cfgs = INVOLVED_CFGS(workspace());
+		assert(cfgs->count() > 0); // make sure we have at least one CFG
+		CFG *cfg = cfgs->get(0); // then get the first CFG
+		
+		CFGAnalysis analysis = CFGAnalysis(cfg);
+		
+		return;
+	}
+};
+
+OTAWA_RUN(Display)
+
+void testPredicates()
 {
 	OperandConst oprconst = OperandConst(2);
 	OperandVar oprvar = OperandVar(0x4000);
@@ -30,7 +53,10 @@ int main()
 	DBG("p1 = p1:\t" << DBG_TEST(p1 == p1, true))
 	DBG("p2 = p2:\t" << DBG_TEST(p2 == p2, true))
 	DBG("p1 = p2:\t" << DBG_TEST(p1 == p2, false) << io::endl)
-	
+}
+
+void testOperands()
+{
 	DBG("--- Equality over Operands  ---")
 	OperandConst o1 = OperandConst(12);
 	OperandConst o1bis = OperandConst(12);
@@ -56,7 +82,20 @@ int main()
 	DBG("oae = oae2:\t" << DBG_TEST(oae == oae2, false))
 	DBG("oae = oae3:\t" << DBG_TEST(oae == oae3, false))
 	DBG("oae = oae4:\t" << DBG_TEST(oae == oae4, false))
-	
-	
-	return 0;
+}
+
+void testCFGAnalysis()
+{
+#	if 0 // Does not compile when CFGAnalysis respects encapsulation rules
+		DBG(cfg);
+		
+		CFGAnalysis analysis;
+		CFGAnalysis::Path path;
+		BasicBlock::OutIterator outs(cfg->firstBB());
+		Edge* edge = *outs;
+		path = edge + path;		
+		analysis.infeasible_paths = path + analysis.infeasible_paths;
+		
+		DBG("analysis.infeasible_paths: " << analysis.infeasible_paths)
+#	endif
 }
