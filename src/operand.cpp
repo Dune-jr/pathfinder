@@ -54,6 +54,9 @@ io::Output& OperandArithExpr::print(io::Output& out) const
 		case ARITHOPR_MOD:
 			out << "(" << opd1 << " mod " << opd2 << ")";
 			break;
+		case ARITHOPR_CMP:
+			out << "(" << opd1 << " ~ " << opd2 << ")";
+			break;
 		default:
 			out << "???";	
 	}

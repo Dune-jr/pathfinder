@@ -20,7 +20,10 @@ enum arithoperator_t
 	ARITHOPR_MOD, // (mod) Modulo
 	// Should we add bit shifting operators? // Not needed, we can represent this with the existing
 	//   operators, it's just a * 2^n, n being a constant it can be reduced
-	// Should we add logical operators? (or, and, etc...) // That got to be complicated...
+	// Should we add logical operators? (or, and, etc...)
+	
+	ARITHOPR_CMP, // (~) Special operator to be used with CONDOPR_EQ and a register, that indicates
+                  //     that it contains information over the comparison of two other registers
 };
 
 enum operand_kind_t
