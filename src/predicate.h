@@ -23,10 +23,11 @@ class Predicate
 {
 protected:
 	condoperator_t opr; // operator
-	Operand& opd1; // left operand
-	Operand& opd2; // right operand
+	Operand *opd1; // left operand
+	Operand *opd2; // right operand
 
 public:
+	// Predicate(const Predicate& p): opr(p.opr), opd1(p.opd1), opd2(p.opd2) { } // TODO: Casse
 	Predicate(condoperator_t opr, Operand& opd1, Operand& opd2);
 	
 	bool operator== (const Predicate& p) const;

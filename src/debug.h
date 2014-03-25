@@ -67,6 +67,7 @@
 #define COLOR_On_Cya "\e[46m"
 #define COLOR_On_ICya "\e[0;106m"
 
+#define COLOR_Whi "\e[0;37m"
 #define COLOR_BWhi "\e[1;37m"
 #define COLOR_UWhi "\e[4;37m"
 #define COLOR_IWhi "\e[0;97m"

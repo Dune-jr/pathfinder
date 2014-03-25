@@ -5,7 +5,7 @@
 #include <otawa/app/Application.h> // main Display class
 #include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
 
-#include "cfganalysis.h"
+#include "analysis.h"
 #include "predicate.h"
 #include "debug.h"
 
@@ -14,7 +14,7 @@ using namespace otawa;
 
 void testPredicates();
 void testOperands();
-void testCFGAnalysis();
+void testAnalysis(CFG *cfg);
 
 class Display: public Application {
 public:
@@ -28,7 +28,7 @@ protected:
 		assert(cfgs->count() > 0); // make sure we have at least one CFG
 		CFG *cfg = cfgs->get(0); // then get the first CFG
 		
-		CFGAnalysis analysis = CFGAnalysis(cfg);
+		Analysis analysis = Analysis(cfg);
 		
 		return;
 	}
@@ -84,18 +84,13 @@ void testOperands()
 	DBG("oae = oae4:\t" << DBG_TEST(oae == oae4, false))
 }
 
-void testCFGAnalysis()
+void testAnalysis(CFG *cfg)
 {
-#	if 0 // Does not compile when CFGAnalysis respects encapsulation rules
-		DBG(cfg);
-		
-		CFGAnalysis analysis;
-		CFGAnalysis::Path path;
+#	if 0 // Does not compile when Analysis respects encapsulation rules
+		Analysis::Path path;
 		BasicBlock::OutIterator outs(cfg->firstBB());
 		Edge* edge = *outs;
-		path = edge + path;		
-		analysis.infeasible_paths = path + analysis.infeasible_paths;
-		
-		DBG("analysis.infeasible_paths: " << analysis.infeasible_paths)
+		// path = edge + path;
+		path += edge;
 #	endif
 }

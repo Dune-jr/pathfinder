@@ -37,5 +37,5 @@ io::Output& operator<<(io::Output& out, const Predicate& p)
 }
 
 Predicate::Predicate(condoperator_t opr, Operand& opd1, Operand& opd2)
-	: opr(opr), opd1(opd1), opd2(opd2) { }
+	: opr(opr), opd1(&opd1), opd2(&opd2) { }
 

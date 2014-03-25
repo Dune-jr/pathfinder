@@ -29,7 +29,7 @@ enum arithoperator_t
 enum operand_kind_t
 {
 	OPERAND_CONST,     // Constant
-	OPERAND_VAR,       // Variable
+	OPERAND_VAR,       // Variable (register or addr, for now)
 	OPERAND_ARITHEXPR, // Arithmetic Expression
 };
 
