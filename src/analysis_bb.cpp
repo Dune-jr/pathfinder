@@ -6,9 +6,9 @@
 
 using namespace otawa::sem;
 
-list<Predicate> Analysis::analyzeBB(BasicBlock *bb)
+SLList<Predicate> Analysis::analyzeBB(const BasicBlock *bb)
 {
-	list<Predicate> pred_list;
+	SLList<Predicate> pred_list;
 	
 	// Parse assembly instructions
 	for(BasicBlock::InstIterator insts(bb); insts; insts++)
@@ -27,10 +27,16 @@ list<Predicate> Analysis::analyzeBB(BasicBlock *bb)
 			switch(opcode opr = seminsts.op())
 			{
 				case SETI:
-					//for(
-					//LPList += LabelledPredicate(
+					static bool once = true;
+					if(once) { once = false;
+						OperandVar opd1 = OperandVar(-12);
+						DBG(COLOR_BIPur << "&opd1 = " << &opd1 << COLOR_RCol);
+						OperandConst opd2 = OperandConst(4);
+						pred_list += Predicate(CONDOPR_EQ, opd1, opd2);
+					}
 					break;
 			}
 		}
 	}
+	return pred_list;
 }

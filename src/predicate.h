@@ -21,7 +21,7 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr);
 // Predicate class
 class Predicate
 {
-protected:
+public: // TODO
 	condoperator_t opr; // operator
 	Operand *opd1; // left operand
 	Operand *opd2; // right operand

@@ -2,21 +2,36 @@
 #define _ANALYSIS_H
 
 #include <otawa/otawa.h>
-#include <elm/imm/list.h>
+#include <elm/genstruct/SLList.h>
 #include "predicate.h"
 
 using namespace otawa;
-using namespace elm::imm;
+using namespace elm::genstruct;
 
-template <class T> inline list<T>& operator+=(list<T> &t, const T& h) { return t = cons(h, t); }
-template <class T> inline list<T>& operator+=(list<T> &t, list<T> l) { return t = concat(t, l); } // TODO check if it's the right way (instead of concat(l, t))
+template <class T> inline const SLList<T>& null(void) {
+	static SLList<T> _null;
+	return _null;
+}
+// SLList<int>test_null = (SLList<int>)null<int>();
+
+template <class T> inline SLList<T>& operator+=(SLList<T> &t, const T& h) { t.addFirst(h); return t; }
+template <class T> inline SLList<T>& operator+=(SLList<T> &t, const SLList<T>& l) { t.addAll(l); return t; }
+
+template <class T> inline io::Output& operator<<(io::Output& out, const SLList<T>& l)
+{
+	out << "[ ";
+	for(typename SLList<T>::Iterator elems(l); elems; elems++)
+		out << *elems << ", ";
+	out << "]";
+	return out;
+};
 
 class Analysis {
 public:
 	Analysis(CFG *cfg);
 	
 private:
-	typedef list<Edge*> Path;
+	typedef SLList<Edge*> Path;
 	
 	class LabelledPredicate {
 	private:
@@ -35,9 +50,9 @@ private:
 	};
 		
 	// The actual struct 
-	list<Path> 						infeasible_paths;
-	list<list<LabelledPredicate> >	labeled_preds;
-	// bool 						solverHasBeenCalled;
+	SLList<Path>						infeasible_paths;
+	SLList<SLList<LabelledPredicate> >	labelled_preds;
+	// bool								solverHasBeenCalled;
 	
 	// Private methods
 	// analysis.cpp
@@ -47,12 +62,12 @@ private:
 	void processBB(BasicBlock *bb);
 	void processCFG(CFG *cfg);
 	void processEdge(Edge *edge);
-	list<LabelledPredicate> labelPredicateList (list<Predicate> pred_list, Edge* label);
+	SLList<LabelledPredicate> labelPredicateList (SLList<Predicate> pred_list, Edge* label);
 	
 	// analysis_bb.cpp
-	list<Predicate> analyzeBB(BasicBlock *bb);
+	SLList<Predicate> analyzeBB(const BasicBlock *bb);
 	
-	// inline list<LabelledPredicate>& currentLPList() const { return labeled_preds.hd(); }
+	// inline list<LabelledPredicate>& currentLPList() const { return labelled_preds.hd(); }
 };
 
 #endif

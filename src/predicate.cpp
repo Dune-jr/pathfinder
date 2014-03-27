@@ -5,7 +5,7 @@ using namespace elm;
 
 bool Predicate::operator==(const Predicate& p) const
 {
-	return (opr == p.opr) && (opd1 == p.opd1) && (opd2 == p.opd2);
+	return (opr == p.opr) && (*opd1 == *(p.opd1)) && (*opd2 == *(p.opd2));
 }
 
 io::Output& operator<<(io::Output& out, const condoperator_t& opr)
@@ -32,10 +32,16 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr)
 io::Output& operator<<(io::Output& out, const Predicate& p)
 {
 	// Only binary conditional operators in our implementation
-	out << "(" << p.opd1 << " "  << p.opr << " " << p.opd2 << ")"; // (... * ...)
+	out << "(" << *(p.opd1) << " "  << p.opr << " " << *(p.opd2) << ")"; // (... * ...)
 	return out;
 }
 
 Predicate::Predicate(condoperator_t opr, Operand& opd1, Operand& opd2)
-	: opr(opr), opd1(&opd1), opd2(&opd2) { }
-
+	: opr(opr), opd1(&opd1), opd2(&opd2)
+{
+	#include "debug.h"
+	DBG(COLOR_BIYel << "assigned opd1 at addr @" << &opd1 << COLOR_RCol)
+}
+//{
+	//Operand* _opd1 = (Operand*) new Operand(opd1);
+//}

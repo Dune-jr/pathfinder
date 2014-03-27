@@ -27,7 +27,7 @@ protected:
         const CFGCollection *cfgs = INVOLVED_CFGS(workspace());
 		assert(cfgs->count() > 0); // make sure we have at least one CFG
 		CFG *cfg = cfgs->get(0); // then get the first CFG
-		
+	
 		Analysis analysis = Analysis(cfg);
 		
 		return;
