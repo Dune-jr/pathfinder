@@ -4,8 +4,14 @@
 using namespace elm;
 
 // Operands: Constants
-OperandConst::OperandConst(t::uint32 value) : value(value) {}
-io::Output& OperandConst::print(io::Output& out) const { out << value; return out; }
+OperandConst::OperandConst(t::int32 value) : value(value) { }
+OperandConst::OperandConst(const OperandConst& opd) : value(opd.value) { }
+Operand* OperandConst::copy() { return new OperandConst(value); }
+io::Output& OperandConst::print(io::Output& out) const
+{
+	out << "0x" << io::hex(value);
+	return out;
+}
 bool OperandConst::operator==(const Operand& o) const
 {
 	if(o.kind() == kind())
@@ -15,10 +21,15 @@ bool OperandConst::operator==(const Operand& o) const
 }
 
 // Operands: Variables
-OperandVar::OperandVar(t::uint32 addr) : addr(addr) {}
+OperandVar::OperandVar(t::int32 addr) : addr(addr) { }
+OperandVar::OperandVar(const OperandVar& opd) : addr(opd.addr) { }
+Operand* OperandVar::copy() { return new OperandVar(addr); }
 io::Output& OperandVar::print(io::Output& out) const
 {
-	out << "@0x" << io::hex(io::uppercase(addr));
+	if(addr >= 0)
+		out << "?" << addr; // register
+	else
+		out << "t" << -addr; // temporary
 	return out; 
 }
 
@@ -32,7 +43,10 @@ bool OperandVar::operator==(const Operand& o) const
 
 // Operands: Arithmetic Expressions
 OperandArithExpr::OperandArithExpr(arithoperator_t opr, Operand& opd1, Operand& opd2)
-	: opr(opr), opd1(opd1), opd2(opd2) {}
+	: opr(opr), opd1(opd1), opd2(opd2) { }
+OperandArithExpr::OperandArithExpr(const OperandArithExpr& opd)
+	: opr(opd.opr), opd1(opd.opd1), opd2(opd.opd2) { }
+Operand* OperandArithExpr::copy() { return new OperandArithExpr(opr, opd1, opd2); }
 io::Output& OperandArithExpr::print(io::Output& out) const
 {
 	switch(opr) {

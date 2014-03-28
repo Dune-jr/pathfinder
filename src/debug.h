@@ -3,10 +3,10 @@
 
 // macros for debugging
 #define DBG_INFO() "\033[33m[" << __FILE__ << ":" << __LINE__ << "]\033[0m "
-#define DBG(str) cout << DBG_INFO() << str << io::endl;
+#define DBG(str) cout << DBG_INFO() << str << COLOR_RCol << io::endl;
 #define DBG_TEST(tested_cond, expected_cond) \
-	(tested_cond == expected_cond ? "\033[92m" : "\033[91m") << \
-	(tested_cond ? "true" : "false") << "\033[0m"
+	((tested_cond) == (expected_cond) ? "\033[92m" : "\033[91m") << \
+	((tested_cond) ? "true" : "false") << "\033[0m"
 	
 // Color macros
 #define COLOR_RCol "\e[0m" // Reset colors

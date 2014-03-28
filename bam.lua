@@ -2,6 +2,7 @@
 -- Settings
 settings = NewSettings()
 -- Loading otawa
+--settings.cc.flags:Add("-Wall")
 settings.cc.flags:Add("`/home/jruiz/Documents/otawa/bin/otawa-config --cflags`")
 settings.link.flags:Add("`/home/jruiz/Documents/otawa/bin/otawa-config --libs --rpath`")
 

@@ -18,7 +18,7 @@ using namespace elm::io;
 void Analysis::initializeAnalysis()
 {
 	// labelled_preds := [[]]
-	labelled_preds += null<LabelledPredicate>(); // Add an empty list as first element
+	labelled_preds += null<LabelledPredicate>(); // Adds an empty list as first element
 }
 
 // WARNING: atm, this function assumes we have NO LOOPS!
@@ -26,10 +26,9 @@ void Analysis::processCFG(CFG *cfg)
 {
 	DBG("Processing CFG " << cfg)
 	processBB(cfg->firstBB());
-	DBG("\e[4mResult of the analysis\e[0m: " << labelled_preds)
+	DBG("\e[4mResult of the analysis: " << labelled_preds)
 }
 
-template <class T, class E> template <template<class _> class C> inline void SLList<T, E>::addAll(const C<T> &items);
 void Analysis::processBB(BasicBlock *bb)
 {
 	if(bb->isExit())
@@ -40,46 +39,32 @@ void Analysis::processBB(BasicBlock *bb)
 		
 	DBG("Processing " << bb)
 
-	// may remove some of the labeled predicates
+	// may remove some of the labelled predicates
 	// returns a list of generated predicates
 	SLList<Predicate> analysis_result = analyzeBB(bb);
 	
-	DBG(COLOR_Whi << "State of the analysis: " << labelled_preds << COLOR_RCol)
+	DBG(COLOR_Whi << "Result of the analysis of the BB: " << analysis_result)
 	
-	assert(labelled_preds);
+	assert(labelled_preds); // Assert that the list of lists we are modifying is not empty
 	int edgeId = 0;
 	for(BasicBlock::OutIterator outs(bb); outs; outs++)
-	{		
+	{
 		if(outs->kind() == Edge::TAKEN
 		|| outs->kind() == Edge::NOT_TAKEN
 		|| outs->kind() == Edge::VIRTUAL
 		|| outs->kind() == Edge::VIRTUAL_RETURN) // Filter out irrelevant edges (calls...)
 		{	
 			if(edgeId++) // If this is not the first valid edge
-			{
-				labelled_preds += labelled_preds.first(); // then duplicate the list we are working on
-			}
+				// labelled_preds += labelled_preds.first(); // then duplicate the list we are working on
+				labelled_preds += null<LabelledPredicate>(); // TODO: is this the right move?
+			
 			// Label our list of predicates with the current edge then append it
 			SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(analysis_result, *outs);
-			SLList<LabelledPredicate> oldlist = labelled_preds.first();
 			
-			
-			
-			//template <class T, class E> template <template<class _> class C>
-				//inline void SLList<T, E>::addAll(const C<T> &items);
-			// oldlist.addAll<SLList<LabelledPredicate> >(labelled_analysis_result); // TODO!!!
-			
-			//for(SLList<LabelledPredicate>::Iterator iter(labelled_analysis_result); iter; iter++)
-			//	oldlist.add(iter);
-			
-			assert(analysis_result);
-			Predicate p = analysis_result.first();
-			DBG("p.opd1 = (" << p.opd1 << ")")
-			DBG("*(p.opd1) = " << *(p.opd1))
-			DBG("analysis_result.first() = " << analysis_result.first());
-			DBG(COLOR_IRed << "labelled_analysis_result = " << labelled_analysis_result << ", oldlist = " << oldlist << COLOR_RCol);
-			
-			
+			SLList<SLList<LabelledPredicate> >::Iterator iter(labelled_preds);
+			SLList<LabelledPredicate> topList = *iter;			
+			topList.addAll(labelled_analysis_result); // append to topList
+			labelled_preds.set(iter, topList); // set topList as new first item of attribute labelled_preds
 			
 			processEdge(*outs);
 		}
@@ -99,14 +84,13 @@ void Analysis::processEdge(Edge *edge)
 	processBB(target);
 }
 
-SLList<Analysis::LabelledPredicate> Analysis::labelPredicateList(SLList<Predicate> pred_list, Edge* label)
+SLList<Analysis::LabelledPredicate> Analysis::labelPredicateList(const SLList<Predicate>& pred_list, Edge* label)
 {
 	SLList<LabelledPredicate> LP_list;
-	while(pred_list)
+	for(SLList<Predicate>::Iterator preds(pred_list); preds; preds++)
 	{
-		LabelledPredicate lp(pred_list.first(), label);
+		LabelledPredicate lp(*preds, label);
 		LP_list.addFirst(lp);
-		pred_list.removeFirst(); // This warrants that the loop will end
 	}
 	return LP_list;
 	// TODO!

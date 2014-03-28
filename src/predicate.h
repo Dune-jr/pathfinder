@@ -22,9 +22,9 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr);
 class Predicate
 {
 public: // TODO
-	condoperator_t opr; // operator
-	Operand *opd1; // left operand
-	Operand *opd2; // right operand
+	condoperator_t _opr; // operator
+	Operand *_opd1; // left operand
+	Operand *_opd2; // right operand
 
 public:
 	// Predicate(const Predicate& p): opr(p.opr), opd1(p.opd1), opd2(p.opd2) { } // TODO: Casse

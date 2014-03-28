@@ -12,16 +12,54 @@ template <class T> inline const SLList<T>& null(void) {
 	static SLList<T> _null;
 	return _null;
 }
-// SLList<int>test_null = (SLList<int>)null<int>();
 
 template <class T> inline SLList<T>& operator+=(SLList<T> &t, const T& h) { t.addFirst(h); return t; }
 template <class T> inline SLList<T>& operator+=(SLList<T> &t, const SLList<T>& l) { t.addAll(l); return t; }
 
-template <class T> inline io::Output& operator<<(io::Output& out, const SLList<T>& l)
+void addIndents(io::Output& out, int n);
+template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l)
 {
-	out << "[ ";
+	int count = l.count();
+	if(count > 9)
+	{
+		out << "#" << count << """#";
+		return out; // For now, we just exit if too many items
+	}
+	
+	static int indent = 0;
+	bool indented_output = (count > 4);
+	
+	if(indented_output)
+		addIndents(out, indent++);
+	out << "[";
+	if(indented_output)
+		out << io::endl;
+	bool first = true;
 	for(typename SLList<T>::Iterator elems(l); elems; elems++)
-		out << *elems << ", ";
+	{
+		if(first)
+		{
+			if(indented_output)
+				addIndents(out, indent);
+			out << *elems;
+			first = false;
+		}
+		else
+		{
+			out << ", ";
+			if(indented_output)
+			{
+				out << io::endl;
+				addIndents(out, indent);
+			}
+			out << *elems;
+		}
+	}
+	if(indented_output)
+	{
+		out << io::endl;
+		addIndents(out, --indent);
+	}
 	out << "]";
 	return out;
 };
@@ -40,7 +78,7 @@ private:
 		io::Output& print(io::Output& out) const;
 	
 	public:
-		LabelledPredicate(Predicate pred, Edge* label);
+		LabelledPredicate(const Predicate& pred, Edge* label);
 		
 		// Accessors
 		inline Predicate pred() const { return _pred; };
@@ -62,7 +100,7 @@ private:
 	void processBB(BasicBlock *bb);
 	void processCFG(CFG *cfg);
 	void processEdge(Edge *edge);
-	SLList<LabelledPredicate> labelPredicateList (SLList<Predicate> pred_list, Edge* label);
+	SLList<LabelledPredicate> labelPredicateList (const SLList<Predicate>& pred_list, Edge* label);
 	
 	// analysis_bb.cpp
 	SLList<Predicate> analyzeBB(const BasicBlock *bb);

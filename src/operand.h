@@ -42,6 +42,7 @@ private:
 public:
 	virtual operand_kind_t kind() const = 0;
 	virtual bool operator==(const Operand& o) const = 0;
+	virtual Operand* copy() = 0; // yet unused
 	friend io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
 };
 
@@ -49,12 +50,14 @@ public:
 class OperandConst : public Operand
 {
 private:
-	t::uint32 value;
+	t::int32 value;
 	io::Output& print(io::Output& out) const;
 
 public:
-	OperandConst(t::uint32 value);
+	OperandConst(const OperandConst& opd);
+	OperandConst(t::int32 value);
 	
+	Operand* copy();
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
@@ -64,12 +67,14 @@ public:
 class OperandVar : public Operand
 {
 private:
-	t::uint32 addr;
+	t::int32 addr;
 	io::Output& print(io::Output& out) const;
 	
 public:
-	OperandVar(t::uint32 addr);
+	OperandVar(const OperandVar& opd);
+	OperandVar(t::int32 addr);
 	
+	Operand* copy();
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
@@ -84,10 +89,13 @@ private:
 	Operand& opd2; // unused if operator is unary	
 	io::Output& print(io::Output& out) const;
 public:
+	OperandArithExpr(const OperandArithExpr& opd);
 	OperandArithExpr(arithoperator_t opr, Operand& opd1, Operand& opd2);
+	
 	bool isUnary() const;
 	bool isBinary() const;
 	
+	Operand* copy();
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
