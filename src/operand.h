@@ -93,12 +93,12 @@ class OperandArithExpr : public Operand
 {
 private:
 	arithoperator_t opr;
-	Operand& opd1;
-	Operand& opd2; // unused if operator is unary	
+	Operand* opd1;
+	Operand* opd2; // unused if operator is unary	
 	io::Output& print(io::Output& out) const;
 public:
+	OperandArithExpr(arithoperator_t opr, const Operand& opd1, const Operand& opd2); // TODO: shouldn't this be const Operand& opd1?
 	OperandArithExpr(const OperandArithExpr& opd);
-	OperandArithExpr(arithoperator_t opr, Operand& opd1, Operand& opd2); // TODO: shouldn't this be const Operand& opd1?
 	
 	bool isUnary() const;
 	bool isBinary() const;

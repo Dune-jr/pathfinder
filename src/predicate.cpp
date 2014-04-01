@@ -25,19 +25,18 @@ bool Predicate::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 	if(*_opd1 == opdv)
 	{
 		_opd1 = opd_modifier.copy();
-		DBG(COLOR_IYel << "true flag here!")
 		rtn = true;
 	}
+	else
+		rtn |= _opd1->updateVar(opdv, opd_modifier);		
 		
 	if(*_opd2 == opdv)
 	{
 		_opd2 = opd_modifier.copy();
-		DBG(COLOR_IYel << "true flag here!")
 		rtn = true;
 	}
-	
-	rtn |= _opd1->updateVar(opdv, opd_modifier);
-	rtn |= _opd2->updateVar(opdv, opd_modifier);
+	else
+		rtn |= _opd2->updateVar(opdv, opd_modifier);
 	
 	return rtn;
 }

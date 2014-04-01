@@ -15,6 +15,7 @@ using namespace otawa;
 void testPredicates();
 void testOperands();
 void testAnalysis(CFG *cfg);
+void makeRainbow();
 
 class Display: public Application {
 public:
@@ -22,6 +23,7 @@ public:
 
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
+		makeRainbow(); // to see more easily the beginning of output
 		// retrieving the main CFG
 		workspace()->require(COLLECTED_CFG_FEATURE, props);
         const CFGCollection *cfgs = INVOLVED_CFGS(workspace());
@@ -88,7 +90,23 @@ void testAnalysis(CFG *cfg)
 		Analysis::Path path;
 		BasicBlock::OutIterator outs(cfg->firstBB());
 		Edge* edge = *outs;
-		// path = edge + path;
 		path += edge;
 #	endif
+}
+
+void makeRainbow()
+{
+	const char* colors[] = {
+		COLOR_BIBla,
+		COLOR_BIBlu,
+		COLOR_BICya,
+		COLOR_BIGre,
+		COLOR_BIPur,
+		COLOR_BIRed,
+		COLOR_BIWhi,
+		COLOR_BIYel
+	};
+	for(int i = 0; i < 160; i++)
+		cout << colors[(i%8)] << "#";
+	cout << COLOR_RCol << io::endl;
 }

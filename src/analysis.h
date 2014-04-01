@@ -89,7 +89,7 @@ private:
 	
 	SLList<Predicate> generated_preds;
 	
-	// The actual struct 
+	// The actual struct
 	SLList<Path>						infeasible_paths;
 	SLList<SLList<LabelledPredicate> >	labelled_preds;
 	// bool								solverHasBeenCalled;

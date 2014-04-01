@@ -183,7 +183,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 			}
 			if(make_pred)
 			{
-				DBG(COLOR_IGre << "+ " << Predicate(opr, *opd1, *opd2))
+				DBG(COLOR_IGre << " + " << Predicate(opr, *opd1, *opd2))
 				generated_preds += Predicate(opr, *opd1, *opd2);
 			}
 		}
@@ -209,7 +209,7 @@ bool Analysis::invalidateVar(const OperandVar& opd_var)
 		{
 			if((*iter).pred().isInvolvedVariable(opd_var))
 			{
-				DBG(COLOR_Red << "- " << *iter)
+				DBG(COLOR_Red << " - " << *iter)
 				top_list.remove(iter);
 				loop = true;
 				rtn = true;
@@ -226,7 +226,7 @@ bool Analysis::invalidateVar(const OperandVar& opd_var)
 		{
 			if((*iter).isInvolvedVariable(opd_var))
 			{
-				DBG(COLOR_IRed << "- " << *iter)
+				DBG(COLOR_IRed << " - " << *iter)
 				generated_preds.remove(iter);
 				loop = true;
 				rtn = true;
@@ -242,7 +242,6 @@ bool Analysis::invalidateVar(const OperandVar& opd_var)
 // second operand is usually an OperandArithExpr
 bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifier)
 {
-	DBG(COLOR_IYel << "update called, opd_to_update=" << opd_to_update << ", opd_modifier=" << opd_modifier)
 	bool rtn = false;
 	
 	// Update predicates that have already been labelled
@@ -251,7 +250,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	{
 		if((*iter).pred().isInvolvedVariable(opd_to_update))
 		{
-			DBG(COLOR_ICya << "* " << *iter)
+			DBG(COLOR_ICya << " * " << *iter) // TODO
 			
 			// updating the predicate
 			Predicate p = (*iter).pred();
@@ -269,17 +268,15 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	{
 		if((*iter).isInvolvedVariable(opd_to_update))
 		{
-			DBG(COLOR_ICya << "< " << *iter)
+			DBG(COLOR_Cya << " !- " << *iter)
 			
 			// updating the predicate
 			Predicate p = *iter;
 			if(p.updateVar(opd_to_update, opd_modifier)) // making sure something is updated
 			{
-				static int nyaa = 0;
-				if(nyaa == 0) { nyaa = 1; // TODO remove
-				generated_preds.set(iter, p); }
+				generated_preds.set(iter, p); 
 				rtn = true;
-				DBG(COLOR_ICya << "> " << *iter)
+				DBG(COLOR_ICya << " !+ " << *iter)
 			}
 		}
 	}
