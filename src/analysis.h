@@ -20,10 +20,10 @@ void addIndents(io::Output& out, int n);
 template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l)
 {
 	int count = l.count();
-	if(count > 9)
+	if(count > 10)
 	{
-		out << "#" << count << """#";
-		return out; // For now, we just exit if too many items
+		out << "#" << count << "#";
+		return out; // just exit if too many items
 	}
 	
 	static int indent = 0;
@@ -74,19 +74,21 @@ private:
 	class LabelledPredicate {
 	private:
 		Predicate _pred;
-		Edge* _label;
+		const Edge* _label;
 		io::Output& print(io::Output& out) const;
 	
 	public:
-		LabelledPredicate(const Predicate& pred, Edge* label);
+		LabelledPredicate(const Predicate& pred, const Edge* label);
 		
 		// Accessors
-		inline Predicate pred() const { return _pred; };
-		inline Edge* label() const { return _label; };
+		inline const Predicate& pred() const { return _pred; };
+		inline const Edge* label() const { return _label; };
 		
 		friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lp) { return lp.print(out); }
 	};
-		
+	
+	SLList<Predicate> generated_preds;
+	
 	// The actual struct 
 	SLList<Path>						infeasible_paths;
 	SLList<SLList<LabelledPredicate> >	labelled_preds;
@@ -95,6 +97,8 @@ private:
 	// Private methods
 	// analysis.cpp
 	void initializeAnalysis();
+	SLList<LabelledPredicate> getTopList();
+	void setTopList(const SLList<LabelledPredicate>& lps);
 	
 	// analysis_cfg.cpp
 	void processBB(BasicBlock *bb);
@@ -103,7 +107,10 @@ private:
 	SLList<LabelledPredicate> labelPredicateList (const SLList<Predicate>& pred_list, Edge* label);
 	
 	// analysis_bb.cpp
-	SLList<Predicate> analyzeBB(const BasicBlock *bb);
+	void analyzeBB(const BasicBlock *bb);
+	bool invalidateVar(const OperandVar& var);
+	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
+	bool updateAdd(OperandVar opd_to_update, OperandVar opd_modifier);
 	
 	// inline list<LabelledPredicate>& currentLPList() const { return labelled_preds.hd(); }
 };

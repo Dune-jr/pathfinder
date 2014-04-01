@@ -2,7 +2,9 @@
 -- Settings
 settings = NewSettings()
 -- Loading otawa
---settings.cc.flags:Add("-Wall")
+if true or ScriptArgs["wall"]=="true" or ScriptArgs["Wall"]=="true" then
+	settings.cc.flags:Add("-Wall")	
+end
 settings.cc.flags:Add("`/home/jruiz/Documents/otawa/bin/otawa-config --cflags`")
 settings.link.flags:Add("`/home/jruiz/Documents/otawa/bin/otawa-config --libs --rpath`")
 

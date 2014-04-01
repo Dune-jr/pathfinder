@@ -29,8 +29,6 @@ protected:
 		CFG *cfg = cfgs->get(0); // then get the first CFG
 	
 		Analysis analysis = Analysis(cfg);
-		
-		return;
 	}
 };
 

@@ -33,6 +33,8 @@ enum operand_kind_t
 	OPERAND_ARITHEXPR, // Arithmetic Expression
 };
 
+class OperandVar;
+
 // Abstract Operand class
 class Operand
 {
@@ -40,9 +42,11 @@ private:
 	virtual io::Output& print(io::Output& out) const = 0;
 	
 public:
+	virtual Operand* copy() const = 0;
+	virtual bool isInvolvedVariable(const OperandVar& opdv) const = 0;
+	virtual bool updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0;
 	virtual operand_kind_t kind() const = 0;
 	virtual bool operator==(const Operand& o) const = 0;
-	virtual Operand* copy() = 0; // yet unused
 	friend io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
 };
 
@@ -57,7 +61,9 @@ public:
 	OperandConst(const OperandConst& opd);
 	OperandConst(t::int32 value);
 	
-	Operand* copy();
+	Operand* copy() const;
+	bool isInvolvedVariable(const OperandVar& opdv) const;
+	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
@@ -74,7 +80,9 @@ public:
 	OperandVar(const OperandVar& opd);
 	OperandVar(t::int32 addr);
 	
-	Operand* copy();
+	Operand* copy() const;
+	bool isInvolvedVariable(const OperandVar& opdv) const;
+	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
@@ -90,12 +98,14 @@ private:
 	io::Output& print(io::Output& out) const;
 public:
 	OperandArithExpr(const OperandArithExpr& opd);
-	OperandArithExpr(arithoperator_t opr, Operand& opd1, Operand& opd2);
+	OperandArithExpr(arithoperator_t opr, Operand& opd1, Operand& opd2); // TODO: shouldn't this be const Operand& opd1?
 	
 	bool isUnary() const;
 	bool isBinary() const;
 	
-	Operand* copy();
+	Operand* copy() const;
+	bool isInvolvedVariable(const OperandVar& opdv) const;
+	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }

@@ -1,8 +1,38 @@
 #ifndef _DEBUG_H
 #define _DEBUG_H
 
+#include <elm/string/String.h>
+#include <elm/string/AutoString.h>
+
+class Debug
+{
+	enum {
+		DEBUG_HEADERSIZE=20, // should be > 3
+	};
+	
+public:
+	inline static elm::String formattedDbgInfo(const char* file, int line){
+		elm::String str = _ << file << ":" << line;
+		
+		if(str.length() > (int)DEBUG_HEADERSIZE)
+		{
+			str = str.substring(str.length() + 3 - DEBUG_HEADERSIZE);
+			return _ << "..." << str;
+		}
+		else
+		{
+			elm::String whitespaces;
+			for(unsigned int i = 0, len = str.length(); i < DEBUG_HEADERSIZE - len; i++)
+				whitespaces = whitespaces.concat(elm::CString(" "));
+			return _ << whitespaces << str;
+		}
+		
+		return str;
+	}
+};
+
 // macros for debugging
-#define DBG_INFO() "\033[33m[" << __FILE__ << ":" << __LINE__ << "]\033[0m "
+#define DBG_INFO() "\033[33m[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "]\033[0m "
 #define DBG(str) cout << DBG_INFO() << str << COLOR_RCol << io::endl;
 #define DBG_TEST(tested_cond, expected_cond) \
 	((tested_cond) == (expected_cond) ? "\033[92m" : "\033[91m") << \
