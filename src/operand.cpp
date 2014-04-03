@@ -5,22 +5,23 @@
 using namespace elm;
 
 // Operands: Constants
-OperandConst::OperandConst(t::int32 value) : value(value) { }
-OperandConst::OperandConst(const OperandConst& opd) : value(opd.value) { }
-Operand* OperandConst::copy() const { return new OperandConst(value); }
+OperandConst::OperandConst(t::int32 value) : _value(value) { }
+OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }
+Operand* OperandConst::copy() const { return new OperandConst(_value); }
 io::Output& OperandConst::print(io::Output& out) const
 {
-	out << "0x" << io::hex(value);
+	out << "0x" << io::hex(_value);
 	return out;
 }
 bool OperandConst::operator==(const Operand& o) const
 {
 	if(o.kind() == kind())
-		return value == ((OperandConst&)o).value;
+		return _value == ((OperandConst&)o)._value;
 	else
 		return false; // Operand types are not matching
 }
 bool OperandConst::isInvolvedVariable(const OperandVar& opdv) const { return false; }
+bool OperandConst::evalConstantOperand(OperandConst& val) const { val = *this; return true; }
 bool OperandConst::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return false; }
 
 // Operands: Variables
@@ -47,6 +48,7 @@ bool OperandVar::isInvolvedVariable(const OperandVar& opdv) const
 {
 	return opdv == *this; // TODO test
 }
+bool OperandVar::evalConstantOperand(OperandConst& val) const { return false; }
 // since the parent has to do the modification, and var has no child, return false
 bool OperandVar::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return false; }
 
@@ -108,6 +110,56 @@ bool OperandArithExpr::isInvolvedVariable(const OperandVar& opdv) const
 	if(isUnary())
 		return opd1->isInvolvedVariable(opdv);
 	return opd1->isInvolvedVariable(opdv) || opd2->isInvolvedVariable(opdv);
+}
+// An ArithExpr can be const if all its children are const!
+bool OperandArithExpr::evalConstantOperand(OperandConst& val) const
+{
+	OperandConst val1(0);
+	OperandConst val2(0);
+	if(isUnary())
+	{
+		if(opd1->evalConstantOperand(val1))
+		{
+			switch(opr)
+			{
+				case ARITHOPR_NEG:
+					val = OperandConst(-1 * val1.value());
+					break;
+				default:
+					assert(false);
+			}
+			return true;
+		}
+	}
+	else if (opd1->evalConstantOperand(val1) && opd2->evalConstantOperand(val2))
+	{
+		switch(opr)
+		{
+			case ARITHOPR_ADD:
+				val = OperandConst(val1.value() + val2.value());
+				break;
+			case ARITHOPR_SUB:
+				val = OperandConst(val1.value() - val2.value());
+				break;
+			case ARITHOPR_MUL:
+				val = OperandConst(val1.value() * val2.value());
+				break;
+			case ARITHOPR_DIV:
+				if(val2.value() == 0)
+					return false; // TODO hugues: should we raise some alert that there is a bug in the assembly code?
+				val = OperandConst(val1.value() / val2.value());
+				break;
+			case ARITHOPR_MOD:
+				val = OperandConst(val1.value() % val2.value());
+				break;
+			case ARITHOPR_CMP:
+				return false; // This can't be evaluated (wouldn't make much sense if this case was matched after the if anyway)
+			default:
+				assert(false);
+		}
+		return true;
+	}
+	return false; // One of the operands includes a variable so we cannot properly evaluate it
 }
 bool OperandArithExpr::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {

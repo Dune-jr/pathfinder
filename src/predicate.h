@@ -30,8 +30,10 @@ public:
 	// Predicate(const Predicate& p): opr(p.opr), opd1(p.opd1), opd2(p.opd2) { } // TODO: useless atm?
 	Predicate(condoperator_t opr, Operand& opd1, Operand& opd2);
 	
+	inline condoperator_t opr() const { return _opr; }
 	inline Operand& leftOperand() const { return *_opd1; }
 	inline Operand& rightOperand() const { return *_opd2; }
+	
 	bool isInvolvedVariable(const OperandVar& opdv) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	

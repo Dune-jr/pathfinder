@@ -33,6 +33,7 @@ enum operand_kind_t
 	OPERAND_ARITHEXPR, // Arithmetic Expression
 };
 
+class OperandConst;
 class OperandVar;
 
 // Abstract Operand class
@@ -44,6 +45,7 @@ private:
 public:
 	virtual Operand* copy() const = 0;
 	virtual bool isInvolvedVariable(const OperandVar& opdv) const = 0;
+	virtual bool evalConstantOperand(OperandConst& val) const = 0;
 	virtual bool updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0;
 	virtual operand_kind_t kind() const = 0;
 	virtual bool operator==(const Operand& o) const = 0;
@@ -54,15 +56,18 @@ public:
 class OperandConst : public Operand
 {
 private:
-	t::int32 value;
+	t::int32 _value;
 	io::Output& print(io::Output& out) const;
 
 public:
 	OperandConst(const OperandConst& opd);
 	OperandConst(t::int32 value);
 	
+	inline t::int32 value() { return _value; }
+	
 	Operand* copy() const;
 	bool isInvolvedVariable(const OperandVar& opdv) const;
+	bool evalConstantOperand(OperandConst& val) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
 	bool operator==(const Operand& o) const;
@@ -82,6 +87,7 @@ public:
 	
 	Operand* copy() const;
 	bool isInvolvedVariable(const OperandVar& opdv) const;
+	bool evalConstantOperand(OperandConst& val) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
 	bool operator==(const Operand& o) const;
@@ -105,6 +111,7 @@ public:
 	
 	Operand* copy() const;
 	bool isInvolvedVariable(const OperandVar& opdv) const;
+	bool evalConstantOperand(OperandConst& val) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	bool operator==(const Operand& o) const;

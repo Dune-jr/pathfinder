@@ -44,8 +44,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					break;
 				// case STORE:	// MEM_type(addr) <- reg
 					// waiting for LOAD/STORE support
-				case SCRATCH: // TODO test
-					DBG(COLOR_BIRed << "Untested operand running!")
+				case SCRATCH:
 					invalidateVar(OperandVar(seminsts.d()));
 					make_pred = false;
 					break;
@@ -108,8 +107,10 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case SHL: // TODO test
 					DBG(COLOR_BIRed << "Untested operand running!")
 					opd1 = new OperandVar(seminsts.d());
+					// TODO: !!!! what we need to do here is to build a identify(OperandVar()) function that
+					//       would tell us if we can (we normally should be able to) replace that variable by
+					//       a const expr. If yes, then do so
 					{
-						// TODO: additional tests to update instead of invalidate
 						invalidateVar(OperandVar(seminsts.d()));
 						Operand *opd21 = new OperandVar(seminsts.a());
 						Operand *opd22 = new OperandConst(1 << seminsts.b()); // 2^b
@@ -193,11 +194,14 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 }
 
 // returns true if a variable has been invalidated
-// TODO: problem! We need to update vars that we have not added to the toplist yet!!!
 bool Analysis::invalidateVar(const OperandVar& opd_var)
 {
-	// TODO: we could implement sth to save some info, see yellow notes "28/03/14"
 	bool rtn = false;
+	
+	//// Try to replace the var that we are about to remove 
+	//OperandConst val(0);
+	//if(seekValue(opd_var, val))
+		//return replaceVarByItsValue(opd_var, val); // all vars have been replaced, so just exit
 	
 	// Invalidate predicates that have already been labelled
 	SLList<LabelledPredicate> top_list = getTopList();
@@ -209,7 +213,7 @@ bool Analysis::invalidateVar(const OperandVar& opd_var)
 		{
 			if((*iter).pred().isInvolvedVariable(opd_var))
 			{
-				DBG(COLOR_Red << " - " << *iter)
+				DBG(COLOR_IRed << " - " << *iter)
 				top_list.remove(iter);
 				loop = true;
 				rtn = true;
@@ -226,7 +230,7 @@ bool Analysis::invalidateVar(const OperandVar& opd_var)
 		{
 			if((*iter).isInvolvedVariable(opd_var))
 			{
-				DBG(COLOR_IRed << " - " << *iter)
+				DBG(COLOR_Red << " - " << *iter)
 				generated_preds.remove(iter);
 				loop = true;
 				rtn = true;
@@ -237,6 +241,12 @@ bool Analysis::invalidateVar(const OperandVar& opd_var)
 	
 	return rtn;
 }
+
+//bool Analysis::replaceVarByItsValue(const OperandVar& opd_var, const OperandConst& val)
+//{
+	//DBG(COLOR_Blu << " * Replacing " << opd_var << " (about to be invalidated) by " << val);
+	//return update(opd_var, val);
+//}
 
 // returns true if a variable has been updated
 // second operand is usually an OperandArithExpr
@@ -250,14 +260,16 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	{
 		if((*iter).pred().isInvolvedVariable(opd_to_update))
 		{
-			DBG(COLOR_ICya << " * " << *iter) // TODO
+			DBG(COLOR_Cya << " - " << *iter)
 			
 			// updating the predicate
 			Predicate p = (*iter).pred();
 			if(p.updateVar(opd_to_update, opd_modifier)) // making sure something is updated
 			{
-				top_list.set(iter, LabelledPredicate(p, (*iter).label()));
+				LabelledPredicate lp = LabelledPredicate(p, (*iter).label());
+				top_list.set(iter, lp);
 				rtn = true;
+				DBG(COLOR_ICya << " + " << lp)
 			}
 		}
 	}
@@ -268,7 +280,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	{
 		if((*iter).isInvolvedVariable(opd_to_update))
 		{
-			DBG(COLOR_Cya << " !- " << *iter)
+			DBG(COLOR_Cya << " - " << *iter)
 			
 			// updating the predicate
 			Predicate p = *iter;
@@ -276,7 +288,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 			{
 				generated_preds.set(iter, p); 
 				rtn = true;
-				DBG(COLOR_ICya << " !+ " << *iter)
+				DBG(COLOR_ICya << " + " << *iter)
 			}
 		}
 	}
@@ -289,4 +301,25 @@ bool Analysis::updateAdd(OperandVar opd_to_update, OperandVar opd_modifier)
 {
 	// replaces d with d + a or d + b
 	return update(opd_to_update, OperandArithExpr(ARITHOPR_ADD, opd_to_update, opd_modifier));
+}
+
+// returns true if it found something
+// if it did, the value will be stored in val
+bool Analysis::seekValue(const OperandVar& var, OperandConst& val)
+{
+	bool rtn = false;
+	SLList<LabelledPredicate> top_list = getTopList();
+	for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; iter++)
+	{
+		const Predicate& p = (*iter).pred();
+		if(p.opr() != CONDOPR_EQ)
+			continue;
+		// once we found a const value, we do not check further
+		// if the algorithm is correct, this should not be a problem (no inconsistency)
+		if(p.leftOperand() == var)
+			return p.rightOperand().evalConstantOperand(val);
+		else if(p.rightOperand() == var)
+			return p.leftOperand().evalConstantOperand(val);
+	}
+	return rtn;
 }

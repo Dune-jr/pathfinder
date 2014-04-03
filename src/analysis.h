@@ -109,8 +109,10 @@ private:
 	// analysis_bb.cpp
 	void analyzeBB(const BasicBlock *bb);
 	bool invalidateVar(const OperandVar& var);
+	//bool replaceVarByItsValue(const OperandVar& opd_var, const OperandConst& val);
 	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
 	bool updateAdd(OperandVar opd_to_update, OperandVar opd_modifier);
+	bool seekValue(const OperandVar& var, OperandConst& val);
 	
 	// inline list<LabelledPredicate>& currentLPList() const { return labelled_preds.hd(); }
 };
