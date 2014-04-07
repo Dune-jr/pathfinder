@@ -34,7 +34,9 @@ public:
 	inline Operand& leftOperand() const { return *_opd1; }
 	inline Operand& rightOperand() const { return *_opd2; }
 	
-	bool isInvolvedVariable(const OperandVar& opdv) const;
+	bool involvesVariable(const OperandVar& opdv) const;
+	unsigned int countTempVars() const;
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	
 	bool operator== (const Predicate& p) const;

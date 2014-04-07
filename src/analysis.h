@@ -88,6 +88,7 @@ private:
 	};
 	
 	SLList<Predicate> generated_preds;
+	int max_tempvars; // This is more of an optimization thing than a necessary measure
 	
 	// The actual struct
 	SLList<Path>						infeasible_paths;
@@ -109,9 +110,13 @@ private:
 	// analysis_bb.cpp
 	void analyzeBB(const BasicBlock *bb);
 	bool invalidateVar(const OperandVar& var);
+	bool invalidateTempVars();
+	bool replaceTempVarFrom(const OperandVar& temp_var, const Operand& expr, const SLList<Predicate>::Iterator& start);
+	// bool updateGeneratedTempVarsList(const Operand& opd);
 	//bool replaceVarByItsValue(const OperandVar& opd_var, const OperandConst& val);
 	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
 	bool updateAdd(OperandVar opd_to_update, OperandVar opd_modifier);
+	bool updateSub(OperandVar opd_to_update, OperandVar opd_modifier, bool reverse);
 	bool seekValue(const OperandVar& var, OperandConst& val);
 	
 	// inline list<LabelledPredicate>& currentLPList() const { return labelled_preds.hd(); }

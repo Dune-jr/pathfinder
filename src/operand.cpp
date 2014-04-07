@@ -20,8 +20,14 @@ bool OperandConst::operator==(const Operand& o) const
 	else
 		return false; // Operand types are not matching
 }
-bool OperandConst::isInvolvedVariable(const OperandVar& opdv) const { return false; }
-bool OperandConst::evalConstantOperand(OperandConst& val) const { val = *this; return true; }
+unsigned int OperandConst::countTempVars() const { return 0; }
+bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
+{
+	expr = this->copy(); // Assume we are the expr
+	return false; // We haven't found an isolated tempvar
+}
+bool OperandConst::involvesVariable(const OperandVar& opdv) const { return false; }
+//bool OperandConst::evalConstantOperand(OperandConst& val) const { val = *this; return true; }
 bool OperandConst::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return false; }
 
 // Operands: Variables
@@ -30,7 +36,7 @@ OperandVar::OperandVar(const OperandVar& opd) : addr(opd.addr) { }
 Operand* OperandVar::copy() const { return new OperandVar(addr); }
 io::Output& OperandVar::print(io::Output& out) const
 {
-	if(addr >= 0)
+	if(!isTempVar())
 		out << "?" << addr; // register
 	else
 		out << "t" << -addr; // temporary
@@ -44,11 +50,25 @@ bool OperandVar::operator==(const Operand& o) const
 	else
 		return false; // Operand types are not matching
 }
-bool OperandVar::isInvolvedVariable(const OperandVar& opdv) const
+unsigned int OperandVar::countTempVars() const { return isTempVar() ? 1 : 0; }
+bool OperandVar::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 {
-	return opdv == *this; // TODO test
+	if(isTempVar()) // temporary
+	{
+		temp_var = *this; // we found an isolated tempvar
+		return true;
+	}
+	else // register
+	{
+		expr = this->copy();
+		return false;
+	}
 }
-bool OperandVar::evalConstantOperand(OperandConst& val) const { return false; }
+bool OperandVar::involvesVariable(const OperandVar& opdv) const
+{
+	return opdv == *this;
+}
+//bool OperandVar::evalConstantOperand(OperandConst& val) const { return false; }
 // since the parent has to do the modification, and var has no child, return false
 bool OperandVar::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return false; }
 
@@ -105,13 +125,20 @@ bool OperandArithExpr::operator==(const Operand& o) const
 	else
 		return false; // Operand types are not matching
 }
-bool OperandArithExpr::isInvolvedVariable(const OperandVar& opdv) const
+unsigned int OperandArithExpr::countTempVars() const { return opd1->countTempVars() + opd2->countTempVars(); }
+bool OperandArithExpr::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
+{
+	expr = this->copy();
+	return false;
+}
+bool OperandArithExpr::involvesVariable(const OperandVar& opdv) const
 {
 	if(isUnary())
-		return opd1->isInvolvedVariable(opdv);
-	return opd1->isInvolvedVariable(opdv) || opd2->isInvolvedVariable(opdv);
+		return opd1->involvesVariable(opdv);
+	return opd1->involvesVariable(opdv) || opd2->involvesVariable(opdv);
 }
-// An ArithExpr can be const if all its children are const!
+/*
+// An ArithExpr can be const if all of its children are const!
 bool OperandArithExpr::evalConstantOperand(OperandConst& val) const
 {
 	OperandConst val1(0);
@@ -161,6 +188,7 @@ bool OperandArithExpr::evalConstantOperand(OperandConst& val) const
 	}
 	return false; // One of the operands includes a variable so we cannot properly evaluate it
 }
+*/
 bool OperandArithExpr::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {
 	bool rtn = false;

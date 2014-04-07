@@ -44,8 +44,10 @@ private:
 	
 public:
 	virtual Operand* copy() const = 0;
-	virtual bool isInvolvedVariable(const OperandVar& opdv) const = 0;
-	virtual bool evalConstantOperand(OperandConst& val) const = 0;
+	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
+	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const = 0;
+	virtual bool involvesVariable(const OperandVar& opdv) const = 0;
+	//virtual bool evalConstantOperand(OperandConst& val) const = 0;
 	virtual bool updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0;
 	virtual operand_kind_t kind() const = 0;
 	virtual bool operator==(const Operand& o) const = 0;
@@ -66,8 +68,10 @@ public:
 	inline t::int32 value() { return _value; }
 	
 	Operand* copy() const;
-	bool isInvolvedVariable(const OperandVar& opdv) const;
-	bool evalConstantOperand(OperandConst& val) const;
+	unsigned int countTempVars() const;
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+	bool involvesVariable(const OperandVar& opdv) const;
+	//bool evalConstantOperand(OperandConst& val) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
 	bool operator==(const Operand& o) const;
@@ -85,9 +89,13 @@ public:
 	OperandVar(const OperandVar& opd);
 	OperandVar(t::int32 addr);
 	
+	inline bool isTempVar() const { return addr < 0; }
+	
 	Operand* copy() const;
-	bool isInvolvedVariable(const OperandVar& opdv) const;
-	bool evalConstantOperand(OperandConst& val) const;
+	unsigned int countTempVars() const;
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+	bool involvesVariable(const OperandVar& opdv) const;
+	//bool evalConstantOperand(OperandConst& val) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
 	bool operator==(const Operand& o) const;
@@ -110,8 +118,10 @@ public:
 	bool isBinary() const;
 	
 	Operand* copy() const;
-	bool isInvolvedVariable(const OperandVar& opdv) const;
-	bool evalConstantOperand(OperandConst& val) const;
+	unsigned int countTempVars() const;
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+	bool involvesVariable(const OperandVar& opdv) const;
+	//bool evalConstantOperand(OperandConst& val) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	bool operator==(const Operand& o) const;

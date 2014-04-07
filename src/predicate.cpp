@@ -10,10 +10,32 @@ Predicate::Predicate(condoperator_t opr, Operand& opd1, Operand& opd2) : _opr(op
 	_opd2 = opd2.copy();
 }
 
-// Test if the predicate contains (recursively) the variable represented by opdv
-bool Predicate::isInvolvedVariable(const OperandVar& opdv) const
+unsigned int Predicate::countTempVars() const
 {
-	return _opd1->isInvolvedVariable(opdv) || _opd2->isInvolvedVariable(opdv);
+	return _opd1->countTempVars() + _opd2-> countTempVars();
+}
+
+bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
+{
+	if(countTempVars() != 1) // no temp vars, several temp vars, or several occurrences of the same temp var
+		return false; // This could really use an improvement
+		
+	bool rtn1 = _opd1->getIsolatedTempVar(temp_var, expr);
+	bool rtn2 = _opd2->getIsolatedTempVar(temp_var, expr);
+	
+	if(!rtn1 && !rtn2)
+		return false;
+	
+	if(rtn1 && rtn2) // both are isolated tempvars, therefore temp_var <- _opd2 and expr <- [???]
+		expr = _opd1->copy();
+	
+	return true;
+}
+
+// Test if the predicate contains (recursively) the variable represented by opdv
+bool Predicate::involvesVariable(const OperandVar& opdv) const
+{
+	return _opd1->involvesVariable(opdv) || _opd2->involvesVariable(opdv);
 }
 
 // returns true if something was updated
