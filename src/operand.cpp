@@ -102,7 +102,7 @@ io::Output& OperandArithExpr::print(io::Output& out) const
 			out << "(" << *opd1 << " * " << *opd2 << ")";
 			break;
 		case ARITHOPR_DIV:
-			out << "(" << *opd1 << " * " << *opd2 << ")";
+			out << "(" << *opd1 << " / " << *opd2 << ")";
 			break;
 		case ARITHOPR_MOD:
 			out << "(" << *opd1 << " mod " << *opd2 << ")";

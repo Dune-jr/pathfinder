@@ -1,5 +1,6 @@
 #include <otawa/cfg/BasicBlock.h>
 #include <otawa/sem/inst.h>
+#include <elm/string/String.h>
 #include "predicate.h"
 #include "operand.h"
 #include "debug.h"
@@ -131,32 +132,51 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						}
 					}
 					break;
-				case SHL: // TODO test
-					DBG(COLOR_BIRed << "Untested operand running!")
+				case SHL:
 					opd1 = new OperandVar(seminsts.d());
-					// TODO: !!!! what we need to do here is to build a identify(OperandVar()) function that
-					//       would tell us if we can (we normally should be able to) replace that variable by
-					//       a const expr. If yes, then do so
 					{
-						invalidateVar(OperandVar(seminsts.d()));
 						Operand *opd21 = new OperandVar(seminsts.a());
-						Operand *opd22 = new OperandConst(1 << seminsts.b()); // 2^b
+						t::int32 val;
+						// b is usually a tempvar that has been previously set to a constant value
+						if(!findConstantValueOfTempVar(seminsts.b(), val))
+						{
+							DBG(COLOR_Blu << "  [t1 could not be identified as a constant value]")
+							make_pred = false;
+						}
+						else
+							DBG(COLOR_Blu << "  [t1 identified as 0x" << io::hex(val) << "]")
+						
+						// only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
+						invalidateVar(OperandVar(seminsts.d()));
+						Operand *opd22 = new OperandConst(1 << val); // 2^val
 						opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
 					}
 					break;
-				case SHR: // TODO test (is this really legit?)
-				case ASR: // TODO test
+				case ASR: // TODO test: is this really legit?
+					assert(!UNTESTED_CRITICAL);
 					DBG(COLOR_BIRed << "Untested operand running!")
+				case SHR:
 					opd1 = new OperandVar(seminsts.d());
 					{
-						// TODO: additional tests to update instead of invalidate
-						invalidateVar(OperandVar(seminsts.d()));
 						Operand *opd21 = new OperandVar(seminsts.a());
-						Operand *opd22 = new OperandConst(1 << seminsts.b()); // 2^b
+						t::int32 val;
+						// b is usually a tempvar that has been previously set to a constant value
+						if(!findConstantValueOfTempVar(seminsts.b(), val))
+						{
+							DBG(COLOR_Blu << "  [t1 could not be identified as a constant value]")
+							make_pred = false;
+						}
+						else
+							DBG(COLOR_Blu << "  [t1 identified as 0x" << io::hex(val) << "]")
+						
+						// only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
+						invalidateVar(OperandVar(seminsts.d()));
+						Operand *opd22 = new OperandConst(1 << val); // 2^val
 						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
 					}
 					break;
 				case NEG: // TODO test
+					assert(!UNTESTED_CRITICAL);
 					DBG(COLOR_BIRed << "Untested operand running!")
 					opd1 = new OperandVar(seminsts.d());
 					{
@@ -274,9 +294,12 @@ bool Analysis::invalidateVar(const OperandVar& opd_var)
 }
 
 
+// This function will try to keep the information contained in the tempvars 
+// by replacing them by their values in other predicates before removing them
 bool Analysis::invalidateTempVars()
 {
 	bool loop, rtn = false;
+	// First step: try and replace everything we can
 	do {
 		loop = false;
 		for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++)
@@ -286,8 +309,30 @@ bool Analysis::invalidateTempVars()
 				OperandVar temp_var(0);
 				Operand* expr = NULL;
 				if((*iter).getIsolatedTempVar(temp_var, expr)) // returns false if several tempvars
-					rtn |= replaceTempVarFrom(temp_var, *expr, iter);
+				{
+					rtn |= replaceTempVar(temp_var, *expr);
 					
+					// remove the predicate
+					DBG(COLOR_IRed << "- " << *iter)
+					generated_preds.remove(iter);
+					loop = true;
+					break;
+				}
+			}
+		}
+	} while(loop);
+	
+	// Second step: remove everything that is left and still contains a tempvar
+	// TODO(!!!): try to write:
+	// 		prev_iter = iter; // at end of for loop
+	//		prev_iter(generated_preds); // initialization
+	//		this way, when we break and loop, we iter from the previous item, instead of the first one
+	do {
+		loop = false;
+		for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++)
+		{
+			if((*iter).countTempVars())
+			{
 				// remove the predicate
 				DBG(COLOR_IRed << "- " << *iter)
 				generated_preds.remove(iter);
@@ -296,58 +341,67 @@ bool Analysis::invalidateTempVars()
 			}
 		}
 	} while(loop);
+	
 	return rtn;
 }
 
-bool Analysis::replaceTempVarFrom(const OperandVar& temp_var, const Operand& expr, const SLList<Predicate>::Iterator& start)
+bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr) //, const SLList<Predicate>::Iterator& start)
 {
-	if(!start) return false; // already at the end of the list
-	bool loop, rtn = false;
-	do {
-		loop = false;
-		SLList<Predicate>::Iterator iter(start);
-		for(iter++; iter; iter++) // begin one position ahead of iterator 'start'
+	// if(!start) return false; // already at the end of the list				
+	bool rtn = false;
+	for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++) // begin one position ahead of iterator 'start'
+	{
+		if((*iter).involvesVariable(temp_var))
 		{
-			if((*iter).involvesVariable(temp_var))
+			Predicate p = *iter;
+			String o = _ << p;
+			
+			assert(p.updateVar(temp_var, expr)); // if this is false, it means involvesVariable returned a false positive
+			if(p.isIdent()) // if we just transformed t1 = X into X = X
+				continue;
+				
+			if(rtn == false)
 			{
-				if(rtn == false)
+				DBG(COLOR_IBlu << "[" << expr << " / " << temp_var << "]")
+				rtn = true;
+			}
+				
+			DBG(COLOR_Cya << "- " << o)
+			DBG(COLOR_ICya << "+ " << p)
+			generated_preds.set(iter, p);
+		}
+	}
+	return rtn;
+}
+
+/**
+ * @fn bool Analysis::findConstantValueOfTempVar(const OperandVar& var, OperandConst& val);
+ * For a temporary variable tX, try to find a predicate tX=cst, and returns cst when it finds it.
+ * @return true if a value was found
+ */
+bool Analysis::findConstantValueOfTempVar(const OperandVar& var, t::int32& val)
+{
+	for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++)
+	{
+		if((*iter).opr() == CONDOPR_EQ) // operator is =
+		{
+			if((*iter).leftOperand() == var) // left operand matches our tempvar
+				if((*iter).rightOperand().kind() == OPERAND_CONST) // other operand is const (maybe we could eval arithoprs too)
 				{
-					DBG(COLOR_IBlu << "[" << expr << " / " << temp_var << "]")
-					rtn = true;
+					val = ((OperandConst&)(*iter).rightOperand()).value();
+					return true;
 				}
 				
-				DBG(COLOR_Cya << "- " << *iter)
-				Predicate p = (*iter);
-				assert(p.updateVar(temp_var, expr)); // if this is false, it means involvesVariable returned a false positive
-				generated_preds.set(iter, p); 
-				
-				DBG(COLOR_ICya << "+ " << *iter)
-			}
+			if((*iter).rightOperand() == var) // right operand matches our tempvar
+				if((*iter).leftOperand().kind() == OPERAND_CONST) // other operand is const
+				{
+					val = ((OperandConst&)(*iter).leftOperand()).value();
+					return true;
+				}
 		}
-	} while(loop);
-	return rtn;
-}
-
-/*
-bool Analysis::updateGeneratedTempVarsList(const Operand& opd)
-{
-	DBG(COLOR_IYel << generated_temp_vars << opd.getTempVars())
-	if(list<OperandVar> l = opd.getTempVars())
-	{
-		generated_temp_vars = generated_temp_vars.concat(l);
-		return true;
 	}
-	return false;
+	return false; // No matches found
 }
-//*/
-
-/*
-bool Analysis::replaceVarByItsValue(const OperandVar& opd_var, const OperandConst& val)
-{
-	DBG(COLOR_Blu << "  * Replacing " << opd_var << " (about to be invalidated) by " << val);
-	return update(opd_var, val);
-}
-//*/
 
 // returns true if a variable has been updated
 // second operand is usually an OperandArithExpr

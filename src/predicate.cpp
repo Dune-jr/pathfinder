@@ -10,6 +10,19 @@ Predicate::Predicate(condoperator_t opr, Operand& opd1, Operand& opd2) : _opr(op
 	_opd2 = opd2.copy();
 }
 
+// Test if the predicate is identity
+
+/**
+ * @fn bool Predicate::isIdent(void);
+ * Test if the predicate is identity (X = X)
+ */
+
+// Test if the predicate contains (recursively) the variable represented by opdv
+bool Predicate::involvesVariable(const OperandVar& opdv) const
+{
+	return _opd1->involvesVariable(opdv) || _opd2->involvesVariable(opdv);
+}
+
 unsigned int Predicate::countTempVars() const
 {
 	return _opd1->countTempVars() + _opd2-> countTempVars();
@@ -30,12 +43,6 @@ bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 		expr = _opd1->copy();
 	
 	return true;
-}
-
-// Test if the predicate contains (recursively) the variable represented by opdv
-bool Predicate::involvesVariable(const OperandVar& opdv) const
-{
-	return _opd1->involvesVariable(opdv) || _opd2->involvesVariable(opdv);
 }
 
 // returns true if something was updated

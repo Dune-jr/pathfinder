@@ -111,9 +111,8 @@ private:
 	void analyzeBB(const BasicBlock *bb);
 	bool invalidateVar(const OperandVar& var);
 	bool invalidateTempVars();
-	bool replaceTempVarFrom(const OperandVar& temp_var, const Operand& expr, const SLList<Predicate>::Iterator& start);
-	// bool updateGeneratedTempVarsList(const Operand& opd);
-	//bool replaceVarByItsValue(const OperandVar& opd_var, const OperandConst& val);
+	bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);
+	bool findConstantValueOfTempVar(const OperandVar& var, t::int32& val);
 	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
 	bool updateAdd(OperandVar opd_to_update, OperandVar opd_modifier);
 	bool updateSub(OperandVar opd_to_update, OperandVar opd_modifier, bool reverse);

@@ -4,6 +4,8 @@
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 
+#define UNTESTED_CRITICAL false // Do not throw exception on executing untested code
+
 class Debug
 {
 	enum {
