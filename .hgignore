@@ -1,6 +1,6 @@
-benchmarks
 doc
 objs
+benchmarks/if_then_else_2seq/colored examples
 
 .bam
 .depend
