@@ -2,19 +2,7 @@ digraph main{
 node [shape=Mrecord, labeljust=l, fontsize=10];
 	"0" [label="ENTRY"]
 	"0" -> "1" [style=dashed, weight=1];
-	"1" [label="{BB 1 (00008278) | main:\l00008278    str lr, [sp, #-4]!\l0000827c    sub sp, sp, #12\l00008280    str r0, [sp, #4]\l00008284    ldr r3, [sp, #4]\l00008288    add r3, r3, r3, lsl #1\l0000828c    mov r3, r3, lsl #1\l00008290    str r3, [sp, #4]\l00008294    mov r0, #48\l00008298    bl 852c    # putchar\l }"]
-	"00000000007f9a60putchar" [label="putchar"]
-	"1" -> "00000000007f9a60putchar" [label="call", style=dashed, weight=1]
-	"1" -> "2" [weight=4];
-	"2" [label="{BB 2 (0000829c) | 0000829c    ldr r3, [sp, #4]\l000082a0    ldr r2, [pc, #80]\l000082a4    smull r1,r2,r3,r2\l000082a8    mov r3, r3, asr #31\l000082ac    rsb r3, r3, r2, asr #1\l000082b0    str r3, [sp, #4]\l000082b4    mov r0, #48\l000082b8    bl 852c    # putchar\l }"]
-	"00000000007f99e0putchar" [label="putchar"]
-	"2" -> "00000000007f99e0putchar" [label="call", style=dashed, weight=1]
-	"2" -> "3" [weight=4];
-	"3" [label="{BB 3 (000082bc) | 000082bc    ldr r2, [sp, #4]\l000082c0    ldr r3, [pc, #52]\l000082c4    smull r1,r3,r2,r3\l000082c8    add r3, r3, r2\l000082cc    mov r1, r2, asr #31\l000082d0    rsb r3, r1, r3, asr #2\l000082d4    rsb r3, r3, r3, lsl #3\l000082d8    rsb r3, r3, r2\l000082dc    str r3, [sp, #4]\l000082e0    mov r0, #48\l000082e4    bl 852c    # putchar\l }"]
-	"00000000007f94e0putchar" [label="putchar"]
-	"3" -> "00000000007f94e0putchar" [label="call", style=dashed, weight=1]
-	"3" -> "4" [weight=4];
-	"4" [label="{BB 4 (000082e8) | 000082e8    ldr r0, [sp, #4]\l000082ec    add sp, sp, #12\l000082f0    ldr lr, [sp], #4\l000082f4    bx lr\l }"]
-	"4" -> "5" [style=dashed, weight=1];
-	"5" [label="EXIT"]
+	"1" [label="{BB 1 (00008278) | main:\l00008278    ldr r3, [pc, #40]\l0000827c    smull r2,r3,r0,r3\l00008280    mov r2, r0, asr #31\l00008284    rsb r3, r2, r3, asr #1\l00008288    add r2, r3, r3, lsl #2\l0000828c    add r3, r3, r2, lsl #1\l00008290    rsb r3, r3, r0\l00008294    add r3, r3, #1\l00008298    add r3, r3, r3, lsl #1\l0000829c    mov r0, r3, lsl #1\l000082a0    sub r0, r0, #7\l000082a4    bx lr\l }"]
+	"1" -> "2" [style=dashed, weight=1];
+	"2" [label="EXIT"]
 }

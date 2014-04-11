@@ -1,16 +1,11 @@
 #include <stdio.h>
 
-int main(int argc, char** argv)
+int main(int x)
 {
-  volatile int x = argc;
-
+  x%=11;
+  x++;
 	x*=6;
-  printf("0");
+  x-=7;
 
-	x/=5;
-  printf("0");
-
-	x%=7;
-  printf("0");
 	return x;
 }

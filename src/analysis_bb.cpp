@@ -29,6 +29,15 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 			Operand *opd1 = NULL;
 			Operand *opd2 = NULL;
 			condoperator_t opr = CONDOPR_EQ; // Default is =
+			
+			// some shortcuts
+			const t::int16& a = seminsts.a();
+			const t::int16& b = seminsts.b();
+			const t::int16& d = seminsts.d();
+			const t::int32& cst = seminsts.cst();
+			const t::int16& reg = seminsts.reg();
+			// const t::int16& addr = seminsts.addr();
+			
 			bool make_pred = true;
 			// TODO: test unsigned MUL DIV MOD CMP
 			// TODO: do not generate t1 = t1 + t2 !!! update preds instead
@@ -40,105 +49,105 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				// case IF:		// continue if condition cond is meet in register sr, else skip "jump" instructions
 					// TODO
 				case LOAD:	// reg <- MEM_type(addr)t
-					invalidateVar(OperandVar(seminsts.reg()));
+					invalidateVar(OperandVar(reg));
 					// waiting for LOAD/STORE support to make more out of it
 					make_pred = false;
 					break;
 				// case STORE:	// MEM_type(addr) <- reg
 					// waiting for LOAD/STORE support
 				case SCRATCH:
-					invalidateVar(OperandVar(seminsts.d()));
+					invalidateVar(OperandVar(d));
 					make_pred = false;
 					break;
 				case SET:
-					invalidateVar(OperandVar(seminsts.d()));
-					opd1 = new OperandVar(seminsts.d());
-					opd2 = new OperandVar(seminsts.a());
+					invalidateVar(OperandVar(d));
+					opd1 = new OperandVar(d);
+					opd2 = new OperandVar(a);
 					break;
 				case SETI:
-					invalidateVar(OperandVar(seminsts.d()));
-					opd1 = new OperandVar(seminsts.d());
-					opd2 = new OperandConst(seminsts.cst());
+					invalidateVar(OperandVar(d));
+					opd1 = new OperandVar(d);
+					opd2 = new OperandConst(cst);
 					break;
 				// case SETP:
 					// nothing to do until we support LOAD/STORE
 				case CMP:
 				case CMPU:
-					opd1 = new OperandVar(seminsts.d());
+					opd1 = new OperandVar(d);
 					{
-						invalidateVar(OperandVar(seminsts.d()));
-						Operand *opd21 = new OperandVar(seminsts.a());
-						Operand *opd22 = new OperandVar(seminsts.b());
+						invalidateVar(OperandVar(d));
+						Operand *opd21 = new OperandVar(a);
+						Operand *opd22 = new OperandVar(b);
 						opd2 = new OperandArithExpr(ARITHOPR_CMP, *opd21, *opd22);
 					}
 					break;
 				case ADD:
-					opd1 = new OperandVar(seminsts.d());
+					opd1 = new OperandVar(d);
 					{
-						if(seminsts.d() == seminsts.a()) // d <- d+b
+						if(d == a) // d <- d+b
 						{
-							updateAdd(OperandVar(seminsts.d()), OperandVar(seminsts.b()));
+							updateAdd(OperandVar(d), OperandVar(b));
 							make_pred = false;
 						}
-						else if(seminsts.d() == seminsts.b()) // d <- d+a
+						else if(d == b) // d <- d+a
 						{
-							updateAdd(OperandVar(seminsts.d()), OperandVar(seminsts.a()));
+							updateAdd(OperandVar(d), OperandVar(a));
 							make_pred = false;
 						}
 						else
 						{
 							// d is not related to a or b, invalidate predicates that involve d
-							invalidateVar(OperandVar(seminsts.d()));
-							Operand *opd21 = new OperandVar(seminsts.a());
-							Operand *opd22 = new OperandVar(seminsts.b());
+							invalidateVar(OperandVar(d));
+							Operand *opd21 = new OperandVar(a);
+							Operand *opd22 = new OperandVar(b);
 							opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
 						}
 					}
 					break;
 				case SUB:
-					opd1 = new OperandVar(seminsts.d());
+					opd1 = new OperandVar(d);
 					{
 						// TODO: additional tests for updates
-						bool d_eq_a = seminsts.d() == seminsts.a(), d_eq_b = seminsts.d() == seminsts.b();
+						bool d_eq_a = d == a, d_eq_b = d == b;
 						if(d_eq_a)
 						{
 							if(d_eq_b) // d <- d-d
-							{
-								// d is set to 0!
-								invalidateVar(OperandVar(seminsts.d()));
-								opd1 = new OperandVar(seminsts.d());
+							{	// d is set to 0!
+								invalidateVar(OperandVar(d));
+								opd1 = new OperandVar(d);
 								opd2 = new OperandConst(0);
 							}
 							else // d <- d-b
-							{								
-								updateSub(OperandVar(seminsts.d()), OperandVar(seminsts.b()), false);
+							{	// [d + b / d]
+								update(d, OperandArithExpr(ARITHOPR_ADD, d, b));
+								// updateSub(OperandVar(d), OperandVar(b), false); // TODO remove these comments
 								make_pred = false;
 							}
 						}
 						else
 						{
 							if(d_eq_b) // d <- a-d
-							{
-								updateSub(OperandVar(seminsts.d()), OperandVar(seminsts.a()), true);
+							{	// [a - d / d] // This function f has a f°f=Id property
+								updateSub(OperandVar(d), OperandVar(a), true);
 								make_pred = false;
 							}
 							else // d <- a-b
 							{
-								invalidateVar(OperandVar(seminsts.d()));
-								Operand *opd21 = new OperandVar(seminsts.a());
-								Operand *opd22 = new OperandVar(seminsts.b());
+								invalidateVar(OperandVar(d));
+								Operand *opd21 = new OperandVar(a);
+								Operand *opd22 = new OperandVar(b);
 								opd2 = new OperandArithExpr(ARITHOPR_SUB, *opd21, *opd22);
 							}
 						}
 					}
 					break;
 				case SHL:
-					opd1 = new OperandVar(seminsts.d());
+					opd1 = new OperandVar(d);
 					{
-						Operand *opd21 = new OperandVar(seminsts.a());
+						Operand *opd21 = new OperandVar(a);
 						t::int32 val;
 						// b is usually a tempvar that has been previously set to a constant value
-						if(!findConstantValueOfTempVar(seminsts.b(), val))
+						if(!findConstantValueOfTempVar(b, val))
 						{
 							DBG(COLOR_Blu << "  [t1 could not be identified as a constant value]")
 							make_pred = false;
@@ -147,7 +156,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							DBG(COLOR_Blu << "  [t1 identified as 0x" << io::hex(val) << "]")
 						
 						// only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
-						invalidateVar(OperandVar(seminsts.d()));
+						invalidateVar(OperandVar(d));
 						Operand *opd22 = new OperandConst(1 << val); // 2^val
 						opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
 					}
@@ -156,12 +165,12 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					assert(!UNTESTED_CRITICAL);
 					DBG(COLOR_BIRed << "Untested operand running!")
 				case SHR:
-					opd1 = new OperandVar(seminsts.d());
+					opd1 = new OperandVar(d);
 					{
-						Operand *opd21 = new OperandVar(seminsts.a());
+						Operand *opd21 = new OperandVar(a);
 						t::int32 val;
 						// b is usually a tempvar that has been previously set to a constant value
-						if(!findConstantValueOfTempVar(seminsts.b(), val))
+						if(!findConstantValueOfTempVar(b, val))
 						{
 							DBG(COLOR_Blu << "  [t1 could not be identified as a constant value]")
 							make_pred = false;
@@ -170,7 +179,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							DBG(COLOR_Blu << "  [t1 identified as 0x" << io::hex(val) << "]")
 						
 						// only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
-						invalidateVar(OperandVar(seminsts.d()));
+						invalidateVar(OperandVar(d));
 						Operand *opd22 = new OperandConst(1 << val); // 2^val
 						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
 					}
@@ -178,12 +187,12 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case NEG: // TODO test
 					assert(!UNTESTED_CRITICAL);
 					DBG(COLOR_BIRed << "Untested operand running!")
-					opd1 = new OperandVar(seminsts.d());
+					opd1 = new OperandVar(d);
 					{
 						// TODO: additional tests to update instead of invalidate
-						invalidateVar(OperandVar(seminsts.d()));
+						invalidateVar(OperandVar(d));
 						Operand *opd21 = new OperandConst(-1);
-						Operand *opd22 = new OperandVar(seminsts.a());
+						Operand *opd22 = new OperandVar(a);
 						opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
 					}
 					break;
@@ -193,37 +202,37 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				// case XOR:		// d <- a ^ b
 				case MULU:
 				case MUL:
-					opd1 = new OperandVar(seminsts.d());
+					opd1 = new OperandVar(d);
 					{
 						// TODO: additional tests to update instead of invalidate
-						invalidateVar(OperandVar(seminsts.d()));
-						Operand *opd21 = new OperandVar(seminsts.a());
-						Operand *opd22 = new OperandVar(seminsts.b());
+						invalidateVar(OperandVar(d));
+						Operand *opd21 = new OperandVar(a);
+						Operand *opd22 = new OperandVar(b);
 						opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
 					}
 					break;
 				case DIVU:
 				case DIV:
-					opd1 = new OperandVar(seminsts.d());
+					opd1 = new OperandVar(d);
 					{
 						// TODO: additional tests to update instead of invalidate
-						invalidateVar(OperandVar(seminsts.d()));
-						Operand *opd21 = new OperandVar(seminsts.a());
-						Operand *opd22 = new OperandVar(seminsts.b());
+						invalidateVar(OperandVar(d));
+						Operand *opd21 = new OperandVar(a);
+						Operand *opd22 = new OperandVar(b);
 						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
 					}
 				case MODU:
 				case MOD:
-					opd1 = new OperandVar(seminsts.d());
+					opd1 = new OperandVar(d);
 					{
 						// TODO: additional tests to update instead of invalidate
-						invalidateVar(OperandVar(seminsts.d()));
-						Operand *opd21 = new OperandVar(seminsts.a());
-						Operand *opd22 = new OperandVar(seminsts.b());
+						invalidateVar(OperandVar(d));
+						Operand *opd21 = new OperandVar(a);
+						Operand *opd22 = new OperandVar(b);
 						opd2 = new OperandArithExpr(ARITHOPR_MOD, *opd21, *opd22);
 					}
 				case SPEC: // special instruction (d: code, cst: sub-code)
-					invalidateVar(OperandVar(seminsts.d()));
+					invalidateVar(OperandVar(d));
 					make_pred = false;
 					break;
 				default:
