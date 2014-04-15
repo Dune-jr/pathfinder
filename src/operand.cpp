@@ -10,7 +10,8 @@ OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }
 Operand* OperandConst::copy() const { return new OperandConst(_value); }
 io::Output& OperandConst::print(io::Output& out) const
 {
-	out << "0x" << io::hex(_value);
+	//out << "0x" << io::hex(_value);
+	out << _value;
 	return out;
 }
 bool OperandConst::operator==(const Operand& o) const

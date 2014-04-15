@@ -99,6 +99,9 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr)
 io::Output& operator<<(io::Output& out, const Predicate& p)
 {
 	// Only binary conditional operators in our implementation
-	out << "(" << *(p._opd1) << " " << p._opr << " " << *(p._opd2) << ")"; // (... * ...)
+	out 
+		//<< "(" 
+		<< *(p._opd1) << " " << p._opr << " " << *(p._opd2);
+		//<< ")"; // (... * ...)
 	return out;
 }

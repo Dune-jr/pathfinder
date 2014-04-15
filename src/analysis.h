@@ -110,13 +110,11 @@ private:
 	// analysis_bb.cpp
 	void analyzeBB(const BasicBlock *bb);
 	bool invalidateVar(const OperandVar& var);
+	inline bool invalidateVar(const t::int32& addr) { return invalidateVar(OperandVar(addr)); }
 	bool invalidateTempVars();
 	bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);
 	bool findConstantValueOfTempVar(const OperandVar& var, t::int32& val);
 	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
-	bool updateAdd(OperandVar opd_to_update, OperandVar opd_modifier);
-	bool updateSub(OperandVar opd_to_update, OperandVar opd_modifier, bool reverse);
-	bool seekValue(const OperandVar& var, OperandConst& val);
 	
 	// inline list<LabelledPredicate>& currentLPList() const { return labelled_preds.hd(); }
 };

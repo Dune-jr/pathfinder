@@ -49,23 +49,23 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				// case IF:		// continue if condition cond is meet in register sr, else skip "jump" instructions
 					// TODO
 				case LOAD:	// reg <- MEM_type(addr)t
-					invalidateVar(OperandVar(reg));
+					invalidateVar(reg);
 					// waiting for LOAD/STORE support to make more out of it
 					make_pred = false;
 					break;
 				// case STORE:	// MEM_type(addr) <- reg
 					// waiting for LOAD/STORE support
 				case SCRATCH:
-					invalidateVar(OperandVar(d));
+					invalidateVar(d);
 					make_pred = false;
 					break;
 				case SET:
-					invalidateVar(OperandVar(d));
+					invalidateVar(d);
 					opd1 = new OperandVar(d);
 					opd2 = new OperandVar(a);
 					break;
 				case SETI:
-					invalidateVar(OperandVar(d));
+					invalidateVar(d);
 					opd1 = new OperandVar(d);
 					opd2 = new OperandConst(cst);
 					break;
@@ -75,7 +75,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case CMPU:
 					opd1 = new OperandVar(d);
 					{
-						invalidateVar(OperandVar(d));
+						invalidateVar(d);
 						Operand *opd21 = new OperandVar(a);
 						Operand *opd22 = new OperandVar(b);
 						opd2 = new OperandArithExpr(ARITHOPR_CMP, *opd21, *opd22);
@@ -85,19 +85,19 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					opd1 = new OperandVar(d);
 					{
 						if(d == a) // d <- d+b
-						{
-							updateAdd(OperandVar(d), OperandVar(b));
+						{	// [d-b / d]
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(b)));
 							make_pred = false;
 						}
 						else if(d == b) // d <- d+a
-						{
-							updateAdd(OperandVar(d), OperandVar(a));
+						{	// [d-a / d]
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(a)));
 							make_pred = false;
 						}
 						else
 						{
 							// d is not related to a or b, invalidate predicates that involve d
-							invalidateVar(OperandVar(d));
+							invalidateVar(d);
 							Operand *opd21 = new OperandVar(a);
 							Operand *opd22 = new OperandVar(b);
 							opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
@@ -107,33 +107,32 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case SUB:
 					opd1 = new OperandVar(d);
 					{
-						// TODO: additional tests for updates
 						bool d_eq_a = d == a, d_eq_b = d == b;
 						if(d_eq_a)
 						{
 							if(d_eq_b) // d <- d-d
-							{	// d is set to 0!
-								invalidateVar(OperandVar(d));
+							{	// [0 / d], d is set to 0!
+								invalidateVar(d);
 								opd1 = new OperandVar(d);
 								opd2 = new OperandConst(0);
 							}
 							else // d <- d-b
-							{	// [d + b / d]
-								update(d, OperandArithExpr(ARITHOPR_ADD, d, b));
-								// updateSub(OperandVar(d), OperandVar(b), false); // TODO remove these comments
+							{	// [d+b / d]
+								update(OperandVar(d), OperandArithExpr(ARITHOPR_ADD, OperandVar(d), OperandVar(b)));
 								make_pred = false;
 							}
 						}
 						else
 						{
 							if(d_eq_b) // d <- a-d
-							{	// [a - d / d] // This function f has a f°f=Id property
-								updateSub(OperandVar(d), OperandVar(a), true);
+							{	// [a-d / d], this function f has a f°f=Id property
+								update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(a), OperandVar(d)));
 								make_pred = false;
 							}
 							else // d <- a-b
 							{
-								invalidateVar(OperandVar(d));
+								invalidateVar(d);
+								opd1 = new OperandVar(d);
 								Operand *opd21 = new OperandVar(a);
 								Operand *opd22 = new OperandVar(b);
 								opd2 = new OperandArithExpr(ARITHOPR_SUB, *opd21, *opd22);
@@ -156,14 +155,14 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							DBG(COLOR_Blu << "  [t1 identified as 0x" << io::hex(val) << "]")
 						
 						// only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
-						invalidateVar(OperandVar(d));
+						invalidateVar(d);
 						Operand *opd22 = new OperandConst(1 << val); // 2^val
 						opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
 					}
 					break;
 				case ASR: // TODO test: is this really legit?
 					assert(!UNTESTED_CRITICAL);
-					DBG(COLOR_BIRed << "Untested operand running!")
+					DBG(COLOR_BIRed << "Untested operator running!")
 				case SHR:
 					opd1 = new OperandVar(d);
 					{
@@ -179,60 +178,158 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							DBG(COLOR_Blu << "  [t1 identified as 0x" << io::hex(val) << "]")
 						
 						// only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
-						invalidateVar(OperandVar(d));
+						invalidateVar(d);
 						Operand *opd22 = new OperandConst(1 << val); // 2^val
 						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
 					}
 					break;
 				case NEG: // TODO test
 					assert(!UNTESTED_CRITICAL);
-					DBG(COLOR_BIRed << "Untested operand running!")
+					DBG(COLOR_BIRed << "Untested operator running!")
 					opd1 = new OperandVar(d);
 					{
 						// TODO: additional tests to update instead of invalidate
-						invalidateVar(OperandVar(d));
+						invalidateVar(d);
 						Operand *opd21 = new OperandConst(-1);
 						Operand *opd22 = new OperandVar(a);
 						opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
 					}
 					break;
-				// case NOT:		// d <- ~a
-				// case AND:		// d <- a & b
-				// case OR:			// d <- a | b
-				// case XOR:		// d <- a ^ b
+				case NOT:		// d <- ~a
+				case AND:		// d <- a & b
+				case OR:		// d <- a | b
+				case XOR:		// d <- a ^ b
+					assert(!UNTESTED_CRITICAL);
+					DBG(COLOR_BIRed << "Unimplemented operator running!")
+					invalidateVar(d);
+					break;
 				case MULU:
+					assert(!UNTESTED_CRITICAL);
+					DBG(COLOR_BIRed << "Untested unsigned variant running!")
 				case MUL:
+					assert(!UNTESTED_CRITICAL);
+					DBG(COLOR_BIRed << "Untested operator running!")
 					opd1 = new OperandVar(d);
 					{
-						// TODO: additional tests to update instead of invalidate
-						invalidateVar(OperandVar(d));
-						Operand *opd21 = new OperandVar(a);
-						Operand *opd22 = new OperandVar(b);
-						opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
+						if(d == a)
+						{
+							if(d == b) // d <- d*d
+							{
+								assert(!UNTESTED_CRITICAL);
+								DBG(COLOR_BIRed << "Untested case of operator MUL running!")
+								invalidateVar(d); // we have no way to do [sqrt(d) / d], so just invalidate
+								opr = CONDOPR_LE; // and add a "0 <= d" predicate
+								opd1 = new OperandConst(0);
+								opd2 = new OperandVar(d);
+							}
+							else // d <- d*b
+							{	// [d/b / d] // we will have to assume that 0/0 is scratch!
+								assert(!UNTESTED_CRITICAL);
+								DBG(COLOR_BIRed << "Untested case of operator MUL running!")
+								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)));
+								
+								// TODO: is this good?
+								// we also add a predicate to say that d is now a multiple of b
+								{
+									Operand *opd11 = new OperandVar(d);
+									Operand *opd12 = new OperandVar(b);
+									opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12); // d % b (%0 is to consider!)
+								}
+								opd2 = new OperandConst(0);
+							}
+						}
+						else
+						{
+							if(d == b) // d <- a*d
+							{	// [d/a / d] // we will have to assume that 0/0 is scratch!
+								assert(!UNTESTED_CRITICAL);
+								DBG(COLOR_BIRed << "Untested case of operator MUL running!")
+								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)));
+								
+								// TODO: is this good?
+								// we also add a predicate to say that d is now a multiple of a
+								{
+									Operand *opd11 = new OperandVar(d);
+									Operand *opd12 = new OperandVar(a);
+									opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12); // d % a (%0 is to consider!)
+								}
+								opd2 = new OperandConst(0);
+							}
+							else // d <- a*b
+							{
+								assert(!UNTESTED_CRITICAL);
+								DBG(COLOR_BIRed << "Untested case of operator MUL running!")
+								opd1 = new OperandVar(d);
+								invalidateVar(d);
+								{
+									Operand *opd21 = new OperandVar(a);
+									Operand *opd22 = new OperandVar(b);
+									opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
+								}
+							}
+						}
+						break;
 					}
 					break;
 				case DIVU:
+					assert(!UNTESTED_CRITICAL);
+					DBG(COLOR_BIRed << "Untested unsigned variant running!")
 				case DIV:
-					opd1 = new OperandVar(d);
+					assert(!UNTESTED_CRITICAL);
+					DBG(COLOR_BIRed << "Untested operator running!")
+					if(d == a)
 					{
-						// TODO: additional tests to update instead of invalidate
-						invalidateVar(OperandVar(d));
-						Operand *opd21 = new OperandVar(a);
-						Operand *opd22 = new OperandVar(b);
-						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
+						if(d == b) // d <- d / d
+						{	// [1 / d]
+							// TODO: this should be okay to assume d != 0, right? otherwise the program is faulty?
+							invalidateVar(d);
+							opd1 = new OperandVar(d);
+							opd2 = new OperandConst(1);
+						}
+						else // d <- d / a
+						{
+							invalidateVar(d);
+							make_pred = false;
+							// we cannot just write [d*a / d] because we lost info
+						}
 					}
+					else
+					{
+						if(d == b) // d <- a / d
+						{
+							invalidateVar(d);
+							make_pred = false;
+							// we cannot just write [d*b / d] because we lost info
+						}
+						else // d <- a / b
+						{	// + (d = a/b)
+							opd1 = new OperandVar(d);
+							invalidateVar(d);
+							{
+								Operand *opd21 = new OperandVar(a);
+								Operand *opd22 = new OperandVar(b);
+								opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
+							}
+						}
+					}
+					break;
 				case MODU:
 				case MOD:
+					invalidateVar(d);
+					if(d == a || d == b) // TODO: it's right to not handle these weird cases, right?
+					{
+						make_pred = false;
+						break;
+					}
 					opd1 = new OperandVar(d);
 					{
-						// TODO: additional tests to update instead of invalidate
-						invalidateVar(OperandVar(d));
 						Operand *opd21 = new OperandVar(a);
 						Operand *opd22 = new OperandVar(b);
 						opd2 = new OperandArithExpr(ARITHOPR_MOD, *opd21, *opd22);
 					}
+					break;
 				case SPEC: // special instruction (d: code, cst: sub-code)
-					invalidateVar(OperandVar(d));
+					invalidateVar(d);
 					make_pred = false;
 					break;
 				default:
@@ -301,7 +398,6 @@ bool Analysis::invalidateVar(const OperandVar& opd_var)
 	
 	return rtn;
 }
-
 
 // This function will try to keep the information contained in the tempvars 
 // by replacing them by their values in other predicates before removing them
@@ -461,20 +557,6 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	//if(rtn)
 		//updateGeneratedTempVarsList(opd_modifier);		
 	return rtn;
-}
-
-// updates generated_preds and labelled_preds
-bool Analysis::updateAdd(OperandVar opd_to_update, OperandVar opd_modifier)
-{
-	return update(opd_to_update, OperandArithExpr(ARITHOPR_ADD, opd_to_update, opd_modifier));
-}
-
-bool Analysis::updateSub(OperandVar opd_to_update, OperandVar opd_modifier, bool reverse)
-{
-	return update(opd_to_update, OperandArithExpr(
-		ARITHOPR_SUB,
-		reverse ? opd_modifier : opd_to_update,
-		reverse ? opd_to_update : opd_modifier));
 }
 
 /*

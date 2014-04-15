@@ -23,10 +23,9 @@ public:
 
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
-		makeRainbow(); // to see more easily the beginning of output
-		// retrieving the main CFG
-		workspace()->require(COLLECTED_CFG_FEATURE, props);
-        const CFGCollection *cfgs = INVOLVED_CFGS(workspace());
+		// makeRainbow(); // to easily see where the output begins
+		workspace()->require(COLLECTED_CFG_FEATURE, props); 
+        const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
 		assert(cfgs->count() > 0); // make sure we have at least one CFG
 		CFG *cfg = cfgs->get(0); // then get the first CFG
 	
