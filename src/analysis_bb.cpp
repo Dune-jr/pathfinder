@@ -1,5 +1,6 @@
 #include <otawa/cfg/BasicBlock.h>
 #include <otawa/sem/inst.h>
+#include <otawa/sem/PathIter.h>
 #include <elm/string/String.h>
 #include "predicate.h"
 #include "operand.h"
@@ -10,61 +11,78 @@ using namespace otawa::sem;
 
 void Analysis::analyzeBB(const BasicBlock *bb)
 {
+	SLList<Predicate> generated_preds_before_condition;
+	sem::inst condition;
 	generated_preds.clear();
+	generated_preds_taken.clear();
+	//previous_paths_preds.clear();	
 	
-	// Parse assembly instructions
+	// parse assembly instructions
 	for(BasicBlock::InstIterator insts(bb); insts; insts++)
 	{
 		DBG(COLOR_Pur << *insts << COLOR_RCol)
-		
 		Block block;
 		insts->semInsts(block);
-		// TODO: update temp_vars_max_id
 		
-		// Parse semantical instructions
-		for(Block::InstIter seminsts(block); seminsts; seminsts++)
+		PathIter seminsts;
+		for(seminsts.start(*insts); seminsts; seminsts++)
+		// parse semantical instructions
+		//for(Block::InstIter seminsts(block); seminsts; seminsts++)
 		{
 			DBG(COLOR_IPur << *seminsts << COLOR_RCol)
 			
-			Operand *opd1 = NULL;
-			Operand *opd2 = NULL;
+			if(seminsts.isCond())
+			{
+				// backup the list of generated predicates before entering the condition
+				generated_preds_before_condition = generated_preds; // side effect: reverses the order of the list
+				DBG(COLOR_IBlu << "(Parsing taken path)")
+			}
+			if(seminsts.pathEnd())
+			{ 	// dumping the current generated_preds into the previous_paths_preds list
+				invalidateTempVars(); // do the end-of-instruction tempvar invalidation first
+				DBG(COLOR_IBlu << "(Parsing not taken path)")
+				generated_preds_taken = generated_preds;
+				//previous_paths_preds += generated_preds;
+				generated_preds = generated_preds_before_condition;
+				
+				DBG("condition is " << condition) // TODO: next step to implement is here!
+				continue;
+			}
+			
+			Operand *opd1 = NULL, *opd2 = NULL;
 			condoperator_t opr = CONDOPR_EQ; // Default is =
+			bool make_pred = false;
 			
-			// some shortcuts
-			const t::int16& a = seminsts.a();
-			const t::int16& b = seminsts.b();
-			const t::int16& d = seminsts.d();
+			// some shortcuts (the seminsts.F functions are not called at this point)
+			const t::int16& a = seminsts.a(), b = seminsts.b(), d = seminsts.d();
 			const t::int32& cst = seminsts.cst();
-			const t::int16& reg = seminsts.reg();
-			// const t::int16& addr = seminsts.addr();
+			const t::int16& reg = seminsts.reg(); //, addr = seminsts.addr();
 			
-			bool make_pred = true;
 			// TODO: test unsigned MUL DIV MOD CMP
-			// TODO: do not generate t1 = t1 + t2 !!! update preds instead
-			//       and only generate if we have sth like t1 = t3 + t2
 			switch(seminsts.op())
 			{
 				// case BRANCH:	// perform a branch on content of register a
 					// TODO
-				// case IF:		// continue if condition cond is meet in register sr, else skip "jump" instructions
-					// TODO
+				case IF:		// continue if condition cond is meet in register sr, else skip "jump" instructions
+					condition = *seminsts;
+					break;
 				case LOAD:	// reg <- MEM_type(addr)t
 					invalidateVar(reg);
 					// waiting for LOAD/STORE support to make more out of it
-					make_pred = false;
 					break;
 				// case STORE:	// MEM_type(addr) <- reg
 					// waiting for LOAD/STORE support
 				case SCRATCH:
 					invalidateVar(d);
-					make_pred = false;
 					break;
 				case SET:
+					make_pred = true;
 					invalidateVar(d);
 					opd1 = new OperandVar(d);
 					opd2 = new OperandVar(a);
 					break;
 				case SETI:
+					make_pred = true;
 					invalidateVar(d);
 					opd1 = new OperandVar(d);
 					opd2 = new OperandConst(cst);
@@ -73,6 +91,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					// nothing to do until we support LOAD/STORE
 				case CMP:
 				case CMPU:
+					make_pred = true;
 					opd1 = new OperandVar(d);
 					{
 						invalidateVar(d);
@@ -87,17 +106,16 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						if(d == a) // d <- d+b
 						{	// [d-b / d]
 							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(b)));
-							make_pred = false;
 						}
 						else if(d == b) // d <- d+a
 						{	// [d-a / d]
 							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(a)));
-							make_pred = false;
 						}
 						else
 						{
 							// d is not related to a or b, invalidate predicates that involve d
 							invalidateVar(d);
+							make_pred = true;
 							Operand *opd21 = new OperandVar(a);
 							Operand *opd22 = new OperandVar(b);
 							opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
@@ -119,7 +137,6 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							else // d <- d-b
 							{	// [d+b / d]
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_ADD, OperandVar(d), OperandVar(b)));
-								make_pred = false;
 							}
 						}
 						else
@@ -127,11 +144,11 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							if(d_eq_b) // d <- a-d
 							{	// [a-d / d], this function f has a f°f=Id property
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(a), OperandVar(d)));
-								make_pred = false;
 							}
 							else // d <- a-b
 							{
 								invalidateVar(d);
+								make_pred = true;
 								opd1 = new OperandVar(d);
 								Operand *opd21 = new OperandVar(a);
 								Operand *opd22 = new OperandVar(b);
@@ -149,13 +166,14 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						if(!findConstantValueOfTempVar(b, val))
 						{
 							DBG(COLOR_Blu << "  [t1 could not be identified as a constant value]")
-							make_pred = false;
+							break;
 						}
 						else
 							DBG(COLOR_Blu << "  [t1 identified as 0x" << io::hex(val) << "]")
 						
 						// only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
 						invalidateVar(d);
+						make_pred = true;
 						Operand *opd22 = new OperandConst(1 << val); // 2^val
 						opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
 					}
@@ -172,13 +190,14 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						if(!findConstantValueOfTempVar(b, val))
 						{
 							DBG(COLOR_Blu << "  [t1 could not be identified as a constant value]")
-							make_pred = false;
+							break;
 						}
 						else
 							DBG(COLOR_Blu << "  [t1 identified as 0x" << io::hex(val) << "]")
 						
 						// only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
 						invalidateVar(d);
+						make_pred = true;
 						Operand *opd22 = new OperandConst(1 << val); // 2^val
 						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
 					}
@@ -186,6 +205,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case NEG: // TODO test
 					assert(!UNTESTED_CRITICAL);
 					DBG(COLOR_BIRed << "Untested operator running!")
+					make_pred = true;
 					opd1 = new OperandVar(d);
 					{
 						// TODO: additional tests to update instead of invalidate
@@ -209,6 +229,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case MUL:
 					assert(!UNTESTED_CRITICAL);
 					DBG(COLOR_BIRed << "Untested operator running!")
+					make_pred = true;
 					opd1 = new OperandVar(d);
 					{
 						if(d == a)
@@ -282,14 +303,14 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						if(d == b) // d <- d / d
 						{	// [1 / d]
 							// TODO: this should be okay to assume d != 0, right? otherwise the program is faulty?
-							invalidateVar(d);
+							make_pred = true;
 							opd1 = new OperandVar(d);
 							opd2 = new OperandConst(1);
+							invalidateVar(d);
 						}
 						else // d <- d / a
 						{
 							invalidateVar(d);
-							make_pred = false;
 							// we cannot just write [d*a / d] because we lost info
 						}
 					}
@@ -298,11 +319,11 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						if(d == b) // d <- a / d
 						{
 							invalidateVar(d);
-							make_pred = false;
-							// we cannot just write [d*b / d] because we lost info
+							
 						}
 						else // d <- a / b
 						{	// + (d = a/b)
+							make_pred = true;
 							opd1 = new OperandVar(d);
 							invalidateVar(d);
 							{
@@ -317,10 +338,8 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case MOD:
 					invalidateVar(d);
 					if(d == a || d == b) // TODO: it's right to not handle these weird cases, right?
-					{
-						make_pred = false;
 						break;
-					}
+					make_pred = true;
 					opd1 = new OperandVar(d);
 					{
 						Operand *opd21 = new OperandVar(a);
@@ -330,25 +349,30 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					break;
 				case SPEC: // special instruction (d: code, cst: sub-code)
 					invalidateVar(d);
-					make_pred = false;
 					break;
 				default:
 					make_pred = false;
 			}
 			if(make_pred)
 			{
+				assert(opd1);
+				assert(opd2);
 				DBG(COLOR_IGre << "  + " << Predicate(opr, *opd1, *opd2))
 				generated_preds += Predicate(opr, *opd1, *opd2);
-				//updateGeneratedTempVarsList(*opd1);
-				//updateGeneratedTempVarsList(*opd2);
 			}
 		}
-		// all the temporary registers are freed at the end of an assembly instruction,
-		// so invalidate them
+		// all tempvars are freed at the end of an assembly instruction, so invalidate them
 		invalidateTempVars();
 	}
 	
-	DBG("Predicates generated by the BB: " << generated_preds)
+	if(generated_preds_taken)
+	{
+		DBG("Predicates generated by the BB: ")
+		DBG("|-> taken path: " << generated_preds_taken)
+		DBG("|-> not taken path: " << generated_preds)
+	}
+	else
+		DBG("Predicates generated by the BB: " << generated_preds)
 }
 
 // returns true if a variable has been invalidated
@@ -450,7 +474,7 @@ bool Analysis::invalidateTempVars()
 	return rtn;
 }
 
-bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr) //, const SLList<Predicate>::Iterator& start)
+bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 {
 	// if(!start) return false; // already at the end of the list				
 	bool rtn = false;

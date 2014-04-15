@@ -88,7 +88,8 @@ private:
 	};
 	
 	SLList<Predicate> generated_preds;
-	int max_tempvars; // This is more of an optimization thing than a necessary measure
+	SLList<Predicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here
+											 // and the not taken preds will stay in generated_preds
 	
 	// The actual struct
 	SLList<Path>						infeasible_paths;
