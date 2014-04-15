@@ -28,10 +28,13 @@ unsigned int Predicate::countTempVars() const
 	return _opd1->countTempVars() + _opd2-> countTempVars();
 }
 
+ // we are looking for a t1 = X or X = t1 pattern, with X being ground
 bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 {
+	if(_opr != CONDOPR_EQ) // not an equality, abort
+		return false;
 	if(countTempVars() != 1) // no temp vars, several temp vars, or several occurrences of the same temp var
-		return false; // This could really use an improvement
+		return false; // this could use an improvement
 		
 	bool rtn1 = _opd1->getIsolatedTempVar(temp_var, expr);
 	bool rtn2 = _opd2->getIsolatedTempVar(temp_var, expr);
@@ -99,9 +102,7 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr)
 io::Output& operator<<(io::Output& out, const Predicate& p)
 {
 	// Only binary conditional operators in our implementation
-	out 
-		//<< "(" 
-		<< *(p._opd1) << " " << p._opr << " " << *(p._opd2);
-		//<< ")"; // (... * ...)
+	out << *(p._opd1) << " " << p._opr << " " << *(p._opd2); // ... @ ...
+		//<< ")"; // (... @ ...)
 	return out;
 }
