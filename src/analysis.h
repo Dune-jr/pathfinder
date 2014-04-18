@@ -3,7 +3,9 @@
 
 #include <otawa/otawa.h>
 #include <elm/genstruct/SLList.h>
+#include <otawa/sem/inst.h>
 #include "predicate.h"
+#include "debug.h"
 
 using namespace otawa;
 using namespace elm::genstruct;
@@ -31,7 +33,7 @@ template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l)
 	
 	if(indented_output)
 		addIndents(out, indent++);
-	out << "[";
+	out << COLOR_Bold << "[" << COLOR_NoBold;
 	if(indented_output)
 		out << io::endl;
 	bool first = true;
@@ -60,8 +62,8 @@ template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l)
 		out << io::endl;
 		addIndents(out, --indent);
 	}
-	out << "]";
-	return out;
+	
+	return (out << COLOR_Bold << "]" << COLOR_NoBold);
 };
 
 class Analysis {
@@ -101,6 +103,7 @@ private:
 	void initializeAnalysis();
 	SLList<LabelledPredicate> getTopList();
 	void setTopList(const SLList<LabelledPredicate>& lps);
+	void addElemToTopList(const SLList<LabelledPredicate>& lps); // TODO: replace code by this function!!!
 	
 	// analysis_cfg.cpp
 	void processBB(BasicBlock *bb);
@@ -114,10 +117,10 @@ private:
 	inline bool invalidateVar(const t::int32& addr) { return invalidateVar(OperandVar(addr)); }
 	bool invalidateTempVars();
 	bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);
-	bool findConstantValueOfTempVar(const OperandVar& var, t::int32& val);
 	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
-	
-	// inline list<LabelledPredicate>& currentLPList() const { return labelled_preds.hd(); }
+	bool findConstantValueOfTempVar(const OperandVar& var, t::int32& val);
+	bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
+	Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken);
 };
 
 #endif

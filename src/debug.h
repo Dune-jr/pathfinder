@@ -107,4 +107,7 @@ public:
 #define COLOR_On_Whi "\e[47m"
 #define COLOR_On_IWhi "\e[0;107m"
 
+#define COLOR_Bold "\e[1m"
+#define COLOR_NoBold "\e[21m"
+
 #endif

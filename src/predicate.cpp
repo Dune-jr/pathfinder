@@ -75,7 +75,7 @@ bool Predicate::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 
 bool Predicate::operator==(const Predicate& p) const
 {
-	return (_opr == p._opr) && (*_opd1 == *(p._opd1)) && (*_opd2 == *(p._opd2));
+	return (_opr == p._opr) && (*_opd1 == *p._opd1) && (*_opd2 == *p._opd2);
 }
 
 io::Output& operator<<(io::Output& out, const condoperator_t& opr)
@@ -85,13 +85,21 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr)
 			out << "<";
 			break;
 		case CONDOPR_LE:
-			out << "<=";
+#			ifndef NO_UTF8
+				out << "≤";
+#			else
+				out << "<=";
+#			endif
 			break;
 		case CONDOPR_EQ:
 			out << "=";
 			break;
 		case CONDOPR_NE:
-			out << "!=";
+#			ifndef NO_UTF8
+				out << "≠";
+#			else
+				out << "!=";
+#			endif
 			break;
 		default:
 			out << "???";
@@ -102,7 +110,5 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr)
 io::Output& operator<<(io::Output& out, const Predicate& p)
 {
 	// Only binary conditional operators in our implementation
-	out << *(p._opd1) << " " << p._opr << " " << *(p._opd2); // ... @ ...
-		//<< ")"; // (... @ ...)
-	return out;
+	return (out << *(p._opd1) << " " << p._opr << " " << *(p._opd2));
 }

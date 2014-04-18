@@ -10,9 +10,8 @@ OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }
 Operand* OperandConst::copy() const { return new OperandConst(_value); }
 io::Output& OperandConst::print(io::Output& out) const
 {
-	//out << "0x" << io::hex(_value);
-	out << _value;
-	return out;
+	//return (out << "0x" << io::hex(_value));
+	return (out << _value);
 }
 bool OperandConst::operator==(const Operand& o) const
 {
@@ -74,45 +73,40 @@ bool OperandVar::involvesVariable(const OperandVar& opdv) const
 bool OperandVar::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return false; }
 
 // Operands: Arithmetic Expressions
-OperandArithExpr::OperandArithExpr(arithoperator_t opr_, const Operand& opd1_, const Operand& opd2_)
-	: opr(opr_)
+OperandArithExpr::OperandArithExpr(arithoperator_t opr, const Operand& opd1_, const Operand& opd2_)
+	: _opr(opr)
 {
 	opd1 = opd1_.copy();
 	opd2 = opd2_.copy();
 }
 OperandArithExpr::OperandArithExpr(const OperandArithExpr& opd)
-	: opr(opd.opr)
+	: _opr(opd._opr)
 {
 	opd1 = opd.opd1->copy();
 	opd2 = opd.opd2->copy();
 }
-Operand* OperandArithExpr::copy() const { return new OperandArithExpr(opr, *opd1, *opd2); }
+Operand* OperandArithExpr::copy() const { return new OperandArithExpr(_opr, *opd1, *opd2); }
 io::Output& OperandArithExpr::print(io::Output& out) const
 {
-	switch(opr) {
-		case ARITHOPR_NEG:
-			out << "-(" << *opd1 << ")";
-			break;
-		case ARITHOPR_ADD:
-			out << "(" << *opd1 << " + " << *opd2 << ")";
-			break;
-		case ARITHOPR_SUB:
-			out << "(" << *opd1 << " - " << *opd2 << ")";
-			break;
-		case ARITHOPR_MUL:
-			out << "(" << *opd1 << " * " << *opd2 << ")";
-			break;
-		case ARITHOPR_DIV:
-			out << "(" << *opd1 << " / " << *opd2 << ")";
-			break;
-		case ARITHOPR_MOD:
-			out << "(" << *opd1 << " mod " << *opd2 << ")";
-			break;
-		case ARITHOPR_CMP:
-			out << "(" << *opd1 << " ~ " << *opd2 << ")";
-			break;
-		default:
-			out << "??opr??";
+	if(isUnary())
+	{
+		out << _opr;
+		if(opd1->kind() == OPERAND_ARITHEXPR)
+			out << "(" << *opd1 << ")";
+		else
+			out << *opd1;
+	}
+	else
+	{
+		if(opd1->kind() == OPERAND_ARITHEXPR)
+			out << "(" << *opd1 << ")";
+		else
+			out << *opd1;
+		out << " " << _opr << " ";
+		if(opd2->kind() == OPERAND_ARITHEXPR)
+			out << "(" << *opd2 << ")";
+		else
+			out << *opd2;
 	}
 	return out;
 }
@@ -121,7 +115,7 @@ bool OperandArithExpr::operator==(const Operand& o) const
 	if(o.kind() == kind())
 	{
 		OperandArithExpr& o_arith = (OperandArithExpr&)o; // Force conversion
-		return (opr == o_arith.opr) && (*opd1 == *(o_arith.opd1)) && (*opd2 == *(o_arith.opd2));
+		return (_opr == o_arith._opr) && (*opd1 == *(o_arith.opd1)) && (*opd2 == *(o_arith.opd2));
 	}
 	else
 		return false; // Operand types are not matching
@@ -174,7 +168,7 @@ bool OperandArithExpr::evalConstantOperand(OperandConst& val) const
 				break;
 			case ARITHOPR_DIV:
 				if(val2.value() == 0)
-					return false; // TODO hugues: should we raise some alert that there is a bug in the assembly code?
+					return false;
 				val = OperandConst(val1.value() / val2.value());
 				break;
 			case ARITHOPR_MOD:
@@ -211,5 +205,53 @@ bool OperandArithExpr::updateVar(const OperandVar& opdv, const Operand& opd_modi
 	
 	return rtn;
 }
-bool OperandArithExpr::isUnary() const { return opr < ARITHOPR_ADD; }
-bool OperandArithExpr::isBinary() const { return opr >= ARITHOPR_ADD; }
+bool OperandArithExpr::isUnary() const { return _opr < ARITHOPR_ADD; }
+bool OperandArithExpr::isBinary() const { return _opr >= ARITHOPR_ADD; }
+
+io::Output& operator<<(io::Output& out, operand_kind_t kind)
+{
+	switch(kind)
+	{		
+		case OPERAND_CONST:
+			out << "(CONST)";
+			break;
+		case OPERAND_VAR:
+			out << "(VAR)";
+			break;
+		case OPERAND_ARITHEXPR:
+			out << "(ARITHEXPR)";
+			break;
+	}
+	return out;
+}
+io::Output& operator<<(io::Output& out, arithoperator_t opr)
+{
+	switch(opr)
+	{
+		case ARITHOPR_NEG:
+			out << "-";
+			break;
+		case ARITHOPR_ADD:
+			out << "+";
+			break;
+		case ARITHOPR_SUB:
+#			ifndef NO_UFT8
+				out << "−";
+#			else
+				out << "-";
+#			endif
+			break;
+		case ARITHOPR_MUL:
+			out << "*";
+			break;
+		case ARITHOPR_DIV:
+			out << "/";
+			break;
+		case ARITHOPR_MOD:
+			out << "mod";
+			break;
+		case ARITHOPR_CMP:
+			out << "~";
+	}
+	return out;
+}

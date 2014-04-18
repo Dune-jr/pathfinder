@@ -15,8 +15,14 @@ Analysis::LabelledPredicate::LabelledPredicate(const Predicate& pred, const Edge
 	
 io::Output& Analysis::LabelledPredicate::print(io::Output &out) const
 {
-	out << "(" << _pred << " | "  << _label->source()->number() << "->" << _label->target()->number() << ")";
-	return out;
+	return (out << "(" << _pred << " | "  << _label->source()->number() << "->" << _label->target()->number() << ")");
+}
+
+void Analysis::addElemToTopList(const SLList<LabelledPredicate>& lps)
+{	
+	SLList<LabelledPredicate> topList = getTopList(); // get topList
+	topList.addAll(lps);							  // append to topList
+	setTopList(topList); 							  // set topList as new first item of attribute labelled_preds
 }
 
 SLList<Analysis::LabelledPredicate> Analysis::getTopList()

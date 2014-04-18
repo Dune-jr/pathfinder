@@ -35,5 +35,6 @@ int main(int argc, char** argv)
 		f4();
 	}
 	printf("%d %d", y, z);
+	//return x;
 	return 0;
 }

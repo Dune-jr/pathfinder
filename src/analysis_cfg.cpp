@@ -16,9 +16,8 @@ using namespace elm::genstruct;
 using namespace elm::io;
 
 void Analysis::initializeAnalysis()
-{
-	// labelled_preds := [[]]
-	labelled_preds += null<LabelledPredicate>(); // Adds an empty list as first element
+{	// labelled_preds := [[]]
+	labelled_preds += null<LabelledPredicate>(); // add an empty list as first element
 }
 
 // WARNING: atm, this function assumes we have NO LOOPS!
@@ -26,7 +25,7 @@ void Analysis::processCFG(CFG* cfg)
 {
 	DBG(COLOR_Whi << "Processing CFG " << cfg)
 	processBB(cfg->firstBB());
-	DBG("\e[4mResult of the analysis: " << COLOR_RCol << labelled_preds)
+	// DBG("\e[4mResult of the analysis: " << COLOR_RCol << labelled_preds)
 }
 
 void Analysis::processBB(BasicBlock* bb)
@@ -38,12 +37,14 @@ void Analysis::processBB(BasicBlock* bb)
 	}
 		
 	DBG(COLOR_Whi << "Processing " << bb)
-
-	// may remove some of the labelled predicates
-	// generates a list of predicates in generated_preds
-	analyzeBB(bb);
-	
+	analyzeBB(bb); // generates lists of predicates in generated_preds and generated_preds_taken	
 	assert(labelled_preds); // Assert that the list of lists we are modifying is not empty
+	
+	// these will be overwritten by further analysis, so back them up
+	SLList<Predicate> generated_preds_backup	   = generated_preds;
+	SLList<Predicate> generated_preds_taken_backup = generated_preds_taken;
+	SLList<LabelledPredicate> top_list_backup	   = getTopList();
+	
 	int edgeId = 0;
 	for(BasicBlock::OutIterator outs(bb); outs; outs++)
 	{
@@ -52,16 +53,18 @@ void Analysis::processBB(BasicBlock* bb)
 		|| outs->kind() == Edge::VIRTUAL
 		|| outs->kind() == Edge::VIRTUAL_RETURN) // Filter out irrelevant edges (calls...)
 		{	
-			if(edgeId++) // If this is not the first valid edge
-				// labelled_preds += labelled_preds.first(); // then duplicate the list we are working on
-				labelled_preds += null<LabelledPredicate>(); // TODO: is this the right move?
+			// TODO Hugues: is there a way without using the ternary operator?
+			SLList<Predicate>& relevant_preds = (outs->kind() == Edge::TAKEN) ?
+				generated_preds_taken_backup :
+				generated_preds_backup;
 			
-			// Label our list of predicates with the current edge then append it
-			SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(generated_preds, *outs);
-			SLList<LabelledPredicate> topList = getTopList();
-			topList.addAll(labelled_analysis_result); // append to topList
-			setTopList(topList); // set topList as new first item of attribute labelled_preds
+			// label our list of predicates with the current edge then append it
+			SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(relevant_preds, *outs);
 			
+			if(edgeId++) // if this is not the first valid edge
+				labelled_preds += top_list_backup; // copy the predicates we have generated until this node into a new list
+			
+			addElemToTopList(labelled_analysis_result);
 			processEdge(*outs);
 		}
 	}

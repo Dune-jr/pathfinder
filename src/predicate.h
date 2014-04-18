@@ -21,13 +21,7 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr);
 // Predicate class
 class Predicate
 {
-private:
-	condoperator_t _opr; // operator
-	Operand *_opd1; // left operand
-	Operand *_opd2; // right operand
-
 public:
-	// Predicate(const Predicate& p): opr(p.opr), opd1(p.opd1), opd2(p.opd2) { } // TODO: useless atm?
 	Predicate(condoperator_t opr, Operand& opd1, Operand& opd2);
 	
 	inline condoperator_t opr() const { return _opr; }
@@ -42,6 +36,11 @@ public:
 	
 	bool operator== (const Predicate& p) const;
 	friend io::Output& operator<<(io::Output& out, const Predicate& p);
+	
+private:
+	condoperator_t _opr; // operator
+	Operand *_opd1; // left operand
+	Operand *_opd2; // right operand
 };
 
 #endif
