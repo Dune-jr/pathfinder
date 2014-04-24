@@ -25,15 +25,13 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 		insts->semInsts(block);
 		
 		PathIter seminsts;
+		// parse semantical instructions with PathIter
 		for(seminsts.start(*insts); seminsts; seminsts++)
-		// parse semantical instructions
-		//for(Block::InstIter seminsts(block); seminsts; seminsts++)
 		{
 			DBG(COLOR_IPur << *seminsts)
 			
 			if(seminsts.isCond()) // IF
-			{
-				// backup the list of generated predicates before entering the condition
+			{	// backup the list of generated predicates before entering the condition
 				generated_preds_before_condition = generated_preds; // side effect: reverses the order of the list
 				DBG(COLOR_IBlu << "(Parsing taken path)")
 			}
@@ -43,8 +41,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				DBG(COLOR_IBlu << "(Parsing not taken path)")
 				generated_preds_taken = generated_preds;
 				generated_preds = generated_preds_before_condition;
-				//previous_paths_preds += generated_preds;				
-				// continue;
+				//previous_paths_preds += generated_preds;
 			}
 			
 			Operand *opd1 = NULL, *opd2 = NULL;
