@@ -27,8 +27,8 @@ bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) cons
 	return false; // We haven't found an isolated tempvar
 }
 bool OperandConst::involvesVariable(const OperandVar& opdv) const { return false; }
-//bool OperandConst::evalConstantOperand(OperandConst& val) const { val = *this; return true; }
 bool OperandConst::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return false; }
+//bool OperandConst::evalConstantOperand(OperandConst& val) const { val = *this; return true; }
 
 // Operands: Variables
 OperandVar::OperandVar(t::int32 addr) : addr(addr) { }
@@ -68,9 +68,9 @@ bool OperandVar::involvesVariable(const OperandVar& opdv) const
 {
 	return opdv == *this;
 }
-//bool OperandVar::evalConstantOperand(OperandConst& val) const { return false; }
 // since the parent has to do the modification, and var has no child, return false
 bool OperandVar::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return false; }
+//bool OperandVar::evalConstantOperand(OperandConst& val) const { return false; }
 
 // Operands: Arithmetic Expressions
 OperandArithExpr::OperandArithExpr(arithoperator_t opr, const Operand& opd1_, const Operand& opd2_)
@@ -132,6 +132,80 @@ bool OperandArithExpr::involvesVariable(const OperandVar& opdv) const
 		return opd1->involvesVariable(opdv);
 	return opd1->involvesVariable(opdv) || opd2->involvesVariable(opdv);
 }
+
+bool OperandArithExpr::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
+{
+	bool rtn = false;
+	if(*opd1 == opdv)
+	{
+		opd1 = opd_modifier.copy();
+		rtn = true;
+	}
+	else
+		rtn |= opd1->updateVar(opdv, opd_modifier);
+		
+	if(*opd2 == opdv)
+	{
+		opd2 = opd_modifier.copy();
+		rtn = true;
+	}
+	else
+		rtn |= opd2->updateVar(opdv, opd_modifier);
+	
+	return rtn;
+}
+
+bool OperandArithExpr::isUnary() const { return _opr < ARITHOPR_ADD; }
+bool OperandArithExpr::isBinary() const { return _opr >= ARITHOPR_ADD; }
+
+io::Output& operator<<(io::Output& out, operand_kind_t kind)
+{
+	switch(kind)
+	{		
+		case OPERAND_CONST:
+			out << "(CONST)";
+			break;
+		case OPERAND_VAR:
+			out << "(VAR)";
+			break;
+		case OPERAND_ARITHEXPR:
+			out << "(ARITHEXPR)";
+			break;
+	}
+	return out;
+}
+io::Output& operator<<(io::Output& out, arithoperator_t opr)
+{
+	switch(opr)
+	{
+		case ARITHOPR_NEG:
+			out << "-";
+			break;
+		case ARITHOPR_ADD:
+			out << "+";
+			break;
+		case ARITHOPR_SUB:
+#			ifndef NO_UFT8
+				out << "−";
+#			else
+				out << "-";
+#			endif
+			break;
+		case ARITHOPR_MUL:
+			out << "*";
+			break;
+		case ARITHOPR_DIV:
+			out << "/";
+			break;
+		case ARITHOPR_MOD:
+			out << "mod";
+			break;
+		case ARITHOPR_CMP:
+			out << "~";
+	}
+	return out;
+}
+
 /*
 // An ArithExpr can be const if all of its children are const!
 bool OperandArithExpr::evalConstantOperand(OperandConst& val) const
@@ -184,74 +258,3 @@ bool OperandArithExpr::evalConstantOperand(OperandConst& val) const
 	return false; // One of the operands includes a variable so we cannot properly evaluate it
 }
 */
-bool OperandArithExpr::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
-{
-	bool rtn = false;
-	if(*opd1 == opdv)
-	{
-		opd1 = opd_modifier.copy();
-		rtn = true;
-	}
-	else
-		rtn |= opd1->updateVar(opdv, opd_modifier);
-		
-	if(*opd2 == opdv)
-	{
-		opd2 = opd_modifier.copy();
-		rtn = true;
-	}
-	else
-		rtn |= opd2->updateVar(opdv, opd_modifier);
-	
-	return rtn;
-}
-bool OperandArithExpr::isUnary() const { return _opr < ARITHOPR_ADD; }
-bool OperandArithExpr::isBinary() const { return _opr >= ARITHOPR_ADD; }
-
-io::Output& operator<<(io::Output& out, operand_kind_t kind)
-{
-	switch(kind)
-	{		
-		case OPERAND_CONST:
-			out << "(CONST)";
-			break;
-		case OPERAND_VAR:
-			out << "(VAR)";
-			break;
-		case OPERAND_ARITHEXPR:
-			out << "(ARITHEXPR)";
-			break;
-	}
-	return out;
-}
-io::Output& operator<<(io::Output& out, arithoperator_t opr)
-{
-	switch(opr)
-	{
-		case ARITHOPR_NEG:
-			out << "-";
-			break;
-		case ARITHOPR_ADD:
-			out << "+";
-			break;
-		case ARITHOPR_SUB:
-#			ifndef NO_UFT8
-				out << "−";
-#			else
-				out << "-";
-#			endif
-			break;
-		case ARITHOPR_MUL:
-			out << "*";
-			break;
-		case ARITHOPR_DIV:
-			out << "/";
-			break;
-		case ARITHOPR_MOD:
-			out << "mod";
-			break;
-		case ARITHOPR_CMP:
-			out << "~";
-	}
-	return out;
-}

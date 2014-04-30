@@ -35,7 +35,9 @@ public:
 
 // macros for debugging
 #define DBG_INFO() "\033[33m[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "]\033[0m "
+#define DBG_INFO_STD() "\033[33m[" << Debug::formattedDbgInfo(__FILE__, __LINE__).chars() << "]\033[0m "
 #define DBG(str) cout << DBG_INFO() << str << COLOR_RCol << io::endl;
+#define DBG_STD(str) std::cout << DBG_INFO_STD() << str << COLOR_RCol << io::endl;
 #define DBG_TEST(tested_cond, expected_cond) \
 	((tested_cond) == (expected_cond) ? "\033[92m" : "\033[91m") << \
 	((tested_cond) ? "true" : "false") << "\033[0m"

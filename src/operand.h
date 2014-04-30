@@ -3,9 +3,11 @@
 
 #include <elm/io.h>
 #include <elm/io/Output.h>
+#include <cvc4/expr/expr.h>
+#include <cvc4/expr/type.h>
 
 using namespace elm;
-
+	
 enum arithoperator_t
 {
 	// Unary
@@ -43,9 +45,9 @@ public:
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
 	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const = 0;
 	virtual bool involvesVariable(const OperandVar& opdv) const = 0;
-	//virtual bool evalConstantOperand(OperandConst& val) const = 0;
 	virtual bool updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0;
 	virtual operand_kind_t kind() const = 0;
+	virtual bool isComplete() const = 0;
 	virtual bool operator==(const Operand& o) const = 0;
 	friend io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
 	
@@ -60,15 +62,15 @@ public:
 	OperandConst(const OperandConst& opd);
 	OperandConst(t::int32 value);
 	
-	inline t::int32 value() { return _value; }
+	inline t::int32 value() const { return _value; }
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesVariable(const OperandVar& opdv) const;
-	//bool evalConstantOperand(OperandConst& val) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
+	inline bool isComplete() const { return true; }
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 	
@@ -90,9 +92,9 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesVariable(const OperandVar& opdv) const;
-	//bool evalConstantOperand(OperandConst& val) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
+	inline bool isComplete() const { return true; }
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
 	
@@ -119,16 +121,17 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesVariable(const OperandVar& opdv) const;
-	//bool evalConstantOperand(OperandConst& val) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
+	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && opd2->isComplete(); }
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
 	
 private:
 	arithoperator_t _opr;
 	Operand* opd1;
-	Operand* opd2; // unused if operator is unary	
+	Operand* opd2; // unused if operator is unary
+		
 	io::Output& print(io::Output& out) const;
 };
 

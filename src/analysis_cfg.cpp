@@ -10,6 +10,7 @@
 #include <otawa/cfg/BasicBlock.h>
 
 #include "analysis.h"
+#include "smt.h"
 #include "debug.h"
 
 using namespace elm::genstruct;
@@ -37,6 +38,8 @@ void Analysis::processBB(BasicBlock* bb)
 	}
 		
 	DBG(COLOR_Whi << "Processing " << bb)
+	SMT smt;
+	smt.seekInfeasiblePaths(getTopList(), infeasible_paths); // TODO move this
 	analyzeBB(bb); // generates lists of predicates in generated_preds and generated_preds_taken	
 	assert(labelled_preds); // Assert that the list of lists we are modifying is not empty
 	

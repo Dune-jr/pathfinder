@@ -2,6 +2,7 @@
 #define _PREDICATE_H
 
 #include <elm/io/Output.h>
+#include <cvc4/expr/expr.h>
 #include "operand.h"
 
 using namespace elm;
@@ -29,10 +30,13 @@ public:
 	inline Operand& rightOperand() const { return *_opd2; }
 	
 	inline bool isIdent() const { return (*_opd1 == *_opd2) && _opr == CONDOPR_EQ; }
+	inline bool isComplete() const { return _opd1->isComplete() && _opd2->isComplete(); }
 	bool involvesVariable(const OperandVar& opdv) const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
+	
+	CVC4::Expr toExpr();
 	
 	bool operator== (const Predicate& p) const;
 	friend io::Output& operator<<(io::Output& out, const Predicate& p);
