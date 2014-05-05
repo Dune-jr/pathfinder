@@ -2,7 +2,7 @@
 #define _OPERAND_H
 
 #include <elm/io.h>
-#include <elm/io/Output.h>
+#include <elm/io/Output.h> // TODO try and remove one of the two
 #include <cvc4/expr/expr.h>
 #include <cvc4/expr/type.h>
 
@@ -34,25 +34,33 @@ enum operand_kind_t
 	OPERAND_ARITHEXPR, // Arithmetic Expression
 };
 
-class OperandConst;
-class OperandVar;
-
 // Abstract Operand class
 class Operand
 {	
 public:
 	virtual Operand* copy() const = 0;
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
-	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const = 0;
-	virtual bool involvesVariable(const OperandVar& opdv) const = 0;
-	virtual bool updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0;
+	virtual bool getIsolatedTempVar(class OperandVar& temp_var, Operand*& expr) const = 0;
+	virtual bool involvesVariable(const class OperandVar& opdv) const = 0;
+	virtual bool updateVar(const class OperandVar& opdv, const Operand& opd_modifier) = 0;
 	virtual operand_kind_t kind() const = 0;
 	virtual bool isComplete() const = 0;
+	virtual void accept(class OperandVisitor& visitor) const = 0;
+	
 	virtual bool operator==(const Operand& o) const = 0;
 	friend io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
 	
 private:
 	virtual io::Output& print(io::Output& out) const = 0;
+};
+
+// The visitor: an abstract class
+class OperandVisitor
+{
+public:
+	virtual void visit(const class OperandConst& o) = 0;
+	virtual void visit(const class OperandVar& o) = 0;
+	virtual void visit(const class OperandArithExpr& o) = 0;
 };
 
 // Constant values
@@ -71,6 +79,8 @@ public:
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
 	inline bool isComplete() const { return true; }
+	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
+	
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 	
@@ -86,6 +96,7 @@ public:
 	OperandVar(const OperandVar& opd);
 	OperandVar(t::int32 addr);
 	
+	inline t::int32 getAddr() const { return addr; }
 	inline bool isTempVar() const { return addr < 0; }
 	
 	Operand* copy() const;
@@ -95,6 +106,8 @@ public:
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
 	inline bool isComplete() const { return true; }
+	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
+	
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
 	
@@ -124,6 +137,8 @@ public:
 	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && opd2->isComplete(); }
+	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
+	
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
 	
