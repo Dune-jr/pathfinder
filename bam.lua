@@ -3,7 +3,7 @@
 settings = NewSettings()
 
 -- Wall option
-if true or ScriptArgs["wall"]=="true" or ScriptArgs["Wall"]=="true" then
+if ScriptArgs["wall"]=="true" or ScriptArgs["Wall"]=="true" then
 	settings.cc.flags:Add("-Wall")	
 end
 

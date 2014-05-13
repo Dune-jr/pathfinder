@@ -10,10 +10,8 @@ Predicate::Predicate(condoperator_t opr, Operand& opd1, Operand& opd2) : _opr(op
 	_opd2 = opd2.copy();
 }
 
-// Test if the predicate is identity
-
 /**
- * @fn bool Predicate::isIdent(void);
+ * @fn inline bool Predicate::isIdent(void);
  * Test if the predicate is identity (X = X)
  */
 

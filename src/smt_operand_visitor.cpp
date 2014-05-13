@@ -40,9 +40,8 @@ void SMTOperandVisitor::visit(const class OperandArithExpr& o)
 		expr = em.mkExpr(kind, expr_left, expr_right);
 	}
 	else
-	{
-		expr = em.mkExpr(kind, expr_left); // this is the unary version of mkExpr
-	}
+		expr = em.mkExpr(kind, expr_left); // this is the unary version of mkExp
+		
 	visited = true;
 }
 

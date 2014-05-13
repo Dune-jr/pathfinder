@@ -33,15 +33,23 @@ void Analysis::processBB(BasicBlock* bb)
 {
 	if(bb->isExit())
 	{
-		DBG(COLOR_BIBlu << "EXIT block reached" << COLOR_RCol)
+		DBG(COLOR_BIYel << "EXIT block reached" << COLOR_RCol)
 		return;
 	}
 		
-	DBG(COLOR_Whi << "Processing " << bb)
+	// SMT call
+	// TODO: this should be put at a smarter place
 	SMT smt;
-	smt.seekInfeasiblePaths(getTopList(), infeasible_paths); // TODO move this
+	if(Option<SLList<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(getTopList()))
+	{
+		infeasible_paths += *maybe_infeasible_paths; // TODO move this
+		DBG(COLOR_BIYel << "Infeasible path found: branch analysis is over" << COLOR_RCol)
+		return; // No point to continue an infeasible path
+	}	
+	
+	DBG(COLOR_Whi << "Processing " << bb)
 	analyzeBB(bb); // generates lists of predicates in generated_preds and generated_preds_taken	
-	assert(labelled_preds); // Assert that the list of lists we are modifying is not empty
+	assert(labelled_preds);
 	
 	// these will be overwritten by further analysis, so back them up
 	SLList<Predicate> generated_preds_backup	   = generated_preds;

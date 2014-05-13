@@ -10,24 +10,28 @@
 #include "smt_variable_stack.h"
 
 using namespace elm::genstruct;
+using namespace CVC4::kind;
+using CVC4::Expr;
 
 class SMT
 {
 public:
 	SMT();
-	bool seekInfeasiblePaths(const SLList<Analysis::LabelledPredicate>& labelled_preds, SLList<Analysis::Path>& infeasible_paths);
+	Option<SLList<Analysis::Path> > seekInfeasiblePaths(const SLList<Analysis::LabelledPredicate>& labelled_preds);
 	bool checkPredSat(const SLList<Analysis::LabelledPredicate>& labelled_preds);
 	
 private:
 	CVC4::ExprManager em;
 	CVC4::SmtEngine smt;
 	VariableStack variables;
+
+	SLList<Analysis::Path> seekInfeasiblePaths_interm(const SLList<Analysis::LabelledPredicate>& labelled_preds, int index = 0);
 	
-	bool getExpr(CVC4::Expr* expr, const Predicate& p);
-	CVC4::Expr getExpr(const Operand& o);
+	Option<Expr> getExpr(const Predicate& p);
+	Option<Expr> getExpr(const Operand& o);
 	
-	       CVC4::kind::Kind_t getKind(condoperator_t opr);
-	inline CVC4::kind::Kind_t getKind(const Predicate& p) { return getKind(p.opr()); }
+	       Kind_t getKind(condoperator_t opr);
+	inline Kind_t getKind(const Predicate& p) { return getKind(p.opr()); }
 	
 	const CVC4::Type integer; // Z
 };

@@ -34,33 +34,37 @@ enum operand_kind_t
 	OPERAND_ARITHEXPR, // Arithmetic Expression
 };
 
+class OperandConst;
+class OperandVar;
+class OperandArithExpr;
+
+// The visitor: an abstract class
+class OperandVisitor
+{
+public:
+	virtual void visit(const OperandConst& o) = 0;
+	virtual void visit(const OperandVar& o) = 0;
+	virtual void visit(const OperandArithExpr& o) = 0;
+};
+
 // Abstract Operand class
 class Operand
 {	
 public:
 	virtual Operand* copy() const = 0;
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
-	virtual bool getIsolatedTempVar(class OperandVar& temp_var, Operand*& expr) const = 0;
-	virtual bool involvesVariable(const class OperandVar& opdv) const = 0;
-	virtual bool updateVar(const class OperandVar& opdv, const Operand& opd_modifier) = 0;
+	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const = 0;
+	virtual bool involvesVariable(const OperandVar& opdv) const = 0;
+	virtual bool updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0;
 	virtual operand_kind_t kind() const = 0;
 	virtual bool isComplete() const = 0;
-	virtual void accept(class OperandVisitor& visitor) const = 0;
+	virtual void accept(OperandVisitor& visitor) const = 0;
 	
 	virtual bool operator==(const Operand& o) const = 0;
 	friend io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
 	
 private:
 	virtual io::Output& print(io::Output& out) const = 0;
-};
-
-// The visitor: an abstract class
-class OperandVisitor
-{
-public:
-	virtual void visit(const class OperandConst& o) = 0;
-	virtual void visit(const class OperandVar& o) = 0;
-	virtual void visit(const class OperandArithExpr& o) = 0;
 };
 
 // Constant values

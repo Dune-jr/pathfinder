@@ -25,7 +25,7 @@ class Analysis {
 public:
 	Analysis(CFG *cfg);
 	
-	typedef SLList<Edge*> Path;
+	typedef SLList<const Edge*> Path;
 	
 	class LabelledPredicate {
 	private:

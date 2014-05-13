@@ -3,31 +3,20 @@
 
 #include <cvc4/expr/expr_manager.h>
 #include <elm/genstruct/SLList.h>
+#include <elm/genstruct/AVLMap.h>
 #include "operand.h"
 
 using namespace elm::genstruct;
+using CVC4::Expr;
 
 class VariableStack
 {
 public:
 	VariableStack();
-	
-	class VariableExpr
-	{
-	public:
-		VariableExpr(t::int32 addr, CVC4::Expr expr);
-		inline t::int32	  addr() const { return _addr; }
-		inline CVC4::Expr expr() const { return _expr; }
-		
-	private:
-		t::int32 _addr;
-		CVC4::Expr _expr;
-	};
-	
-	CVC4::Expr getVariableExpr(const OperandVar& o, CVC4::ExprManager& em);
+	Expr getVariableExpr(const OperandVar& o, CVC4::ExprManager& em);
 	
 private:
-	SLList<VariableExpr> var_list;
+	AVLMap<t::int32, Expr> map;
 };
 
 #endif
