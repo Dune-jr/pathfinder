@@ -27,13 +27,31 @@ void Analysis::processCFG(CFG* cfg)
 	DBG(COLOR_Whi << "Processing CFG " << cfg)
 	processBB(cfg->firstBB());
 	// DBG("\e[4mResult of the analysis: " << COLOR_RCol << labelled_preds)
+	int infeasible_paths_count = infeasible_paths.count();
+	DBG(COLOR_BIGre << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found:")
+	for(SLList<Path>::Iterator iter(infeasible_paths); iter; iter++)
+	{
+		SLList<const Edge*> l = *iter;
+		bool first = true;
+		elm::String str = "    - [";
+		for(SLList<const Edge*>::Iterator subiter(l); subiter; subiter++)
+		{
+			if(first)
+				first = false;
+			else
+				str = str.concat(_ << ", ");
+			str = str.concat(_ << (*subiter)->source()->number() << "->" << (*subiter)->target()->number());
+		}
+		str = str.concat(_ << "]");
+		DBG(COLOR_IGre << str)
+	}
 }
 
 void Analysis::processBB(BasicBlock* bb)
 {
 	if(bb->isExit())
 	{
-		DBG(COLOR_BIYel << "EXIT block reached" << COLOR_RCol)
+		DBG(COLOR_BIYel << "EXIT block reached")
 		return;
 	}
 		
@@ -43,7 +61,6 @@ void Analysis::processBB(BasicBlock* bb)
 	if(Option<SLList<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(getTopList()))
 	{
 		infeasible_paths += *maybe_infeasible_paths; // TODO move this
-		DBG(COLOR_BIYel << "Infeasible path found: branch analysis is over" << COLOR_RCol)
 		return; // No point to continue an infeasible path
 	}	
 	

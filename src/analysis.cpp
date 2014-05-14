@@ -1,6 +1,6 @@
 #include "analysis.h"
-
 #include <otawa/cfg/Edge.h>
+
 void addIndents(io::Output& out, int n) { for(int i=0; i<n; i++) out << "\t"; }
 
 Analysis::Analysis(CFG *cfg)

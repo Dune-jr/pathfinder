@@ -8,8 +8,8 @@ if ScriptArgs["wall"]=="true" or ScriptArgs["Wall"]=="true" then
 end
 
 -- OTAWA
-settings.cc.flags:Add("`/home/jruiz/Documents/otawa/bin/otawa-config --cflags`")
-settings.link.flags:Add("`/home/jruiz/Documents/otawa/bin/otawa-config --libs --rpath`")
+settings.cc.flags:Add("`/home/jruiz/Documents/casse/linux-x86_64/otawa-core/bin/otawa-config --cflags`")
+settings.link.flags:Add("`/home/jruiz/Documents/casse/linux-x86_64/otawa-core/bin/otawa-config --libs --rpath`")
 
 -- CVC4
 settings.cc.includes:Add("/home/jruiz/.local/include/")

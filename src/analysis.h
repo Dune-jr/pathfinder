@@ -1,7 +1,7 @@
 #ifndef _ANALYSIS_H
 #define _ANALYSIS_H
 
-#include <otawa/cfg/CFG.h>
+#include <otawa/cfg/Edge.h>
 #include <elm/genstruct/SLList.h>
 #include <otawa/sem/inst.h>
 #include "predicate.h"
