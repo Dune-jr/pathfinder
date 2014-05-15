@@ -6,12 +6,12 @@ node [shape=Mrecord, labeljust=l, fontsize=10];
 	"1" -> "3" [label="taken", weight=3];
 	"1" -> "2" [weight=4];
 	"2" [label="{BB 2 (000082e8) | 000082e8    bl 8278    # f1\l }"]
-	"0000000000c29c20f1" [label="f1"]
-	"2" -> "0000000000c29c20f1" [label="call", style=dashed, weight=1]
+	"0000000001b696b0f1" [label="f1"]
+	"2" -> "0000000001b696b0f1" [label="call", style=dashed, weight=1]
 	"2" -> "4" [weight=4];
 	"3" [label="{BB 3 (000082f0) | 000082f0    bl 8290    # f2\l }"]
-	"0000000000c29ba0f2" [label="f2"]
-	"3" -> "0000000000c29ba0f2" [label="call", style=dashed, weight=1]
+	"0000000001b69630f2" [label="f2"]
+	"3" -> "0000000001b69630f2" [label="call", style=dashed, weight=1]
 	"3" -> "5" [weight=4];
 	"4" [label="{BB 4 (000082ec) | 000082ec    b 82f4    # 000082f4\l }"]
 	"4" -> "5" [label="taken", weight=3];
@@ -19,18 +19,18 @@ node [shape=Mrecord, labeljust=l, fontsize=10];
 	"5" -> "7" [label="taken", weight=3];
 	"5" -> "6" [weight=4];
 	"6" [label="{BB 6 (000082fc) | 000082fc    bl 82a8    # f3\l }"]
-	"0000000000c29720f3" [label="f3"]
-	"6" -> "0000000000c29720f3" [label="call", style=dashed, weight=1]
+	"0000000001b691b0f3" [label="f3"]
+	"6" -> "0000000001b691b0f3" [label="call", style=dashed, weight=1]
 	"6" -> "8" [weight=4];
 	"7" [label="{BB 7 (00008304) | 00008304    bl 82c0    # f4\l }"]
-	"0000000000c29520f4" [label="f4"]
-	"7" -> "0000000000c29520f4" [label="call", style=dashed, weight=1]
+	"0000000001b68fb0f4" [label="f4"]
+	"7" -> "0000000001b68fb0f4" [label="call", style=dashed, weight=1]
 	"7" -> "9" [weight=4];
 	"8" [label="{BB 8 (00008300) | 00008300    b 8308    # 00008308\l }"]
 	"8" -> "9" [label="taken", weight=3];
 	"9" [label="{BB 9 (00008308) | 00008308    ldr r0, [pc, #20]\l0000830c    mov r1, #0\l00008310    mov r2, r1\l00008314    bl 8574    # printf\l }"]
-	"0000000000c28c20printf" [label="printf"]
-	"9" -> "0000000000c28c20printf" [label="call", style=dashed, weight=1]
+	"0000000001b686b0printf" [label="printf"]
+	"9" -> "0000000001b686b0printf" [label="call", style=dashed, weight=1]
 	"9" -> "10" [weight=4];
 	"10" [label="{BB 10 (00008318) | 00008318    mov r0, #0\l0000831c    ldmia sp!, \{r4, lr\}\l00008320    bx lr\l }"]
 	"10" -> "11" [style=dashed, weight=1];

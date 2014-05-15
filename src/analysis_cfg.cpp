@@ -39,10 +39,10 @@ void Analysis::processCFG(CFG* cfg)
 			if(first)
 				first = false;
 			else
-				str = str.concat(_ << ", ");
+				str = _ << str << ", ";
 			str = str.concat(_ << (*subiter)->source()->number() << "->" << (*subiter)->target()->number());
 		}
-		str = str.concat(_ << "]");
+		str = _ << str << "]";
 		DBG(COLOR_IGre << str)
 	}
 }
@@ -61,6 +61,7 @@ void Analysis::processBB(BasicBlock* bb)
 	if(Option<SLList<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(getTopList()))
 	{
 		infeasible_paths += *maybe_infeasible_paths; // TODO move this
+		DBG(COLOR_BIYel "Current path identified as infeasible, stopping analysis")
 		return; // No point to continue an infeasible path
 	}	
 	
@@ -101,13 +102,8 @@ void Analysis::processBB(BasicBlock* bb)
 void Analysis::processEdge(Edge* edge)
 {
 	BasicBlock* target = edge->target();
-	DBG(COLOR_Whi << "Processing Edge: " << edge)
-	
-	// TODO: we very well may have something to process here,
-	//       in case it's a conditional branch (c or neg(c))
-	
-	DBG("State of the analysis: " << labelled_preds << COLOR_RCol)
-	
+	DBG(COLOR_Whi << "Processing Edge: " << edge)	
+	// DBG("State of the analysis: " << labelled_preds)	
 	processBB(target);
 }
 
