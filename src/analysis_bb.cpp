@@ -15,7 +15,6 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 	sem::inst condition;
 	generated_preds.clear();
 	generated_preds_taken.clear();
-	//previous_paths_preds.clear();	
 	
 	// parse assembly instructions
 	for(BasicBlock::InstIterator insts(bb); insts; insts++)
@@ -56,6 +55,10 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 			// TODO: test unsigned MUL DIV MOD CMP
 			switch(seminsts.op())
 			{
+				case NOP:
+					assert(!UNTESTED_CRITICAL);
+					DBG(COLOR_BIRed << "Untested operand NOP running!")
+					break;
 				case BRANCH:
 					break;
 				case CONT:
@@ -272,7 +275,6 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 								DBG(COLOR_BIRed << "Untested case of operator MUL running!")
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)));
 								
-								// TODO: is this good?
 								// we also add a predicate to say that d is now a multiple of b
 								{
 									Operand *opd11 = new OperandVar(d);
@@ -290,7 +292,6 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 								DBG(COLOR_BIRed << "Untested case of operator MUL running!")
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)));
 								
-								// TODO: is this good?
 								// we also add a predicate to say that d is now a multiple of a
 								{
 									Operand *opd11 = new OperandVar(d);
@@ -326,6 +327,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						if(d == b) // d <- d / d
 						{	// [1 / d]
 							// TODO: this should be okay to assume d != 0, right? otherwise the program is faulty?
+							// or should we use a SMT solver mode that supports / 0?
 							make_pred = true;
 							opd1 = new OperandVar(d);
 							opd2 = new OperandConst(1);
@@ -380,7 +382,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 			{
 				assert(opd1);
 				assert(opd2);
-				DBG(COLOR_IGre << "  + " << Predicate(opr, *opd1, *opd2))
+				DBG(COLOR_IPur DBG_SEPARATOR COLOR_IGre " + " << Predicate(opr, *opd1, *opd2))
 				generated_preds += Predicate(opr, *opd1, *opd2);
 			}
 		}
@@ -403,25 +405,42 @@ bool Analysis::invalidateVar(const OperandVar& opd_var)
 {
 	bool loop, rtn = false;
 	
-	//// Try to replace the var that we are about to remove 
-	//OperandConst val(0);
-	//if(seekValue(opd_var, val))
-		//return replaceVarByItsValue(opd_var, val); // all vars have been replaced, so just exit
-	
 	// Invalidate predicates that have already been labelled
 	SLList<LabelledPredicate> top_list = getTopList();
+	/*
+	int c = 0;
+	for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; )
+	{
+		DBG("iteration #" << c++)
+		if((*iter).pred().involvesVariable(opd_var))
+		{
+			SLList<LabelledPredicate>::Iterator prev_iter(iter);
+			if(c==5) DBG("*prev_iter =" << *prev_iter)
+			iter++;
+			if(c==5) DBG("*prev_iter =" << *prev_iter)
+			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *prev_iter)
+			if(c==5) DBG("BEFORE ------ " << top_list)
+			top_list.remove(prev_iter);
+			if(c==5) DBG("AFTER  ------ " << top_list)
+			rtn = true;
+			continue;
+		}
+		iter++;
+	}
+	String o = _ << top_list;
+	DBG("WRONG = " << top_list)
+	setTopList(top_list);
+	//*/
+
+	//*
+	top_list = getTopList();
 	do {
 		loop = false;
-		// TODO: optimize this! We are rewinding the whole list every time to look for new predicates to invalidate! (same for below)
 		for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; iter++)
 		{
-			// Debugging purposes only!
-			//if((*iter).pred().opr() != CONDOPR_EQ)
-				//continue;
-			
 			if((*iter).pred().involvesVariable(opd_var))
 			{
-				DBG(COLOR_IYel << "  - " << *iter)
+				DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *iter)
 				top_list.remove(iter);
 				loop = true;
 				rtn = true;
@@ -430,23 +449,24 @@ bool Analysis::invalidateVar(const OperandVar& opd_var)
 		}
 	} while(loop);
 	setTopList(top_list);
+	//*/
+
 	
 	// Also invalidate predicates of the current BB
-	do {
-		loop = false;
-		for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++)
+	// TODO: this may very well be bugged (last element not removed)
+	for(SLList<Predicate>::Iterator iter(generated_preds); iter; )
+	{
+		if((*iter).involvesVariable(opd_var))
 		{
-			if((*iter).involvesVariable(opd_var))
-			{
-				DBG(COLOR_IYel << "  - " << *iter)
-				generated_preds.remove(iter);
-				loop = true;
-				rtn = true;
-				break;
-			}
+			SLList<Predicate>::Iterator prev_iter(iter);
+			iter++;
+			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *prev_iter)
+			generated_preds.remove(prev_iter);
+			rtn = true;
+			continue;
 		}
-	} while(loop);
-	
+		iter++;
+	}	
 	return rtn;
 }
 
@@ -479,25 +499,19 @@ bool Analysis::invalidateTempVars()
 	} while(loop);
 	
 	// Second step: remove everything that is left and still contains a tempvar
-	// TODO(!!!): try to write:
-	// 		prev_iter = iter; // at end of for loop
-	//		prev_iter(generated_preds); // initialization
-	//		this way, when we break and loop, we iter from the previous item, instead of the first one
-	do {
-		loop = false;
-		for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++)
-		{
-			if((*iter).countTempVars())
-			{
-				// remove the predicate
-				DBG(COLOR_IYel << "- " << *iter)
-				generated_preds.remove(iter);
-				loop = true;
-				break;
-			}
+	// TODO: this may very well be bugged (last element not removed)
+	for(SLList<Predicate>::Iterator iter(generated_preds); iter; )
+	{
+		if((*iter).countTempVars())
+		{	// remove the predicate
+			SLList<Predicate>::Iterator prev_iter(iter);
+			iter++;
+			DBG(COLOR_IYel << "- " << *prev_iter)
+			generated_preds.remove(prev_iter);
+			continue;
 		}
-	} while(loop);
-	
+		iter++;
+	}	
 	return rtn;
 }
 
@@ -510,7 +524,7 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 		if((*iter).involvesVariable(temp_var))
 		{
 			Predicate p = *iter;
-			String o = _ << p;
+			String prev_str = _ << p;
 			
 			assert(p.updateVar(temp_var, expr)); // if this is false, it means involvesVariable returned a false positive
 			if(p.isIdent()) // if we just transformed t1 = X into X = X
@@ -522,8 +536,8 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 				rtn = true;
 			}
 				
-			DBG(COLOR_Cya << "- " << o)
-			DBG(COLOR_ICya << "+ " << p)
+			DBG(COLOR_IBlu DBG_SEPARATOR " " COLOR_Cya "- " << prev_str)
+			DBG(COLOR_IBlu DBG_SEPARATOR " " COLOR_ICya "+ " << p)
 			generated_preds.set(iter, p);
 		}
 	}
@@ -534,8 +548,7 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 // second operand is usually an OperandArithExpr
 bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifier)
 {
-	DBG(COLOR_Blu << "  [" << opd_modifier << " / " << opd_to_update << "]")
-	
+	DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " [" << opd_modifier << " / " << opd_to_update << "]")
 	bool rtn = false;
 	
 	// Update predicates that have already been labelled
@@ -564,7 +577,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	{
 		if((*iter).involvesVariable(opd_to_update))
 		{
-			DBG(COLOR_Cya << "  - " << *iter)
+			DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_Blu DBG_SEPARATOR COLOR_Cya " - " << *iter)
 			
 			// updating the predicate
 			Predicate p = *iter;
@@ -572,12 +585,10 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 			{
 				generated_preds.set(iter, p); 
 				rtn = true;
-				DBG(COLOR_ICya << "  + " << *iter)
+				DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_Blu DBG_SEPARATOR COLOR_ICya " + " << *iter)
 			}
 		}
-	}
-	//if(rtn)
-		//updateGeneratedTempVarsList(opd_modifier);		
+	}	
 	return rtn;
 }
 

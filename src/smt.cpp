@@ -36,7 +36,7 @@ void SMT::testSimplify(SLList<Analysis::LabelledPredicate> labelled_preds)
 
 Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<Analysis::LabelledPredicate> labelled_preds)
 {
-	testSimplify(labelled_preds);
+	// testSimplify(labelled_preds);
 
 	if(checkPredSat(labelled_preds, true))
 		return elm::none; // no inconsistency found

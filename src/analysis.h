@@ -58,7 +58,7 @@ private:
 	void initializeAnalysis();
 	SLList<LabelledPredicate> getTopList();
 	void setTopList(const SLList<LabelledPredicate>& lps);
-	void addElemToTopList(const SLList<LabelledPredicate>& lps); // TODO: replace code by this function!!!
+	void addElemToTopList(const SLList<LabelledPredicate>& lps);
 	
 	// analysis_cfg.cpp
 	void processBB(BasicBlock *bb);

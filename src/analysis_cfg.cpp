@@ -2,10 +2,8 @@
  * Skeleton of the analysis algorithm, defines the way we parse the CFG 
  */
 
-#include <elm/io.h>
 #include <elm/io/Output.h>
 #include <elm/genstruct/SLList.h>
-#include <otawa/cfg/CFG.h>
 #include <otawa/cfg/Edge.h>
 #include <otawa/cfg/BasicBlock.h>
 
@@ -60,7 +58,7 @@ void Analysis::processBB(BasicBlock* bb)
 	SMT smt;
 	if(Option<SLList<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(getTopList()))
 	{
-		infeasible_paths += *maybe_infeasible_paths; // TODO move this
+		infeasible_paths += *maybe_infeasible_paths;
 		DBG(COLOR_BIYel "Current path identified as infeasible, stopping analysis")
 		return; // No point to continue an infeasible path
 	}	

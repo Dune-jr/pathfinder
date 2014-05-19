@@ -259,3 +259,4 @@ bool OperandArithExpr::evalConstantOperand(OperandConst& val) const
 	return false; // One of the operands includes a variable so we cannot properly evaluate it
 }
 */
+

@@ -1,8 +1,7 @@
 #ifndef _OPERAND_H
 #define _OPERAND_H
 
-#include <elm/io.h>
-#include <elm/io/Output.h> // TODO try and remove one of the two
+#include <elm/io/Output.h>
 #include <cvc4/expr/expr.h>
 #include <cvc4/expr/type.h>
 
