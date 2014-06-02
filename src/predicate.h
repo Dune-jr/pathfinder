@@ -34,7 +34,7 @@ public:
 	bool involvesVariable(const OperandVar& opdv) const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
-	bool updateVar(const OperandVar& opdv, const Operand& opd_modifier);
+	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	
 	CVC4::Expr toExpr();
 	

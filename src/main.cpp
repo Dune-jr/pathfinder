@@ -14,6 +14,7 @@ using namespace otawa;
 
 void testPredicates();
 void testOperands();
+void testSimplify();
 void testAnalysis(CFG *cfg);
 void makeRainbow();
 
@@ -30,10 +31,29 @@ protected:
 		CFG *cfg = cfgs->get(0); // then get the first CFG
 	
 		Analysis analysis = Analysis(cfg);
+		// testSimplify();
 	}
 };
 
 OTAWA_RUN(Display)
+
+void testSimplify()
+{
+	OperandConst zero = OperandConst(0);
+	OperandConst one = OperandConst(1);
+	OperandConst two = OperandConst(2);
+	OperandConst three = OperandConst(3);
+	OperandVar t1 = OperandVar(-1);
+	OperandArithExpr e11 = OperandArithExpr(ARITHOPR_NEG, t1);
+	OperandArithExpr e12 = OperandArithExpr(ARITHOPR_SUB, two, three);
+	OperandArithExpr e1 = OperandArithExpr(ARITHOPR_ADD, t1, e11);
+
+	DBG("e1: " << e1)
+	Operand* e1_new = &e1;
+	if(Option<Operand*> o = e1.simplify())
+		e1_new = o;
+	DBG("e1: " << *e1_new)
+}
 
 void testPredicates()
 {

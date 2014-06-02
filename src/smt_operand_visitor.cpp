@@ -22,7 +22,14 @@ void SMTOperandVisitor::visit(const class OperandConst& o)
 
 void SMTOperandVisitor::visit(const class OperandVar& o)
 {
-	expr = variables.getVariableExpr(o, em);
+	expr = variables.getExpr(em, o);
+	visited = true;
+}
+
+void SMTOperandVisitor::visit(const class OperandMem& o)
+{
+	//o.addr().accept(*this); // fetch expr from address of o
+	expr = variables.getExpr(em, o);//, expr);
 	visited = true;
 }
 
@@ -40,7 +47,7 @@ void SMTOperandVisitor::visit(const class OperandArithExpr& o)
 		expr = em.mkExpr(kind, expr_left, expr_right);
 	}
 	else
-		expr = em.mkExpr(kind, expr_left); // this is the unary version of mkExp
+		expr = em.mkExpr(kind, expr_left); // this is the unary version of mkExpr
 		
 	visited = true;
 }

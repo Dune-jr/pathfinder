@@ -19,25 +19,8 @@ SMT::SMT(): smt(&em), integer(em.integerType())
 	smt.setLogic("QF_LIA"); // Quantifier-Free (no forall, exists...) Linear Integer Arithmetic
 }
 
-// TODO: remove
-void SMT::testSimplify(SLList<Analysis::LabelledPredicate> labelled_preds)
-{
-	for(SLList<Analysis::LabelledPredicate>::Iterator it(labelled_preds); it; it++)
-	{
-		Analysis::LabelledPredicate lp = *it;
-		Predicate p = lp.pred();
-		Option<CVC4::Expr> e = getExpr(p);
-		if(!e) continue;
-		CVC4::Expr e2 = smt.simplify(*e);
-		DBG_STD("before: p = " << *e)
-		DBG_STD(COLOR_IRed "         => " << e2)
-	}
-}
-
 Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<Analysis::LabelledPredicate> labelled_preds)
 {
-	// testSimplify(labelled_preds);
-
 	if(checkPredSat(labelled_preds, true))
 		return elm::none; // no inconsistency found
 
@@ -131,7 +114,6 @@ Vector<BitVector> SMT::genBitCodes(const SLList<Analysis::Path>& paths, const AV
 {
 	BitVector bitcode(used_bits);
 	Vector<BitVector> bitcode_vector;
-	int index = 0;
 	for(SLList<Analysis::Path>::Iterator iter(paths); iter; iter++)
 	{
 		bitcode.clear();

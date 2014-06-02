@@ -47,26 +47,34 @@ bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 }
 
 // returns true if something was updated
-bool Predicate::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
+operand_state_t Predicate::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {	
 	// we need to replace the OperandVar children
 	// (they can't do it on their own since the parent has to do the modification)
-	bool rtn = false;
+	operand_state_t rtn = OPERANDSTATE_UNCHANGED;
 	if(*_opd1 == opdv)
 	{
 		_opd1 = opd_modifier.copy();
-		rtn = true;
+		rtn = OPERANDSTATE_UPDATED;
 	}
 	else
-		rtn |= _opd1->updateVar(opdv, opd_modifier);		
+	{
+		operand_state_t r = _opd1->updateVar(opdv, opd_modifier);
+		if(r > rtn)
+			rtn = r;	
+	}
 		
 	if(*_opd2 == opdv)
 	{
 		_opd2 = opd_modifier.copy();
-		rtn = true;
+		rtn = OPERANDSTATE_UPDATED;
 	}
 	else
-		rtn |= _opd2->updateVar(opdv, opd_modifier);
+	{
+		operand_state_t r = _opd2->updateVar(opdv, opd_modifier);
+		if(r > rtn)
+			rtn = r;
+	}
 	
 	return rtn;
 }

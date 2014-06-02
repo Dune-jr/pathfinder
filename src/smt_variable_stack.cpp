@@ -8,18 +8,32 @@ using CVC4::Expr;
 
 VariableStack::VariableStack() { }
 
-Expr VariableStack::getVariableExpr(const OperandVar& o, CVC4::ExprManager& em)
+Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o)
 {
-	t::int32 addr = o.getAddr();
-	if(Option<Expr> opt_expr = map.get(addr))
-		// variable is already in the stack
-		return *opt_expr;
+	t::int32 addr = o.addr();
+	if(Option<Expr> opt_expr = varmap.get(addr))
+		return *opt_expr; // already in the stack
 	else
-	{
-		// variable not in stack, create it
+	{	// not in stack, create it
 		elm::String label = _ << o;
 		Expr expr = em.mkVar(label.chars(), em.integerType());
-		map.put(addr, expr);
+		varmap.put(addr, expr);
 		return expr;
 	}
+}
+
+//
+Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, const Expr& expr_addr)
+{
+	return em.mkConst(CVC4::Rational(0)); // TODO!!!
+	// const Operand& addr = o.addr();
+	// if(Option<Expr> opt_expr = memmap.get(addr))
+	// 	return *opt_expr; // already in the stack
+	// else
+	// {	// not in stack, create it
+	// 	elm::String label = _ << o;
+	// 	Expr expr = em.mkVar(label.chars(), em.integerType());
+	// 	memmap.put(addr, expr);
+	// 	return expr;
+	// }
 }

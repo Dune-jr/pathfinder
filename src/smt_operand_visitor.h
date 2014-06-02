@@ -12,6 +12,7 @@ public:
 	CVC4::Expr result();		
 	void visit(const OperandConst& o);
 	void visit(const OperandVar& o);
+	void visit(const OperandMem &o);
 	void visit(const OperandArithExpr& o);
 	
 private:

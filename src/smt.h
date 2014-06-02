@@ -27,8 +27,6 @@ private:
 	CVC4::SmtEngine smt;
 	VariableStack variables;
 
-	void testSimplify(SLList<Analysis::LabelledPredicate> labelled_preds);
-
 	SLList<Analysis::Path> getAllInfeasiblePaths(const SLList<Analysis::LabelledPredicate>& labelled_preds, int index = 0);
 	void removeIncompletePredicates(SLList<Analysis::LabelledPredicate>& labelled_preds);
 	void genPathPointBitMaps(const SLList<Analysis::Path>& paths, AVLMap<const Edge*, unsigned int>& map_pathpoint_to_bit, Vector<const Edge*>& map_bit_to_pathpoint);

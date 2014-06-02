@@ -13,10 +13,12 @@ class VariableStack
 {
 public:
 	VariableStack();
-	Expr getVariableExpr(const OperandVar& o, CVC4::ExprManager& em);
+	Expr getExpr(CVC4::ExprManager& em, const OperandVar& o);
+	Expr getExpr(CVC4::ExprManager& em, const OperandMem& o); //, const Expr& expr_addr);
 	
 private:
-	AVLMap<t::int32, Expr> map;
+	AVLMap<t::int32, Expr> varmap; // tempvars, registers
+	AVLMap<const Operand&, Expr> memmap; // content of addresses in memory (stack-relative or absolute)
 };
 
 #endif

@@ -50,7 +50,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 			// some shortcuts (the seminsts.F functions are not called at this point)
 			const t::int16& a = seminsts.a(), b = seminsts.b(), d = seminsts.d();
 			const t::int32& cst = seminsts.cst();
-			const t::int16& reg = seminsts.reg(); //, addr = seminsts.addr();
+			const t::int16& reg = seminsts.reg(), addr = seminsts.addr();
 			
 			// TODO: test unsigned MUL DIV MOD CMP
 			switch(seminsts.op())
@@ -86,12 +86,16 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						delete p;
 					}
 					break;
-				case LOAD: // reg <- MEM_type(addr)t
+				case LOAD: // reg <- MEM_type(addr)
+					// TODO make it that it only accepts ?var + const and const types
+					make_pred = true;
 					invalidateVar(reg);
-					// waiting for LOAD/STORE support to make more out of it
+					opd1 = new OperandVar(reg);
+					opd2 = new OperandMem(OperandVar(addr));
 					break;
-				// case STORE:	// MEM_type(addr) <- reg
-					// waiting for LOAD/STORE support
+				case STORE:	// MEM_type(addr) <- reg
+					// TODO!!!
+					break;
 				case SCRATCH:
 					invalidateVar(d);
 					break;
@@ -107,8 +111,10 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					opd1 = new OperandVar(d);
 					opd2 = new OperandConst(cst);
 					break;
-				// case SETP:
-					// nothing to do until we support LOAD/STORE
+				case SETP:
+					assert(!UNTESTED_CRITICAL);
+					DBG(COLOR_BIRed << "Untested operand SETP running!")
+					break;
 				case CMP:
 				case CMPU:
 					make_pred = true;
@@ -209,11 +215,11 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						// b is usually a tempvar that has been previously set to a constant value
 						if(!findConstantValueOfTempVar(b, val))
 						{
-							DBG(COLOR_Blu << "  [t1 could not be identified as a constant value]")
+							DBG(COLOR_Blu << "  [" << OperandVar(b) << " could not be identified as a constant value]")
 							break;
 						}
 						else
-							DBG(COLOR_Blu << "  [t1 identified as 0x" << io::hex(val) << "]")
+							DBG(COLOR_Blu << "  [" << OperandVar(b) << " identified as 0x" << io::hex(val) << "]")
 						
 						// only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
 						invalidateVar(d);
@@ -253,8 +259,6 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					assert(!UNTESTED_CRITICAL);
 					DBG(COLOR_BIRed << "Untested unsigned variant running!")
 				case MUL:
-					assert(!UNTESTED_CRITICAL);
-					DBG(COLOR_BIRed << "Untested operator running!")
 					make_pred = true;
 					opd1 = new OperandVar(d);
 					{
@@ -302,8 +306,6 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							}
 							else // d <- a*b
 							{
-								assert(!UNTESTED_CRITICAL);
-								DBG(COLOR_BIRed << "Untested case of operator MUL running!")
 								opd1 = new OperandVar(d);
 								invalidateVar(d);
 								{
@@ -335,8 +337,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						}
 						else // d <- d / a
 						{
-							invalidateVar(d);
-							// we cannot just write [d*a / d] because we lost info
+							invalidateVar(d); // we cannot just write [d*a / d] because we lost info
 						}
 					}
 					else
@@ -344,7 +345,6 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						if(d == b) // d <- a / d
 						{
 							invalidateVar(d);
-							
 						}
 						else // d <- a / b
 						{	// + (d = a/b)
@@ -403,65 +403,30 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 // returns true if a variable has been invalidated
 bool Analysis::invalidateVar(const OperandVar& opd_var)
 {
-	bool loop, rtn = false;
+	bool rtn = false;
 	
 	// Invalidate predicates that have already been labelled
 	SLList<LabelledPredicate> top_list = getTopList();
-	/*
-	int c = 0;
 	for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; )
 	{
-		DBG("iteration #" << c++)
 		if((*iter).pred().involvesVariable(opd_var))
 		{
-			SLList<LabelledPredicate>::Iterator prev_iter(iter);
-			if(c==5) DBG("*prev_iter =" << *prev_iter)
-			iter++;
-			if(c==5) DBG("*prev_iter =" << *prev_iter)
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *prev_iter)
-			if(c==5) DBG("BEFORE ------ " << top_list)
-			top_list.remove(prev_iter);
-			if(c==5) DBG("AFTER  ------ " << top_list)
+			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *iter)
+			top_list.remove(iter);
 			rtn = true;
 			continue;
 		}
 		iter++;
 	}
-	String o = _ << top_list;
-	DBG("WRONG = " << top_list)
 	setTopList(top_list);
-	//*/
-
-	//*
-	top_list = getTopList();
-	do {
-		loop = false;
-		for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; iter++)
-		{
-			if((*iter).pred().involvesVariable(opd_var))
-			{
-				DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *iter)
-				top_list.remove(iter);
-				loop = true;
-				rtn = true;
-				break;
-			}
-		}
-	} while(loop);
-	setTopList(top_list);
-	//*/
-
 	
 	// Also invalidate predicates of the current BB
-	// TODO: this may very well be bugged (last element not removed)
 	for(SLList<Predicate>::Iterator iter(generated_preds); iter; )
 	{
 		if((*iter).involvesVariable(opd_var))
 		{
-			SLList<Predicate>::Iterator prev_iter(iter);
-			iter++;
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *prev_iter)
-			generated_preds.remove(prev_iter);
+			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *iter)
+			generated_preds.remove(iter);
 			rtn = true;
 			continue;
 		}
@@ -499,15 +464,12 @@ bool Analysis::invalidateTempVars()
 	} while(loop);
 	
 	// Second step: remove everything that is left and still contains a tempvar
-	// TODO: this may very well be bugged (last element not removed)
 	for(SLList<Predicate>::Iterator iter(generated_preds); iter; )
 	{
 		if((*iter).countTempVars())
 		{	// remove the predicate
-			SLList<Predicate>::Iterator prev_iter(iter);
-			iter++;
-			DBG(COLOR_IYel << "- " << *prev_iter)
-			generated_preds.remove(prev_iter);
+			DBG(COLOR_IYel << "- " << *iter)
+			generated_preds.remove(iter);
 			continue;
 		}
 		iter++;
@@ -519,18 +481,28 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 {
 	// if(!start) return false; // already at the end of the list				
 	bool rtn = false;
-	for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++) // begin one position ahead of iterator 'start'
+	for(SLList<Predicate>::Iterator iter(generated_preds); iter; ) // begin one position ahead of iterator 'start'
 	{
 		if((*iter).involvesVariable(temp_var))
 		{
 			Predicate p = *iter;
 			String prev_str = _ << p;
 			
-			assert(p.updateVar(temp_var, expr)); // if this is false, it means involvesVariable returned a false positive
+			operand_state_t state = p.updateVar(temp_var, expr);
+			assert(state != OPERANDSTATE_UNCHANGED); // otherwise means involvesVariable returned a false positive
+			if(state == OPERANDSTATE_INVALID)
+			{
+				assert(!UNTESTED_CRITICAL);
+				DBG(COLOR_BIRed << "Untested case of invalidation!")
+				generated_preds.remove(iter);
+			}
 			if(p.isIdent()) // if we just transformed t1 = X into X = X
+			{
+				iter++;
 				continue;
+			}
 				
-			if(rtn == false)
+			if(rtn == false) // first time
 			{
 				DBG(COLOR_IBlu << "[" << expr << " / " << temp_var << "]")
 				rtn = true;
@@ -540,6 +512,7 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 			DBG(COLOR_IBlu DBG_SEPARATOR " " COLOR_ICya "+ " << p)
 			generated_preds.set(iter, p);
 		}
+		iter++;
 	}
 	return rtn;
 }
@@ -561,12 +534,17 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 			
 			// updating the predicate
 			Predicate p = (*iter).pred();
-			if(p.updateVar(opd_to_update, opd_modifier)) // making sure something is updated
+			operand_state_t state = p.updateVar(opd_to_update, opd_modifier);
+			if(state == OPERANDSTATE_UPDATED) // making sure something is updated
 			{
 				LabelledPredicate lp = LabelledPredicate(p, (*iter).label());
 				top_list.set(iter, lp);
 				rtn = true;
 				DBG(COLOR_ICya << "  + " << lp)
+			}
+			else if(state == OPERANDSTATE_INVALID)
+			{
+				// TODO!!!!!!!!
 			}
 		}
 	}
@@ -576,16 +554,22 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++)
 	{
 		if((*iter).involvesVariable(opd_to_update))
-		{
-			DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_Blu DBG_SEPARATOR COLOR_Cya " - " << *iter)
-			
+		{			
 			// updating the predicate
 			Predicate p = *iter;
-			if(p.updateVar(opd_to_update, opd_modifier)) // making sure something is updated
+			DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_Blu DBG_SEPARATOR COLOR_Cya " - " << *iter)
+			operand_state_t state = p.updateVar(opd_to_update, opd_modifier);
+			assert(state != OPERANDSTATE_UNCHANGED);
+			if(state == OPERANDSTATE_UPDATED) // making sure something is updated
 			{
 				generated_preds.set(iter, p); 
 				rtn = true;
 				DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_Blu DBG_SEPARATOR COLOR_ICya " + " << *iter)
+			}
+			else if(state == OPERANDSTATE_INVALID)
+			{
+				DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_Blu DBG_SEPARATOR COLOR_Cya "(new indirection is too complex)")
+				// TODO!!!!!!!!
 			}
 		}
 	}	

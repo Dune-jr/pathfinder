@@ -80,7 +80,6 @@ void Analysis::processBB(BasicBlock* bb)
 		|| outs->kind() == Edge::VIRTUAL
 		|| outs->kind() == Edge::VIRTUAL_RETURN) // Filter out irrelevant edges (calls...)
 		{	
-			// TODO Hugues: is there a way without using the ternary operator?
 			SLList<Predicate>& relevant_preds = (outs->kind() == Edge::TAKEN) ?
 				generated_preds_taken_backup :
 				generated_preds_backup;
