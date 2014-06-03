@@ -155,11 +155,11 @@ public:
 	OperandMem(const OperandVar& opdv);
 	OperandMem(const OperandVar& opdv, const OperandConst& opdc);
 	
-	inline const OperandConst& getConst() const { assert(_opdc); return *_opdc; }
-	inline const OperandVar&   getVar()   const { assert(_opdv); return *_opdv; }
 	inline operandmem_kind_t memkind() const { return _kind; }
 	inline bool hasConst() const { return _kind & OPERANDMEMFLAG_HASCONST; }
-	inline bool hasVar()   const { return _kind & OPERANDMEMFLAG_HASVAR; }
+	inline bool hasVar()   const { return _kind & OPERANDMEMFLAG_HASVAR;   }
+	inline const OperandConst& getConst() const { assert(hasConst() && _opdc); return *_opdc; }
+	inline const OperandVar&   getVar()   const { assert(hasVar()   && _opdv); return *_opdv; }
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;

@@ -526,7 +526,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	
 	// Update predicates that have already been labelled
 	SLList<LabelledPredicate> top_list = getTopList();
-	for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; iter++)
+	for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; )
 	{
 		if((*iter).pred().involvesVariable(opd_to_update))
 		{
@@ -535,6 +535,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 			// updating the predicate
 			Predicate p = (*iter).pred();
 			operand_state_t state = p.updateVar(opd_to_update, opd_modifier);
+			assert(state != OPERANDSTATE_UNCHANGED);
 			if(state == OPERANDSTATE_UPDATED) // making sure something is updated
 			{
 				LabelledPredicate lp = LabelledPredicate(p, (*iter).label());
@@ -544,34 +545,39 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 			}
 			else if(state == OPERANDSTATE_INVALID)
 			{
-				// TODO!!!!!!!!
+				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya "(new indirection is too complex)")
+				top_list.remove(iter);
+				continue;
 			}
 		}
+		iter++;
 	}
 	setTopList(top_list);
 	
 	// Also update predicates of the current BB
-	for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++)
+	for(SLList<Predicate>::Iterator iter(generated_preds); iter; )
 	{
 		if((*iter).involvesVariable(opd_to_update))
 		{			
 			// updating the predicate
 			Predicate p = *iter;
-			DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_Blu DBG_SEPARATOR COLOR_Cya " - " << *iter)
+			DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya " - " << *iter)
 			operand_state_t state = p.updateVar(opd_to_update, opd_modifier);
 			assert(state != OPERANDSTATE_UNCHANGED);
 			if(state == OPERANDSTATE_UPDATED) // making sure something is updated
 			{
 				generated_preds.set(iter, p); 
 				rtn = true;
-				DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_Blu DBG_SEPARATOR COLOR_ICya " + " << *iter)
+				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_ICya " + " << *iter)
 			}
 			else if(state == OPERANDSTATE_INVALID)
 			{
-				DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_Blu DBG_SEPARATOR COLOR_Cya "(new indirection is too complex)")
-				// TODO!!!!!!!!
+				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya "(new indirection is too complex)")
+				generated_preds.remove(iter);
+				continue;
 			}
 		}
+		iter++;
 	}	
 	return rtn;
 }

@@ -88,7 +88,7 @@ template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l)
 	}
 	
 	static int indent = 0;
-	bool indented_output = (count > 4);
+	bool indented_output = (count > 5);
 	
 	if(indented_output)
 		addIndents(out, indent++);

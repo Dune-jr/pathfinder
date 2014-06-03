@@ -6,7 +6,8 @@
 
 // #define DBG_NO_COLOR
 // #define DBG_NO_INFO
-#define UNTESTED_CRITICAL false // Do not throw exception on executing untested code
+#define UNTESTED_CRITICAL false // Do not raise exception when executing untested code
+#define DBG_SEPARATOR " "
 
 class Debug
 {
@@ -54,8 +55,6 @@ public:
 	#define DBG_STD(str) {}
 	#define DBG_TEST(tested_cond, expected_cond) ""
 #endif
-
-#define DBG_SEPARATOR " "
 
 // Color macros
 #ifndef DBG_NO_COLOR
