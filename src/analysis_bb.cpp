@@ -183,7 +183,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						}
 					}
 					break;
-				case SHL:
+				case SHL: // (*) TODO! don't we need to check for cases d <- d << 2 ???
 					opd1 = new OperandVar(d);
 					{
 						Operand *opd21 = new OperandVar(a);
@@ -192,22 +192,22 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						if(!findConstantValueOfTempVar(b, val))
 						{
 							DBG(COLOR_Blu << "  [t1 could not be identified as a constant value]")
-							break;
+							invalidateVar(d); // only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
 						}
 						else
+						{
 							DBG(COLOR_Blu << "  [t1 identified as 0x" << io::hex(val) << "]")
-						
-						// only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
-						invalidateVar(d);
-						make_pred = true;
-						Operand *opd22 = new OperandConst(1 << val); // 2^val
-						opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
+							invalidateVar(d);
+							make_pred = true;
+							Operand *opd22 = new OperandConst(1 << val); // 2^val
+							opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
+						}
 					}
 					break;
 				case ASR: // TODO test: is this really legit?
 					assert(!UNTESTED_CRITICAL);
 					DBG(COLOR_BIRed << "Untested operator running!")
-				case SHR:
+				case SHR: // TODO: see previously (*)
 					opd1 = new OperandVar(d);
 					{
 						Operand *opd21 = new OperandVar(a);
@@ -234,7 +234,8 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					{
 						if(a == d) // d <- -d
 						{	// [-1 * d / d]
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_MUL, OperandConst(-1), OperandVar(d)));
+							// update(OperandVar(d), OperandArithExpr(ARITHOPR_MUL, OperandConst(-1), OperandVar(d)));
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_NEG, OperandVar(d))); // TODO test
 						}
 						else
 						{	
@@ -335,7 +336,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							opd2 = new OperandConst(1);
 							invalidateVar(d);
 						}
-						else // d <- d / a
+						else // d <- d / b
 						{
 							invalidateVar(d); // we cannot just write [d*a / d] because we lost info
 						}

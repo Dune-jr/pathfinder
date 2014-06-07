@@ -13,11 +13,12 @@
 \lstset{
     language=Caml,
     basicstyle=\ttfamily,
-    keywordstyle=\bfseries,
+    keywordstyle=\color[rgb]{0.5,0,0}\bfseries,
+    commentstyle=\color[rgb]{0.133,0.545,0.133},
     showstringspaces=false,
     frame=tb,
     columns=fullflexible,
-    % morekeywords={let, in, if, then, else}
+    morekeywords={undefined}
 }
 
 \definecolor{Gray}{gray}{0.85}
@@ -26,7 +27,7 @@
   \section{Brouillon}
   \subsection{Analyse d'un bloc de base}
   Le programme parcourt les blocs de base linéairement en mettant à jour la liste de prédicats.
-  
+
   Nous définissons d'abord une fonction d'invalidation d'une variable dans la liste de prédicats, qui consiste à
   supprimer tous les prédicats qui utilisent cette variable.
 
@@ -34,19 +35,19 @@
     invalidate var p =
         {predicate $\in$ p $|$ var $\notin$ predicate}
   \end{lstlisting}
-  
+
   Il s'agit maintenant de définir l'effet de la lecture de chaque instruction sur la liste de prédicats.
   Exemple sur un premier cas trivial :
-  
+
   \begin{lstlisting}
     t [NOP] p =
-        p
+        p (* rien ne change *)
   \end{lstlisting}
-  
+
   La fonction de traduction \texttt{t} opère sur une instruction (ici \texttt{NOP}) et la liste de prédicats \texttt{p}.
-  
+
   Regardons maintenant comment est traitée l'instruction d'assignation d'une variable à une autre variable (\texttt{SET}) :
-      
+
   \begin{lstlisting}
     t [SET d a] p =
         (d = a) @ (invalidate d p)
@@ -63,10 +64,10 @@
     t [CMP d a b] p =
         (d = a ~ b) @ (invalidate d p)
     \end{lstlisting}
-    
+
     Cet opérateur $\sim$ bien spécifique aux langages d'assembleur sert à se souvenir que
     \texttt{d} contient des informations sur la comparaison entre \texttt{a} et \texttt{b}.
-    
+
     Pour la suite nous allons avoir besoin de la fonction \texttt{update} qui sert à remplacer
     toutes les occurences d'une variable \texttt{var} par l'expression \texttt{expr} dans la liste de prédicats \texttt{p} :
 
@@ -74,10 +75,10 @@
     update var expr p =
         {predicate[expr / var] $|$ predicate $\in$ p}
   \end{lstlisting}
-  
+
   où la syntaxe \texttt{predicate[expr / var]} dénote ici le prédicat où le terme \texttt{var} est remplacé par l'expression \texttt{expr}.
-  
-  \begin{lstlisting}
+
+  \begin{lstlisting}[mathescape]
     t [ADD d a b] p =
         if (d = a) then (* d <- d+b *)
             (update d (d - b) p)
@@ -97,7 +98,71 @@
                 (update d (a-d) p)
             else (* d <- a-b *)
                 (d = a - b) @ (invalidate d p)
+
+    t [MUL d a b] p =
+        if (d = a) then
+            if (d = b) then (* d <- d*d *)
+                (* impossible de remplacer d par $\sqrt{d}$, on invalide *)
+                (0 <= d) @ (invalidate d p)
+            else (* d <- d*b *)
+                (* on rajoute un predicat pour indiquer que d est
+                   divisible par b *)
+                (d % b = 0) @ (update d (d/b) p)
+        else
+            if (d = b) then (* d <- a*d *)
+                (d % a = 0) @ (update d (d/a) p)
+            else (* d <- a*b *)
+                (d = a * b) @ (invalidate d p)
+
+    t [DIV d a b] p =
+        if (d = a) then
+            if (d = b) then (* d <- d/d *)
+                (d = 1) @ (invalidate d p)
+            else (* d <- d/b *)
+                (* impossible de remplacer d par (d*b),
+                   on a perdu de l'information ! *)
+                (invalidate d p)
+        else
+            if (d = b) then (* d <- a/d *)
+                (invalidate d p)
+            else (* d <- a/b *)
+                (d = a / b) @ (invalidate d p)
   \end{lstlisting}
+
+  Pour illustrer le problème de l'instruction DIV, prenons le cas où l'on a \texttt{\{t1 = 7, t2 = 3\}} et une instruction \texttt{[DIV t1 t1 t2]}.\\
+  En remplaçant \texttt{t1} par \texttt{t1 * t2}, on obtiendrait \texttt{\{(t1 * t2 = 7), (t2 = 3)\}}, c'est-à-dire \texttt{(t1 * 3 = 7)}, ce qui est impossible puisqu'on travaille sur des entiers !
+
+  \begin{lstlisting}
+    t [MOD d a b] p =
+        if (d = a or d = b)
+            (invalidate d p)
+        else
+            (d = a % b) @ (invalidate d p)
+  \end{lstlisting}
+
+  Nous utiliserons dans la suite une fonction \texttt{eval} qui cherche la valeur \textbf{constante} pour une variable.
+  La fonction eval parcourt donc la liste des prédicats à la recherche de prédicats du type \texttt{(var = 2)} permettant
+  d'identifier la valeur de \texttt{var}.
+
+  \begin{lstlisting}
+    t [ASR d a b] p =
+        let b_val = eval b in
+        if b_val is undefined then
+            (invalidate d p)
+        else
+            let factor = 2 ** b_val in
+            if (d = a) then (* d <- d>>b *)
+                (update d (d / factor) p)
+            else (* d <- a>>b *)
+                (d = a / factor) @ (invalidate d p)
+
+    t [NEG d a] =
+        if (a = d) (* d <- -d *)
+            (update d (-d) p)
+        else (* d <- -a *)
+            (d = -a) @ (invalidate d p)
+  \end{lstlisting}
+
 
 
   \subsection{Brouillon1}
