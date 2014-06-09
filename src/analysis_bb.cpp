@@ -87,7 +87,6 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					}
 					break;
 				case LOAD: // reg <- MEM_type(addr)
-					// TODO make it that it only accepts ?var + const and const types
 					make_pred = true;
 					invalidateVar(reg);
 					opd1 = new OperandVar(reg);

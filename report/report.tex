@@ -9,6 +9,7 @@
 \usepackage{colortbl}
 \usepackage{listings}
 \usepackage{pxfonts}
+\usepackage[french]{algorithm2e}
 
 \lstset{
     language=Caml,
@@ -25,11 +26,26 @@
 
 \begin{document}
   \section{Brouillon}
-  \subsection{Analyse d'un bloc de base}
+  \subsection{Analyse d'un graphe de flot de contrôle}
+  Nous travaillons sans boucles, cet algorithme n'est pas correct (il ne terminera pas) si on le fait fonctionner sur un \textsc{cfg} avec boucles. Nous initialisons d'abord l'algorithme de parcours de graphe de contrôle avec le premier bloc de base du \textsc{cfg}, qui nous est donné par \textsc{otawa}.
+  
+  Voici donc l'algorithme en pseudo-code, qui prend en paramètre un bloc de base :\\
+  
+  % http://www.cs.toronto.edu/~frank/Useful/algorithm2e.pdf
+  \begin{algorithm}[H]
+    \Donnees{bb: BasicBlock}
+  \end{algorithm}
+%    \Res{infeasible_paths: Path list}
+%    infeasible_paths = [];
+%    \Si{bb est un bloc de sortie (EXIT)}{
+%        \Retour{}
+%    }
+  
+  
+  \subsection{Analyse des instructions sémantiques d'un bloc de base}
   Le programme parcourt les blocs de base linéairement en mettant à jour la liste de prédicats.
 
-  Nous définissons d'abord une fonction d'invalidation d'une variable dans la liste de prédicats, qui consiste à
-  supprimer tous les prédicats qui utilisent cette variable.
+  Nous définissons d'abord une fonction d'invalidation d'une variable dans la liste de prédicats, qui consiste à supprimer tous les prédicats qui utilisent cette variable.
 
   \begin{lstlisting}[mathescape]
     invalidate var p =
@@ -53,8 +69,7 @@
         (d = a) @ (invalidate d p)
   \end{lstlisting}
 
-  Un nouveau prédicat \texttt{d = a} est généré après qu'on ait invalidé \texttt{d},
-  c'est-à-dire qu'on ait supprimé tous les prédicats qui contiennent t.
+  Un nouveau prédicat \texttt{d = a} est généré après qu'on ait invalidé \texttt{d}, c'est-à-dire qu'on ait supprimé tous les prédicats qui contiennent t.
   De même pour l'instruction \texttt{SETI} qui assigne une constante à une variable.
 
   \begin{lstlisting}
@@ -147,7 +162,7 @@
   \begin{lstlisting}
     t [ASR d a b] p =
         let b_val = eval b in
-        if b_val is undefined then
+        if b_val = undefined then
             (invalidate d p)
         else
             let factor = 2 ** b_val in
@@ -165,7 +180,6 @@
 
 
 
-  \subsection{Brouillon1}
   \begin{figure}
     \begin{center}
       \includegraphics[scale=0.5]{pictures/otawa_abstraction_architecture.png}
