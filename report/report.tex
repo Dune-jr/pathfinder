@@ -31,15 +31,25 @@
   
   Voici donc l'algorithme en pseudo-code, qui prend en paramètre un bloc de base :\\
   
-  % http://www.cs.toronto.edu/~frank/Useful/algorithm2e.pdf
+    % http://www.cs.toronto.edu/~frank/Useful/algorithm2e.pdf
+  \RestyleAlgo{boxed}
   \begin{algorithm}[H]
     \Donnees{bb: BasicBlock}
+    \Res{Chemins infaisables trouvés}
+    \Si{bb est un bloc de sortie (EXIT)}{
+        \Retour{[]} // Fin de l'analyse de ce chemin
+    }
+    Appeler le solveur SMT;
+    \Si{on a trouvé une insatisfiabilité}{
+	Extraire la liste des chemins infaisables;
+	\Retour{cette liste}
+    }
+    analyzeBasicBlock(bb); // Analyse linéaire des instructions sémantiques du bloc\\
+    \Pour{tous les arcs sortants de bb}{
+	blabla
+    }
+    
   \end{algorithm}
-%    \Res{infeasible_paths: Path list}
-%    infeasible_paths = [];
-%    \Si{bb est un bloc de sortie (EXIT)}{
-%        \Retour{}
-%    }
   
   
   \subsection{Analyse des instructions sémantiques d'un bloc de base}
