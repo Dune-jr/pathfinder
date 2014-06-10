@@ -11,6 +11,8 @@
 \usepackage{pxfonts}
 \usepackage[french]{algorithm2e}
 
+% TODO: parler de la limitation 'programme sans boucles'
+
 \lstset{
     language=Caml,
     basicstyle=\ttfamily,
@@ -24,31 +26,119 @@
 
 \definecolor{Gray}{gray}{0.85}
 
+\makeatletter
+\renewcommand{\@algocf@capt@plain}{above}% formerly {bottom}
+\newcommand{\pushline}{\Indp} % Indent
+\newcommand{\popline}{\Indm}  % Undent
+\makeatother
+
 \begin{document}
+  \begin{titlepage}
+  \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+  \center 
+  \textsc{\	 IRIT - Equipe TRACES}\\[1.5cm] \textsc{\Large Rapport de Stage - M2R IT Spé. SRLC}\\[0.5cm] 
+  \textsc{\large 01 Mars 2014 - 03 Août 2014}
+  \HRule \\[0.5cm] { \huge \bfseries Détermination de propriétés de flot de données pour l'amélioration du temps d'exécution
+pire-cas}\\[0.4cm] \HRule \\[1cm]
+  \begin{minipage}{0.5\textwidth} \begin{flushleft} \large \emph{Auteur:}\\ Jordy \textsc{Ruiz} \end{flushleft} \end{minipage}\begin{minipage}{0.5\textwidth} \begin{flushright} \large \emph{Encadrant:} \\ Hugues \textsc{Cassé}\end{flushright} \end{minipage}\\[1cm]
+  {\large Année 2013 - 2014}\\[2.5cm]
+  \includegraphics[scale=0.6]{pictures/logo_univ_tlse.png}\\[1cm]
+  \vfill
+  \end{titlepage}
+
+  \section{Introduction}
+  \subsection{WCET, les enjeux}
+  \`A Toulouse même, les besoins des industriels en termes de vérification de logiciel sont présents. Le calcul du pire temps d'exécution, ou WCET en anglais (Worst Case Execution Time) est un de ces multiples processus de vérification. La grande majorité des logiciels développés n'ont pas besoin de tels procédés de vérification, les bugs y sont gênants mais la plupart du temps on redémarre sans trop chercher à comprendre. Pour les systèmes dits \textbf{temps-réel critiques} (algorithme dans un satellite, frein d'une voiture, pilotage d'une rame de métro...), une erreur ou un échec peuvent entraîner de lourdes pertes économiques ou humaines : le plantage du logiciel d'un satellite nécessite des interventions très coûteuses, le temps de réponse exceptionnellement long d'un frein de voiture peut entraîner un accident...
+  
+  Le problème est simple : il peut exister dans ces systèmes temps-réel critiques des cas extrêmement rares, indétectables par une batterie de tests, où le temps d'exécution explose anormalement. On pourrait par exemple imaginer un algorithme qui sauvegarde (disons hebdomadairement) le contenu de ses données sur un disque externe. Si tout est géré de manière synchrone et qu'un ordre critique arrive à ce moment-là, on pourrait se retrouver avec un temps d'exécution très élevé. On peut imaginer plein d'autres exemples (une plage de données très fragmentée qui entrainerait des défauts de page en masse, etc...).
+  
+  Dans le cadre de mon étude, je fais abstraction de certains problèmes très bas niveau comme la gestion du cache ou le fonctionnement du pipeline et des prédictions de branchement. Ces problèmes ne sont pas ignorés, ils sont simplement traités par d'autres travaux, d'autres outils que les miens.
+  
+  Le calcul du WCET consiste en une \textbf{surestimation} : on ne donne certes pas une mesure exacte du pire temps d'exécution, mais on garantit que cette mesure est en tout cas supérieure au pire temps réel. Le but de mon étude est d'améliorer, d'affiner, donc de \textbf{réduire} la surestimation du WCET calculée par notre outil OTAWA, tout en restant correct. On cherche à avoir le plus petit majorant possible.
+  
+  La stratégie que je vais mettre en oeuvre pour la réduction de notre évaluation du WCET est la recherche de chemins infaisables.
+  
+  \subsection{La recherche de chemins infaisables}
+  L'idée est la suivante : pour (sur)estimer le WCET, notre outil OTAWA fonctionne par énumération implicite des ``chemins'' du programme, ou IPET en anglais (Implicit Path Enumeration Technique), il prendra ensuite le temps d'exécution du chemin le plus coûteux du programme pour le calcul du WCET. Les programmes étudiés contiennent souvent de nombreux chemins infaisables (une étude avait observé 99.9\% de chemins infaisables dans un programme de gestion des vitres d'une voiture). Prenons par exemple le programme suivant :
+  
+  \RestyleAlgo{boxed}
+  \begin{algorithm}
+    \Donnees{n}
+    \Res{k}
+    \eSi{n > 10}{
+	k = 0; // (1)\\
+	sauvegarder();
+    }{
+	k = 1; // (2)
+    }
+    \eSi{n > 0}{
+	k = k + 1; // (3)
+    }{
+	k = k - 1; // (4)\\
+	sauvegarder();
+    }
+    \caption{Exemple d'un programme avec chemin infaisable}
+  \end{algorithm}
+  
+  Ce programme contient 4 chemins :
+  \begin{itemize}
+    \item Un chemin $c_1$ qui passe par (1) et (3) ;
+    \item Un chemin $c_2$ qui passe par (1) et (4) ;
+    \item Un chemin $c_3$ qui passe par (2) et (3) ;
+    \item Un chemin $c_4$ qui passe par (2) et (4).
+  \end{itemize}
+  
+  Le chemin $c_2$, qui passe par (1) et (4) est \textbf{infaisable}, puisqu'il implique $n > 10$ et $n \ngtr 0$.
+  
+  On pourrait maintenant imaginer que la fonction \texttt{sauvegarder} fait une opération relativement coûteuse, comme par exemple une écriture sur un fichier du système. Dans ce cas, le WCET calculé correspondra au temps d'exécution du chemin $c_2$, qui vaut à peu près à deux fois le temps d'exécution de la fonction \texttt{sauvegarder}.
+  
+  Or, ce chemin est infaisable, c'est-à-dire qu'il ne sera jamais emprunté par le programme. Dans la réalité, ce programme n'exécuterait au plus qu'une fois cette fonction de sauvegarde, nous avons donc estimé le WCET (à peu près) au double du WCET réel !
+  
+  En détectant ce chemin infaisable $c_2$, on pourrait indiquer à OTAWA de ne pas considérer ce chemin, et ainsi réduire effectivement l'estimation du WCET obtenue de moitié.
+  
+  Le but de mon étude est donc de détecter ces chemins infaisables et de transmettre cette information à l'outil avant qu'il démarre son analyse pour l'estimation du WCET.
+
+  
+  \subsection{Langages supportés}
+  sur la figure\ref{abstraction architecture}, ...
+  \begin{figure}
+    \begin{center}
+      \includegraphics[width=\textwidth]{pictures/otawa_abstraction_architecture.png}
+    \end{center}
+    \caption{OTAWA permet aux analyses de s'abstraire de l'architecture}
+    \label{abstraction architecture}
+  \end{figure}
+  
+  \subsection{Restrictions}
+  
   \section{Brouillon}
   \subsection{Analyse d'un graphe de flot de contrôle}
-  Nous travaillons sans boucles, cet algorithme n'est pas correct (il ne terminera pas) si on le fait fonctionner sur un \textsc{cfg} avec boucles. Nous initialisons d'abord l'algorithme de parcours de graphe de contrôle avec le premier bloc de base du \textsc{cfg}, qui nous est donné par \textsc{otawa}.
+  Nous travaillons sans boucles, cet algorithme n'est pas correct (il ne terminera pas) si on le fait fonctionner sur un CFG avec boucles. Nous initialisons d'abord l'algorithme de parcours de graphe de contrôle avec le premier bloc de base du CFG, qui nous est donné par OTAWA.
   
   Voici donc l'algorithme en pseudo-code, qui prend en paramètre un bloc de base :\\
   
-    % http://www.cs.toronto.edu/~frank/Useful/algorithm2e.pdf
-  \RestyleAlgo{boxed}
+   % http://www.cs.toronto.edu/~frank/Useful/algorithm2e.pdf
   \begin{algorithm}[H]
-    \Donnees{bb: BasicBlock}
+    % \caption{analyzeBasicBlock}
+    \Donnees{bb: BasicBlock, lpreds: LabelledPredicate list}
     \Res{Chemins infaisables trouvés}
     \Si{bb est un bloc de sortie (EXIT)}{
         \Retour{[]} // Fin de l'analyse de ce chemin
     }
-    Appeler le solveur SMT;
+    Appeler le solveur SMT avec lpreds;\\
     \Si{on a trouvé une insatisfiabilité}{
-	Extraire la liste des chemins infaisables;
-	\Retour{cette liste}
+	Extraire la liste des chemins infaisables;\\
+	\Retour{cette liste} // Fin de l'analyse de ce chemin
     }
-    analyzeBasicBlock(bb); // Analyse linéaire des instructions sémantiques du bloc\\
-    \Pour{tous les arcs sortants de bb}{
-	blabla
+    preds = parseBasicBlock(bb); // Analyse linéaire des instructions sémantiques\\
+    \Pour{tous les arcs sortants edge de bb}{
+	Labeller les prédicats preds avec l'arc edge comme étiquette;\\
+	Ajouter ces prédicats labellés à lpreds;\\
+	Appel récursif de cette fonction avec pour paramètres (\\
+	    \pushline le bloc de base vers lequel edge pointe,\\
+	    la nouvelle liste lpreds\\
+	\popline);\\
     }
-    
   \end{algorithm}
   
   
@@ -108,7 +198,7 @@
         if (d = a) then (* d <- d+b *)
             (update d (d - b) p)
         else if (d = b) (* d <- a+d *)
-            (update d (d + a) p)
+            (update d (d - a) p)
         else
             (d = a + b) @ (invalidate d p)
 
@@ -189,13 +279,6 @@
   \end{lstlisting}
 
 
-
-  \begin{figure}
-    \begin{center}
-      \includegraphics[scale=0.5]{pictures/otawa_abstraction_architecture.png}
-    \end{center}
-    \caption{OTAWA permet aux analyses de s'abstraire de l'architecture}
-  \end{figure}
   \begin{figure}
     \begin{tabular}{|l|l|} \hline
       \textbf{Instruction} & \textbf{Sémantique}\\ \hline \hline
@@ -235,10 +318,6 @@
     \caption{Liste des instructions sémantiques d'OTAWA}
   \end{figure}
 
-
-  \section{Objectif}
-  \subsection{WCET, enjeux (systèmes critiques etc)}
-  Améliorer l'estimation de WCET
 
   \section{Solution}
   Explication : calcul de WCET par IPET, max d'un système ILP\\
