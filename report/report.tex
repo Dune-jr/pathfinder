@@ -3,15 +3,14 @@
 \usepackage[utf8]{inputenc}
 \usepackage{fixltx2e}
 \usepackage{graphicx}
-% \usepackage{listings}
 \usepackage{babel}
 \usepackage{color}
 \usepackage{colortbl}
 \usepackage{listings}
 \usepackage{pxfonts}
 \usepackage[french]{algorithm2e}
-
-% TODO: parler de la limitation 'programme sans boucles'
+\usepackage{url}
+\usepackage{lstlangarm}
 
 \lstset{
     language=Caml,
@@ -45,6 +44,10 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \includegraphics[scale=0.6]{pictures/logo_univ_tlse.png}\\[1cm]
   \vfill
   \end{titlepage}
+  
+  \pagebreak{}
+  %\tableofcontents{}
+  %\newpage{}
 
   \section{Introduction}
   \subsection{WCET, les enjeux}
@@ -96,20 +99,56 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   
   En détectant ce chemin infaisable $c_2$, on pourrait indiquer à OTAWA de ne pas considérer ce chemin, et ainsi réduire effectivement l'estimation du WCET obtenue de moitié.
   
-  Le but de mon étude est donc de détecter ces chemins infaisables et de transmettre cette information à l'outil avant qu'il démarre son analyse pour l'estimation du WCET.
+  Le but de mon étude est donc de détecter ces chemins infaisables et de transmettre cette information à l'outil avant qu'il ne démarre son analyse pour l'estimation du WCET.
 
   
   \subsection{Langages supportés}
-  sur la figure\ref{abstraction architecture}, ...
+  Notre analyse portera sur des programmes écrits en \textbf{langage assembleur}, qui est le langage de programmation le plus proche de la machine. Le travail sur le code source a effectivement de multiples inconvénients : il faut prouver le(s) compilateur(s) qui viennent avec (un travail très conséquent), et cela nous restreint aussi aux programmes dont nous disposons des sources complètes (certaines bibliothèques ne sont pas open-source).
+  
+  Le langage assembleur, aussi appelé langage machine, est en revanche bien sûr beaucoup moins facile à analyser : les registres ne sont en général pas typés, et il n'y a pas réellement d'instructions \texttt{if}, \texttt{then}, \texttt{else} ou \texttt{while}, \texttt{for} (celle-ci est particulièrement dure à détecter dans le code assembleur) : il s'agit seulement d'instructions de comparaison et de branchements conditionnels. 
+  
+  Il n'y a pas non plus d'appels de fonctions avec des paramètres et des valeurs de retours explicites, il s'agit là encore de branchements (BL, Branch with Link dans le cas du langage d'assembleur ARM~\cite{ARM instruction set}).
+  
+  Un autre problème des langages machines est qu'il sont spécifiques à une architecture, les exécutables compilés à partir d'un même langage source seront différent selon qu'on est sur une architecture ARM ou PowerPC... Fort heureusement, notre outil OTAWA nous permet de nous \textbf{abstraire de l'architecture} en transformant les instructions du langage assembleur en \textbf{instructions sémantiques} génériques, universelles à tous les langages assembleur. % TODO: what is going on with the text align o_o
+  
+  Ainsi, l'analyse que je développerai avec OTAWA supportera toutes les architectures supportées par OTAWA, et pour supporter une nouvelle architecture, il suffit de rajouter celle-ci dans OTAWA. OTAWA fonctionne comme une interface entre l'analyse et le code (écrit dans un langage spécifique à une architeture). Cette interface est schématisée sur la figure~\ref{abstraction architecture}.
+  
   \begin{figure}
-    \begin{center}
-      \includegraphics[width=\textwidth]{pictures/otawa_abstraction_architecture.png}
-    \end{center}
+    \centering
+    \includegraphics[width=\textwidth]{pictures/otawa_abstraction_architecture.png}
     \caption{OTAWA permet aux analyses de s'abstraire de l'architecture}
     \label{abstraction architecture}
   \end{figure}
   
+  Voici, sans donner plus de détails pour le moment, à quoi ressemble la traduction de code assembleur (celui-ci a été généré avec gcc) en instructions sémantiques. Les \texttt{tX} sont des variables temporaires utilisées pour la traduction en instructions sémantiques et les \texttt{?X} sont les registres. Pour chaque instruction assembleur, on trouve dessous une ou plusieurs instructions sémantiques équivalentes, en commentaire :
+  
+  \begin{lstlisting}[language={[ARM]Assembler}]
+    ldr r0, [pc, #20]
+    @	seti ?15, 0x8310
+    @	seti t2, 0x14
+    @	add t1, ?15, t2
+    @	load ?0, t1, uint32
+    
+    mov r1, #0
+    @	seti ?1, 0x0
+    
+    mov r2, r1
+    @	set t1, ?1
+    @	set ?2, t1
+    
+    bl 8574
+    @	seti t1, 0x8574
+    @	seti ?14, 0x8318
+    @	branch t1
+  \end{lstlisting}
+  
+  De plus amples explications à ce sujet seront données dans la suite de ce mémoire.
+  
   \subsection{Restrictions}
+  programmes sans boucles\\
+  gestion de la mémoire limitée\\
+  gestion unsigned/signed\\
+  bien sûr toutes les instructions non gérées par otawa...\\
   
   \section{Brouillon}
   \subsection{Analyse d'un graphe de flot de contrôle}
@@ -336,4 +375,20 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   On fait des appels au SMT pour vérifier la satisfiabilité\\
   Retourne la liste de prédicats\\
   On génère les contraintes ILP\\
+  
+  \section*{Conclusion}
+  Petit récap...\\
+  Tout ce qu'il y a à faire en thèse !\\
+  Parler un peu de la théorie, analyse statique...\\
+
+\newpage{}
+%\bibliographystyle{plain}
+\begin{thebibliography}{1}
+    \bibitem{ARM instruction set} ARM Instruction Set Quick Reference Card.\\ \url{http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf}
+\end{thebibliography}
+
 \end{document}
+
+
+% http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf
+% ARM Instruction Set Quick Reference Card
