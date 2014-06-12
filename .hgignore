@@ -4,6 +4,7 @@ benchmarks/if_then_else_2seq/colored examples
 benchmarks/if_then_else_2seq/slideshow
 report/*.aux
 report/*.log
+report/*.toc
 report/report.tex.backup
 report/report.tex~
 

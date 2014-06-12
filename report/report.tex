@@ -1,15 +1,21 @@
-\documentclass[french,english]{article}
+\documentclass[french]{article}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usepackage{amsmath}
 \usepackage{fixltx2e}
 \usepackage{graphicx}
-\usepackage{babel}
+\usepackage[french]{babel}
 \usepackage{color}
 \usepackage{colortbl}
 \usepackage{listings}
 \usepackage{pxfonts}
 \usepackage[french]{algorithm2e}
 \usepackage{url}
+\usepackage{stmaryrd}
+\usepackage{wrapfig}
+\usepackage{textcomp} % \textlnot
+
+% User packages
 \usepackage{lstlangarm}
 
 \lstset{
@@ -45,9 +51,10 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \vfill
   \end{titlepage}
   
+  %\selectlanguage{french}
   \pagebreak{}
   %\tableofcontents{}
-  %\newpage{}
+  \newpage{}
 
   \section{Introduction}
   \subsection{WCET, les enjeux}
@@ -80,6 +87,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 	k = k - 1; // (4)\\
 	sauvegarder();
     }
+    \label{alg:1}
     \caption{Exemple d'un programme avec chemin infaisable}
   \end{algorithm}
   
@@ -145,14 +153,145 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   De plus amples explications à ce sujet seront données dans la suite de ce mémoire.
   
   \subsection{Restrictions}
-  programmes sans boucles\\
-  gestion de la mémoire limitée\\
-  gestion unsigned/signed\\
-  bien sûr toutes les instructions non gérées par otawa...\\
+  Nous travaillons dans le cadre de cette étude exclusivement sur des programmes sans boucles. Le problème de la gestion des boucles est un problème complexe qui ne pouvait pas se traiter en l'espace de quelques mois. Cette hypothèse n'est pas complètement irréaliste puisqu'il existe des programmes, ou même des langages assembleur sans boucles. Plus tard quand ce travail sera continué en thèse, il faudra les traiter mais nous ne savons pas encore à quel point ce traitement sera limité en efficacité.
+  
+  Un autre vaste problème se pose, celui de la gestion de la mémoire. Il s'agit de se représenter dans le programme l'état de la mémoire (ou du moins les quelques parties sur lesquelles on sait quelque chose) et de déduire des propriétés sur la valeur du registre de destination d'un LOAD en mémoire. Le traitement des instructions mémoire est à l'heure que j'écris ces lignes quasiment terminé mais il reste assez limité.
+  
+  Notre programmme ne traite pour l'instant pas les instructions sémantiques d'OTAWA spécifiques aux ``unsigned'' (entiers représentés non signés). En effet, pour une même valeur binaire dans un registre, selon qu'on l'interprète comme un entier signé ou non, son interprétation peut être différente. Un exemple sur 4 bits est donné sur la figure~\ref{representation_signed_unsigned}.
+  
+  \begin{figure}
+    \centering
+    \includegraphics[width=250px]{pictures/representation_signed_unsigned.png}
+    \caption{Différentes interprétations de la valeur d'un registre}
+    \label{representation_signed_unsigned}
+  \end{figure}
+
+  Toutefois, l'interprétation de la valeur d'un registre est identique tant que le bit de poids fort est à 0, c'est à dire tant que la valeur interprétée appartient à l'intervalle $\llbracket0, 2^{n-1}-1\rrbracket$, où $n$ est le nombre de bits du registre.
+  
+  Et bien sûr, toutes les instructions qui ne sont pas supportées par OTAWA (impossibles à traduire en expression sémantiques) ne sont pas non plus supportées par notre programme, même si ce type d'erreur est géré de manière à ne pas être critique : on va perdre de l'information et donc peut-être détecter moins de chemins infaisables, mais l'analyse n'échoue pas.
   
   \section{Brouillon}
+  \subsection{Choix du solveur SMT}
+  Pour le choix de notre solveur SMT, nous avons dressé un petit état de l'art en nous basant principalement sur des résultats de la SMT-COMP~\cite{SMT-COMP}, une compétition entre solveurs, en éliminant d'office les solveurs qui ne présentaient pas d'API utilisable en C++ :
+  
+  \begin{itemize}
+    \item Z3~\cite{smt_z3}
+    \begin{itemize}
+      \item Gagnant de la SMT-COMP 2011
+      \item Apparemment encore le plus performant en termes de temps d'exécution
+      \item Développé par Microsoft Research
+      \item Distribué sous la licence \textit{Microsoft Research License Agreement Non-Commercial Use Only}
+    \end{itemize}
+    \item CVC4~\cite{smt_cvc4}
+    \begin{itemize}
+      \item CVC3 a l'air insuffisant et limité mais le solveur a été globalement réécrit pour CVC4, bien qu'il semble y avoir une certaine continuité dans les \textit{features} proposées
+      \item CVC4 a tourné sur de multiples benchmarks et a toujours eu de bons ou très bons résultats
+      \item Open source, sans restriction pour un usage commercial ou à fins de recherches
+    \end{itemize}
+    \item MathSAT 5~\cite{smt_mathsat5}
+    \begin{itemize}
+      \item API disponible seulement en C
+      \item Bons résultats pour MathSAT5-smtcomp12
+      \item ``An SMT solver for Formal Verification'', ouverture possible sur la vérification formelle
+    \end{itemize}
+    \item Boolector~\cite{smt_boolector}
+    \begin{itemize}
+      \item API disponible seulement en C
+      \item Quelques très bons résultats à la SMT-COMP mais qui ne semblent pas porter sur des critères intéressants pour notre usage.
+    \end{itemize}
+    \item SONOLAR~\cite{smt_sonolar}
+    \begin{itemize}
+      \item Modeste dans ses performances
+      \item N'a été testé que sur benchmarks notés ``BV'', restrictions aux booléens ?
+    \end{itemize}
+    \item MISTRAL~\cite{smt_mistral}
+    \begin{itemize}
+      \item Pas évalué à la SMT-COMP 2012
+    \end{itemize}
+    \item VeriT~\cite{smt_verit}
+    \begin{itemize}
+      \item Pas évalué à la SMT-COMP 2012
+    \end{itemize}
+    \item Barcelogic~\cite{smt_barcelogic}
+    \begin{itemize}
+      \item Pas évalué à la SMT-COMP 2012
+    \end{itemize}
+  \end{itemize}
+  
+  \begin{wrapfigure}{R}{1.5in}
+    \centering
+    \includegraphics{./pictures/cvc4.png}
+    % cvc4.png: 300x168 pixel, 300dpi, 2.54x1.42 cm, bb=0 0 72 40
+    \label{cvc4}
+  \end{wrapfigure}
+  
+  Notre choix s'est finalement porté sur \textbf{CVC4}, pour ses bonnes performances, son API riche et bien documentée, et sa licence très libre.
+  
+  Notre application utilise toutefois ses propres structures pour manipuler les prédicats, et le module qui fait l'interface avec le solveur SMT devrait être suffisamment indépendant du reste pour permettre de changer de solveur SMT si besoin sans trop de difficultés.
+  
+  \subsection{Représentation en graphe de flot de contrôle}
+  Lors de notre analyse, nous considérerons le programme sous la forme d'un graphe connexe enraciné, appelé \textbf{graphe de flot de contrôle, ou CFG} (Control Flow Graph). Dans le cas des programmes sans boucles que nous traitons, il s'agit même d'un arbre.
+  
+  Un CFG est donc un graphe dont les noeuds sont appelés des \textbf{blocs de bases}, et qui sont constitués d'une suite d'instructions exécutées \textit{séquentiellement}. Il ne peut donc y avoir d'appels de fonctions, de conditions, de boucles, ou tout autre branchement à l'intérieur d'un bloc de base (excepté en dernière instruction). La figure~\ref{bloc de base} en montre un exemple.
+  
+  \begin{figure}
+    \centering
+    \includegraphics[scale=0.5]{pictures/basicblock.png}
+    % basicblock.png: 173x104 pixel, 72dpi, 6.10x3.67 cm, bb=0 0 173 104
+    \caption{Un exemple de bloc de base en langage machine ARM}
+    \label{bloc de base}
+  \end{figure}
+  
+  Les arêtes représentent les chemins d'exécution du programme, elles correspondent à des branchements où à l'exécution séquentielle du programme. Il y a deux types de branchements : les branchements conditionnels et les branchements inconditionnels.
+  
+  Parmi les \textbf{branchements conditionnels}, ceux qui correspondent à l'arc ``pris'', c'est-à-dire au cas où la condition évoquée est vérifiée, sont annotés sur le CFG avec l'étiquette ``\textit{taken}'', l'arc dit ''non pris'' n'a conventionellement pas d'étiquette.
+  
+  Parmi les \textbf{branchements inconditionnels}, il peut s'agit de l'exécution séquentielle du programme ou d'un branchement non conditionnel (ce qui revient en assembleur à changer le registre pointeur d'instruction \texttt{pc} ou \texttt{r15}) auquel cas l'arc n'est pas annoté, ou il peut s'agit d'un appel de fonction (\textit{Branch with Link} en assembleur), auquel cas l'arc est dessiné en pointillés et annoté ``\textit{call}''.
+  
+  Les figures \ref{branchement conditionnel} et \ref{branchement inconditionnel} montrent des exemples de ces branchements.
+  
+  \begin{figure}
+    \begin{minipage}[c]{.46\linewidth}
+      \includegraphics[scale=0.5]{./pictures/conditional_branch.png}
+      % conditional_branch.png: 419x248 pixel, 96dpi, 11.08x6.56 cm, bb=0 0 314 186
+      \caption{Exemples de branchements conditionnels}
+      \label{branchement conditionnel}
+   \end{minipage} \hfill
+   \begin{minipage}[c]{.46\linewidth}
+      \includegraphics[scale=0.5]{./pictures/incoditional_branch.png}
+      % incoditional_branch.png: 423x181 pixel, 96dpi, 11.19x4.79 cm, bb=0 0 317 136
+      \caption{Exemples de branchements inconditionnels}
+      \label{branchement inconditionnel}
+   \end{minipage}
+\end{figure}
+
+  % TODO expliquer plus en détail/formellement les CFGs ici
+  
+  \bigbreak
+  
+  Prenons pour exemple l'algorithme~\ref{alg:1} que nous avions présenté plus haut. Le CFG en pseudo-code correspondant est exhibé sur la figure~\ref{cfg}. On y voit bien apparaître les 4 chemins cités précédemment. %TOLDO: vérifier que l'algo soit bien présent *plus haut*
+  
+  La figure~\ref{cfg_genere} montre le CFG généré par OTAWA à partir du code ARM correspondant à l'algorithme~\ref{alg:1} (compilé à partir d'un fichier C). On y observe à peu près la même structure que sur le CFG en pseudo-code, avec des calls à la fonction \texttt{sauvegarder} et des instructions ARM plus volumineuses à l'intérieur des blocs.
+  
+  \begin{figure}
+    \centering
+    \includegraphics[height=250px]{pictures/cfg.png}
+    \caption{CFG de l'algorithme~\ref{alg:1}}
+    \label{cfg}
+  \end{figure}
+  
+  \begin{figure}
+    \centering
+    \includegraphics[height=525pt]{pictures/cfg_genere.png}
+    % cfg_genere.png: 468x1296 pixel, 72dpi, 16.51x45.72 cm, bb=0 0 468 1296
+    \caption{CFG généré par OTAWA}
+    \label{cfg_genere}
+  \end{figure}
+
+  
+  
   \subsection{Analyse d'un graphe de flot de contrôle}
-  Nous travaillons sans boucles, cet algorithme n'est pas correct (il ne terminera pas) si on le fait fonctionner sur un CFG avec boucles. Nous initialisons d'abord l'algorithme de parcours de graphe de contrôle avec le premier bloc de base du CFG, qui nous est donné par OTAWA.
+  Comme nous travaillons sans boucles, l'algorithme ci-dessous n'est pas correct, ou du moins ne terminera pas si on le fait fonctionner sur un CFG avec boucles. Nous initialisons d'abord l'algorithme de parcours de graphe de contrôle avec le premier bloc de base du CFG, qui nous est donné par OTAWA.
   
   Voici donc l'algorithme en pseudo-code, qui prend en paramètre un bloc de base :\\
   
@@ -376,6 +515,72 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Retourne la liste de prédicats\\
   On génère les contraintes ILP\\
   
+  Identification des chemins infaisables ?
+  
+  \section{Traduction en contraintes ILP}
+  Une fois les chemins infaisables trouvés, il faut générer des contraintes ILP sur le CFG utilisables par OTAWA pour affiner (du moins on l'espère) l'estimation du WCET.
+  
+  \subsection{Cas avec deux if en séquence}
+  Commençons avec un exemple simple de deux \texttt{if... then... else ...} en séquence (figure~\ref{if_2seq}). La première condition est notée \texttt{x} et la deuxième \texttt{y}, nous avons étiquettés les 4 arcs correspondants aux branchements conditionnels : \texttt{x}, \texttt{\textlnot x}, \texttt{y}, \texttt{\textlnot y}.
+  
+  
+%   \begin{figure}
+%     \centering
+%     \includegraphics[scale=0.45]{./pictures/if_2seq.png}
+%     % if_2seq.png: 363x661 pixel, 72dpi, 12.80x23.32 cm, bb=0 0 363 661
+%     \caption{Premier exemple : deux if en séquence}
+%     \label{if_2seq}
+%   \end{figure}
+  \begin{wrapfigure}{R}{0in}
+    \centering
+    \includegraphics[scale=0.4]{./pictures/if_2seq.png}
+    % if_2seq.png: 363x661 pixel, 72dpi, 12.80x23.32 cm, bb=0 0 363 661
+    \caption{Premier exemple : deux if en séquence}
+    \label{if_2seq}
+  \end{wrapfigure}
+  
+  Nous notons $n_x$, $n_{\neg x}$, $n_y$ et $n_{\neg y}$ les variables qui représentent le nombre de fois que sont exécutés les arcs respectifs \texttt{x}, \texttt{\textlnot x}, \texttt{y}, et \texttt{\textlnot y}.
+  
+  Le problème est le suivant : nous savons que le chemin \texttt{x-y} (je note ainsi le seul chemin qui passe par les arcs notés \texttt{x} et \texttt{y}) est infaisable. Quelles contraintes ILP peut-on en déduire ?
+  
+  Attention, nous ne cherchons pas à trouver une équivalence (chemin infaisable $\Leftrightarrow$ contraintes ILP) mais simplement une implication (chemin infaisable $\Rightarrow$ contraintes ILP).
+  
+  \medbreak
+  
+  Pour un tel chemin infaisable \texttt{x-y}, l'\textit{unique} contrainte ILP que nous générons est la suivante :
+  
+  \[ n_x \leq n_{\neg y} \]
+  
+  Intuitivement, cette contrainte est valide (c'est-à-dire qu'elle est toujours vraie si \texttt{x-y} est un chemin infaisable) :
+  
+  En effet, si \texttt{x-y} est un chemin infaisable, alors tous les chemins qui passent par \texttt{x} passeront forcément par \texttt{\textlnot y}. Donc le nombre de fois que l'arc \texttt{\textlnot y} est exécuté, noté $n_{\neg y}$, est nécessairement \textit{supérieur ou égal} au nombre de fois que l'arc \texttt{x} est exécuté, c'est-à-dire $n_x$ (c'est supérieur s'il existe des chemins \texttt{\textlnot x-y}). Cela se traduit bien par 
+  
+  \[ n_x \leq n_{\neg y} \]
+  
+  On pourrait observer que de même, puisque \texttt{x-y} est un chemin infaisable, alors tous les chemins qui passent par \texttt{y} passeront forcément par \texttt{\textlnot x}, et donc que :
+  
+  \[ n_y \leq n_{\neg x} \]
+  
+  Nous allons maintenant montrer que $n_x \leq n_{\neg y} \Leftrightarrow n_y \leq n_{\neg x}$ et que par conséquent générer ces deux contraintes au lieu d'une seule est \textit{superflu}. Pour cela nous allons utiliser la propriété de flots de graphes qui dit que
+  
+  \[ n_x + n_{\neg x} = n_y + n_{\neg y} = N\]
+  
+  où N est une constante (qui représente le nombre total d'exécutions du programme). Nous avons ainsi :
+  
+  \begin{align*}
+    n_x &\leq n_{\neg y} \\
+    \Leftrightarrow n_x &\leq n_{\neg y}
+  \end{align*} 
+
+  
+  \subsection{Cas avec trois if en séquence}
+  
+  \subsection{Généralistion}
+  
+  \subsection{Limites des contraintes ILP}
+  voir dans le dossier rapport/ !
+  
+  \pagebreak
   \section*{Conclusion}
   Petit récap...\\
   Tout ce qu'il y a à faire en thèse !\\
@@ -384,7 +589,17 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 \newpage{}
 %\bibliographystyle{plain}
 \begin{thebibliography}{1}
-    \bibitem{ARM instruction set} ARM Instruction Set Quick Reference Card.\\ \url{http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf}
+    \bibitem{ARM instruction set} ARM Instruction Set Quick Reference Card. \url{http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf}
+    \bibitem{SMT-COMP} SMT-COMP: Satisfiability Modulo Theories Competition. Édition 2012. \url{http://smtcomp.sourceforge.net/2012/}
+    
+    \bibitem{smt_z3} SMT solver Z3. \url{http://z3.codeplex.com/}
+    \bibitem{smt_cvc4} SMT solver CVC4. \url{http://cvc4.cs.nyu.edu/web/}
+    \bibitem{smt_mathsat5} SMT solver MathSAT 5. \url{http://mathsat.fbk.eu/documentation.html}
+    \bibitem{smt_boolector} SMT solver Boolector. \url{http://fmv.jku.at/boolector/}
+    \bibitem{smt_sonolar} SMT solver SONOLAR. \url{http://www.informatik.uni-bremen.de/~florian/sonolar/}
+    \bibitem{smt_mistral} SMT solver MISTRAL. \url{http://www.cs.wm.edu/~tdillig/mistral/index.html}
+    \bibitem{smt_verit} SMT solver VeriT. \url{http://www.verit-solver.org/veriT-download.php}
+    \bibitem{smt_barcelogic} SMT solver Barcelogic. \url{http://www.lsi.upc.edu/~oliveras/bclt-main.html}
 \end{thebibliography}
 
 \end{document}

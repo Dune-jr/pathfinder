@@ -1,0 +1,4 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"3" [label="{BB 3 (000082bc) | 000082bc    mov r2, #1\l000082c0    ldr r3, [pc, #72]\l000082c4    str r2, [r3, #0]\l }"]
+}
