@@ -35,6 +35,8 @@
 \renewcommand{\@algocf@capt@plain}{above}% formerly {bottom}
 \newcommand{\pushline}{\Indp} % Indent
 \newcommand{\popline}{\Indm}  % Undent
+\newcommand{\pushright}[1]{\ifmeasuring@#1\else\omit\hfill$\displaystyle#1$\fi\ignorespaces} % push to right
+\newcommand{\pushleft}[1]{\ifmeasuring@#1\else\omit$\displaystyle#1$\hfill\fi\ignorespaces} % push to left
 \makeatother
 
 \begin{document}
@@ -569,11 +571,25 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   
   \begin{align*}
     n_x &\leq n_{\neg y} \\
-    \Leftrightarrow n_x &\leq n_{\neg y}
-  \end{align*} 
-
+    \Leftrightarrow n_x + (n_{\neg x} - n_{\neg x}) &\leq n_{\neg y} + (n_y - n_y) \\
+    \Leftrightarrow (n_x + n_{\neg x}) - n_{\neg x} &\leq (n_{\neg y} + n_y) - n_y \\
+    \Leftrightarrow N - n_{\neg x} &\leq N - n_y \\
+    \Leftrightarrow - n_{\neg x} &\leq - n_y \\
+    \Leftrightarrow n_y &\leq n_{\neg x} & \pushright{\blacksquare}
+  \end{align*}
   
   \subsection{Cas avec trois if en séquence}
+  \begin{wrapfigure}{R}{3.5in}
+    \centering
+    \includegraphics[scale=0.4]{./pictures/if_3seq.png}
+    % if_3seq.png: 363x923 pixel, 72dpi, 12.80x32.56 cm, bb=0 0 363 923
+    \caption{Deuxième exemple : trois if en séquence}
+    \label{if_3seq}
+  \end{wrapfigure}
+  
+  Voyons maintenant ce qui se passe lorsque l'on rajoute un autre \texttt{if... then... else ...} en séquence, ainsi que deux arcs notés \texttt{z} et \texttt{\textlnot z}.
+  
+  %TODO
   
   \subsection{Généralistion}
   
