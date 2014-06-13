@@ -29,6 +29,10 @@
     morekeywords={undefined}
 }
 
+\newtheorem{theorem}{Theorème}
+
+\newcommand*\quotefont{\fontfamily{LinuxLibertineT-LF}} % selects Libertine as the quote font
+
 \definecolor{Gray}{gray}{0.85}
 
 \makeatletter
@@ -55,7 +59,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   
   %\selectlanguage{french}
   \pagebreak{}
-  %\tableofcontents{}
+  \tableofcontents{}
   \newpage{}
 
   \section{Introduction}
@@ -266,8 +270,6 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
       \label{branchement inconditionnel}
    \end{minipage}
 \end{figure}
-
-  % TODO expliquer plus en détail/formellement les CFGs ici
   
   \bigbreak
   
@@ -277,7 +279,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   
   \begin{figure}
     \centering
-    \includegraphics[height=250px]{pictures/cfg.png}
+    \includegraphics[height=250px]{pictures/cfg.png} % TODO: increase height?
     \caption{CFG de l'algorithme~\ref{alg:1}}
     \label{cfg}
   \end{figure}
@@ -497,12 +499,24 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \textit{En gris : les instructions qui ne sont pas (encore) traitées par notre analyse.}
     \caption{Liste des instructions sémantiques d'OTAWA}
   \end{figure}
+  
+  \subsection{Identification de chemins infaisables minimaux}
+  Une fois qu'un appel au solveur SMT avec une conjonction de prédicats en paramètre a renvoyé une insatisfiabilité (code ``UNSAT''), le travail pour trouver le chemin infaisable en question n'est pas encore terminé. En effet, nous n'avons certes pas la liste complète de tous les arcs du chemin que nous avons parcouru, et seulement la liste des \textit{arcs qui ont généré un prédicat appartenant à la liste de prédicats que le SMT a détectée insatisfiable}, mais c'est loin d'être minimal.
+  
+  Nous aurons souvent une liste d'une dizaine de prédicats qui ont peu de rapport entre eux et deux ou trois prédicats qui à eux seuls ont causé l'insatisfiabilité. Le but de cet étape de l'algorithme et d'\textbf{identifier les prédicats responsables de l'insatisfiabilité} pour inclure le moins d'arcs possibles dans le chemin insatisfiable renvoyé.
+  
+  L'intérêt de faire cette réduction est que, comme nous le verrons plus loin, % TOLDO: est-ce vraiment plus loin ?
+  que l'exploitabilité des chemins infaisables trouvés (pour réduire l'estimation du WCET) diminue plus le chemin infaisable contient d'arcs.
+
+  % TODO: 1re partie description des contextes
+  % 2e partie recherche des chemins infaisables <- le gros chapite
+ % 3e partie trad contraintes ilp
 
 
   \section{Solution}
   Explication : calcul de WCET par IPET, max d'un système ILP\\
   Solution = Recherche de chemins infaisables pour améliorer l'estimation du WCET\\
-  Parler des outils choisis (OTAWA + CVC4 ?)\\
+  Parler des outils choisis (OTAWA)\\
 
   \section{Structures de données utilisées}
   La représentation des prédicats (associés à un Edge)\\
@@ -517,10 +531,10 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Retourne la liste de prédicats\\
   On génère les contraintes ILP\\
   
-  Identification des chemins infaisables ?
-  
   \section{Traduction en contraintes ILP}
   Une fois les chemins infaisables trouvés, il faut générer des contraintes ILP sur le CFG utilisables par OTAWA pour affiner (du moins on l'espère) l'estimation du WCET.
+  
+  % TODO: parler des contraintes IPET et de la loi des noeuds
   
   \subsection{Cas avec deux if en séquence}
   Commençons avec un exemple simple de deux \texttt{if... then... else ...} en séquence (figure~\ref{if_2seq}). La première condition est notée \texttt{x} et la deuxième \texttt{y}, nous avons étiquettés les 4 arcs correspondants aux branchements conditionnels : \texttt{x}, \texttt{\textlnot x}, \texttt{y}, \texttt{\textlnot y}.
@@ -579,7 +593,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{align*}
   
   \subsection{Cas avec trois if en séquence}
-  \begin{wrapfigure}{R}{3.5in}
+  \begin{wrapfigure}{r}{0in}
     \centering
     \includegraphics[scale=0.4]{./pictures/if_3seq.png}
     % if_3seq.png: 363x923 pixel, 72dpi, 12.80x32.56 cm, bb=0 0 363 923
@@ -589,14 +603,97 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   
   Voyons maintenant ce qui se passe lorsque l'on rajoute un autre \texttt{if... then... else ...} en séquence, ainsi que deux arcs notés \texttt{z} et \texttt{\textlnot z}.
   
-  %TODO
+  Supposons que \texttt{x-y-z} soit un chemin infaisable. Inutitivement, on en déduit que si un chemin passe par \texttt{x}, alors il passera par \texttt{\textlnot y} ou par \texttt{\textlnot z}. C'est-à-dire, exprimé en termes de nombre d'exécution des arcs :
   
-  \subsection{Généralistion}
+  \[n_x \leq n_{\neg y} + n_{\neg z} \]
   
-  \subsection{Limites des contraintes ILP}
-  voir dans le dossier rapport/ !
+  De manière similaire, on trouve aussi que ``\texttt{x-y-z} chemin infaisable'' entraîne :
   
-  \pagebreak
+  \begin{align*}
+    n_y &\leq n_{\neg x} + n_{\neg z} \\
+    n_z &\leq n_{\neg x} + n_{\neg y}
+  \end{align*}
+  
+  Une fois de plus, nous allons prouver que ces trois assertions sont équivalentes. Nous avons toujours la propriété de flots de graphes (cette sorte de loi des noeuds) qui dit que :
+  
+  \[ n_x + n_{\neg x} = n_y + n_{\neg y} = n_z + n_{\neg z} = N\]
+  
+  Montrons alors ces équivalences :
+  
+  \begin{align*}
+    &\boxed{n_x \leq n_{\neg y} + n_{\neg z}} \\
+    \Leftrightarrow& n_x \leq n_{\neg y} + (n_y - n_y) + n_{\neg z} \\
+    \Leftrightarrow& n_x \leq (n_{\neg y} + n_y) - n_y + n_{\neg z} \\
+    \Leftrightarrow& n_x \leq N - n_y + n_{\neg z} \\
+    \Leftrightarrow& n_x + n_y \leq N + n_{\neg z} \\
+    \Leftrightarrow& n_y \leq N - n_x + n_{\neg z} \\
+    \Leftrightarrow& n_y \leq (n_x + n_{\neg x}) - n_x + n_{\neg z} \\
+    \Leftrightarrow& \boxed{n_y \leq n_{\neg x} + n_{\neg z}} \\
+    \Leftrightarrow& n_y \leq n_{\neg x} + n_{\neg z} \\
+    \Leftrightarrow& n_y \leq n_{\neg x} + (N - n_z) \\
+    \Leftrightarrow& n_z \leq n_{\neg x} + N - n_y \\
+    \Leftrightarrow& \boxed{n_z \leq n_{\neg x} + n_{\neg y}} & \pushright{\blacksquare}
+  \end{align*}
+  
+  Générer une seule de ces trois contraintes est donc suffisant. On peut remarquer que cela entraîne également la propriété suivante :
+  
+  \[
+    \left.
+    \begin{array}{c}
+      n_x \leq n_{\neg y} + n_{\neg z}\\    
+      n_y \leq n_{\neg x} + n_{\neg z}\\
+      n_z \leq n_{\neg x} + n_{\neg y} 
+    \end{array}
+    \right\} \Longrightarrow n_x+n_y+n_z \leq 2(n_{\neg x} + n_{\neg y} + n_{\neg z})
+  \]
+
+  
+  Nous voyons apparaître un motif qui se répète, que nous allons tenter de généraliser dans la prochaine section.
+  
+  \subsection{Généralisation}
+  \begin{theorem}
+    Pour un CFG composé de $k$ \texttt{if... then... else... } en séquence, où les arcs pris (\texttt{then}) de chacune de ses conditions sont notés $x_1$, $x_2$, ..., $x_k$ et les arcs non pris (\texttt{else}) sont notés $\neg x_1$, $\neg x_2$, ..., $\neg x_k$, on note le nombre de fois qu'un arc $x_i$ (resp. $\neg x_i$) est emprunté $n_{x_i}$ (resp. $n_{\neg x_i}$).
+    
+    Si $x_1$\texttt{-}$x_2$\texttt{-...-}$x_k$ est un chemin infaisable, alors on en déduit les $k$ contraintes ILP suivantes :
+    
+    \[\forall i \in \llbracket 1, k \rrbracket,\; n_{x_i} \leq \sum_{j \in \llbracket 1, k \rrbracket \setminus \{i\}} n_{\neg x_j} \]
+    
+    et chacune de ces contraintes est équivalente. De plus, il est immédiat que :
+    
+    \[ \sum_{i \in \llbracket 1, k \rrbracket} n_{x_i} \leq (k-1) \sum_{i \in \llbracket 1, k \rrbracket} n_{\neg x_i} \]
+  \end{theorem}
+  
+  On pourra remarquer que les CFG contenant des conditions du type \texttt{if... then...} sans \texttt{else...} ne diffèrent pas du cas étudié (avec \texttt{else}) puisqu'il y a toujours deux arcs sortant du bloc de base qui calcule la condition, la différence étant que l'arc non pris pointe sur le bloc de fin de condition au lieu de pointer sur un bloc qui lui-même pointera vers ce bloc de fin de condition.
+
+  
+  \subsection{Limitations des contraintes ILP}
+  \begin{wrapfigure}{R!}{0in}
+    \centering
+    \includegraphics[scale=0.4]{./pictures/ambiguite_ilp.png}
+    % ambiguite_ilp.png: 363x661 pixel, 72dpi, 12.80x23.32 cm, bb=0 0 363 661
+    \caption{Exemple du manque d'expressivité des contraintes ILP}
+    \label{ambiguite ilp}
+  \end{wrapfigure}
+  
+  Les contraintes ILP manquent toutefois d'expressivité pour représenter toute l'information contenue dans la notion de ``chemin infaisable'', comme expliqué dans un article du WCET 2005 workshop :
+  
+  \begin{quote}
+    ``This is because the usual ILP formulation introduces formal variables for the execution counts of the nodes and edges in the Control Flow Graph (CFG) of the program. Since the variables denote aggregate execution counts of basic blocks, it is not possible to express certain infeasible path patterns as constraints on these variables.''~\cite{wcet05}
+  \end{quote}
+
+  En effet, si on considère l'exemple de la figure~\ref{ambiguite ilp}, où les valeurs entre paranthèses sur chaque arc représentent le nombre de fois que l'arc est exécuté dans le scénario considéré, il est impossible de déterminer si l'on a un chemin infaisable (en tout cas un chemin qui n'est jamais pris) ou non à partir des seules variables $n_x$, $n_{\neg x}$, $n_y$, $n_{\neg y}$ !
+  
+  Il se pourrait, par exemple, que les 20 exécutions du CFG consistent en 10 fois le chemin \texttt{x-\textlnot y} et 10 fois le chemin \texttt{\textlnot x-y}. Dans ce cas, le chemin \texttt{x-y} n'est effectivement jamais pris.
+  
+  Mais il se pourrait aussi, que l'on ait 10 exécutions qui passent par le chemin \texttt{x-y} !
+  
+  Dans ces conditions, on ne peut pas signifier à OTAWA si ce scénario (avec ces comptes d'exécution) est viable ou non, et il sera donc inclus dans le calcul du WCET. Les contraintes ILP ne permettent pas d'exprimer tout ce que l'on sait à partir de l'hypothèse ``chemin infaisable''.
+  
+  Il faut prendre conscience de cette limitation à l'étape ``utilisation des chemins infaisables trouvés'', de cette perte d'information, mais cela ne signifie pas nécessairement que le choix de la génération de contraintes ILP est mauvais. L'autre alternative serait de faire de la réécriture de graphe pour faire apparaître (ou plutôt disparaître en l'occurence) les chemins infaisables sur le CFG, mais c'est bien plus coûteux, et aussi plus compliqué.
+  
+  \'Etant donné qu'un membre de l'équipe TRACES travaille justement sur la réécriture de CFG, une collaboration sur ce sujet est envisageable pour ma thèse.
+  
+  \newpage{}
   \section*{Conclusion}
   Petit récap...\\
   Tout ce qu'il y a à faire en thèse !\\
@@ -607,6 +704,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 \begin{thebibliography}{1}
     \bibitem{ARM instruction set} ARM Instruction Set Quick Reference Card. \url{http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf}
     \bibitem{SMT-COMP} SMT-COMP: Satisfiability Modulo Theories Competition. Édition 2012. \url{http://smtcomp.sourceforge.net/2012/}
+    \bibitem{wcet05} T. Chen, T. Mitra, A. Roychoudhury, and V. Suhendra. Exploiting branch constraints without exhaustive path enumeration. In Int’l Workshop on WCET Analysis, 2005.
     
     \bibitem{smt_z3} SMT solver Z3. \url{http://z3.codeplex.com/}
     \bibitem{smt_cvc4} SMT solver CVC4. \url{http://cvc4.cs.nyu.edu/web/}
