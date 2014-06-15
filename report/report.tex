@@ -14,6 +14,8 @@
 \usepackage{stmaryrd}
 \usepackage{wrapfig}
 \usepackage{textcomp} % \textlnot
+\usepackage{ dsfont } % Z
+\usepackage{amssymb}
 
 % User packages
 \usepackage{lstlangarm}
@@ -31,7 +33,16 @@
 
 \newtheorem{theorem}{Theorème}
 
+\newcommand\ccc[1]{\color{red}{#1}\color{black}}
 \newcommand*\quotefont{\fontfamily{LinuxLibertineT-LF}} % selects Libertine as the quote font
+
+% define bijection map arrow
+\def\mathrlap{\mathpalette\mathrlapinternal}
+\def\mathrlapinternal#1#2{%
+        \rlap{$\mathsurround=0pt#1{#2}$}%
+}
+\def\bijmap{\ensuremath{%
+        \mathrlap{\rightarrowtail}\rightarrow}}
 
 \definecolor{Gray}{gray}{0.85}
 
@@ -46,8 +57,8 @@
 \begin{document}
   \begin{titlepage}
   \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
-  \center 
-  \textsc{\	 IRIT - Equipe TRACES}\\[1.5cm] \textsc{\Large Rapport de Stage - M2R IT Spé. SRLC}\\[0.5cm] 
+  \center
+  \textsc{\	 IRIT - Equipe TRACES}\\[1.5cm] \textsc{\Large Rapport de Stage - M2R IT Spé. SRLC}\\[0.5cm]
   \textsc{\large 01 Mars 2014 - 03 Août 2014}
   \HRule \\[0.5cm] { \huge \bfseries Détermination de propriétés de flot de données pour l'amélioration du temps d'exécution
 pire-cas}\\[0.4cm] \HRule \\[1cm]
@@ -56,7 +67,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \includegraphics[scale=0.6]{pictures/logo_univ_tlse.png}\\[1cm]
   \vfill
   \end{titlepage}
-  
+
   %\selectlanguage{french}
   \pagebreak{}
   \tableofcontents{}
@@ -64,20 +75,19 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   \section{Introduction}
   \subsection{WCET, les enjeux}
-  \`A Toulouse même, les besoins des industriels en termes de vérification de logiciel sont présents. Le calcul du pire temps d'exécution, ou WCET en anglais (Worst Case Execution Time) est un de ces multiples processus de vérification. La grande majorité des logiciels développés n'ont pas besoin de tels procédés de vérification, les bugs y sont gênants mais la plupart du temps on redémarre sans trop chercher à comprendre. Pour les systèmes dits \textbf{temps-réel critiques} (algorithme dans un satellite, frein d'une voiture, pilotage d'une rame de métro...), une erreur ou un échec peuvent entraîner de lourdes pertes économiques ou humaines : le plantage du logiciel d'un satellite nécessite des interventions très coûteuses, le temps de réponse exceptionnellement long d'un frein de voiture peut entraîner un accident...
-%HUG: "on redémarre sans trop chercher à comprendre" forme un peu trop familière.
-  
+  \`A Toulouse même, les besoins des industriels en termes de vérification de logiciel sont présents. Le calcul du pire temps d'exécution, ou WCET en anglais (Worst Case Execution Time) est un de ces multiples processus de vérification. La grande majorité des logiciels développés n'ont pas besoin de tels procédés de vérification, les bugs y sont gênants mais \ccc{la plupart du temps un simple redémarrage suffit}. Pour les systèmes dits \textbf{temps-réel critiques} (algorithme dans un satellite, frein d'une voiture, pilotage d'une rame de métro...), une erreur ou un échec peuvent entraîner de lourdes pertes économiques ou humaines : le plantage du logiciel d'un satellite nécessite des interventions très coûteuses, le temps de réponse exceptionnellement long d'un frein de voiture peut entraîner un accident...
+
   Le problème est simple : il peut exister dans ces systèmes temps-réel critiques des cas extrêmement rares, indétectables par une batterie de tests, où le temps d'exécution explose anormalement. On pourrait par exemple imaginer un algorithme qui sauvegarde (disons hebdomadairement) le contenu de ses données sur un disque externe. Si tout est géré de manière synchrone et qu'un ordre critique arrive à ce moment-là, on pourrait se retrouver avec un temps d'exécution très élevé. On peut imaginer plein d'autres exemples (une plage de données très fragmentée qui entrainerait des défauts de page en masse, etc...).
-  
+
   Dans le cadre de mon étude, je fais abstraction de certains problèmes très bas niveau comme la gestion du cache ou le fonctionnement du pipeline et des prédictions de branchement. Ces problèmes ne sont pas ignorés, ils sont simplement traités par d'autres travaux, d'autres outils que les miens.
-  
+
   Le calcul du WCET consiste en une \textbf{surestimation} : on ne donne certes pas une mesure exacte du pire temps d'exécution, mais on garantit que cette mesure est en tout cas supérieure au pire temps réel. Le but de mon étude est d'améliorer, d'affiner, donc de \textbf{réduire} la surestimation du WCET calculée par notre outil OTAWA, tout en restant correct. On cherche à avoir le plus petit majorant possible.
-  
+
   La stratégie que je vais mettre en oeuvre pour la réduction de notre évaluation du WCET est la recherche de chemins infaisables.
-  
+
   \subsection{La recherche de chemins infaisables}
   L'idée est la suivante : pour (sur)estimer le WCET, notre outil OTAWA fonctionne par énumération implicite des ``chemins'' du programme, ou IPET en anglais (Implicit Path Enumeration Technique), il prendra ensuite le temps d'exécution du chemin le plus coûteux du programme pour le calcul du WCET. Les programmes étudiés contiennent souvent de nombreux chemins infaisables (une étude avait observé 99.9\% de chemins infaisables dans un programme de gestion des vitres d'une voiture). Prenons par exemple le programme suivant :
-  
+
   \RestyleAlgo{boxed}
   \begin{algorithm}
     \Donnees{n}
@@ -97,7 +107,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \label{alg:1}
     \caption{Exemple d'un programme avec chemin infaisable}
   \end{algorithm}
-  
+
   Ce programme contient 4 chemins :
   \begin{itemize}
     \item Un chemin $c_1$ qui passe par (1) et (3) ;
@@ -105,69 +115,67 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \item Un chemin $c_3$ qui passe par (2) et (3) ;
     \item Un chemin $c_4$ qui passe par (2) et (4).
   \end{itemize}
-  
+
   Le chemin $c_2$, qui passe par (1) et (4) est \textbf{infaisable}, puisqu'il implique $n > 10$ et $n \ngtr 0$.
-  
+
   On pourrait maintenant imaginer que la fonction \texttt{sauvegarder} fait une opération relativement coûteuse, comme par exemple une écriture sur un fichier du système. Dans ce cas, le WCET calculé correspondra au temps d'exécution du chemin $c_2$, qui vaut à peu près à deux fois le temps d'exécution de la fonction \texttt{sauvegarder}.
-  
+
   Or, ce chemin est infaisable, c'est-à-dire qu'il ne sera jamais emprunté par le programme. Dans la réalité, ce programme n'exécuterait au plus qu'une fois cette fonction de sauvegarde, nous avons donc estimé le WCET (à peu près) au double du WCET réel !
-  
+
   En détectant ce chemin infaisable $c_2$, on pourrait indiquer à OTAWA de ne pas considérer ce chemin, et ainsi réduire effectivement l'estimation du WCET obtenue de moitié.
-  
+
   Le but de mon étude est donc de détecter ces chemins infaisables et de transmettre cette information à l'outil avant qu'il ne démarre son analyse pour l'estimation du WCET.
 
-  
+
   \subsection{Langages supportés}
   Notre analyse portera sur des programmes écrits en \textbf{langage assembleur}, qui est le langage de programmation le plus proche de la machine. Le travail sur le code source a effectivement de multiples inconvénients : il faut prouver le(s) compilateur(s) qui viennent avec (un travail très conséquent), et cela nous restreint aussi aux programmes dont nous disposons des sources complètes (certaines bibliothèques ne sont pas open-source).
-  
-  Le langage assembleur, aussi appelé langage machine, est en revanche bien sûr beaucoup moins facile à analyser : les registres ne sont en général pas typés, et il n'y a pas réellement d'instructions \texttt{if}, \texttt{then}, \texttt{else} ou \texttt{while}, \texttt{for} (celle-ci est particulièrement dure à détecter dans le code assembleur) : il s'agit seulement d'instructions de comparaison et de branchements conditionnels. 
-  
-  Il n'y a pas non plus d'appels de fonctions avec des paramètres et des valeurs de retours explicites, il s'agit là encore de branchements (BL, Branch with Link dans le cas du langage d'assembleur ARM~\cite{ARM instruction set}).
-%HUG: tu peux ajouter que le passage des paramètres et de valeur de retour n'est pas explicite: utilisation d'un mix de registres et de valeurs empilées.
-  
+
+  Le langage assembleur, aussi appelé langage machine, est en revanche bien sûr beaucoup moins facile à analyser : les registres ne sont en général pas typés, et il n'y a pas réellement d'instructions \texttt{if}, \texttt{then}, \texttt{else} ou \texttt{while}, \texttt{for} (celle-ci est particulièrement dure à détecter dans le code assembleur) : il s'agit seulement d'instructions de comparaison et de branchements conditionnels.
+
+  Il n'y a pas non plus d'appels de fonctions avec des paramètres et des valeurs de retours explicites : il s'agit là encore de branchements (BL, Branch with Link dans le cas du langage d'assembleur ARM~\cite{ARM instruction set}) \ccc{et on utilise un mélange de registres et de valeurs empilées pour les entrées et sorties de valeurs}.
+
   Un autre problème des langages machines est qu'il sont spécifiques à une architecture, les exécutables compilés à partir d'un même langage source seront différents selon qu'on est sur une architecture ARM ou PowerPC... Fort heureusement, notre outil OTAWA nous permet de nous \textbf{abstraire de l'architecture} en transformant les instructions du langage assembleur en \textbf{instructions sémantiques} génériques, universelles à tous les langages assembleur. % TODO: what is going on with the text align o_o
-  
+
   Ainsi, l'analyse que je développerai avec OTAWA supportera toutes les architectures supportées par OTAWA, et pour supporter une nouvelle architecture, il suffit de rajouter celle-ci dans OTAWA. OTAWA fonctionne comme une interface entre l'analyse et le code (écrit dans un langage spécifique à une architecture). Cette interface est schématisée sur la figure~\ref{abstraction architecture}.
-  
+
   \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{pictures/otawa_abstraction_architecture.png}
     \caption{OTAWA permet aux analyses de s'abstraire de l'architecture}
     \label{abstraction architecture}
   \end{figure}
-  
+
   Voici, sans donner plus de détails pour le moment, à quoi ressemble la traduction de code assembleur (celui-ci a été généré avec gcc) en instructions sémantiques. Les \texttt{tX} sont des variables temporaires utilisées pour la traduction en instructions sémantiques et les \texttt{?X} sont les registres. Pour chaque instruction assembleur, on trouve dessous une ou plusieurs instructions sémantiques équivalentes, en commentaire :
-  
+
   \begin{lstlisting}[language={[ARM]Assembler}]
     ldr r0, [pc, #20]
     @	seti ?15, 0x8310
     @	seti t2, 0x14
     @	add t1, ?15, t2
     @	load ?0, t1, uint32
-    
+
     mov r1, #0
     @	seti ?1, 0x0
-    
+
     mov r2, r1
     @	set t1, ?1
     @	set ?2, t1
-    
+
     bl 8574
     @	seti t1, 0x8574
     @	seti ?14, 0x8318
     @	branch t1
   \end{lstlisting}
-  
+
   De plus amples explications à ce sujet seront données dans la suite de ce mémoire.
-  
+
   \subsection{Restrictions}
-  Nous travaillons dans le cadre de cette étude exclusivement sur des programmes sans boucles. Le problème de la gestion des boucles est un problème complexe qui ne pouvait pas se traiter en l'espace de quelques mois. Cette hypothèse n'est pas complètement irréaliste puisqu'il existe des programmes, ou même des langages assembleur sans boucles. Plus tard quand ce travail sera continué en thèse, il faudra les traiter mais nous ne savons pas encore à quel point ce traitement sera limité en efficacité.
-%HUG: des assembleurs sas boucle ? Tu es sûr ?
-  
+  Nous travaillons dans le cadre de cette étude exclusivement sur des programmes sans boucles. Le problème de la gestion des boucles est un problème complexe qui ne pouvait pas se traiter en l'espace de quelques mois. Cette hypothèse n'est pas complètement irréaliste puisqu'il existe des programmes, \ccc{ou même des langages sans boucles}. Plus tard quand ce travail sera continué en thèse, il faudra les traiter mais nous ne savons pas encore à quel point ce traitement sera limité en efficacité.
+
   Un autre vaste problème se pose, celui de la gestion de la mémoire. Il s'agit de se représenter dans le programme l'état de la mémoire (ou du moins les quelques parties sur lesquelles on sait quelque chose) et de déduire des propriétés sur la valeur du registre de destination d'un LOAD en mémoire. Le traitement des instructions mémoire est à l'heure que j'écris ces lignes quasiment terminé mais il reste assez limité.
-  
+
   Notre programmme ne traite pour l'instant pas les instructions sémantiques d'OTAWA spécifiques aux ``unsigned'' (entiers représentés non signés). En effet, pour une même valeur binaire dans un registre, selon qu'on l'interprète comme un entier signé ou non, son interprétation peut être différente. Un exemple sur 4 bits est donné sur la figure~\ref{representation_signed_unsigned}.
-  
+
   \begin{figure}
     \centering
     \includegraphics[width=250px]{pictures/representation_signed_unsigned.png}
@@ -176,14 +184,13 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{figure}
 
   Toutefois, l'interprétation de la valeur d'un registre est identique tant que le bit de poids fort est à 0, c'est à dire tant que la valeur interprétée appartient à l'intervalle $\llbracket0, 2^{n-1}-1\rrbracket$, où $n$ est le nombre de bits du registre.
-  
+
   Et bien sûr, toutes les instructions qui ne sont pas supportées par OTAWA (impossibles à traduire en expression sémantiques) ne sont pas non plus supportées par notre programme, même si ce type d'erreur est géré de manière à ne pas être critique : on va perdre de l'information et donc peut-être détecter moins de chemins infaisables, mais l'analyse n'échoue pas.
-  
+
   \section{Brouillon}
   \subsection{Choix du solveur SMT}
-%HUG: pourquoi utilise un solveur SMT ? Problème d'ordre dans les paragraphes.
   Pour le choix de notre solveur SMT, nous avons dressé un petit état de l'art en nous basant principalement sur des résultats de la SMT-COMP~\cite{SMT-COMP}, une compétition entre solveurs, en éliminant d'office les solveurs qui ne présentaient pas d'API utilisable en C++ :
-  
+
   \begin{itemize}
     \item Z3~\cite{smt_z3}
     \begin{itemize}
@@ -227,24 +234,23 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
       \item Pas évalué à la SMT-COMP 2012
     \end{itemize}
   \end{itemize}
-  
+
   \begin{wrapfigure}{R}{1.5in}
     \centering
     \includegraphics{./pictures/cvc4.png}
     % cvc4.png: 300x168 pixel, 300dpi, 2.54x1.42 cm, bb=0 0 72 40
     \label{cvc4}
   \end{wrapfigure}
-  
+
   Notre choix s'est finalement porté sur \textbf{CVC4}, pour ses bonnes performances, son API riche et bien documentée, et sa licence très libre.
-  
+
   Notre application utilise toutefois ses propres structures pour manipuler les prédicats, et le module qui fait l'interface avec le solveur SMT devrait être suffisamment indépendant du reste pour permettre de changer de solveur SMT si besoin sans trop de difficultés.
-  
+
   \subsection{Représentation en graphe de flot de contrôle}
-  Lors de notre analyse, nous considérerons le programme sous la forme d'un graphe connexe enraciné, appelé \textbf{graphe de flot de contrôle, ou CFG} (Control Flow Graph). Dans le cas des programmes sans boucles que nous traitons, il s'agit même d'un arbre.
-%HUG: ce n'est pas forcément un arbre (en tout cas à la base ?).
-  
+  Lors de notre analyse, nous considérerons le programme sous la forme d'un graphe connexe enraciné, appelé \textbf{graphe de flot de contrôle, ou CFG} (Control Flow Graph). \ccc{Dans le cas des programmes sans boucles que nous traitons, il s'agit aussi d'un graphe acyclique.}
+
   Un CFG est donc un graphe dont les noeuds sont appelés des \textbf{blocs de bases}, et qui sont constitués d'une suite d'instructions exécutées \textit{séquentiellement}. Il ne peut donc y avoir d'appels de fonctions, de conditions, de boucles, ou tout autre branchement à l'intérieur d'un bloc de base (excepté en dernière instruction). La figure~\ref{bloc de base} en montre un exemple.
-  
+
   \begin{figure}
     \centering
     \includegraphics[scale=0.5]{pictures/basicblock.png}
@@ -252,15 +258,15 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \caption{Un exemple de bloc de base en langage machine ARM}
     \label{bloc de base}
   \end{figure}
-  
+
   Les arêtes représentent les chemins d'exécution du programme, elles correspondent à des branchements où à l'exécution séquentielle du programme. Il y a deux types de branchements : les branchements conditionnels et les branchements inconditionnels.
-  
+
   Parmi les \textbf{branchements conditionnels}, ceux qui correspondent à l'arc ``pris'', c'est-à-dire au cas où la condition évoquée est vérifiée, sont annotés sur le CFG avec l'étiquette ``\textit{taken}'', l'arc dit ''non pris'' n'a conventionellement pas d'étiquette.
-  
+
   Parmi les \textbf{branchements inconditionnels}, il peut s'agir de l'exécution séquentielle du programme ou d'un branchement non conditionnel (ce qui revient en assembleur à changer le registre pointeur d'instruction \texttt{pc} ou \texttt{r15} pour l'ARM) auquel cas l'arc n'est pas annoté, ou il peut s'agir d'un appel de fonction (\textit{Branch with Link} en assembleur), auquel cas l'arc est dessiné en pointillés et annoté ``\textit{call}''.
-  
+
   Les figures \ref{branchement conditionnel} et \ref{branchement inconditionnel} montrent des exemples de ces branchements.
-  
+
   \begin{figure}
     \begin{minipage}[c]{.46\linewidth}
       \includegraphics[scale=0.5]{./pictures/conditional_branch.png}
@@ -275,20 +281,20 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
       \label{branchement inconditionnel}
    \end{minipage}
 \end{figure}
-  
+
   \bigbreak
-  
+
   Prenons pour exemple l'algorithme~\ref{alg:1} que nous avions présenté plus haut. Le CFG en pseudo-code correspondant est exhibé sur la figure~\ref{cfg}. On y voit bien apparaître les 4 chemins cités précédemment. %TOLDO: vérifier que l'algo soit bien présent *plus haut*
-  
+
   La figure~\ref{cfg_genere} montre le CFG généré par OTAWA à partir du code ARM correspondant à l'algorithme~\ref{alg:1} (compilé à partir d'un fichier C). On y observe à peu près la même structure que sur le CFG en pseudo-code, avec des calls à la fonction \texttt{sauvegarder} et des instructions ARM plus volumineuses à l'intérieur des blocs.
-  
+
   \begin{figure}
     \centering
     \includegraphics[height=250px]{pictures/cfg.png} % TODO: increase height?
     \caption{CFG de l'algorithme~\ref{alg:1}}
     \label{cfg}
   \end{figure}
-  
+
   \begin{figure}
     \centering
     \includegraphics[height=525pt]{pictures/cfg_genere.png}
@@ -297,13 +303,13 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \label{cfg_genere}
   \end{figure}
 
-  
-  
+
+
   \subsection{Analyse d'un graphe de flot de contrôle}
   Comme nous travaillons sans boucles, l'algorithme ci-dessous n'est pas correct, ou du moins ne terminera pas si on le fait fonctionner sur un CFG avec boucles. Nous initialisons d'abord l'algorithme de parcours de graphe de contrôle avec le premier bloc de base du CFG, qui nous est donné par OTAWA.
-  
+
   Voici donc l'algorithme en pseudo-code, qui prend en paramètre un bloc de base :\\
-  
+
    % http://www.cs.toronto.edu/~frank/Useful/algorithm2e.pdf
   \begin{algorithm}[H]
     % \caption{analyzeBasicBlock}
@@ -327,7 +333,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 	\popline);\\
     }
   \end{algorithm}
-  
+
 
 %HUG: il faudrait donner la grammaire abstraite des prédicats ici ! Et l'expliquer. Un début ci-dessous en ASCII
 %       Prédicat: Expression x Comparator x Expression
@@ -341,13 +347,27 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \subsection{Analyse des instructions sémantiques d'un bloc de base}
   Le programme parcourt les blocs de base linéairement en mettant à jour la liste de prédicats.
 
-  Nous définissons d'abord une fonction d'invalidation d'une variable dans la liste de prédicats, qui consiste à supprimer tous les prédicats qui utilisent cette variable.
-%HUG: pourquoi tu fais ça ?
+  Nous définissons d'abord une fonction d'invalidation d'une variable dans la liste de prédicats, qui consiste à supprimer tous les prédicats qui utilisent cette variable. \ccc{En effet, nous allons rencontrer des instructions ``destructrices'', c'est-à-dire des instructions qui vont rendre invalde toutes les propriétés que nous avions sur la variable en question. Par exemple, si nous rencontrons une instruction qui met \texttt{r0} à \texttt{0}, alors il faudra supprimer les prédicats précédemment créés \texttt{r0 = r1} et \texttt{r0 = 2}.}
 
   \begin{lstlisting}[mathescape]
     invalidate var p =
         {predicate $\in$ p $|$ var $\notin$ predicate}
   \end{lstlisting}
+
+  \ccc{Les seules fois où l'invalidation ne sera pas nécessaire pour une instruction qui modifie une variable seront celles où la modification en question est \textbf{bijective}. Par exemple, une instruction qui incrémente une variable de \texttt{1} (abstraite par la fonction $\textit{ajouter}_1$ ici) est bijective :}
+
+  \begin{align*}
+    \textit{ajouter}_1 &: \mathds{Z} &\bijmap \mathds{Z}\\
+    x &\mapsto x+1
+  \end{align*}
+  \begin{align*}
+    \textit{ajouter}_1^{-1} : \mathds{Z} &\bijmap \mathds{Z}\\
+    x &\mapsto x - 1
+  \end{align*}
+
+  \ccc{Si par exemple nous rencontrons une instruction qui nous demande d'incrémenter de \texttt{1} la variable \texttt{r0}, nous pourrons simplement remplacer \texttt{r0} par \texttt{r0~-~1} dans les prédicats \texttt{r0 = r1} et \texttt{r0 = 2}. Nous obtenons les nouveaux prédicats \texttt{r0 - 1 = r1} et \texttt{r0 - 1 = 2} (c'est-à-dire \texttt{r0 = 3}).}
+  
+  \bigbreak
 
   Il s'agit maintenant de définir l'effet de la lecture de chaque instruction sur la liste de prédicats.
   Exemple sur un premier cas trivial :
@@ -367,8 +387,14 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{lstlisting}
 
   Un nouveau prédicat \texttt{d = a} est généré après qu'on ait invalidé \texttt{d}, c'est-à-dire qu'on ait supprimé tous les prédicats qui contiennent t.
-  De même pour l'instruction \texttt{SETI} qui assigne une constante à une variable.
-%HUG: pourquoi donne un exemple qui montre qu'il faut supprimer tous les prédicats contenant d!
+  De même pour l'instruction \texttt{SETI} qui assigne une constante à une variable, \ccc{puisque pour tout n, la fonction $\textit{assigner}_n$ définie ci-dessous n'est pas bijective :}
+  
+  \begin{align*}
+    \textit{assigner}_n : \mathds{Z} &\rightarrow \mathds{Z}\\
+    x &\mapsto n
+  \end{align*}
+  
+  \ccc{On ne peut donc pas en extraire une fonction inverse définie sur tout $\mathds{Z}$.}
 
   \begin{lstlisting}
     t [SETI d cst] p =
@@ -390,11 +416,19 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{lstlisting}
 
   où la syntaxe \texttt{predicate[expr / var]} dénote ici le prédicat où le terme \texttt{var} est remplacé par l'expression \texttt{expr}.
-
-%HUG: pourquoi ci-dessous il y a toujours 2 cas, d = a et d != a ? Donne également un également et ça motivera l'utilisation du update.
+  
+  \medbreak
+  
+  \ccc{
+  Nous distinguerons toujours dans les instructions ci-dessous plusieurs cas, selon que \texttt{d} soit une variable distincte de \texttt{a} et \texttt{b} ou non. Nous allons ensuite modifier les prédicats qui contiennent \texttt{d} en fonction des résultats de ces tests :
+  \begin{itemize}
+  \item Dans le cas où \texttt{d} n'est pas la même variable que \texttt{a} ou \texttt{b}, on invalide simplement les prédicats qui contiennent \texttt{d} et on rajoute un nouveau prédicat exprimant ce qu'on sait sur le nouveau \texttt{d}.
+  \item Dans l'autre cas, il faut mettre à jour les prédicats qui contiennent \texttt{d} pour prendre en compte la modification appliquée sur \texttt{d}.
+\end{itemize}
+  }
 
   \begin{lstlisting}[mathescape]
-    t [ADD d a b] p =
+    t [ADD d a b] p = % TODO: on a oublie un cas, a changer dans le code aussi !!!
         if (d = a) then (* d <- d+b *)
             (update d (d - b) p)
         else if (d = b) (* d <- a+d *)
@@ -405,7 +439,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     t [SUB d a b] p =
         if (d = a) then
             if (d = b) then (* d <- d-d *)
-                (update d 0 p)
+                (d = 0) @ (invalidate d p) % TODO a changer dans le vrai code !!!
             else (* d <- d-b *)
                 (update d (d+b) p)
         else
@@ -445,8 +479,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{lstlisting}
 
   Pour illustrer le problème de l'instruction DIV, prenons le cas où l'on a \texttt{\{t1 = 7, t2 = 3\}} et une instruction \texttt{[DIV t1 t1 t2]}.\\
-  En remplaçant \texttt{t1} par \texttt{t1 * t2}, on obtiendrait \texttt{\{(t1 * t2 = 7), (t2 = 3)\}}, c'est-à-dire \texttt{(t1 * 3 = 7)}, ce qui est impossible puisqu'on travaille sur des entiers !
-%HUG: fini ton paragraphe : et on fait donc le choix d'invalider.
+  En remplaçant \texttt{t1} par \texttt{t1 * t2}, on obtiendrait \texttt{\{(t1 * t2 = 7), (t2 = 3)\}}, c'est-à-dire \texttt{(t1 * 3 = 7)}, ce qui est impossible puisqu'on travaille sur des entiers ! \ccc{On fait donc le choix d'invalider \texttt{t1}}.
 
   \begin{lstlisting}
     t [MOD d a b] p =
@@ -459,7 +492,10 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Nous utiliserons dans la suite une fonction \texttt{eval} qui cherche la valeur \textbf{constante} pour une variable.
   La fonction eval parcourt donc la liste des prédicats à la recherche de prédicats du type \texttt{(var = 2)} permettant
   d'identifier la valeur de \texttt{var}.
-%HUG: elle cherche seulement une constante ? Pourquoi faire ?
+  
+  \ccc{Les scénarios où on ne peut pas identifier une valeur constante pour le nombre de bits à décaler dans le cas d'une instruction
+  de décalage logique sont rares. Nous n'avons de toutes façons pas la possibilité de représenter des prédicats du type $... = 2^{var}$
+  dans notre structure, c'est pourquoi nous cherchons une valeur constante pour \texttt{b} dans l'instruction \texttt{ASR}.}
 
   \begin{lstlisting}
     t [ASR d a b] p =
@@ -519,13 +555,13 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \textit{En gris : les instructions qui ne sont pas (encore) traitées par notre analyse.}
     \caption{Liste des instructions sémantiques d'OTAWA}
   \end{figure}
-  
+
   \subsection{Identification de chemins infaisables minimaux}
-%HUG: quelle conjonction de prédicat ? C'est quoi le rapport avec ce que tu as fait précédemment ?
+%TOLDO: parler des conjonctions de prédicats avant
   Une fois qu'un appel au solveur SMT avec une conjonction de prédicats en paramètre a renvoyé une insatisfiabilité (code ``UNSAT''), le travail pour trouver le chemin infaisable en question n'est pas encore terminé. En effet, nous n'avons certes pas la liste complète de tous les arcs du chemin que nous avons parcouru, et seulement la liste des \textit{arcs qui ont généré un prédicat appartenant à la liste de prédicats que le SMT a détectée insatisfiable}, mais c'est loin d'être minimal.
-  
+
   Nous aurons souvent une liste d'une dizaine de prédicats qui ont peu de rapport entre eux et deux ou trois prédicats qui à eux seuls ont causé l'insatisfiabilité. Le but de cet étape de l'algorithme et d'\textbf{identifier les prédicats responsables de l'insatisfiabilité} pour inclure le moins d'arcs possibles dans le chemin insatisfiable renvoyé.
-  
+
   L'intérêt de faire cette réduction est que, comme nous le verrons plus loin, % TOLDO: est-ce vraiment plus loin ?
   que l'exploitabilité des chemins infaisables trouvés (pour réduire l'estimation du WCET) diminue plus le chemin infaisable contient d'arcs.
 
@@ -551,16 +587,16 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   On fait des appels au SMT pour vérifier la satisfiabilité\\
   Retourne la liste de prédicats\\
   On génère les contraintes ILP\\
-  
+
   \section{Traduction en contraintes ILP}
   Une fois les chemins infaisables trouvés, il faut générer des contraintes ILP sur le CFG utilisables par OTAWA pour affiner (du moins on l'espère) l'estimation du WCET.
-  
+
   % TODO: parler des contraintes IPET et de la loi des noeuds
-  
+
   \subsection{Cas avec deux if en séquence}
   Commençons avec un exemple simple de deux \texttt{if... then... else ...} en séquence (figure~\ref{if_2seq}). La première condition est notée \texttt{x} et la deuxième \texttt{y}, nous avons étiquettés les 4 arcs correspondants aux branchements conditionnels : \texttt{x}, \texttt{\textlnot x}, \texttt{y}, \texttt{\textlnot y}.
-  
-  
+
+
 %   \begin{figure}
 %     \centering
 %     \includegraphics[scale=0.45]{./pictures/if_2seq.png}
@@ -575,38 +611,35 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \caption{Premier exemple : deux if en séquence}
     \label{if_2seq}
   \end{wrapfigure}
-  
+
   Nous notons $n_x$, $n_{\neg x}$, $n_y$ et $n_{\neg y}$ les variables qui représentent le nombre de fois que sont exécutés les arcs respectifs \texttt{x}, \texttt{\textlnot x}, \texttt{y}, et \texttt{\textlnot y}.
-  
+
   Le problème est le suivant : nous savons que le chemin \texttt{x-y} (je note ainsi le seul chemin qui passe par les arcs notés \texttt{x} et \texttt{y}) est infaisable. Quelles contraintes ILP peut-on en déduire ?
-  
-  Attention, nous ne cherchons pas à trouver une équivalence (chemin infaisable $\Leftrightarrow$ contraintes ILP) mais simplement une implication (chemin infaisable $\Rightarrow$ contraintes ILP).
-%HUG: très bien mais pourquoi ? Justifier ?
-  
+
+  Attention, nous ne cherchons pas à trouver une équivalence (chemin infaisable $\Leftrightarrow$ contraintes ILP) mais simplement une implication (chemin infaisable $\Rightarrow$ contraintes ILP). \ccc{Nous verrons plus loin que la perte d'information lors du passage aux contraintes ILP est irrémédiable et qu'il est parfois impossible d'avoir une équivalence}.
+
   \medbreak
 
-%HUG: cette partie est super !
-
   Pour un tel chemin infaisable \texttt{x-y}, l'\textit{unique} contrainte ILP que nous générons est la suivante :
-  
+
   \[ n_x \leq n_{\neg y} \]
-  
+
   Intuitivement, cette contrainte est valide (c'est-à-dire qu'elle est toujours vraie si \texttt{x-y} est un chemin infaisable) :
-  
-  En effet, si \texttt{x-y} est un chemin infaisable, alors tous les chemins qui passent par \texttt{x} passeront forcément par \texttt{\textlnot y}. Donc le nombre de fois que l'arc \texttt{\textlnot y} est exécuté, noté $n_{\neg y}$, est nécessairement \textit{supérieur ou égal} au nombre de fois que l'arc \texttt{x} est exécuté, c'est-à-dire $n_x$ (c'est supérieur s'il existe des chemins \texttt{\textlnot x-y}). Cela se traduit bien par 
-  
+
+  En effet, si \texttt{x-y} est un chemin infaisable, alors tous les chemins qui passent par \texttt{x} passeront forcément par \texttt{\textlnot y}. Donc le nombre de fois que l'arc \texttt{\textlnot y} est exécuté, noté $n_{\neg y}$, est nécessairement \textit{supérieur ou égal} au nombre de fois que l'arc \texttt{x} est exécuté, c'est-à-dire $n_x$ (c'est supérieur s'il existe des chemins \texttt{\textlnot x-y}). Cela se traduit bien par
+
   \[ n_x \leq n_{\neg y} \]
-  
+
   On pourrait observer que de même, puisque \texttt{x-y} est un chemin infaisable, alors tous les chemins qui passent par \texttt{y} passeront forcément par \texttt{\textlnot x}, et donc que :
-  
+
   \[ n_y \leq n_{\neg x} \]
-  
+
   Nous allons maintenant montrer que $n_x \leq n_{\neg y} \Leftrightarrow n_y \leq n_{\neg x}$ et que par conséquent générer ces deux contraintes au lieu d'une seule est \textit{superflu}. Pour cela nous allons utiliser la propriété de flots de graphes qui dit que
-  
+
   \[ n_x + n_{\neg x} = n_y + n_{\neg y} = N\]
-  
+
   où N est une constante (qui représente le nombre total d'exécutions du programme). Nous avons ainsi :
-  
+
   \begin{align*}
     n_x &\leq n_{\neg y} \\
     \Leftrightarrow n_x + (n_{\neg x} - n_{\neg x}) &\leq n_{\neg y} + (n_y - n_y) \\
@@ -615,7 +648,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \Leftrightarrow - n_{\neg x} &\leq - n_y \\
     \Leftrightarrow n_y &\leq n_{\neg x} & \pushright{\blacksquare}
   \end{align*}
-  
+
   \subsection{Cas avec trois if en séquence}
   \begin{wrapfigure}{r}{0in}
     \centering
@@ -624,26 +657,26 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \caption{Deuxième exemple : trois if en séquence}
     \label{if_3seq}
   \end{wrapfigure}
-  
+
   Voyons maintenant ce qui se passe lorsque l'on rajoute un autre \texttt{if... then... else ...} en séquence, ainsi que deux arcs notés \texttt{z} et \texttt{\textlnot z}.
-  
+
   Supposons que \texttt{x-y-z} soit un chemin infaisable. Inutitivement, on en déduit que si un chemin passe par \texttt{x}, alors il passera par \texttt{\textlnot y} ou par \texttt{\textlnot z}. C'est-à-dire, exprimé en termes de nombre d'exécution des arcs :
-  
+
   \[n_x \leq n_{\neg y} + n_{\neg z} \]
-  
+
   De manière similaire, on trouve aussi que ``\texttt{x-y-z} chemin infaisable'' entraîne :
-  
+
   \begin{align*}
     n_y &\leq n_{\neg x} + n_{\neg z} \\
     n_z &\leq n_{\neg x} + n_{\neg y}
   \end{align*}
-  
+
   Une fois de plus, nous allons prouver que ces trois assertions sont équivalentes. Nous avons toujours la propriété de flots de graphes (cette sorte de loi des noeuds) qui dit que :
-  
+
   \[ n_x + n_{\neg x} = n_y + n_{\neg y} = n_z + n_{\neg z} = N\]
-  
+
   Montrons alors ces équivalences :
-  
+
   \begin{align*}
     &\boxed{n_x \leq n_{\neg y} + n_{\neg z}} \\
     \Leftrightarrow& n_x \leq n_{\neg y} + (n_y - n_y) + n_{\neg z} \\
@@ -658,38 +691,38 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \Leftrightarrow& n_z \leq n_{\neg x} + N - n_y \\
     \Leftrightarrow& \boxed{n_z \leq n_{\neg x} + n_{\neg y}} & \pushright{\blacksquare}
   \end{align*}
-  
+
   Générer une seule de ces trois contraintes est donc suffisant. On peut remarquer que cela entraîne également la propriété suivante :
-  
+
   \[
     \left.
     \begin{array}{c}
-      n_x \leq n_{\neg y} + n_{\neg z}\\    
+      n_x \leq n_{\neg y} + n_{\neg z}\\
       n_y \leq n_{\neg x} + n_{\neg z}\\
-      n_z \leq n_{\neg x} + n_{\neg y} 
+      n_z \leq n_{\neg x} + n_{\neg y}
     \end{array}
     \right\} \Longrightarrow n_x+n_y+n_z \leq 2(n_{\neg x} + n_{\neg y} + n_{\neg z})
   \]
 
-  
+
   Nous voyons apparaître un motif qui se répète, que nous allons tenter de généraliser dans la prochaine section.
-  
+
   \subsection{Généralisation}
   \begin{theorem}
     Pour un CFG composé de $k$ \texttt{if... then... else... } en séquence, où les arcs pris (\texttt{then}) de chacune de ses conditions sont notés $x_1$, $x_2$, ..., $x_k$ et les arcs non pris (\texttt{else}) sont notés $\neg x_1$, $\neg x_2$, ..., $\neg x_k$, on note le nombre de fois qu'un arc $x_i$ (resp. $\neg x_i$) est emprunté $n_{x_i}$ (resp. $n_{\neg x_i}$).
-    
+
     Si $x_1$\texttt{-}$x_2$\texttt{-...-}$x_k$ est un chemin infaisable, alors on en déduit les $k$ contraintes ILP suivantes :
-    
+
     \[\forall i \in \llbracket 1, k \rrbracket,\; n_{x_i} \leq \sum_{j \in \llbracket 1, k \rrbracket \setminus \{i\}} n_{\neg x_j} \]
-    
+
     et chacune de ces contraintes est équivalente. De plus, il est immédiat que :
-    
+
     \[ \sum_{i \in \llbracket 1, k \rrbracket} n_{x_i} \leq (k-1) \sum_{i \in \llbracket 1, k \rrbracket} n_{\neg x_i} \]
   \end{theorem}
-  
+
   On pourra remarquer que les CFG contenant des conditions du type \texttt{if... then...} sans \texttt{else...} ne diffèrent pas du cas étudié (avec \texttt{else}) puisqu'il y a toujours deux arcs sortant du bloc de base qui calcule la condition, la différence étant que l'arc non pris pointe sur le bloc de fin de condition au lieu de pointer sur un bloc qui lui-même pointera vers ce bloc de fin de condition.
 
-  
+
   \subsection{Limitations des contraintes ILP}
   \begin{wrapfigure}{R!}{0in}
     \centering
@@ -698,25 +731,25 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \caption{Exemple du manque d'expressivité des contraintes ILP}
     \label{ambiguite ilp}
   \end{wrapfigure}
-  
+
   Les contraintes ILP manquent toutefois d'expressivité pour représenter toute l'information contenue dans la notion de ``chemin infaisable'', comme expliqué dans un article du WCET 2005 workshop :
-  
+
   \begin{quote}
     ``This is because the usual ILP formulation introduces formal variables for the execution counts of the nodes and edges in the Control Flow Graph (CFG) of the program. Since the variables denote aggregate execution counts of basic blocks, it is not possible to express certain infeasible path patterns as constraints on these variables.''~\cite{wcet05}
   \end{quote}
 
   En effet, si on considère l'exemple de la figure~\ref{ambiguite ilp}, où les valeurs entre paranthèses sur chaque arc représentent le nombre de fois que l'arc est exécuté dans le scénario considéré, il est impossible de déterminer si l'on a un chemin infaisable (en tout cas un chemin qui n'est jamais pris) ou non à partir des seules variables $n_x$, $n_{\neg x}$, $n_y$, $n_{\neg y}$ !
-  
+
   Il se pourrait, par exemple, que les 20 exécutions du CFG consistent en 10 fois le chemin \texttt{x-\textlnot y} et 10 fois le chemin \texttt{\textlnot x-y}. Dans ce cas, le chemin \texttt{x-y} n'est effectivement jamais pris.
-  
+
   Mais il se pourrait aussi, que l'on ait 10 exécutions qui passent par le chemin \texttt{x-y} !
-  
+
   Dans ces conditions, on ne peut pas signifier à OTAWA si ce scénario (avec ces comptes d'exécution) est viable ou non, et il sera donc inclus dans le calcul du WCET. Les contraintes ILP ne permettent pas d'exprimer tout ce que l'on sait à partir de l'hypothèse ``chemin infaisable''.
-  
+
   Il faut prendre conscience de cette limitation à l'étape ``utilisation des chemins infaisables trouvés'', de cette perte d'information, mais cela ne signifie pas nécessairement que le choix de la génération de contraintes ILP est mauvais. L'autre alternative serait de faire de la réécriture de graphe pour faire apparaître (ou plutôt disparaître en l'occurence) les chemins infaisables sur le CFG, mais c'est bien plus coûteux, et aussi plus compliqué.
-  
+
   \'Etant donné qu'un membre de l'équipe TRACES travaille justement sur la réécriture de CFG, une collaboration sur ce sujet est envisageable pour ma thèse.
-  
+
   \newpage{}
   \section*{Conclusion}
   Petit récap...\\
@@ -729,7 +762,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \bibitem{ARM instruction set} ARM Instruction Set Quick Reference Card. \url{http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf}
     \bibitem{SMT-COMP} SMT-COMP: Satisfiability Modulo Theories Competition. Édition 2012. \url{http://smtcomp.sourceforge.net/2012/}
     \bibitem{wcet05} T. Chen, T. Mitra, A. Roychoudhury, and V. Suhendra. Exploiting branch constraints without exhaustive path enumeration. In Int’l Workshop on WCET Analysis, 2005.
-    
+
     \bibitem{smt_z3} SMT solver Z3. \url{http://z3.codeplex.com/}
     \bibitem{smt_cvc4} SMT solver CVC4. \url{http://cvc4.cs.nyu.edu/web/}
     \bibitem{smt_mathsat5} SMT solver MathSAT 5. \url{http://mathsat.fbk.eu/documentation.html}
