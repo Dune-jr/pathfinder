@@ -16,6 +16,7 @@
 \usepackage{textcomp} % \textlnot
 \usepackage{ dsfont } % Z
 \usepackage{amssymb}
+\usepackage{ textcomp } % times
 
 % User packages
 \usepackage{lstlangarm}
@@ -73,6 +74,8 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \tableofcontents{}
   \newpage{}
 
+  \RestyleAlgo{boxed}
+
   \section{Introduction}
   \subsection{WCET, les enjeux}
   \`A Toulouse même, les besoins des industriels en termes de vérification de logiciel sont présents. Le calcul du pire temps d'exécution, ou WCET en anglais (Worst Case Execution Time) est un de ces multiples processus de vérification. La grande majorité des logiciels développés n'ont pas besoin de tels procédés de vérification, les bugs y sont gênants mais \ccc{la plupart du temps un simple redémarrage suffit}. Pour les systèmes dits \textbf{temps-réel critiques} (algorithme dans un satellite, frein d'une voiture, pilotage d'une rame de métro...), une erreur ou un échec peuvent entraîner de lourdes pertes économiques ou humaines : le plantage du logiciel d'un satellite nécessite des interventions très coûteuses, le temps de réponse exceptionnellement long d'un frein de voiture peut entraîner un accident...
@@ -88,7 +91,6 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \subsection{La recherche de chemins infaisables}
   L'idée est la suivante : pour (sur)estimer le WCET, notre outil OTAWA fonctionne par énumération implicite des ``chemins'' du programme, ou IPET en anglais (Implicit Path Enumeration Technique), il prendra ensuite le temps d'exécution du chemin le plus coûteux du programme pour le calcul du WCET. Les programmes étudiés contiennent souvent de nombreux chemins infaisables (une étude avait observé 99.9\% de chemins infaisables dans un programme de gestion des vitres d'une voiture). Prenons par exemple le programme suivant :
 
-  \RestyleAlgo{boxed}
   \begin{algorithm}
     \Donnees{n}
     \Res{k}
@@ -334,6 +336,54 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     }
   \end{algorithm}
 
+  \subsection{Représentation des prédicats}
+  Nous utilisons nos propres structures de prédicats, appropriées à l'usage qui leur est destiné. En voici la grammaire abstraite :
+
+  Un prédicat est composé de deux opérandes et d'un opérateur de comparaison :
+  
+  \begin{algorithm}[H]
+    \textbf{Prédicat}: Expression \texttimes~Comparateur \texttimes~Expression\\
+        \textbf{Comparateur}:\\
+            \qquad |\quad EQ, // $=$\\
+            \qquad |\quad NE, // $\neq$\\
+            \qquad |\quad LE,\, // $\leq$\\
+            \qquad |\quad LT\: // $<$\\
+            \qquad |\quad NOT\: // $\neg$\\
+  \end{algorithm}
+  
+  Pour limiter le nombre de cas à traiter, nous n'avons pas inclus les opérateurs $>$ et $\geq$ (on peut les retrouver en combinant $\neg$ à $<$ et $\leq$). Ce genre d'astuce est aussi utilisé dans l'API fournie par le solveur SMT CVC4, à cela près qu'ils préfèrent exclure $\leq$ et $<$.
+  
+  Une expression peut être une constante, une variable, une valeur en mémoire, ou une expression arithmétique composée d'un opérateur arithmétique et de deux opérandes, elles-mêmes des expressions :
+
+  \begin{algorithm}[H]
+        \textbf{Expression}:\\
+            \qquad |\quad Const(k: $\mathds{Z}$)\\
+            \qquad |\quad Var(id: Variable)\\
+            \qquad |\quad Mem(addr: Adresse)\\
+            \qquad |\quad Neg(Expression)\\
+            \qquad |\quad Add(Expression, Expression)\\
+            \qquad |\quad Sub(Expression, Expression)\\
+            \qquad |\quad Mul(Expression, Expression)\\
+            \qquad |\quad Div(Expression, Expression)\\
+            \qquad |\quad Mod(Expression, Expression)\\
+  \end{algorithm}
+  
+  Une variable peut être un registre temporaire (un entier strictement positif) ou un registre (un entier positif). La quantité de registres est généralement très limitée mais comme nous travaillons indépendemment de l'architecture, nous ne pouvons pas connaître cette limitation (et nous n'en avons pas besoin).
+
+  \begin{algorithm}[H]
+        \textbf{Variable}:\\
+            \qquad |\quad Temporaire(k: $\mathds{N^*}$)\\
+            \qquad |\quad Registre(k: $\mathds{N}$)\\
+  \end{algorithm}
+  
+  Une adresse peut être absolue (par exemple, \texttt{0x8014}), ou relative à une variable (par exemple \texttt{r13 + 4}).
+  
+  \begin{algorithm}[H]
+        \textbf{Adresse}:\\
+            \qquad |\quad Absolu(k: $\mathds{Z}$)\\
+            \qquad |\quad Relatif(reg: Registre, offset: $\mathds{Z}$)\\
+  \end{algorithm}
+
 
 %HUG: il faudrait donner la grammaire abstraite des prédicats ici ! Et l'expliquer. Un début ci-dessous en ASCII
 %       Prédicat: Expression x Comparator x Expression
@@ -366,7 +416,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{align*}
 
   \ccc{Si par exemple nous rencontrons une instruction qui nous demande d'incrémenter de \texttt{1} la variable \texttt{r0}, nous pourrons simplement remplacer \texttt{r0} par \texttt{r0~-~1} dans les prédicats \texttt{r0 = r1} et \texttt{r0 = 2}. Nous obtenons les nouveaux prédicats \texttt{r0 - 1 = r1} et \texttt{r0 - 1 = 2} (c'est-à-dire \texttt{r0 = 3}).}
-  
+
   \bigbreak
 
   Il s'agit maintenant de définir l'effet de la lecture de chaque instruction sur la liste de prédicats.
@@ -388,12 +438,12 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   Un nouveau prédicat \texttt{d = a} est généré après qu'on ait invalidé \texttt{d}, c'est-à-dire qu'on ait supprimé tous les prédicats qui contiennent t.
   De même pour l'instruction \texttt{SETI} qui assigne une constante à une variable, \ccc{puisque pour tout n, la fonction $\textit{assigner}_n$ définie ci-dessous n'est pas bijective :}
-  
+
   \begin{align*}
     \textit{assigner}_n : \mathds{Z} &\rightarrow \mathds{Z}\\
     x &\mapsto n
   \end{align*}
-  
+
   \ccc{On ne peut donc pas en extraire une fonction inverse définie sur tout $\mathds{Z}$.}
 
   \begin{lstlisting}
@@ -416,9 +466,9 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{lstlisting}
 
   où la syntaxe \texttt{predicate[expr / var]} dénote ici le prédicat où le terme \texttt{var} est remplacé par l'expression \texttt{expr}.
-  
+
   \medbreak
-  
+
   \ccc{
   Nous distinguerons toujours dans les instructions ci-dessous plusieurs cas, selon que \texttt{d} soit une variable distincte de \texttt{a} et \texttt{b} ou non. Nous allons ensuite modifier les prédicats qui contiennent \texttt{d} en fonction des résultats de ces tests :
   \begin{itemize}
@@ -492,7 +542,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Nous utiliserons dans la suite une fonction \texttt{eval} qui cherche la valeur \textbf{constante} pour une variable.
   La fonction eval parcourt donc la liste des prédicats à la recherche de prédicats du type \texttt{(var = 2)} permettant
   d'identifier la valeur de \texttt{var}.
-  
+
   \ccc{Les scénarios où on ne peut pas identifier une valeur constante pour le nombre de bits à décaler dans le cas d'une instruction
   de décalage logique sont rares. Nous n'avons de toutes façons pas la possibilité de représenter des prédicats du type $... = 2^{var}$
   dans notre structure, c'est pourquoi nous cherchons une valeur constante pour \texttt{b} dans l'instruction \texttt{ASR}.}
