@@ -65,6 +65,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \section{Introduction}
   \subsection{WCET, les enjeux}
   \`A Toulouse même, les besoins des industriels en termes de vérification de logiciel sont présents. Le calcul du pire temps d'exécution, ou WCET en anglais (Worst Case Execution Time) est un de ces multiples processus de vérification. La grande majorité des logiciels développés n'ont pas besoin de tels procédés de vérification, les bugs y sont gênants mais la plupart du temps on redémarre sans trop chercher à comprendre. Pour les systèmes dits \textbf{temps-réel critiques} (algorithme dans un satellite, frein d'une voiture, pilotage d'une rame de métro...), une erreur ou un échec peuvent entraîner de lourdes pertes économiques ou humaines : le plantage du logiciel d'un satellite nécessite des interventions très coûteuses, le temps de réponse exceptionnellement long d'un frein de voiture peut entraîner un accident...
+%HUG: "on redémarre sans trop chercher à comprendre" forme un peu trop familière.
   
   Le problème est simple : il peut exister dans ces systèmes temps-réel critiques des cas extrêmement rares, indétectables par une batterie de tests, où le temps d'exécution explose anormalement. On pourrait par exemple imaginer un algorithme qui sauvegarde (disons hebdomadairement) le contenu de ses données sur un disque externe. Si tout est géré de manière synchrone et qu'un ordre critique arrive à ce moment-là, on pourrait se retrouver avec un temps d'exécution très élevé. On peut imaginer plein d'autres exemples (une plage de données très fragmentée qui entrainerait des défauts de page en masse, etc...).
   
@@ -122,10 +123,11 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Le langage assembleur, aussi appelé langage machine, est en revanche bien sûr beaucoup moins facile à analyser : les registres ne sont en général pas typés, et il n'y a pas réellement d'instructions \texttt{if}, \texttt{then}, \texttt{else} ou \texttt{while}, \texttt{for} (celle-ci est particulièrement dure à détecter dans le code assembleur) : il s'agit seulement d'instructions de comparaison et de branchements conditionnels. 
   
   Il n'y a pas non plus d'appels de fonctions avec des paramètres et des valeurs de retours explicites, il s'agit là encore de branchements (BL, Branch with Link dans le cas du langage d'assembleur ARM~\cite{ARM instruction set}).
+%HUG: tu peux ajouter que le passage des paramètres et de valeur de retour n'est pas explicite: utilisation d'un mix de registres et de valeurs empilées.
   
-  Un autre problème des langages machines est qu'il sont spécifiques à une architecture, les exécutables compilés à partir d'un même langage source seront différent selon qu'on est sur une architecture ARM ou PowerPC... Fort heureusement, notre outil OTAWA nous permet de nous \textbf{abstraire de l'architecture} en transformant les instructions du langage assembleur en \textbf{instructions sémantiques} génériques, universelles à tous les langages assembleur. % TODO: what is going on with the text align o_o
+  Un autre problème des langages machines est qu'il sont spécifiques à une architecture, les exécutables compilés à partir d'un même langage source seront différents selon qu'on est sur une architecture ARM ou PowerPC... Fort heureusement, notre outil OTAWA nous permet de nous \textbf{abstraire de l'architecture} en transformant les instructions du langage assembleur en \textbf{instructions sémantiques} génériques, universelles à tous les langages assembleur. % TODO: what is going on with the text align o_o
   
-  Ainsi, l'analyse que je développerai avec OTAWA supportera toutes les architectures supportées par OTAWA, et pour supporter une nouvelle architecture, il suffit de rajouter celle-ci dans OTAWA. OTAWA fonctionne comme une interface entre l'analyse et le code (écrit dans un langage spécifique à une architeture). Cette interface est schématisée sur la figure~\ref{abstraction architecture}.
+  Ainsi, l'analyse que je développerai avec OTAWA supportera toutes les architectures supportées par OTAWA, et pour supporter une nouvelle architecture, il suffit de rajouter celle-ci dans OTAWA. OTAWA fonctionne comme une interface entre l'analyse et le code (écrit dans un langage spécifique à une architecture). Cette interface est schématisée sur la figure~\ref{abstraction architecture}.
   
   \begin{figure}
     \centering
@@ -160,6 +162,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   
   \subsection{Restrictions}
   Nous travaillons dans le cadre de cette étude exclusivement sur des programmes sans boucles. Le problème de la gestion des boucles est un problème complexe qui ne pouvait pas se traiter en l'espace de quelques mois. Cette hypothèse n'est pas complètement irréaliste puisqu'il existe des programmes, ou même des langages assembleur sans boucles. Plus tard quand ce travail sera continué en thèse, il faudra les traiter mais nous ne savons pas encore à quel point ce traitement sera limité en efficacité.
+%HUG: des assembleurs sas boucle ? Tu es sûr ?
   
   Un autre vaste problème se pose, celui de la gestion de la mémoire. Il s'agit de se représenter dans le programme l'état de la mémoire (ou du moins les quelques parties sur lesquelles on sait quelque chose) et de déduire des propriétés sur la valeur du registre de destination d'un LOAD en mémoire. Le traitement des instructions mémoire est à l'heure que j'écris ces lignes quasiment terminé mais il reste assez limité.
   
@@ -178,6 +181,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   
   \section{Brouillon}
   \subsection{Choix du solveur SMT}
+%HUG: pourquoi utilise un solveur SMT ? Problème d'ordre dans les paragraphes.
   Pour le choix de notre solveur SMT, nous avons dressé un petit état de l'art en nous basant principalement sur des résultats de la SMT-COMP~\cite{SMT-COMP}, une compétition entre solveurs, en éliminant d'office les solveurs qui ne présentaient pas d'API utilisable en C++ :
   
   \begin{itemize}
@@ -237,6 +241,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   
   \subsection{Représentation en graphe de flot de contrôle}
   Lors de notre analyse, nous considérerons le programme sous la forme d'un graphe connexe enraciné, appelé \textbf{graphe de flot de contrôle, ou CFG} (Control Flow Graph). Dans le cas des programmes sans boucles que nous traitons, il s'agit même d'un arbre.
+%HUG: ce n'est pas forcément un arbre (en tout cas à la base ?).
   
   Un CFG est donc un graphe dont les noeuds sont appelés des \textbf{blocs de bases}, et qui sont constitués d'une suite d'instructions exécutées \textit{séquentiellement}. Il ne peut donc y avoir d'appels de fonctions, de conditions, de boucles, ou tout autre branchement à l'intérieur d'un bloc de base (excepté en dernière instruction). La figure~\ref{bloc de base} en montre un exemple.
   
@@ -252,7 +257,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   
   Parmi les \textbf{branchements conditionnels}, ceux qui correspondent à l'arc ``pris'', c'est-à-dire au cas où la condition évoquée est vérifiée, sont annotés sur le CFG avec l'étiquette ``\textit{taken}'', l'arc dit ''non pris'' n'a conventionellement pas d'étiquette.
   
-  Parmi les \textbf{branchements inconditionnels}, il peut s'agit de l'exécution séquentielle du programme ou d'un branchement non conditionnel (ce qui revient en assembleur à changer le registre pointeur d'instruction \texttt{pc} ou \texttt{r15}) auquel cas l'arc n'est pas annoté, ou il peut s'agit d'un appel de fonction (\textit{Branch with Link} en assembleur), auquel cas l'arc est dessiné en pointillés et annoté ``\textit{call}''.
+  Parmi les \textbf{branchements inconditionnels}, il peut s'agir de l'exécution séquentielle du programme ou d'un branchement non conditionnel (ce qui revient en assembleur à changer le registre pointeur d'instruction \texttt{pc} ou \texttt{r15} pour l'ARM) auquel cas l'arc n'est pas annoté, ou il peut s'agir d'un appel de fonction (\textit{Branch with Link} en assembleur), auquel cas l'arc est dessiné en pointillés et annoté ``\textit{call}''.
   
   Les figures \ref{branchement conditionnel} et \ref{branchement inconditionnel} montrent des exemples de ces branchements.
   
@@ -323,11 +328,21 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     }
   \end{algorithm}
   
-  
+
+%HUG: il faudrait donner la grammaire abstraite des prédicats ici ! Et l'expliquer. Un début ci-dessous en ASCII
+%       Prédicat: Expression x Comparator x Expression
+%        Comparator: EQ | NE | GT | GE | LT | LE
+%       Expression: Const(k: \N)
+%               |   Var(id: Registre)
+%               |   Neg(Expression)
+%               |   Add(Expression, Expression)
+%         etc
+
   \subsection{Analyse des instructions sémantiques d'un bloc de base}
   Le programme parcourt les blocs de base linéairement en mettant à jour la liste de prédicats.
 
   Nous définissons d'abord une fonction d'invalidation d'une variable dans la liste de prédicats, qui consiste à supprimer tous les prédicats qui utilisent cette variable.
+%HUG: pourquoi tu fais ça ?
 
   \begin{lstlisting}[mathescape]
     invalidate var p =
@@ -353,6 +368,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   Un nouveau prédicat \texttt{d = a} est généré après qu'on ait invalidé \texttt{d}, c'est-à-dire qu'on ait supprimé tous les prédicats qui contiennent t.
   De même pour l'instruction \texttt{SETI} qui assigne une constante à une variable.
+%HUG: pourquoi donne un exemple qui montre qu'il faut supprimer tous les prédicats contenant d!
 
   \begin{lstlisting}
     t [SETI d cst] p =
@@ -374,6 +390,8 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{lstlisting}
 
   où la syntaxe \texttt{predicate[expr / var]} dénote ici le prédicat où le terme \texttt{var} est remplacé par l'expression \texttt{expr}.
+
+%HUG: pourquoi ci-dessous il y a toujours 2 cas, d = a et d != a ? Donne également un également et ça motivera l'utilisation du update.
 
   \begin{lstlisting}[mathescape]
     t [ADD d a b] p =
@@ -428,6 +446,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   Pour illustrer le problème de l'instruction DIV, prenons le cas où l'on a \texttt{\{t1 = 7, t2 = 3\}} et une instruction \texttt{[DIV t1 t1 t2]}.\\
   En remplaçant \texttt{t1} par \texttt{t1 * t2}, on obtiendrait \texttt{\{(t1 * t2 = 7), (t2 = 3)\}}, c'est-à-dire \texttt{(t1 * 3 = 7)}, ce qui est impossible puisqu'on travaille sur des entiers !
+%HUG: fini ton paragraphe : et on fait donc le choix d'invalider.
 
   \begin{lstlisting}
     t [MOD d a b] p =
@@ -440,6 +459,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Nous utiliserons dans la suite une fonction \texttt{eval} qui cherche la valeur \textbf{constante} pour une variable.
   La fonction eval parcourt donc la liste des prédicats à la recherche de prédicats du type \texttt{(var = 2)} permettant
   d'identifier la valeur de \texttt{var}.
+%HUG: elle cherche seulement une constante ? Pourquoi faire ?
 
   \begin{lstlisting}
     t [ASR d a b] p =
@@ -501,6 +521,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{figure}
   
   \subsection{Identification de chemins infaisables minimaux}
+%HUG: quelle conjonction de prédicat ? C'est quoi le rapport avec ce que tu as fait précédemment ?
   Une fois qu'un appel au solveur SMT avec une conjonction de prédicats en paramètre a renvoyé une insatisfiabilité (code ``UNSAT''), le travail pour trouver le chemin infaisable en question n'est pas encore terminé. En effet, nous n'avons certes pas la liste complète de tous les arcs du chemin que nous avons parcouru, et seulement la liste des \textit{arcs qui ont généré un prédicat appartenant à la liste de prédicats que le SMT a détectée insatisfiable}, mais c'est loin d'être minimal.
   
   Nous aurons souvent une liste d'une dizaine de prédicats qui ont peu de rapport entre eux et deux ou trois prédicats qui à eux seuls ont causé l'insatisfiabilité. Le but de cet étape de l'algorithme et d'\textbf{identifier les prédicats responsables de l'insatisfiabilité} pour inclure le moins d'arcs possibles dans le chemin insatisfiable renvoyé.
@@ -560,9 +581,12 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Le problème est le suivant : nous savons que le chemin \texttt{x-y} (je note ainsi le seul chemin qui passe par les arcs notés \texttt{x} et \texttt{y}) est infaisable. Quelles contraintes ILP peut-on en déduire ?
   
   Attention, nous ne cherchons pas à trouver une équivalence (chemin infaisable $\Leftrightarrow$ contraintes ILP) mais simplement une implication (chemin infaisable $\Rightarrow$ contraintes ILP).
+%HUG: très bien mais pourquoi ? Justifier ?
   
   \medbreak
-  
+
+%HUG: cette partie est super !
+
   Pour un tel chemin infaisable \texttt{x-y}, l'\textit{unique} contrainte ILP que nous générons est la suivante :
   
   \[ n_x \leq n_{\neg y} \]
