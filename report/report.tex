@@ -648,8 +648,30 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Le problème de cet algorithme est bien sûr sa complexité exponentielle qui fait qu'il explose sur des grosses listes : il fait 3,6 millions d'appels au solveur SMT pour une liste de 10 prédicats !
   
   \subsection{Algorithme incomplet (en $\theta(n)$)}
+  En partant d'une liste de prédicats $\{p_1^{c_1}, p_2^{c_2}, ..., p_n^{c_n}\}$, on parcourt une fois la liste en testant pour chaque prédicat $p_i$ :
   
-  \subsection{Algorithme complet (entre $\theta(n)$ et $\theta(2^n)$)}
+  \begin{itemize}
+   \item Si, en supprimant $p_i$ de la liste des prédicats, la liste reste insatisfiable, alors on supprime $p_i$ définitivement.
+   \item Si, en supprimant $p_i$ de la liste des prédicats, la liste devient insatisfiable, alors on laisse $p_i$ dans la liste.
+  \end{itemize}
+  
+  Après une seule passe, on s'arrête et on obtient un \textbf{unique} chemin infaisable. L'inconvénient de cette méthode très rapide est que l'on peut manquer des chemins infaisables que l'on pourrait ne pas retrouver ailleurs. Le chemin retenu est arbitraire et décidé par l'ordre d'analyse. Par exemple, nous avons la liste de prédicats suivantes :
+  
+  \[\{x = 0^{c_1}, x > 1^{c_2}, x > 2^{c_3}\}\]
+  
+  L'algorithme essaye de supprimer $x = 0^{c_1}$, mais $\{x > 1^{c_2}, x > 2^{c_3}\}$ est satisfiable, donc le premier prédicat est conservé.
+  
+  L'algorithme essaye de supprimer le deuxième prédicat $x > 1^{c_2}$, et obtient $\{x = 0^{c_1}, x > 2^{c_3}\}$, qui est insatisfiable. Par conséquent, il supprimé définitivement ce prédicat.
+  
+  La troisième passe ne donne rien, vu que ${x = 0^{c_1}}$ tout seul est satisfiable.
+  
+  On obtient ainsi un seul chemin infaisable, $\{c_1, c_3\}$, alors qu'il y en a en réalité deux, $\{c_1, c_3\}$ \textbf{et} $\{c_1, c_2\}$ !
+  
+  La complexité est en revanche très bonne, $\theta(n)$. L'algorithme suivant a pour but de résoudre ce problème tout en conservant une complexité acceptable.
+  
+  
+  \subsection{Algorithme complet (entre $\theta(n)$ et $\theta(2^n)$) - TODO}
+  dire que même si on a $\theta(2^n)$ pire cas c'est très bien en cas moyen
   
 
   % TODO: 1re partie description des contextes
