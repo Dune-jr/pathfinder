@@ -78,7 +78,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   \section{Introduction}
   \subsection{WCET, les enjeux}
-  \`A Toulouse même, les besoins des industriels en termes de vérification de logiciel sont présents. Le calcul du pire temps d'exécution, ou WCET en anglais (Worst Case Execution Time) est un de ces multiples processus de vérification. La grande majorité des logiciels développés n'ont pas besoin de tels procédés de vérification, les bugs y sont gênants mais \ccc{la plupart du temps un simple redémarrage suffit}. Pour les systèmes dits \textbf{temps-réel critiques} (algorithme dans un satellite, frein d'une voiture, pilotage d'une rame de métro...), une erreur ou un échec peuvent entraîner de lourdes pertes économiques ou humaines : le plantage du logiciel d'un satellite nécessite des interventions très coûteuses, le temps de réponse exceptionnellement long d'un frein de voiture peut entraîner un accident...
+  \`A Toulouse même, les besoins des industriels en termes de vérification de logiciel sont présents. Le calcul du pire temps d'exécution, ou WCET en anglais (Worst Case Execution Time) est un de ces multiples processus de vérification. La grande majorité des logiciels développés n'ont pas besoin de tels procédés de vérification, les bugs y sont gênants mais la plupart du temps un simple redémarrage suffit. Pour les systèmes dits \textbf{temps-réel critiques} (algorithme dans un satellite, frein d'une voiture, pilotage d'une rame de métro...), une erreur ou un échec peuvent entraîner de lourdes pertes économiques ou humaines : le plantage du logiciel d'un satellite nécessite des interventions très coûteuses, le temps de réponse exceptionnellement long d'un frein de voiture peut entraîner un accident...
 
   Le problème est simple : il peut exister dans ces systèmes temps-réel critiques des cas extrêmement rares, indétectables par une batterie de tests, où le temps d'exécution explose anormalement. On pourrait par exemple imaginer un algorithme qui sauvegarde (disons hebdomadairement) le contenu de ses données sur un disque externe. Si tout est géré de manière synchrone et qu'un ordre critique arrive à ce moment-là, on pourrait se retrouver avec un temps d'exécution très élevé. On peut imaginer plein d'autres exemples (une plage de données très fragmentée qui entrainerait des défauts de page en masse, etc...).
 
@@ -134,7 +134,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   Le langage assembleur, aussi appelé langage machine, est en revanche bien sûr beaucoup moins facile à analyser : les registres ne sont en général pas typés, et il n'y a pas réellement d'instructions \texttt{if}, \texttt{then}, \texttt{else} ou \texttt{while}, \texttt{for} (celle-ci est particulièrement dure à détecter dans le code assembleur) : il s'agit seulement d'instructions de comparaison et de branchements conditionnels.
 
-  Il n'y a pas non plus d'appels de fonctions avec des paramètres et des valeurs de retours explicites : il s'agit là encore de branchements (BL, Branch with Link dans le cas du langage d'assembleur ARM~\cite{ARM instruction set}) \ccc{et on utilise un mélange de registres et de valeurs empilées pour les entrées et sorties de valeurs}.
+  Il n'y a pas non plus d'appels de fonctions avec des paramètres et des valeurs de retours explicites : il s'agit là encore de branchements (BL, Branch with Link dans le cas du langage d'assembleur ARM~\cite{ARM instruction set}) et on utilise un mélange de registres et de valeurs empilées pour les entrées et sorties de valeurs.
 
   Un autre problème des langages machines est qu'il sont spécifiques à une architecture, les exécutables compilés à partir d'un même langage source seront différents selon qu'on est sur une architecture ARM ou PowerPC... Fort heureusement, notre outil OTAWA nous permet de nous \textbf{abstraire de l'architecture} en transformant les instructions du langage assembleur en \textbf{instructions sémantiques} génériques, universelles à tous les langages assembleur. % TODO: what is going on with the text align o_o
 
@@ -172,7 +172,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   De plus amples explications à ce sujet seront données dans la suite de ce mémoire.
 
   \subsection{Restrictions}
-  Nous travaillons dans le cadre de cette étude exclusivement sur des programmes sans boucles. Le problème de la gestion des boucles est un problème complexe qui ne pouvait pas se traiter en l'espace de quelques mois. Cette hypothèse n'est pas complètement irréaliste puisqu'il existe des programmes, \ccc{ou même des langages sans boucles}. Plus tard quand ce travail sera continué en thèse, il faudra les traiter mais nous ne savons pas encore à quel point ce traitement sera limité en efficacité.
+  Nous travaillons dans le cadre de cette étude exclusivement sur des programmes sans boucles. Le problème de la gestion des boucles est un problème complexe qui ne pouvait pas se traiter en l'espace de quelques mois. Cette hypothèse n'est pas complètement irréaliste puisqu'il existe des programmes, voire même des langages sans boucles. Plus tard quand ce travail sera continué en thèse, il faudra les traiter mais nous ne savons pas encore à quel point ce traitement sera limité en efficacité.
 
   Un autre vaste problème se pose, celui de la gestion de la mémoire. Il s'agit de se représenter dans le programme l'état de la mémoire (ou du moins les quelques parties sur lesquelles on sait quelque chose) et de déduire des propriétés sur la valeur du registre de destination d'un LOAD en mémoire. Le traitement des instructions mémoire est à l'heure que j'écris ces lignes quasiment terminé mais il reste assez limité.
 
@@ -189,7 +189,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   Et bien sûr, toutes les instructions qui ne sont pas supportées par OTAWA (impossibles à traduire en expression sémantiques) ne sont pas non plus supportées par notre programme, même si ce type d'erreur est géré de manière à ne pas être critique : on va perdre de l'information et donc peut-être détecter moins de chemins infaisables, mais l'analyse n'échoue pas.
 
-  \section{Brouillon}
+  \section{Contexte}
   \subsection{Choix du solveur SMT}
   Pour le choix de notre solveur SMT, nous avons dressé un petit état de l'art en nous basant principalement sur des résultats de la SMT-COMP~\cite{SMT-COMP}, une compétition entre solveurs, en éliminant d'office les solveurs qui ne présentaient pas d'API utilisable en C++ :
 
@@ -249,7 +249,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Notre application utilise toutefois ses propres structures pour manipuler les prédicats, et le module qui fait l'interface avec le solveur SMT devrait être suffisamment indépendant du reste pour permettre de changer de solveur SMT si besoin sans trop de difficultés.
 
   \subsection{Représentation en graphe de flot de contrôle}
-  Lors de notre analyse, nous considérerons le programme sous la forme d'un graphe connexe enraciné, appelé \textbf{graphe de flot de contrôle, ou CFG} (Control Flow Graph). \ccc{Dans le cas des programmes sans boucles que nous traitons, il s'agit aussi d'un graphe acyclique.}
+  Lors de notre analyse, nous considérerons le programme sous la forme d'un graphe connexe enraciné, appelé \textbf{graphe de flot de contrôle, ou CFG} (Control Flow Graph). Dans le cas des programmes sans boucles que nous traitons, il s'agit aussi d'un graphe acyclique.
 
   Un CFG est donc un graphe dont les noeuds sont appelés des \textbf{blocs de bases}, et qui sont constitués d'une suite d'instructions exécutées \textit{séquentiellement}. Il ne peut donc y avoir d'appels de fonctions, de conditions, de boucles, ou tout autre branchement à l'intérieur d'un bloc de base (excepté en dernière instruction). La figure~\ref{bloc de base} en montre un exemple.
 
@@ -304,9 +304,111 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \caption{CFG généré par OTAWA}
     \label{cfg_genere}
   \end{figure}
+  
+  \subsection{Les instructions sémantiques d'OTAWA}
+  %TODO: parler ici des variables temporaires introduites
+  
+  \begin{figure}
+    \begin{tabular}{|l|l|} \hline
+      \textbf{Instruction} & \textbf{Sémantique}\\ \hline \hline
+      \texttt{NOP} & (rien)\\ \hline
+      \texttt{BRANCH} & \\
+      \texttt{TRAP} & Indicateurs du flot du programme\\
+      \texttt{CONT} & \\ \hline
+      \texttt{IF cond sr jump} & si la condition \texttt{cond} sur le registre \texttt{sr} est vraie, continuer,\\
+      & sinon sauter \texttt{jump} instructions\\ \hline
+      \texttt{LOAD reg addr type} & reg $\leftarrow$ \texttt{MEM\textsubscript{type}} \\ \hline
+      \texttt{STORE reg addr type} & \texttt{MEM\textsubscript{type}} $\leftarrow$ \texttt{reg}\\ \hline
+      \texttt{SCRATCH d} & \texttt{d $\leftarrow$ $\top$} \textit{(invalidation)}\\ \hline
+      \texttt{SET d a} & \texttt{d $\leftarrow$ a}\\ \hline
+      \texttt{SETI d cst} & \texttt{d $\leftarrow$ cst}\\ \hline
+      \rowcolor{Gray} \texttt{SETP d cst} & \texttt{page(d) $\leftarrow$ cst}\\ \hline
+      \texttt{CMP d a b} & \texttt{d $\leftarrow$ a $\sim$ b}\\ \hline
+      \rowcolor{Gray} \texttt{CMPU d a b} & \texttt{d $\leftarrow$ a $\sim$\textsubscript{unsigned} b}\\ \hline
+      \texttt{ADD d a b} & \texttt{d $\leftarrow$ a $+$ b}\\ \hline
+      \texttt{SUB d a b} & \texttt{d $\leftarrow$ a $-$ b}\\ \hline
+      \rowcolor{Gray} \texttt{SHL d a b} & \texttt{d $\leftarrow$ unsigned(a) <{<} b}\\ \hline
+      \rowcolor{Gray} \texttt{SHR d a b} & \texttt{d $\leftarrow$ unsigned(a) >{>} b}\\ \hline
+      \texttt{ASR d a b} & \texttt{d $\leftarrow$ a >{>} b}\\ \hline
+      \texttt{NEG d a} & \texttt{d $\leftarrow$ $-$a}\\ \hline
+      \rowcolor{Gray} \texttt{NOT d a} & \texttt{d $\leftarrow$ $\neg$a}\\ \hline
+      \rowcolor{Gray} \texttt{AND d a b} & \texttt{d $\leftarrow$ a \& b}\\ \hline
+      \rowcolor{Gray} \texttt{OR d a b} & \texttt{d $\leftarrow$ a | b}\\ \hline
+      \rowcolor{Gray} \texttt{XOR d a b} & \texttt{d $\leftarrow$ a $\oplus$ b}\\ \hline
+      \texttt{MUL d a b} & \texttt{d $\leftarrow$ a $\times$ b}\\ \hline
+      \rowcolor{Gray} \texttt{MULU d a b} & \texttt{d $\leftarrow$ unsigned(a) $\times$ unsigned(b)}\\ \hline
+      \texttt{DIV d a b} & \texttt{d $\leftarrow$ a / b}\\ \hline
+      \rowcolor{Gray} \texttt{DIVU d a b} & \texttt{d $\leftarrow$ unsigned(a) / unsigned(b)}\\ \hline
+      \texttt{MOD d a b} & \texttt{d $\leftarrow$ a \% b}\\ \hline
+      \rowcolor{Gray} \texttt{MODU d a b} & \texttt{d $\leftarrow$ unsigned(a) \% unsigned(b)}\\ \hline
+      \rowcolor{Gray} \texttt{SPEC} & (instruction spéciale non supportée par OTAWA)\\ \hline
+    \end{tabular}
+    \textit{En gris : les instructions qui ne sont pas (encore) traitées par notre analyse.}
+    \caption{Liste des instructions sémantiques d'OTAWA}
+  \end{figure}
+  
+  \subsection{Interprétation abstraite}
+  
+  \section{Algorithme de recherche de chemins infaisables}  
+  \subsection{Représentation des prédicats}
+  Nous utilisons nos propres structures de prédicats, appropriées à l'usage qui leur est destiné. En voici la grammaire abstraite :
 
+  Un prédicat est composé de deux opérandes et d'un opérateur de comparaison :
+  
+  \begin{algorithm}[H]
+    \textbf{Prédicat}: Expression \texttimes~Comparateur \texttimes~Expression\\
+        \textbf{Comparateur}:\\
+            \qquad |\quad EQ, // $=$\\
+            \qquad |\quad NE, // $\neq$\\
+            \qquad |\quad LE,\, // $\leq$\\
+            \qquad |\quad LT\: // $<$\\
+  \end{algorithm}
+  
+  Pour limiter le nombre de cas à traiter, nous n'avons pas inclus les opérateurs $>$ et $\geq$ (on peut les retrouver en inversant l'ordre des opérandes avec $<$ et $\leq$). Ce genre d'astuce est aussi utilisé dans l'API fournie par le solveur SMT CVC4, à cela près qu'ils préfèrent exclure $\leq$ et $<$.
+  
+  Une expression peut être une constante, une variable, une valeur en mémoire, ou une expression arithmétique composée d'un opérateur arithmétique et de deux opérandes, elles-mêmes des expressions :
 
+  \begin{algorithm}[H]
+        \textbf{Expression}:\\
+            \qquad |\quad Const(k: $\mathds{Z}$)\\
+            \qquad |\quad Var(id: Variable)\\
+            \qquad |\quad Mem(addr: Adresse)\\
+            \qquad |\quad \-- Expression\\
+            \qquad |\quad Expression + Expression\\
+            \qquad |\quad Expression \--\ Expression\\
+            \qquad |\quad Expression \texttimes\ Expression\\
+            \qquad |\quad Expression / Expression\\
+            \qquad |\quad Expression \textit{mod} Expression\\
+  \end{algorithm}
+  
+  Nous ne supportons pour le moment que les opérations sur les entiers signés ($\mathds{Z}$), donc pas d'opérateurs ``non signés'' (sur $\mathds{N}$), ou d'opérateurs logiques (sur $\mathds{Z}/$\raisebox{-0.5ex}{$2\mathds{Z}$}).
+  
+  Une variable peut être un registre temporaire (un entier strictement positif) ou un registre (un entier positif). La quantité de registres est généralement très limitée mais comme nous travaillons indépendemment de l'architecture, nous ne pouvons pas connaître cette limitation (et nous n'en avons pas besoin).
 
+  \begin{algorithm}[H]
+        \textbf{Variable}:\\
+            \qquad |\quad Temporaire(k: $\mathds{N^*}$)\\
+            \qquad |\quad Registre(k: $\mathds{N}$)\\
+  \end{algorithm}
+  
+  Une adresse peut être absolue (par exemple, \texttt{0x8014}), ou relative à une variable (par exemple \texttt{r13 + 4}).
+  
+  \begin{algorithm}[H]
+        \textbf{Adresse}:\\
+            \qquad |\quad Absolu(k: $\mathds{Z}$)\\
+            \qquad |\quad Relatif(reg: Registre, offset: $\mathds{Z}$)\\
+  \end{algorithm}
+
+  \bigbreak
+  
+  A chaque prédicat nous lui associerons un arc du CFG, qui correspondra, sur le chemin emprunté, à l'arc immédiatement après le bloc de base qui contenait l'instruction qui a généré le prédicat en question.
+  
+  Nous ne transportons donc pas exactement une liste de prédicats (qui correspond à une conjonction de prédicats), mais plutôt une liste de couples \texttt{(Prédicat, Edge)} qui contiennent des informations sur l'origine de leur prédicats. Cela nous permettra ensuite, une fois que nous aurons trouvé une insatisfiabilité, de remonter jusqu'aux arêtes responsables du CFG et d'identifier le chemin infaisable. Par exemple, à partir de la liste :
+  
+  \[\{(x = 0)^{1\rightarrow 2}, (y = x)^{3\rightarrow 5}, (y > 10)^{3\rightarrow 5} \}\]
+  
+  on pourra en déduire que le chemin qui passe par les arcs $\{1\rightarrow 2, 3\rightarrow 5\}$ est infaisable.
+  
   \subsection{Analyse d'un graphe de flot de contrôle}
   Comme nous travaillons sans boucles, l'algorithme ci-dessous n'est pas correct, ou du moins ne terminera pas si on le fait fonctionner sur un CFG avec boucles. Nous initialisons d'abord l'algorithme de parcours de graphe de contrôle avec le premier bloc de base du CFG, qui nous est donné par OTAWA.
 
@@ -335,66 +437,6 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 	\popline);\\
     }
   \end{algorithm}
-
-  \subsection{Représentation des prédicats}
-  Nous utilisons nos propres structures de prédicats, appropriées à l'usage qui leur est destiné. En voici la grammaire abstraite :
-
-  Un prédicat est composé de deux opérandes et d'un opérateur de comparaison :
-  
-  \begin{algorithm}[H]
-    \textbf{Prédicat}: Expression \texttimes~Comparateur \texttimes~Expression\\
-        \textbf{Comparateur}:\\
-            \qquad |\quad EQ, // $=$\\
-            \qquad |\quad NE, // $\neq$\\
-            \qquad |\quad LE,\, // $\leq$\\
-            \qquad |\quad LT\: // $<$\\
-            \qquad |\quad NOT\: // $\neg$\\
-  \end{algorithm}
-  
-  Pour limiter le nombre de cas à traiter, nous n'avons pas inclus les opérateurs $>$ et $\geq$ (on peut les retrouver en combinant $\neg$ à $<$ et $\leq$). Ce genre d'astuce est aussi utilisé dans l'API fournie par le solveur SMT CVC4, à cela près qu'ils préfèrent exclure $\leq$ et $<$.
-  
-  Une expression peut être une constante, une variable, une valeur en mémoire, ou une expression arithmétique composée d'un opérateur arithmétique et de deux opérandes, elles-mêmes des expressions :
-
-  \begin{algorithm}[H]
-        \textbf{Expression}:\\
-            \qquad |\quad Const(k: $\mathds{Z}$)\\
-            \qquad |\quad Var(id: Variable)\\
-            \qquad |\quad Mem(addr: Adresse)\\
-            \qquad |\quad Neg(Expression)\\
-            \qquad |\quad Add(Expression, Expression)\\
-            \qquad |\quad Sub(Expression, Expression)\\
-            \qquad |\quad Mul(Expression, Expression)\\
-            \qquad |\quad Div(Expression, Expression)\\
-            \qquad |\quad Mod(Expression, Expression)\\
-  \end{algorithm}
-  
-  Nous ne supportons pour le moment que les opérations sur les entiers signés ($\mathds{Z}$), donc pas d'opérateurs ``non signés'' (sur $\mathds{N}$), ou d'opérateurs logiques (sur \raisebox{0.3ex}{$\mathds{Z}$}$/$\raisebox{-0.3ex}{$2\mathds{Z}$}).
-  
-  Une variable peut être un registre temporaire (un entier strictement positif) ou un registre (un entier positif). La quantité de registres est généralement très limitée mais comme nous travaillons indépendemment de l'architecture, nous ne pouvons pas connaître cette limitation (et nous n'en avons pas besoin).
-
-  \begin{algorithm}[H]
-        \textbf{Variable}:\\
-            \qquad |\quad Temporaire(k: $\mathds{N^*}$)\\
-            \qquad |\quad Registre(k: $\mathds{N}$)\\
-  \end{algorithm}
-  
-  Une adresse peut être absolue (par exemple, \texttt{0x8014}), ou relative à une variable (par exemple \texttt{r13 + 4}).
-  
-  \begin{algorithm}[H]
-        \textbf{Adresse}:\\
-            \qquad |\quad Absolu(k: $\mathds{Z}$)\\
-            \qquad |\quad Relatif(reg: Registre, offset: $\mathds{Z}$)\\
-  \end{algorithm}
-
-  \bigbreak
-  
-  A chaque prédicat nous lui associerons un arc du CFG, qui correspondra, sur le chemin emprunté, à l'arc immédiatement après le bloc de base qui contenait l'instruction qui a généré le prédicat en question.
-  
-  Nous ne transportons donc pas exactement une liste de prédicats (qui correspond à une conjonction de prédicats), mais plutôt une liste de couples \texttt{(Prédicat, Edge)} qui contiennent des informations sur l'origine de leur prédicats. Cela nous permettra ensuite, une fois que nous aurons trouvé une insatisfiabilité, de remonter jusqu'aux arêtes responsables du CFG et d'identifier le chemin infaisable. Par exemple, à partir de la liste :
-  
-  \[\{(x = 0)^{1\rightarrow 2}, (y = x)^{3\rightarrow 5}, (y > 10)^{3\rightarrow 5} \}\]
-  
-  on pourra en déduire que le chemin qui passe par les arcs $\{1\rightarrow 2, 3\rightarrow 5\}$ est infaisable.
   
 
   \subsection{Analyse des instructions sémantiques d'un bloc de base}
@@ -410,7 +452,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \ccc{Les seules fois où l'invalidation ne sera pas nécessaire pour une instruction qui modifie une variable seront celles où la modification en question est \textbf{bijective}. Par exemple, une instruction qui incrémente une variable de \texttt{1} (abstraite par la fonction $\textit{ajouter}_1$ ici) est bijective :}
 
   \begin{align*}
-    \textit{ajouter}_1 &: \mathds{Z} &\bijmap \mathds{Z}\\
+    \textit{ajouter}_1 : \mathds{Z} &\bijmap \mathds{Z}\\
     x &\mapsto x+1
   \end{align*}
   \begin{align*}
@@ -419,6 +461,8 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{align*}
 
   \ccc{Si par exemple nous rencontrons une instruction qui nous demande d'incrémenter de \texttt{1} la variable \texttt{r0}, nous pourrons simplement remplacer \texttt{r0} par \texttt{r0~-~1} dans les prédicats \texttt{r0 = r1} et \texttt{r0 = 2}. Nous obtenons les nouveaux prédicats \texttt{r0 - 1 = r1} et \texttt{r0 - 1 = 2} (c'est-à-dire \texttt{r0 = 3}).}
+  
+  \ccc{Nous avons également implémenté des stratégies pour essayer de préserver l'information autant que possible lors de l'invalidation d'une variable. Par exemple, si on a un prédicat \texttt{r0 = r1} et que l'on doit invalider \texttt{r0}, on se contentera de supprimer ce premier prédicat et remplacer toutes les occurences de \texttt{r0} par \texttt{r1}.}
 
   \bigbreak
 
@@ -546,9 +590,9 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   La fonction eval parcourt donc la liste des prédicats à la recherche de prédicats du type \texttt{(var = 2)} permettant
   d'identifier la valeur de \texttt{var}.
 
-  \ccc{Les scénarios où on ne peut pas identifier une valeur constante pour le nombre de bits à décaler dans le cas d'une instruction
+  Les scénarios où on ne peut pas identifier une valeur constante pour le nombre de bits à décaler dans le cas d'une instruction
   de décalage logique sont rares. Nous n'avons de toutes façons pas la possibilité de représenter des prédicats du type $... = 2^{var}$
-  dans notre structure, c'est pourquoi nous cherchons une valeur constante pour \texttt{b} dans l'instruction \texttt{ASR}.}
+  dans notre structure, c'est pourquoi nous cherchons une valeur constante pour \texttt{b} dans l'instruction \texttt{ASR}.
 
   \begin{lstlisting}
     t [ASR d a b] p =
@@ -569,47 +613,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
             (d = -a) @ (invalidate d p)
   \end{lstlisting}
 
-
-  \begin{figure}
-    \begin{tabular}{|l|l|} \hline
-      \textbf{Instruction} & \textbf{Sémantique}\\ \hline \hline
-      \texttt{NOP} & (rien)\\ \hline
-      \texttt{BRANCH} & \\
-      \texttt{TRAP} & Indicateurs du flot du programme\\
-      \texttt{CONT} & \\ \hline
-      \texttt{IF cond sr jump} & si la condition \texttt{cond} sur le registre \texttt{sr} est vraie, continuer,\\
-      & sinon sauter \texttt{jump} instructions\\ \hline
-      \texttt{LOAD reg addr type} & reg $\leftarrow$ \texttt{MEM\textsubscript{type}} \\ \hline
-      \texttt{STORE reg addr type} & \texttt{MEM\textsubscript{type}} $\leftarrow$ \texttt{reg}\\ \hline
-      \texttt{SCRATCH d} & \texttt{d $\leftarrow$ $\top$} \textit{(invalidation)}\\ \hline
-      \texttt{SET d a} & \texttt{d $\leftarrow$ a}\\ \hline
-      \texttt{SETI d cst} & \texttt{d $\leftarrow$ cst}\\ \hline
-      \rowcolor{Gray} \texttt{SETP d cst} & \texttt{page(d) $\leftarrow$ cst}\\ \hline
-      \texttt{CMP d a b} & \texttt{d $\leftarrow$ a $\sim$ b}\\ \hline
-      \rowcolor{Gray} \texttt{CMPU d a b} & \texttt{d $\leftarrow$ a $\sim$\textsubscript{unsigned} b}\\ \hline
-      \texttt{ADD d a b} & \texttt{d $\leftarrow$ a $+$ b}\\ \hline
-      \texttt{SUB d a b} & \texttt{d $\leftarrow$ a $-$ b}\\ \hline
-      \rowcolor{Gray} \texttt{SHL d a b} & \texttt{d $\leftarrow$ unsigned(a) <{<} b}\\ \hline
-      \rowcolor{Gray} \texttt{SHR d a b} & \texttt{d $\leftarrow$ unsigned(a) >{>} b}\\ \hline
-      \texttt{ASR d a b} & \texttt{d $\leftarrow$ a >{>} b}\\ \hline
-      \texttt{NEG d a} & \texttt{d $\leftarrow$ $-$a}\\ \hline
-      \rowcolor{Gray} \texttt{NOT d a} & \texttt{d $\leftarrow$ $\neg$a}\\ \hline
-      \rowcolor{Gray} \texttt{AND d a b} & \texttt{d $\leftarrow$ a \& b}\\ \hline
-      \rowcolor{Gray} \texttt{OR d a b} & \texttt{d $\leftarrow$ a | b}\\ \hline
-      \rowcolor{Gray} \texttt{XOR d a b} & \texttt{d $\leftarrow$ a $\oplus$ b}\\ \hline
-      \texttt{MUL d a b} & \texttt{d $\leftarrow$ a $\times$ b}\\ \hline
-      \rowcolor{Gray} \texttt{MULU d a b} & \texttt{d $\leftarrow$ unsigned(a) $\times$ unsigned(b)}\\ \hline
-      \texttt{DIV d a b} & \texttt{d $\leftarrow$ a / b}\\ \hline
-      \rowcolor{Gray} \texttt{DIVU d a b} & \texttt{d $\leftarrow$ unsigned(a) / unsigned(b)}\\ \hline
-      \texttt{MOD d a b} & \texttt{d $\leftarrow$ a \% b}\\ \hline
-      \rowcolor{Gray} \texttt{MODU d a b} & \texttt{d $\leftarrow$ unsigned(a) \% unsigned(b)}\\ \hline
-      \rowcolor{Gray} \texttt{SPEC} & (instruction spéciale non supportée par OTAWA)\\ \hline
-    \end{tabular}
-    \textit{En gris : les instructions qui ne sont pas (encore) traitées par notre analyse.}
-    \caption{Liste des instructions sémantiques d'OTAWA}
-  \end{figure}
-
-  \subsection{Identification de chemins infaisables minimaux}
+  \section{Identification de chemins infaisables minimaux}
 %TOLDO: parler des conjonctions de prédicats avant
   Une fois qu'un appel au solveur SMT avec une conjonction de prédicats en paramètre a renvoyé une insatisfiabilité (code ``UNSAT''), le travail pour trouver le chemin infaisable en question n'est pas encore terminé. En effet, nous n'avons certes pas la liste complète de tous les arcs du chemin que nous avons parcouru, et seulement la liste des \textit{arcs qui ont généré un prédicat appartenant à la liste de prédicats que le SMT a détectée insatisfiable}, mais c'est loin d'être minimal.
 
@@ -621,7 +625,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Pour cela, nous présentons trois algorithmes :
   
   % TOLDO: vérifier qu'on a déjà introduit la notation p_1^{c_1}
-  \subsubsection{Algorithme complet naïf ($\theta(n!)$)}
+  \subsection{Algorithme complet naïf (en $\theta(n!)$)}
   Cet algorithme naïf va tout simplement, à partir d'une liste de prédicats $\{p_1^{c_1}, p_2^{c_2}, ..., p_n^{c_n}\}$, tester la satisfiabilité des $n!$ combinaisons possibles (par exemple, $\{p_1, p_3\}$).
   
   On relève ensuite la liste des conjonctions de prédicats qui ont donné lieu à des insatisfiabilités, par exemple pour $n = 4$ :
@@ -642,6 +646,10 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   On a donc obtenu l'information ``$\{c_1, c_2\}$ et $\{c_1, c_4\}$'' sont des chemins infaisables, au lieu de ``$\{c_1, c_2, c_3, c_4\}$'' est un chemin infaisable. C'est beaucoup mieux !
   
   Le problème de cet algorithme est bien sûr sa complexité exponentielle qui fait qu'il explose sur des grosses listes : il fait 3,6 millions d'appels au solveur SMT pour une liste de 10 prédicats !
+  
+  \subsection{Algorithme incomplet (en $\theta(n)$)}
+  
+  \subsection{Algorithme complet (entre $\theta(n)$ et $\theta(2^n)$)}
   
 
   % TODO: 1re partie description des contextes
@@ -676,7 +684,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   Le problème est le suivant : nous savons que le chemin \texttt{x-y} (je note ainsi le seul chemin qui passe par les arcs notés \texttt{x} et \texttt{y}) est infaisable. Quelles contraintes ILP peut-on en déduire ?
 
-  Attention, nous ne cherchons pas à trouver une équivalence (chemin infaisable $\Leftrightarrow$ contraintes ILP) mais simplement une implication (chemin infaisable $\Rightarrow$ contraintes ILP). \ccc{Nous verrons plus loin que la perte d'information lors du passage aux contraintes ILP est irrémédiable et qu'il est parfois impossible d'avoir une équivalence}.
+  Attention, nous ne cherchons pas à trouver une équivalence (chemin infaisable $\Leftrightarrow$ contraintes ILP) mais simplement une implication (chemin infaisable $\Rightarrow$ contraintes ILP). Nous verrons plus loin que la perte d'information lors du passage aux contraintes ILP est irrémédiable et qu'il est parfois impossible d'avoir une équivalence.
 
   \medbreak
 
@@ -842,9 +850,4 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \bibitem{smt_verit} SMT solver VeriT. \url{http://www.verit-solver.org/veriT-download.php}
     \bibitem{smt_barcelogic} SMT solver Barcelogic. \url{http://www.lsi.upc.edu/~oliveras/bclt-main.html}
 \end{thebibliography}
-
 \end{document}
-
-
-% http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf
-% ARM Instruction Set Quick Reference Card
