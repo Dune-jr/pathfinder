@@ -89,7 +89,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   La stratégie que je vais mettre en oeuvre pour la réduction de notre évaluation du WCET est la recherche de chemins infaisables.
 
   \subsection{La recherche de chemins infaisables}
-  L'idée est la suivante : pour (sur)estimer le WCET, notre outil OTAWA fonctionne par énumération implicite des ``chemins'' du programme, ou IPET en anglais (Implicit Path Enumeration Technique), il prendra ensuite le temps d'exécution du chemin le plus coûteux du programme pour le calcul du WCET. Les programmes étudiés contiennent souvent de nombreux chemins infaisables (une étude avait observé 99.9\% de chemins infaisables dans un programme de gestion des vitres d'une voiture). Prenons par exemple le programme suivant :
+  L'idée est la suivante : pour (sur)estimer le WCET, notre outil OTAWA fonctionne par énumération implicite des ``chemins'' du programme, ou IPET en anglais (Implicit Path Enumeration Technique), il prendra ensuite le temps d'exécution du chemin le plus coûteux du programme pour le calcul du WCET. Les programmes étudiés contiennent souvent de nombreux chemins infaisables (une étude avait observé 99.9\% de chemins infaisables dans un programme de gestion des vitres d'une voiture~\cite{wcet05}). Prenons par exemple le programme suivant :
 
   \begin{algorithm}
     \Donnees{n}
@@ -368,6 +368,8 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
             \qquad |\quad Mod(Expression, Expression)\\
   \end{algorithm}
   
+  Nous ne supportons pour le moment que les opérations sur les entiers signés ($\mathds{Z}$), donc pas d'opérateurs ``non signés'' (sur $\mathds{N}$), ou d'opérateurs logiques (sur \raisebox{0.3ex}{$\mathds{Z}$}$/$\raisebox{-0.3ex}{$2\mathds{Z}$}).
+  
   Une variable peut être un registre temporaire (un entier strictement positif) ou un registre (un entier positif). La quantité de registres est généralement très limitée mais comme nous travaillons indépendemment de l'architecture, nous ne pouvons pas connaître cette limitation (et nous n'en avons pas besoin).
 
   \begin{algorithm}[H]
@@ -384,15 +386,16 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
             \qquad |\quad Relatif(reg: Registre, offset: $\mathds{Z}$)\\
   \end{algorithm}
 
-
-%HUG: il faudrait donner la grammaire abstraite des prédicats ici ! Et l'expliquer. Un début ci-dessous en ASCII
-%       Prédicat: Expression x Comparator x Expression
-%        Comparator: EQ | NE | GT | GE | LT | LE
-%       Expression: Const(k: \N)
-%               |   Var(id: Registre)
-%               |   Neg(Expression)
-%               |   Add(Expression, Expression)
-%         etc
+  \bigbreak
+  
+  A chaque prédicat nous lui associerons un arc du CFG, qui correspondra, sur le chemin emprunté, à l'arc immédiatement après le bloc de base qui contenait l'instruction qui a généré le prédicat en question.
+  
+  Nous ne transportons donc pas exactement une liste de prédicats (qui correspond à une conjonction de prédicats), mais plutôt une liste de couples \texttt{(Prédicat, Edge)} qui contiennent des informations sur l'origine de leur prédicats. Cela nous permettra ensuite, une fois que nous aurons trouvé une insatisfiabilité, de remonter jusqu'aux arêtes responsables du CFG et d'identifier le chemin infaisable. Par exemple, à partir de la liste :
+  
+  \[\{(x = 0)^{1\rightarrow 2}, (y = x)^{3\rightarrow 5}, (y > 10)^{3\rightarrow 5} \}\]
+  
+  on pourra en déduire que le chemin qui passe par les arcs $\{1\rightarrow 2, 3\rightarrow 5\}$ est infaisable.
+  
 
   \subsection{Analyse des instructions sémantiques d'un bloc de base}
   Le programme parcourt les blocs de base linéairement en mettant à jour la liste de prédicats.
@@ -613,35 +616,42 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Nous aurons souvent une liste d'une dizaine de prédicats qui ont peu de rapport entre eux et deux ou trois prédicats qui à eux seuls ont causé l'insatisfiabilité. Le but de cet étape de l'algorithme et d'\textbf{identifier les prédicats responsables de l'insatisfiabilité} pour inclure le moins d'arcs possibles dans le chemin insatisfiable renvoyé.
 
   L'intérêt de faire cette réduction est que, comme nous le verrons plus loin, % TOLDO: est-ce vraiment plus loin ?
-  que l'exploitabilité des chemins infaisables trouvés (pour réduire l'estimation du WCET) diminue plus le chemin infaisable contient d'arcs.
+  l'exploitabilité des chemins infaisables trouvés (pour réduire l'estimation du WCET) diminue plus le chemin infaisable contient d'arcs.
+  
+  Pour cela, nous présentons trois algorithmes :
+  
+  % TOLDO: vérifier qu'on a déjà introduit la notation p_1^{c_1}
+  \subsubsection{Algorithme complet naïf ($\theta(n!)$)}
+  Cet algorithme naïf va tout simplement, à partir d'une liste de prédicats $\{p_1^{c_1}, p_2^{c_2}, ..., p_n^{c_n}\}$, tester la satisfiabilité des $n!$ combinaisons possibles (par exemple, $\{p_1, p_3\}$).
+  
+  On relève ensuite la liste des conjonctions de prédicats qui ont donné lieu à des insatisfiabilités, par exemple pour $n = 4$ :
+  
+  \begin{itemize}
+    \item $\{p_1^{c_1}, p_2^{c_2}, p_3^{c_3}\}$
+    \item $\{p_1^{c_1}, p_2^{c_2}\}$
+    \item $\{p_1^{c_1}, p_4^{c_4}\}$
+  \end{itemize}
+  
+  On simplifie ensuite (à l'aide d'une disjonction globale) pour obtenir un nombre minimal de conjonctions de prédicats. Pour l'exemple précédent, on obtiendrait :
+  
+  \begin{itemize}
+    \item $\{p_1^{c_1}, p_2^{c_2}\}$
+    \item $\{p_1^{c_1}, p_4^{c_4}\}$
+  \end{itemize}
+  
+  On a donc obtenu l'information ``$\{c_1, c_2\}$ et $\{c_1, c_4\}$'' sont des chemins infaisables, au lieu de ``$\{c_1, c_2, c_3, c_4\}$'' est un chemin infaisable. C'est beaucoup mieux !
+  
+  Le problème de cet algorithme est bien sûr sa complexité exponentielle qui fait qu'il explose sur des grosses listes : il fait 3,6 millions d'appels au solveur SMT pour une liste de 10 prédicats !
+  
 
   % TODO: 1re partie description des contextes
   % 2e partie recherche des chemins infaisables <- le gros chapite
- % 3e partie trad contraintes ilp
+  % 3e partie trad contraintes ilp
 
-
-  \section{Solution}
-  Explication : calcul de WCET par IPET, max d'un système ILP\\
-  Solution = Recherche de chemins infaisables pour améliorer l'estimation du WCET\\
-  Parler des outils choisis (OTAWA)\\
-
-  \section{Structures de données utilisées}
-  La représentation des prédicats (associés à un Edge)\\
-  => représentation également de la mémoire\\
-  Traduction des prédicats dans le solveur SMT
-
-  \section{Structure de l'algorithme}
-  CFG : Représentation du programme sous la forme de graphe\\
-  On parcourt tous les chemins\\
-  On les représente sous la forme de prédicats (on y associe un arc du CFG\\
-  On fait des appels au SMT pour vérifier la satisfiabilité\\
-  Retourne la liste de prédicats\\
-  On génère les contraintes ILP\\
+  % TODO: appels au SMT
 
   \section{Traduction en contraintes ILP}
   Une fois les chemins infaisables trouvés, il faut générer des contraintes ILP sur le CFG utilisables par OTAWA pour affiner (du moins on l'espère) l'estimation du WCET.
-
-  % TODO: parler des contraintes IPET et de la loi des noeuds
 
   \subsection{Cas avec deux if en séquence}
   Commençons avec un exemple simple de deux \texttt{if... then... else ...} en séquence (figure~\ref{if_2seq}). La première condition est notée \texttt{x} et la deuxième \texttt{y}, nous avons étiquettés les 4 arcs correspondants aux branchements conditionnels : \texttt{x}, \texttt{\textlnot x}, \texttt{y}, \texttt{\textlnot y}.
@@ -700,7 +710,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{align*}
 
   \subsection{Cas avec trois if en séquence}
-  \begin{wrapfigure}{r}{0in}
+  \begin{wrapfigure}{R}{0in}
     \centering
     \includegraphics[scale=0.4]{./pictures/if_3seq.png}
     % if_3seq.png: 363x923 pixel, 72dpi, 12.80x32.56 cm, bb=0 0 363 923
@@ -809,9 +819,19 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 \newpage{}
 %\bibliographystyle{plain}
 \begin{thebibliography}{1}
+    
+    \bibitem{cousot}Patrick Cousot and Rahida Cousot. 1992. \textit{Abstract interpretation and application to logic programs}. J. Log. Program. 13, 2-3 (July 1992), 103-179. http://dx.doi.org/10.1016/0743-1066(92)90030-7
+    \bibitem{nielson}Flemming Nielson, Hanne R. Nielson, and Chris Hankin. 1999. \textit{Principles of Program Analysis}. Springer-Verlag New York, Inc., Secaucus, NJ, USA.
+    \bibitem{entcs}\textit{Electronic Notes in Theoretical Computer Science (Entcs)}. Elsevier Sci. Pub. B. V., Amsterdam, The Netherlands, The Netherlands. http://dx.doi.org/10.1016/j.entcs.2010.09.014
+    \bibitem{wcet05} T. Chen, T. Mitra, A. Roychoudhury, and V. Suhendra. \textit{Exploiting branch constraints without exhaustive path enumeration}. In Int’l Workshop on WCET Analysis, 2005.
+    \url{http://www.comp.nus.edu.sg/~tulika/wcet05.pdf}
+    \bibitem{intlconf11}S. Andalam, P. Roop, and A. Girault. \textit{Pruning Infeasible Paths for Tight WCRT Analysis of Synchronous Programs}. In Intl’ Conf. on Design, Automation and Test in Europe (DATE), 2011.
+    \bibitem{smtintro}Leonardo De Moura and Nikolaj Bjørner. 2011. \textit{Satisfiability modulo theories: introduction and applications}. Commun. ACM 54, 9 (September 2011), 69-77.
+    \url{http://doi.acm.org/10.1145/1995376.1995394}
+
+    
     \bibitem{ARM instruction set} ARM Instruction Set Quick Reference Card. \url{http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf}
     \bibitem{SMT-COMP} SMT-COMP: Satisfiability Modulo Theories Competition. Édition 2012. \url{http://smtcomp.sourceforge.net/2012/}
-    \bibitem{wcet05} T. Chen, T. Mitra, A. Roychoudhury, and V. Suhendra. Exploiting branch constraints without exhaustive path enumeration. In Int’l Workshop on WCET Analysis, 2005.
 
     \bibitem{smt_z3} SMT solver Z3. \url{http://z3.codeplex.com/}
     \bibitem{smt_cvc4} SMT solver CVC4. \url{http://cvc4.cs.nyu.edu/web/}
