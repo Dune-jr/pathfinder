@@ -17,6 +17,8 @@
 \usepackage{ dsfont } % Z
 \usepackage{amssymb}
 \usepackage{ textcomp } % times
+\usepackage{calc} % strikethrough
+\usepackage[normalem]{ulem} % underline
 
 % User packages
 \usepackage{lstlangarm}
@@ -34,8 +36,18 @@
 
 \newtheorem{theorem}{Theorème}
 
-\newcommand\ccc[1]{\color{red}{#1}\color{black}}
+\newcommand\ccc[1]{\color{red}{#1}\color{black}} % TOLDO : check this is unused
+\newcommand\SAT{\texttt{SAT}}
+\newcommand\UNSAT{\texttt{UNSAT}}
+
 \newcommand*\quotefont{\fontfamily{LinuxLibertineT-LF}} % selects Libertine as the quote font
+
+% define strikethrough
+\newsavebox\CBox
+\newcommand\strike[2][0.5pt]{%
+  \ifmmode\sbox\CBox{$#2$}\else\sbox\CBox{#2}\fi%
+  \makebox[0pt][l]{\usebox\CBox}%  
+  \rule[0.5\ht\CBox-#1/2]{\wd\CBox}{#1}}
 
 % define bijection map arrow
 \def\mathrlap{\mathpalette\mathrlapinternal}
@@ -72,10 +84,10 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   %\selectlanguage{french}
   \pagebreak{}
   \tableofcontents{}
-  \newpage{}
 
   \RestyleAlgo{boxed}
 
+  \newpage{}
   \section{Introduction}
   \subsection{WCET, les enjeux}
   \`A Toulouse même, les besoins des industriels en termes de vérification de logiciel sont présents. Le calcul du pire temps d'exécution, ou WCET en anglais (Worst Case Execution Time) est un de ces multiples processus de vérification. La grande majorité des logiciels développés n'ont pas besoin de tels procédés de vérification, les bugs y sont gênants mais la plupart du temps un simple redémarrage suffit. Pour les systèmes dits \textbf{temps-réel critiques} (algorithme dans un satellite, frein d'une voiture, pilotage d'une rame de métro...), une erreur ou un échec peuvent entraîner de lourdes pertes économiques ou humaines : le plantage du logiciel d'un satellite nécessite des interventions très coûteuses, le temps de réponse exceptionnellement long d'un frein de voiture peut entraîner un accident...
@@ -189,6 +201,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   Et bien sûr, toutes les instructions qui ne sont pas supportées par OTAWA (impossibles à traduire en expression sémantiques) ne sont pas non plus supportées par notre programme, même si ce type d'erreur est géré de manière à ne pas être critique : on va perdre de l'information et donc peut-être détecter moins de chemins infaisables, mais l'analyse n'échoue pas.
 
+  \newpage{}
   \section{Contexte}
   \subsection{Choix du solveur SMT}
   Pour le choix de notre solveur SMT, nous avons dressé un petit état de l'art en nous basant principalement sur des résultats de la SMT-COMP~\cite{SMT-COMP}, une compétition entre solveurs, en éliminant d'office les solveurs qui ne présentaient pas d'API utilisable en C++ :
@@ -305,9 +318,12 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \label{cfg_genere}
   \end{figure}
   
+  \newpage{} % TOLDO: maybe add this
   \subsection{Les instructions sémantiques d'OTAWA}
   %TODO: parler ici des variables temporaires introduites
-  
+  %TODO: référence vers http://drops.dagstuhl.de/opus/volltexte/2013/4121/pdf/6.pdf
+ 
+ 
   \begin{figure}
     \begin{tabular}{|l|l|} \hline
       \textbf{Instruction} & \textbf{Sémantique}\\ \hline \hline
@@ -344,11 +360,54 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
       \rowcolor{Gray} \texttt{SPEC} & (instruction spéciale non supportée par OTAWA)\\ \hline
     \end{tabular}
     \textit{En gris : les instructions qui ne sont pas (encore) traitées par notre analyse.}
+    \label{seminsts}
     \caption{Liste des instructions sémantiques d'OTAWA}
   \end{figure}
   
+  \'Etant donné que les systèmes temps-réels embarqués tournent sur des architectures très différentes, OTAWA fournit une abstraction de la sémantique des instructions machine, nous l'avions déjà évoqué au chapitre 1.3. %TOLDO
+  
+  Ce langage, présenté sur la figure~\ref{seminsts} est composé d'instructions simplifiées de type RISC qui utilisent des registres machine ou des variable temporaires. \'Etant donné sa simplicité par rapport aux assembleurs réels, la plupart de leurs instructions sont traduites par un bloc d'instructions sémantiques. Le langage sémantique définit des registres temporaires $t_0, ..., t_n$ dont la durée de vie est limitée à un bloc d'instructions sémantiques (correspondant à une seule instruction assembleur), et qui ne servent qu'à passer des valeurs entre les différentes instructions sémantiques du bloc.
+  
+  Nous distinguons donc deux types de variables :
+  
+  \begin{itemize}
+    \item les registres machine, notés $r_0$, $r_1$, ..., $r_n$ ou parfois $?0, ?1, ?n$, qui sont permanentes ;
+    \item les variables temporaires, notées $t_1$, $t_2$, ..., $t_n$, qui sont locales à un bloc.
+  \end{itemize}
+  
+  Décortiquons l'exemple précédemment utilisé :
+  
+  \begin{lstlisting}[language={[ARM]Assembler}]
+    mov r1, #0
+    @	seti ?1, 0x0
+  \end{lstlisting}
+  
+  Ici, on a une instruction machine assez basique qui peut être traduite en une seule instruction sémantique. \texttt{mov r1, \#0} correspond à ``mettre la valeur 0 dans le registre $r_1$'', ce qui s'écrit en instructions sémantique comme \texttt{seti, ?1, 0x0}.
+
+  \begin{lstlisting}[language={[ARM]Assembler}]
+    mov r2, r1
+    @	set t1, ?1
+    @	set ?2, t1
+  \end{lstlisting}
+  
+  Cette fois-ci c'est un peu plus compliqué puisque nous faisons à la fois la lecture d'un registre et l'écriture dans un registre : nous avons besoin de deux instructions sémantiques pour traduire ce que fait ``\texttt{mov r2, r1}'', c'est-à-dire ``mettre dans $r_2$ la valeur de $r_1$'', nous utilisons donc une variable temporaire ($t_1$) qui fait l'intermédiaire. La première instruction lit le registre $r_1$, la deuxième écrit dans le registre $r_2$.
+
+  \begin{lstlisting}[language={[ARM]Assembler}]
+    bl 8574
+    @	seti t1, 0x8574
+    @	seti ?14, 0x8318
+    @	branch t1
+  \end{lstlisting}
+
+  Il s'agit ici d'un branchement avec lien (on se souvient d'où on a fait l'appel de fonction pour y revenir quand la fonction se termine). Techniquement, cela se traduit par un simple branchement avec la sauvegarde au préalable de l'adresse de la prochaine instruction dans $r_{14}$ (on l'appelle aussi le registre \textit{link}).
+  
+  OTAWA génère donc une première instruction sémantique qui écrit l'adresse sur laquelle brancher (c'est-à-dire, là où il faut aller, le début de la fonction) qui est fournise en paramètre de \texttt{bl} (ici, \texttt{0x8574}). La deuxième instruction sémantique s'occupe de mettre l'adresse de la prochaine instruction machine dans $r_14$ (ici, \texttt{0x8318}). Enfin, nous faisons le branchement sur $t_1$ avec \texttt{branch t1}.
+  
+  Nous nous désintéressons complètement au fonctionnement de cette traduction, qui est expliqué plus en détail dans cet article de H. Cassé, F. Birée et P. Sainrat~\cite{otawa}, puisque nous ne travaillerons dans le cadre de notre analyse qu'avec les instructions sémantiques fournies par OTAWA.
+  
   \subsection{Interprétation abstraite}
   
+  \newpage{}
   \section{Algorithme de recherche de chemins infaisables}  
   \subsection{Représentation des prédicats}
   Nous utilisons nos propres structures de prédicats, appropriées à l'usage qui leur est destiné. En voici la grammaire abstraite :
@@ -381,7 +440,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
             \qquad |\quad Expression \textit{mod} Expression\\
   \end{algorithm}
   
-  Nous ne supportons pour le moment que les opérations sur les entiers signés ($\mathds{Z}$), donc pas d'opérateurs ``non signés'' (sur $\mathds{N}$), ou d'opérateurs logiques (sur $\mathds{Z}/$\raisebox{-0.5ex}{$2\mathds{Z}$}).
+  Nous ne supportons pour le moment que les opérations sur les entiers signés ($\mathds{Z}$), donc pas d'opérateurs ``non signés'' (sur $\mathds{N}$), ou d'opérateurs logiques (sur $\mathds{Z}/$\raisebox{-0.5ex}{$2\mathds{Z}$}), comme \texttt{ET}, \texttt{OU} et \texttt{NON}.
   
   Une variable peut être un registre temporaire (un entier strictement positif) ou un registre (un entier positif). La quantité de registres est généralement très limitée mais comme nous travaillons indépendemment de l'architecture, nous ne pouvons pas connaître cette limitation (et nous n'en avons pas besoin).
 
@@ -401,7 +460,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   \bigbreak
 
-%HUG: pas de représentation du ET, OU, NON logiques ? Expliquer pourquoi.
+%OKHUG: pas de représentation du ET, OU, NON logiques ? Expliquer pourquoi.
 
   A chaque prédicat nous lui associerons un arc du CFG, qui correspondra, sur le chemin emprunté, à l'arc immédiatement après le bloc de base qui contenait l'instruction qui a généré le prédicat en question.
   
@@ -444,15 +503,15 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \subsection{Analyse des instructions sémantiques d'un bloc de base}
   Le programme parcourt les blocs de base linéairement en mettant à jour la liste de prédicats.
 
-  Nous définissons d'abord une fonction d'invalidation d'une variable dans la liste de prédicats, qui consiste à supprimer tous les prédicats qui utilisent cette variable. \ccc{En effet, nous allons rencontrer des instructions ``destructrices'', c'est-à-dire des instructions qui vont rendre invalides toutes les propriétés que nous avions sur la variable en question. Par exemple, si nous rencontrons une instruction qui met \texttt{r0} à \texttt{0}, alors il faudra supprimer les prédicats précédemment créés \texttt{r0 = r1} et \texttt{r0 = 2}.}
+  Nous définissons d'abord une fonction d'invalidation d'une variable dans la liste de prédicats, qui consiste à supprimer tous les prédicats qui utilisent cette variable. En effet, nous allons rencontrer des instructions ``destructrices'', c'est-à-dire des instructions qui vont rendre invalides toutes les propriétés que nous avions sur la variable en question. Par exemple, si nous rencontrons une instruction qui met \texttt{r0} à \texttt{0}, alors il faudra supprimer les prédicats précédemment créés \texttt{r0 = r1} et \texttt{r0 = 2}.
 
   \begin{lstlisting}[mathescape]
     invalidate var p =
         {predicate $\in$ p $|$ var $\notin$ predicate}
   \end{lstlisting}
 
-  \ccc{Les seules fois où l'invalidation ne sera pas nécessaire pour une instruction qui modifie une variable seront celles où la modification en question est \textbf{bijective}. Par exemple, une instruction qui incrémente une variable de \texttt{1} (abstraite par la fonction $\textit{ajouter}_1$ ici) est bijective :}
-%HUG: bijective me fait bizarre dans ce contexte. Inversible peut-être ?
+  Les seules fois où l'invalidation ne sera pas nécessaire pour une instruction qui modifie une variable seront celles où la modification en question est \textbf{bijective}. Par exemple, une instruction qui incrémente une variable de \texttt{1} (abstraite par la fonction $\textit{ajouter}_1$ ici) est bijective :
+%OKHUG: bijective me fait bizarre dans ce contexte. Inversible peut-être ?
 
   \begin{align*}
     \textit{ajouter}_1 : \mathds{Z} &\bijmap \mathds{Z}\\
@@ -463,9 +522,11 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     x &\mapsto x - 1
   \end{align*}
 
-  \ccc{Si par exemple nous rencontrons une instruction qui nous demande d'incrémenter de \texttt{1} la variable \texttt{r0}, nous pourrons simplement remplacer \texttt{r0} par \texttt{r0~-~1} dans les prédicats \texttt{r0 = r1} et \texttt{r0 = 2}. Nous obtenons les nouveaux prédicats \texttt{r0 - 1 = r1} et \texttt{r0 - 1 = 2} (c'est-à-dire \texttt{r0 = 3}).}
+  Si par exemple nous rencontrons une instruction qui nous demande d'incrémenter de \texttt{1} la variable \texttt{r0}, nous pourrons simplement remplacer \texttt{r0} par \texttt{r0~-~1} dans les prédicats \texttt{r0 = r1} et \texttt{r0 = 2}. Nous obtenons les nouveaux prédicats \texttt{r0 - 1 = r1} et \texttt{r0 - 1 = 2} (c'est-à-dire \texttt{r0 = 3}).
   
-  \ccc{Nous avons également implémenté des stratégies pour essayer de préserver l'information autant que possible lors de l'invalidation d'une variable. Par exemple, si on a un prédicat \texttt{r0 = r1} et que l'on doit invalider \texttt{r0}, on se contentera de supprimer ce premier prédicat et remplacer toutes les occurences de \texttt{r0} par \texttt{r1}.}
+  Nous avons également implémenté des stratégies pour essayer de préserver l'information autant que possible lors de l'invalidation d'une variable. Par exemple, si on a un prédicat \texttt{r0 = r1} et que l'on doit invalider \texttt{r0}, on se contentera de supprimer ce premier prédicat et remplacer toutes les occurences de \texttt{r0} par \texttt{r1}.
+  
+  \ccc{Il faut bien voir que nous avons la liberté de perdre autant d'informations (c'est-à-dire de supprimer des prédicats) que nous le voulons sur l'état du programme. Par exemple, si on a $\{p_1, p_2, p_3\}$ (c'est-à-dire $p_1 \land p_2 \land p_3$), on peut enlever n'importe quel prédicat $p_1$, $p_2$ ou $p_3$ et garder un résultat valide : on a juste perdu de la précision.}
 
 %HUG: tu pourrais parler ici de nos marges de manoeuvre: on cherche un sous-ensemble des prédicats d'un point du programme.
 % par exemple, si on P1 /\ P2 /\ P3, on peut enlever n'importe quel prédicat P1, P2 ou P3 et garder un résultat valide: on a juste perdu de la précision.
@@ -496,14 +557,14 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{lstlisting}
 
   Un nouveau prédicat \texttt{d = a} est généré après qu'on ait invalidé \texttt{d}, c'est-à-dire qu'on ait supprimé tous les prédicats qui contiennent t.
-  De même pour l'instruction \texttt{SETI} qui assigne une constante à une variable, \ccc{puisque pour tout n, la fonction $\textit{assigner}_n$ définie ci-dessous n'est pas bijective :}
+  De même pour l'instruction \texttt{SETI} qui assigne une constante à une variable, puisque pour tout n, la fonction $\textit{assigner}_n$ définie ci-dessous n'est pas bijective :
 
   \begin{align*}
     \textit{assigner}_n : \mathds{Z} &\rightarrow \mathds{Z}\\
     x &\mapsto n
   \end{align*}
 
-  \ccc{On ne peut donc pas en extraire une fonction inverse définie sur tout $\mathds{Z}$.}
+  On ne peut donc pas en extraire une fonction inverse définie sur tout $\mathds{Z}$.
 
   \begin{lstlisting}
     t [SETI d cst] p =
@@ -528,13 +589,11 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   \medbreak
 
-  \ccc{
   Nous distinguerons toujours dans les instructions ci-dessous plusieurs cas, selon que \texttt{d} soit une variable distincte de \texttt{a} et \texttt{b} ou non. Nous allons ensuite modifier les prédicats qui contiennent \texttt{d} en fonction des résultats de ces tests :
   \begin{itemize}
   \item Dans le cas où \texttt{d} n'est pas la même variable que \texttt{a} ou \texttt{b}, on invalide simplement les prédicats qui contiennent \texttt{d} et on rajoute un nouveau prédicat exprimant ce qu'on sait sur le nouveau \texttt{d}.
   \item Dans l'autre cas, il faut mettre à jour les prédicats qui contiennent \texttt{d} pour prendre en compte la modification appliquée sur \texttt{d}.
 \end{itemize}
-  }
 
   \begin{lstlisting}[mathescape]
     t [ADD d a b] p = % TODO: on a oublie un cas, a changer dans le code aussi !!!
@@ -588,7 +647,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{lstlisting}
 
   Pour illustrer le problème de l'instruction DIV, prenons le cas où l'on a \texttt{\{t1 = 7, t2 = 3\}} et une instruction \texttt{[DIV t1 t1 t2]}.\\
-  En remplaçant \texttt{t1} par \texttt{t1 * t2}, on obtiendrait \texttt{\{(t1 * t2 = 7), (t2 = 3)\}}, c'est-à-dire \texttt{(t1 * 3 = 7)}, ce qui est impossible puisqu'on travaille sur des entiers ! \ccc{On fait donc le choix d'invalider \texttt{t1}}.
+  En remplaçant \texttt{t1} par \texttt{t1 * t2}, on obtiendrait \texttt{\{(t1 * t2 = 7), (t2 = 3)\}}, c'est-à-dire \texttt{(t1 * 3 = 7)}, ce qui est impossible puisqu'on travaille sur des entiers ! On fait donc le choix d'invalider \texttt{t1}.
 
   \begin{lstlisting}
     t [MOD d a b] p =
@@ -625,6 +684,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
             (d = -a) @ (invalidate d p)
   \end{lstlisting}
 
+  \newpage{}
   \section{Identification de chemins infaisables minimaux}
 %TOLDO: parler des conjonctions de prédicats avant
   Une fois qu'un appel au solveur SMT avec une conjonction de prédicats en paramètre a renvoyé une insatisfiabilité (code ``UNSAT''), le travail pour trouver le chemin infaisable en question n'est pas encore terminé. En effet, nous n'avons certes pas la liste complète de tous les arcs du chemin que nous avons parcouru, et seulement la liste des \textit{arcs qui ont généré un prédicat appartenant à la liste de prédicats que le SMT a détectée insatisfiable}, mais c'est loin d'être minimal.
@@ -637,6 +697,8 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Pour cela, nous présentons trois algorithmes :
   
   % TOLDO: vérifier qu'on a déjà introduit la notation p_1^{c_1}
+  % TODO: pour etre complet on considère que c'est un ensemble d'éléments
+  % peut etre considérer suelement le cas simpel dans le mémoire
   \subsection{Algorithme complet naïf (en $\theta(n!)$)}
   Cet algorithme naïf va tout simplement, à partir d'une liste de prédicats $\{p_1^{c_1}, p_2^{c_2}, ..., p_n^{c_n}\}$, tester la satisfiabilité des $n!$ combinaisons possibles (par exemple, $\{p_1, p_3\}$).
   
@@ -655,8 +717,8 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \item $\{p_1^{c_1}, p_4^{c_4}\}$
   \end{itemize}
   
-  On a donc obtenu l'information ``$\{c_1, c_2\}$ et $\{c_1, c_4\}$'' sont des chemins infaisables, au lieu de ``$\{c_1, c_2, c_3, c_4\}$'' est un chemin infaisable. C'est beaucoup mieux !
-%HUG: pourquoi c'est mieux ?
+  On a donc obtenu l'information ``$\{c_1, c_2\}$ et $\{c_1, c_4\}$'' sont des chemins infaisables, au lieu de ``$\{c_1, c_2, c_3, c_4\}$'' est un chemin infaisable. C'est beaucoup mieux : imaginez un repas avec une entrée, des pâtes, du riz, et un dessert. Vous avez beaucoup moins de choix si on vous dit ``vous ne pouvez pas prendre à la fois une entrée et des pâtes ou à la fois une entrée et un dessert'' que si on vous dit ``vous ne pouvez pas prendre les 4 plats '' !
+%OKHUG: pourquoi c'est mieux ?
   
   Le problème de cet algorithme est bien sûr sa complexité exponentielle qui fait qu'il explose sur des grosses listes : il fait 3,6 millions d'appels au solveur SMT pour une liste de 10 prédicats !
   
@@ -683,9 +745,94 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   La complexité est en revanche très bonne, $\theta(n)$. L'algorithme suivant a pour but de résoudre ce problème tout en conservant une complexité acceptable.
   
   
-  \subsection{Algorithme complet (entre $\theta(n)$ et $\theta(2^n)$) - TODO}
-  dire que même si on a $\theta(2^n)$ pire cas c'est très bien en cas moyen
+  \subsection{Algorithme complet (entre $\theta(n)$ et $\theta(2^n)$)}
+  En partant d’une liste de prédicats $\{p_1^{c_1}, p_2^{c_2}, ..., p_n^{c_n}\}$, on parcourt une fois la liste d’un bout à l’autre. Pour chaque prédicat $p_i$, on teste la satisfiabilité après l’avoir supprimé de la liste, et :
+  \begin{itemize}
+    \item si on tombe sur \SAT, on remet le prédicat dans la liste et on continue l’analyse linéairement ;
+    \item si on tombe sur \UNSAT, on dédouble, on ``fork'' l’analyse :
+    \begin{itemize}
+      \item une analyse où on enlève le prédicat de la liste
+      \item une analyse où on garde quand même le prédicat dans la liste
+    \end{itemize}
+  \end{itemize}
   
+  Voici donc, en fonction de résultat obtenu après enlèvement du prédicat, le fonctionnement schématisé de l'analyse :
+  
+  \begin{center}
+    \includegraphics[scale=0.7]{./pictures/alg3.png}
+    % alg3.png: 525x305 pixel, 96dpi, 13.89x8.07 cm, bb=0 0 394 229
+  \end{center}
+  
+  La complexité de cet algorithme est beaucoup moins prévisible que celle des deux précédents, pour une même liste de prédicats, on peut avoir une complexité différente (du simple au double) selon l'ordre des éléments.
+  
+  Imaginons par exemple une liste où un seul élément est superflu. Dans le cas de gauche, nous analysons ce prédicat en premier, dans le cas de droite, nous l'analysons en dernier. Les points verts sur la figure signifient que le solveur a retourné \SAT après qu'on ait retiré le prédicat en question (et donc on le laisse).
+  
+  \begin{center}
+    \includegraphics[scale=0.7]{./pictures/alg3_complexity.png}
+    % alg3_complexity.png: 549x539 pixel, 96dpi, 14.52x14.26 cm, bb=0 0 412 404
+  \end{center}
+
+  Ici l'unité de complexité et le nombre d'appels au solveur SMT. Si $n$ est la taille de la liste de prédicats, la complexité est de $2n-1$ dans le premier cas et de $n+1$ dans le deuxième, et cela pour une même liste !
+  
+  La liste de prédicats qui donne le pire cas possible est celle dont tous les éléments sont insatisfiables à eux tous seuls, la complexité avoisine dans ce cas $2^{n-1}$.
+  
+  \bigbreak
+  
+  Nous allons maintenant exécuter l'algorithme sur un exemple précis. Nous avons :
+  
+  \begin{itemize}
+    \item $p_1 \coloneqq (x = y)$
+    \item $p_2 \coloneqq (x > 1)$
+    \item $p_3 \coloneqq (x > 2)$
+    \item $p_4 \coloneqq (y = 0)$
+  \end{itemize}
+
+  La liste $\{p_1, p_2, p_3, p_4\}$ est effectivement \UNSAT.
+  
+  Inutitivement, on voit que $\{p_1, p_2, p_4\}$ et $\{p_1, p_3, p_4\}$ sont les plus petits démonitateurs insatisfiables de cette liste, ce sont donc les deux résultats auxquels nous souhaitons arriver. Appliquons maintenant l'algorithme :
+  
+  \begin{algorithm}[H]
+    $\{\strike{p_1}, p_2, p_3, p_4\}$ : \SAT\\
+    $\{p_1, \strike{p_2}, p_3, p_4\}$ : \UNSAT\\
+    \textbf{Fork !}\\
+    \uline{Branche 1 ($\strike{p_2}$) :}\\
+    \qquad $\{p_1, \strike{p_2}, \strike{p_3}, p_4\}$ : \SAT\\
+    \qquad $\{p_1, \strike{p_2}, p_3, \strike{p_4}\}$ : \SAT\\
+    \qquad $\mathbb{\Rightarrow}$ \textbf{Résultat :} $\{p_1, \strike{p_2}, p_3, p_4\}$\\
+    \uline{Branche 2 ($p_2$) :}\\
+    \qquad $\{p_1, p_2, \strike{p_3}, p_4\}$ : \UNSAT\\
+    \qquad \textbf{Fork !}\\
+    \qquad \uline{Branche 2.1 ($\strike{p_3}$) :}\\
+    \qquad \qquad $\{p_1, p_2, \strike{p_3}, \strike{p_4}\}$ : \SAT\\
+    \qquad \qquad $\mathbb{\Rightarrow}$ \textbf{Résultat :} $\{p_1, p_2, \strike{p_3}, p_4\}$\\
+    \qquad \uline{Branche 2.2 ($p_3$) :}\\
+    \qquad \qquad $\{p_1, p_2, p_3, \strike{p_4}\}$ : \SAT\\
+    \qquad \qquad $\mathbb{\Rightarrow}$ \textbf{Résultat :} $\{p_1, p_2, p_3, p_4\}$\\
+  \end{algorithm}
+  
+  Nous avons donc maintenant trois listes de prédicats insatisfiables, qui sont des sous-listes de la liste de départ :
+  
+  \begin{itemize}
+    \item $\{p_1, p_3, p_4\}$
+    \item $\{p_1, p_2, p_4\}$
+    \item $\{p_1, p_2, p_3, p_4\}$
+  \end{itemize}
+  
+  Cet algorithme renvoie la liste \textbf{exhaustive} des conjonctions de prédicats insatisfiables, c'est d'ailleurs pourquoi on retrouvera toujours la liste de départ. Pour l'instant, nous avons le même résultat que celui de l'algorithme naïf (mais avec une meilleure complexité).
+  
+  Il faut maintenant ``épurer'' cette liste pour ne conserver que les listes de prédicats \textit{minimales}, c'est-à-dire celles qui sont telles que si on supprime un élément quelconque de la liste, elle perdra toujours son insatisfiabilité (tous ses éléments lui sont nécessaires).
+  
+  Une fois ce test fait sur les listes trouvées, nous nous apercevons que la dernière liste ($\{p_1, p_2, p_3, p_4\}$) n'est pas minimale, elle est donc enlevée. L'algorithme retourne finalement :
+  
+  \begin{itemize}
+    \item $\{p_1, p_3, p_4\}$
+    \item $\{p_1, p_2, p_4\}$
+  \end{itemize}
+  
+  qui sont bien les deux sous-listes minimales de $\{p_1, p_2, p_3, p_4\}$.
+  
+  %TODO: on accélère ça avec des masques de bits
+
 
   % TODO: 1re partie description des contextes
   % 2e partie recherche des chemins infaisables <- le gros chapite
@@ -693,11 +840,12 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   % TODO: appels au SMT
 
+  \newpage{}
   \section{Traduction en contraintes ILP}
   Une fois les chemins infaisables trouvés, il faut générer des contraintes ILP sur le CFG utilisables par OTAWA pour affiner (du moins on l'espère) l'estimation du WCET.
 
   \subsection{Cas avec deux if en séquence}
-  Commençons avec un exemple simple de deux \texttt{if... then... else ...} en séquence (figure~\ref{if_2seq}). La première condition est notée \texttt{x} et la deuxième \texttt{y}, nous avons étiquettés les 4 arcs correspondants aux branchements conditionnels : \texttt{x}, \texttt{\textlnot x}, \texttt{y}, \texttt{\textlnot y}.
+%   Commençons avec un exemple simple de deux \texttt{if... then... else ...} en séquence (figure~\ref{if_2seq}). La première condition est notée \texttt{x} et la deuxième \texttt{y}, nous avons étiquettés les 4 arcs correspondants aux branchements conditionnels : \texttt{x}, \texttt{\textlnot x}, \texttt{y}, \texttt{\textlnot y}.
 
 
 %   \begin{figure}
@@ -827,7 +975,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
 
   \subsection{Limitations des contraintes ILP}
-  \begin{wrapfigure}{R!}{0in}
+  \begin{wrapfigure}{r}{0in}
     \centering
     \includegraphics[scale=0.4]{./pictures/ambiguite_ilp.png}
     % ambiguite_ilp.png: 363x661 pixel, 72dpi, 12.80x23.32 cm, bb=0 0 363 661
@@ -854,6 +1002,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \'Etant donné qu'un membre de l'équipe TRACES travaille justement sur la réécriture de CFG, une collaboration sur ce sujet est envisageable pour ma thèse.
 
   \newpage{}
+  \addcontentsline{toc}{section}{Conclusion}
   \section*{Conclusion}
   Petit récap...\\
   Tout ce qu'il y a à faire en thèse !\\
@@ -861,6 +1010,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
 \newpage{}
 %\bibliographystyle{plain}
+\addcontentsline{toc}{section}{Références}
 \begin{thebibliography}{1}
     
     \bibitem{cousot}Patrick Cousot and Rahida Cousot. 1992. \textit{Abstract interpretation and application to logic programs}. J. Log. Program. 13, 2-3 (July 1992), 103-179. http://dx.doi.org/10.1016/0743-1066(92)90030-7
@@ -871,8 +1021,8 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \bibitem{intlconf11}S. Andalam, P. Roop, and A. Girault. \textit{Pruning Infeasible Paths for Tight WCRT Analysis of Synchronous Programs}. In Intl’ Conf. on Design, Automation and Test in Europe (DATE), 2011.
     \bibitem{smtintro}Leonardo De Moura and Nikolaj Bjørner. 2011. \textit{Satisfiability modulo theories: introduction and applications}. Commun. ACM 54, 9 (September 2011), 69-77.
     \url{http://doi.acm.org/10.1145/1995376.1995394}
+    \bibitem{otawa}Hugues Cassé, Florian Birée, Pascal Sainrat. Multi-architecture Value Analysis for Machine Code (regular paper). Dans / In : Workshop on Worst-Case Execution Time Analysis, Paris, 09/07/2013, (Eds.), OASICs, Dagstuhl Publishing, p. 42-52, juillet / july 2013.
 
-    
     \bibitem{ARM instruction set} ARM Instruction Set Quick Reference Card. \url{http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf}
     \bibitem{SMT-COMP} SMT-COMP: Satisfiability Modulo Theories Competition. Édition 2012. \url{http://smtcomp.sourceforge.net/2012/}
 
