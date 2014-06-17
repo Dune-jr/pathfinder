@@ -400,7 +400,9 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{algorithm}
 
   \bigbreak
-  
+
+%HUG: pas de représentation du ET, OU, NON logiques ? Expliquer pourquoi.
+
   A chaque prédicat nous lui associerons un arc du CFG, qui correspondra, sur le chemin emprunté, à l'arc immédiatement après le bloc de base qui contenait l'instruction qui a généré le prédicat en question.
   
   Nous ne transportons donc pas exactement une liste de prédicats (qui correspond à une conjonction de prédicats), mais plutôt une liste de couples \texttt{(Prédicat, Edge)} qui contiennent des informations sur l'origine de leur prédicats. Cela nous permettra ensuite, une fois que nous aurons trouvé une insatisfiabilité, de remonter jusqu'aux arêtes responsables du CFG et d'identifier le chemin infaisable. Par exemple, à partir de la liste :
@@ -442,7 +444,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \subsection{Analyse des instructions sémantiques d'un bloc de base}
   Le programme parcourt les blocs de base linéairement en mettant à jour la liste de prédicats.
 
-  Nous définissons d'abord une fonction d'invalidation d'une variable dans la liste de prédicats, qui consiste à supprimer tous les prédicats qui utilisent cette variable. \ccc{En effet, nous allons rencontrer des instructions ``destructrices'', c'est-à-dire des instructions qui vont rendre invalde toutes les propriétés que nous avions sur la variable en question. Par exemple, si nous rencontrons une instruction qui met \texttt{r0} à \texttt{0}, alors il faudra supprimer les prédicats précédemment créés \texttt{r0 = r1} et \texttt{r0 = 2}.}
+  Nous définissons d'abord une fonction d'invalidation d'une variable dans la liste de prédicats, qui consiste à supprimer tous les prédicats qui utilisent cette variable. \ccc{En effet, nous allons rencontrer des instructions ``destructrices'', c'est-à-dire des instructions qui vont rendre invalides toutes les propriétés que nous avions sur la variable en question. Par exemple, si nous rencontrons une instruction qui met \texttt{r0} à \texttt{0}, alors il faudra supprimer les prédicats précédemment créés \texttt{r0 = r1} et \texttt{r0 = 2}.}
 
   \begin{lstlisting}[mathescape]
     invalidate var p =
@@ -450,6 +452,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{lstlisting}
 
   \ccc{Les seules fois où l'invalidation ne sera pas nécessaire pour une instruction qui modifie une variable seront celles où la modification en question est \textbf{bijective}. Par exemple, une instruction qui incrémente une variable de \texttt{1} (abstraite par la fonction $\textit{ajouter}_1$ ici) est bijective :}
+%HUG: bijective me fait bizarre dans ce contexte. Inversible peut-être ?
 
   \begin{align*}
     \textit{ajouter}_1 : \mathds{Z} &\bijmap \mathds{Z}\\
@@ -463,6 +466,15 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \ccc{Si par exemple nous rencontrons une instruction qui nous demande d'incrémenter de \texttt{1} la variable \texttt{r0}, nous pourrons simplement remplacer \texttt{r0} par \texttt{r0~-~1} dans les prédicats \texttt{r0 = r1} et \texttt{r0 = 2}. Nous obtenons les nouveaux prédicats \texttt{r0 - 1 = r1} et \texttt{r0 - 1 = 2} (c'est-à-dire \texttt{r0 = 3}).}
   
   \ccc{Nous avons également implémenté des stratégies pour essayer de préserver l'information autant que possible lors de l'invalidation d'une variable. Par exemple, si on a un prédicat \texttt{r0 = r1} et que l'on doit invalider \texttt{r0}, on se contentera de supprimer ce premier prédicat et remplacer toutes les occurences de \texttt{r0} par \texttt{r1}.}
+
+%HUG: tu pourrais parler ici de nos marges de manoeuvre: on cherche un sous-ensemble des prédicats d'un point du programme.
+% par exemple, si on P1 /\ P2 /\ P3, on peut enlever n'importe quel prédicat P1, P2 ou P3 et garder un résultat valide: on a juste perdu de la précision.
+% Cela explique le fonctionnement du invalidate().
+% NOTE: soit S l'ens des états du programme et S' = { s / s in S /\ (P1 /\ P2 /\ P3) s = T }, les prédicats induisent un sous-ensemble des états
+% et il est facile de voir que S" = { s / s in S /\ (P1 /\ P2) s = T } inclus S'.
+% En fait, on peut voir un prédicat comme une fonction P: S -> Bool
+% De plus, un ensemble de prédicats insatisfiable, Ps donnerait un ensemble d'état vide { } montrant par là qu'il n'existe aucun chemin d'exécution
+% permettant d'atteindre ce point du programme.
 
   \bigbreak
 
@@ -644,6 +656,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   \end{itemize}
   
   On a donc obtenu l'information ``$\{c_1, c_2\}$ et $\{c_1, c_4\}$'' sont des chemins infaisables, au lieu de ``$\{c_1, c_2, c_3, c_4\}$'' est un chemin infaisable. C'est beaucoup mieux !
+%HUG: pourquoi c'est mieux ?
   
   Le problème de cet algorithme est bien sûr sa complexité exponentielle qui fait qu'il explose sur des grosses listes : il fait 3,6 millions d'appels au solveur SMT pour une liste de 10 prédicats !
   
