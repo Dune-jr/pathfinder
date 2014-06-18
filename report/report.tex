@@ -19,6 +19,7 @@
 \usepackage{ textcomp } % times
 \usepackage{calc} % strikethrough
 \usepackage[normalem]{ulem} % underline
+\usepackage{mathrsfs} % \mathscr
 
 % User packages
 \usepackage{lstlangarm}
@@ -39,6 +40,8 @@
 \newcommand\ccc[1]{\color{red}{#1}\color{black}} % TOLDO : check this is unused
 \newcommand\SAT{\texttt{SAT}}
 \newcommand\UNSAT{\texttt{UNSAT}}
+\newcommand\si{\textit{si}}
+\newcommand\sinon{\textit{sinon}}
 
 \newcommand*\quotefont{\fontfamily{LinuxLibertineT-LF}} % selects Libertine as the quote font
 
@@ -68,6 +71,7 @@
 \makeatother
 
 \begin{document}
+  % TODO: Ajouter ``un bref résumé du travail effectué''
   \begin{titlepage}
   \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
   \center
@@ -148,7 +152,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   Il n'y a pas non plus d'appels de fonctions avec des paramètres et des valeurs de retours explicites : il s'agit là encore de branchements (BL, Branch with Link dans le cas du langage d'assembleur ARM~\cite{ARM instruction set}) et on utilise un mélange de registres et de valeurs empilées pour les entrées et sorties de valeurs.
 
-  Un autre problème des langages machines est qu'il sont spécifiques à une architecture, les exécutables compilés à partir d'un même langage source seront différents selon qu'on est sur une architecture ARM ou PowerPC... Fort heureusement, notre outil OTAWA nous permet de nous \textbf{abstraire de l'architecture} en transformant les instructions du langage assembleur en \textbf{instructions sémantiques} génériques, universelles à tous les langages assembleur. % TODO: what is going on with the text align o_o
+  Un autre problème des langages machines est qu'il sont spécifiques à une architecture, les exécutables compilés à partir d'un même langage source seront différents selon qu'on est sur une architecture ARM ou PowerPC... Fort heureusement, notre outil OTAWA nous permet de nous \textbf{abstraire de l'architecture} en transformant les instructions du langage assembleur en \textbf{instructions sémantiques} génériques, universelles à tous les langages assembleur.
 
   Ainsi, l'analyse que je développerai avec OTAWA supportera toutes les architectures supportées par OTAWA, et pour supporter une nouvelle architecture, il suffit de rajouter celle-ci dans OTAWA. OTAWA fonctionne comme une interface entre l'analyse et le code (écrit dans un langage spécifique à une architecture). Cette interface est schématisée sur la figure~\ref{abstraction architecture}.
 
@@ -305,7 +309,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
   \begin{figure}
     \centering
-    \includegraphics[height=250px]{pictures/cfg.png} % TODO: increase height?
+    \includegraphics[height=330px]{pictures/cfg.png}
     \caption{CFG de l'algorithme~\ref{alg:1}}
     \label{cfg}
   \end{figure}
@@ -318,11 +322,8 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \label{cfg_genere}
   \end{figure}
   
-  \newpage{} % TOLDO: maybe add this
-  \subsection{Les instructions sémantiques d'OTAWA}
-  %TODO: parler ici des variables temporaires introduites
-  %TODO: référence vers http://drops.dagstuhl.de/opus/volltexte/2013/4121/pdf/6.pdf
- 
+  \newpage{} % TOLDO: maybe remove this
+  \subsection{Les instructions sémantiques d'OTAWA} 
  
   \begin{figure}
     \begin{tabular}{|l|l|} \hline
@@ -406,6 +407,190 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Nous nous désintéressons complètement au fonctionnement de cette traduction, qui est expliqué plus en détail dans cet article de H. Cassé, F. Birée et P. Sainrat~\cite{otawa}, puisque nous ne travaillerons dans le cadre de notre analyse qu'avec les instructions sémantiques fournies par OTAWA.
   
   \subsection{Interprétation abstraite}
+  Il s'agit maintenant d'introduire brièvement la théorie derrière notre travail, l'interprétation abstraite~\cite{cousot}.
+  
+  Une quadruplet  $(L, \alpha, \gamma, M)$, composé deux domaines et deux fonctions, un domaine concret $L$, un domaine abstrait $M$, une fonction d'abstraction $\alpha : L \rightarrow M$ et une fonction de concrétisation $\gamma : M \rightarrow L$, est une \textit{correspondance de Galois}~\cite{nielson} si elle respecte les deux propriétés suivantes :
+  
+  \begin{align}
+    \gamma \circ \alpha \sqsupseteq id_L\\
+    \alpha \circ \gamma \sqsubseteq id_M
+  \end{align}
+
+  où $id_L$ et $id_M$ sont les fonctions d'identité respectives de $L$ et $M$.
+  
+  Regardons tout de suite un exemple pour mieux comprendre : prenons $L \coloneqq \mathscr{P}(\mathds{Z})$, $M \coloneqq \{\perp, +, -\}$, et
+  
+  \begin{align*}
+    \alpha (l) \coloneqq \left\{ 
+    \begin{array}{ll}
+      + & \si\ l \subseteq \mathds{Z}_{\geq 0}\\
+      - & \si\ l \subseteq \mathds{Z}_{< 0}\\
+      \perp & \sinon\
+    \end{array} \right.
+  \end{align*}
+  
+  \begin{align*}
+    \gamma (m) \coloneqq \left\{ 
+    \begin{array}{ll}
+      \llbracket 0, +\infty\llbracket & \si\ m = -\\
+      \rrbracket -\infty, -1\rrbracket & \si\ m = +\\
+      \rrbracket -\infty, +\infty\llbracket  & \si\ m =\ \perp\\
+    \end{array} \right.
+  \end{align*}
+  
+  ``$\sqsupseteq$'' correspond ici à ``$\supseteq$'' et ``$\sqsubseteq$'' à ``$=$''. Essayons maintenant de vérifier que $(L, \alpha, \gamma, M)$ est une correspondance de Galois :
+  
+  \begin{align*}
+    \gamma \circ \alpha (l) = \left\{ 
+    \begin{array}{ll}
+      \llbracket 0, +\infty\llbracket & \si\ l \subseteq \mathds{Z}_{\geq 0}\\
+      \rrbracket -\infty, -1\rrbracket & \si\ l \subseteq \mathds{Z}_{< 0}\\
+      \rrbracket -\infty, +\infty\llbracket & \sinon\
+    \end{array} \right.
+  \end{align*}
+  
+  Or,
+  
+  \begin{align*}
+    \forall l \subseteq \mathds{Z}_{\geq 0},\ & \llbracket 0, +\infty\llbracket \supseteq l\\
+    \forall l \subseteq \mathds{Z}_{< 0},\    & \rrbracket -\infty, -1\rrbracket \supseteq l\\
+    \forall l \in \mathscr{P}(\mathds{Z}),\   & \rrbracket -\infty, +\infty\llbracket \supseteq l
+  \end{align*}
+  
+  Donc $\forall l \in L, \gamma \circ \alpha (l) \supseteq l = id_L(l)$. Donc la propriété $(1)$ est bien respectée.
+  La deuxième propriété est plus rapide à vérifier, nous allons donc la détailler un peu :
+  
+  \begin{align*}
+    \alpha \circ \gamma (m)\ &=\ \left\{ 
+    \begin{array}{ll}
+      \alpha (\llbracket 0, +\infty\llbracket) & \si\ m = -\\
+      \alpha (\rrbracket -\infty, -1\rrbracket) & \si\ m = +\\
+      \alpha (\rrbracket -\infty, +\infty\llbracket)  & \si\ m =\ \perp\\
+    \end{array} \right.\\
+    &= \ \left\{ 
+    \begin{array}{ll}
+      - & \si\ m = -\\
+      + & \si\ m = +\\
+      \perp  & \si\ m =\ \perp\\
+    \end{array} \right.\\
+    &= m
+  \end{align*}
+  
+  Donc $\forall m \in M, \alpha \circ \gamma (m) = m = id_M(m)$. Donc la propriété $(2)$ est bien repectée.
+  
+  $(L, \alpha, \gamma, M)$ est donc bien une correspondance de Galois. \hfill $\blacksquare$
+  
+  \bigbreak
+  
+  Il existe d'autres approches plus visuelles et moins algébriques des correspondances de Galois. Prenez cette fleur $l$, par exemple :
+  
+  \begin{center}
+    \includegraphics[scale=0.19]{./pictures/flower2.png}
+    % flower2.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
+  \end{center}
+  
+  Considérons que le domaine concret ($L$) est l'ensemble des dessins sur le plan ($l \in L$), et que le domaine abstrait ($M$) ne contient que des contours.
+  
+  La fonction d'abstraction $\alpha\ : L \rightarrow M$ ne retient que les contours du dessin. Par exemple, voici $\alpha (l)$ :
+  
+  \begin{center}
+    \includegraphics[scale=0.19]{pictures/flower4.png}
+    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
+  \end{center}
+
+  La fonction de concrétisation $\gamma\ : M \rightarrow L$ remplit le dessin, de telle manière que $\gamma \circ \alpha$  soit :
+  
+  \begin{center}
+    \includegraphics[scale=0.19]{./pictures/flower3.png}
+    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
+  \end{center}
+  
+  On se rend compte que la première propriété $(1)$ pour que $(L, \alpha, \gamma, M)$ soit une correspondance de Galois est respectée pour $l$, puisqu'on a $\gamma \circ \alpha (l) \sqsupset l$ (le dessin ci-dessus ``contient'' la fleur originale).
+  
+  La deuxièle propriété est assez triviale, puisque lorsqu'on prend un contour $m$ :
+  
+  \begin{center}
+    \includegraphics[scale=0.19]{pictures/flower4.png}
+    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
+  \end{center}
+  
+  qu'on le concrétise (on le ``remplit'') pour obtenir $\gamma (m)$ :
+  
+  \begin{center}
+    \includegraphics[scale=0.19]{./pictures/flower3.png}
+    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
+  \end{center}
+  
+  et qu'on revienne dans le monde abstrait ($\alpha \circ \gamma (m)$) :
+  
+  \begin{center}
+    \includegraphics[scale=0.19]{pictures/flower4.png}
+    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
+  \end{center}
+  
+  on obtient toujours l'identité ($id_M$). $\alpha \circ \gamma$ est donc \textit{égal} à $id_M$, et à fortiori la condition $(2)$ est respectée ($\alpha \circ \gamma \sqsubseteq id_M$). Nous n'avons montré ces propriétés que sur un exemple, celui de la fleur $l$, nous n'avons donc rien prouvé (ce n'est pas l'objet) mais nous avons déjà donné quelques éléments d'intuition.
+  
+  Quel intérêt pour l'analyse d'un programme ? Nous voulons trouver des chemins infaisables dans un programme, dont l'état initial est schématisé par cette fleur :
+  
+  \begin{center}
+    \includegraphics[scale=0.19]{./pictures/flower2.png}
+    % flower2.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
+  \end{center}
+  
+  Dans la métaphore, cela revient, par exemple, à vérifier que le dessin ne disparait jamais entièrement (il n'est jamais vide) au fur et à mesure de l'exécution du programme. Pour cela, nous nous représentons l'état du programme, une abstraction de la réalité :
+  
+  
+  \begin{center}
+    \includegraphics[scale=0.19]{pictures/flower4.png}
+    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
+  \end{center}
+  
+  Nous suivons le fil d'exécution du programme, en appliquant à notre état abstrait (notre contour) les modifications subies par le programme, c'est-à-dire la lecture d'instruction. Par exemple, nous lisons une instruction qui fait, dans notre métaphore, pivoter la fleur de 90$^{\circ}$ :  
+  
+  \begin{center}
+    \includegraphics[scale=0.19]{./pictures/flower5.png}
+    % flower5.png: 788x604 pixel, 96dpi, 20.85x15.98 cm, bb=0 0 591 453
+  \end{center}
+  
+  Pour que notre analyse reste juste, il faut que notre état abstrait reste une surapproximation de la réalité (c'est-à-dire ici que le dessin concrétisé contient toujours le dessin obtenu en faisant les modifications à l'original) :
+
+  \begin{center}
+    \includegraphics[scale=0.19]{./pictures/flower6.png}
+    % flower6.png: 788x604 pixel, 96dpi, 20.85x15.98 cm, bb=0 0 591 453
+  \end{center}
+  
+  Comme on surestime grâce à la propriété $(1)$ de la correspondace de la Galois ($\gamma \circ \alpha \sqsupset id_L$), il se peut qu'on ne détecte pas des chemins infaisables (c'est-à-dire des disparitions du dessin), en revanche \textbf{on ne peut pas trouver de chemins infaisables faux} (c'est-à-dire notre dessin ne disparaîtra pas sans raison), et c'est là l'essentiel : en analyse statique, on abstrait des domaines complexes en domaines plus simples en faisant des surestimations, on peut manquer des propriétés mais on ne peut pas en trouver de fausses.
+  
+  Par exemple, si nous lisons des instructions qui nous demandent maintenant de supprimer la tige :
+  
+  \begin{center}
+    \includegraphics[scale=0.19]{./pictures/flower7.png}
+    % flower7.png: 788x604 pixel, 96dpi, 20.85x15.98 cm, bb=0 0 591 453
+  \end{center}
+  
+  puis de supprimer toutes les pétales une à une, jusqu'à arriver à :
+  
+  \begin{center}
+    \includegraphics[scale=0.19]{./pictures/flower8.png}
+  \end{center}
+  
+  et enfin :
+
+  \begin{center}
+    \includegraphics[scale=0.19]{./pictures/flower9.png}
+  \end{center}
+  
+  Il s'agit là d'un exemple de chemin infaisable que nous n'avons pas pu trouvé à cause de notre surestimation (dans la réalité, ce rond restant correspond au ``noyau'' vide de la fleur, et la fleur a donc disparu).
+  
+  \bigbreak
+  
+  Dans notre travail, au lieu d'abstraire les contours d'un dessin, nous allons abstraire l'état de l'exécution du programme dans la machine à un moment donné par une liste de prédicats. Il faut garder en tête que cette représentation du programme sera imprécise et surestimée, [but that it will always be sound]. % TODO
+
+  
+% Cela explique le fonctionnement du invalidate().
+% NOTE: soit S l'ens des états du programme et S' = { s in S \ (P1 /\ P2 /\ P3) s = T }, les prédicats induisent un sous-ensemble des états et il est facile de voir que S" = { s in S \ (P1 /\ P2) s = T } inclus S'.
+% En fait, on peut voir un prédicat comme une fonction P: S -> Bool
+% De plus, un ensemble de prédicats insatisfiable, Ps donnerait un ensemble d'état vide { } montrant par là qu'il n'existe aucun chemin d'exécution permettant d'atteindre ce point du programme.
   
   \newpage{}
   \section{Algorithme de recherche de chemins infaisables}  
@@ -527,15 +712,6 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   Nous avons également implémenté des stratégies pour essayer de préserver l'information autant que possible lors de l'invalidation d'une variable. Par exemple, si on a un prédicat \texttt{r0 = r1} et que l'on doit invalider \texttt{r0}, on se contentera de supprimer ce premier prédicat et remplacer toutes les occurences de \texttt{r0} par \texttt{r1}.
   
   \ccc{Il faut bien voir que nous avons la liberté de perdre autant d'informations (c'est-à-dire de supprimer des prédicats) que nous le voulons sur l'état du programme. Par exemple, si on a $\{p_1, p_2, p_3\}$ (c'est-à-dire $p_1 \land p_2 \land p_3$), on peut enlever n'importe quel prédicat $p_1$, $p_2$ ou $p_3$ et garder un résultat valide : on a juste perdu de la précision.}
-
-%HUG: tu pourrais parler ici de nos marges de manoeuvre: on cherche un sous-ensemble des prédicats d'un point du programme.
-% par exemple, si on P1 /\ P2 /\ P3, on peut enlever n'importe quel prédicat P1, P2 ou P3 et garder un résultat valide: on a juste perdu de la précision.
-% Cela explique le fonctionnement du invalidate().
-% NOTE: soit S l'ens des états du programme et S' = { s / s in S /\ (P1 /\ P2 /\ P3) s = T }, les prédicats induisent un sous-ensemble des états
-% et il est facile de voir que S" = { s / s in S /\ (P1 /\ P2) s = T } inclus S'.
-% En fait, on peut voir un prédicat comme une fonction P: S -> Bool
-% De plus, un ensemble de prédicats insatisfiable, Ps donnerait un ensemble d'état vide { } montrant par là qu'il n'existe aucun chemin d'exécution
-% permettant d'atteindre ce point du programme.
 
   \bigbreak
 
@@ -831,21 +1007,14 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
   
   qui sont bien les deux sous-listes minimales de $\{p_1, p_2, p_3, p_4\}$.
   
-  %TODO: on accélère ça avec des masques de bits
-
-
-  % TODO: 1re partie description des contextes
-  % 2e partie recherche des chemins infaisables <- le gros chapite
-  % 3e partie trad contraintes ilp
-
-  % TODO: appels au SMT
+  Ce test de minimalité des conjonctions de prédicats a été en implémenté avec une approche moins naïve que celle-ci, en utilisant des masques de bits pour accélérer cette partie de l'algorithme. S'agissant là d'un détail technique sans grand rapport au reste de l'analyse, je ne le développerai pas ici.
 
   \newpage{}
   \section{Traduction en contraintes ILP}
   Une fois les chemins infaisables trouvés, il faut générer des contraintes ILP sur le CFG utilisables par OTAWA pour affiner (du moins on l'espère) l'estimation du WCET.
 
   \subsection{Cas avec deux if en séquence}
-%   Commençons avec un exemple simple de deux \texttt{if... then... else ...} en séquence (figure~\ref{if_2seq}). La première condition est notée \texttt{x} et la deuxième \texttt{y}, nous avons étiquettés les 4 arcs correspondants aux branchements conditionnels : \texttt{x}, \texttt{\textlnot x}, \texttt{y}, \texttt{\textlnot y}.
+   Commençons avec un exemple simple de deux \texttt{if... then... else ...} en séquence (figure~\ref{if_2seq}). La première condition est notée \texttt{x} et la deuxième \texttt{y}, nous avons étiquettés les 4 arcs correspondants aux branchements conditionnels : \texttt{x}, \texttt{\textlnot x}, \texttt{y}, \texttt{\textlnot y}.
 
 
 %   \begin{figure}
@@ -966,7 +1135,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
 
     \[\forall i \in \llbracket 1, k \rrbracket,\; n_{x_i} \leq \sum_{j \in \llbracket 1, k \rrbracket \setminus \{i\}} n_{\neg x_j} \]
 
-    et chacune de ces contraintes est équivalente. De plus, il est immédiat que :
+    et chacune de ces contraintes est équivalente. De plus, il est immédiat que : % pourquoi on est passé en math-mode ???
 
     \[ \sum_{i \in \llbracket 1, k \rrbracket} n_{x_i} \leq (k-1) \sum_{i \in \llbracket 1, k \rrbracket} n_{\neg x_i} \]
   \end{theorem}
