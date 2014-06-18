@@ -69,18 +69,20 @@
 \newcommand{\pushright}[1]{\ifmeasuring@#1\else\omit\hfill$\displaystyle#1$\fi\ignorespaces} % push to right
 \newcommand{\pushleft}[1]{\ifmeasuring@#1\else\omit$\displaystyle#1$\hfill\fi\ignorespaces} % push to left
 \makeatother
-
+% Une phrase le contexte 3 phrases ce qu'on fait (je fais une analyse de l'assembleur par l'intermédiaire des instructions sémantiques pour se faire on utilise il faut introduire la notion de chemin infaisable
 \begin{document}
-  % TODO: Ajouter ``un bref résumé du travail effectué''
   \begin{titlepage}
   \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
   \center
-  \textsc{\	 IRIT - Equipe TRACES}\\[1.5cm] \textsc{\Large Rapport de Stage - M2R IT Spé. SRLC}\\[0.5cm]
+  \textsc{\	 IRIT - Equipe TRACES}\\[0.4cm]
+  \textsc{\Large Rapport de Stage - M2R IT Spé. SRLC}\\[0.4cm]
   \textsc{\large 01 Mars 2014 - 03 Août 2014}
   \HRule \\[0.5cm] { \huge \bfseries Détermination de propriétés de flot de données pour l'amélioration du temps d'exécution
-pire-cas}\\[0.4cm] \HRule \\[1cm]
-  \begin{minipage}{0.5\textwidth} \begin{flushleft} \large \emph{Auteur:}\\ Jordy \textsc{Ruiz} \end{flushleft} \end{minipage}\begin{minipage}{0.5\textwidth} \begin{flushright} \large \emph{Encadrant:} \\ Hugues \textsc{Cassé}\end{flushright} \end{minipage}\\[1cm]
-  {\large Année 2013 - 2014}\\[2.5cm]
+pire-cas}\\[0.4cm] \HRule \\[0.5cm]
+  \begin{minipage}{0.5\textwidth} \begin{flushleft} \large \emph{Auteur:}\\ Jordy \textsc{Ruiz} \end{flushleft} \end{minipage}\begin{minipage}{0.5\textwidth} \begin{flushright} \large \emph{Encadrant:} \\ Hugues \textsc{Cassé}\end{flushright} \end{minipage}\\[0.5cm]
+  {\large Année 2013 - 2014}\\[1cm]
+  
+  {\large \textit{Résumé :} Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.} \\[1cm]
   \includegraphics[scale=0.6]{pictures/logo_univ_tlse.png}\\[1cm]
   \vfill
   \end{titlepage}
@@ -528,7 +530,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
   \end{center}
   
-  on obtient toujours l'identité ($id_M$). $\alpha \circ \gamma$ est donc \textit{égal} à $id_M$, et à fortiori la condition $(2)$ est respectée ($\alpha \circ \gamma \sqsubseteq id_M$). Nous n'avons montré ces propriétés que sur un exemple, celui de la fleur $l$, nous n'avons donc rien prouvé (ce n'est pas l'objet) mais nous avons déjà donné quelques éléments d'intuition.
+  On obtient toujours l'identité ($id_M$). $\alpha \circ \gamma$ est donc \textit{égal} à $id_M$, et à fortiori la condition $(2)$ est respectée ($\alpha \circ \gamma \sqsubseteq id_M$). Nous n'avons montré ces propriétés que sur un exemple, celui de la fleur $l$, nous n'avons donc rien prouvé (ce n'est pas l'objet) mais nous avons déjà donné quelques éléments d'intuition.
   
   Quel intérêt pour l'analyse d'un programme ? Nous voulons trouver des chemins infaisables dans un programme, dont l'état initial est schématisé par cette fleur :
   
@@ -580,7 +582,7 @@ pire-cas}\\[0.4cm] \HRule \\[1cm]
     \includegraphics[scale=0.19]{./pictures/flower9.png}
   \end{center}
   
-  Il s'agit là d'un exemple de chemin infaisable que nous n'avons pas pu trouvé à cause de notre surestimation (dans la réalité, ce rond restant correspond au ``noyau'' vide de la fleur, et la fleur a donc disparu).
+  Il s'agit là d'un exemple de chemin infaisable que nous n'avons pas pu trouver à cause de notre surestimation (dans la réalité, ce rond restant correspond au ``noyau'' vide de la fleur, et la fleur a donc disparu).
   
   \bigbreak
   
