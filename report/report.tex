@@ -484,110 +484,107 @@ pire-cas}\\[0.4cm] \HRule \\[0.5cm]
   
   \bigbreak
   
-  Il existe d'autres approches plus visuelles et moins algébriques des correspondances de Galois. Prenez cette fleur $l$, par exemple :
+  Il existe d'autres approches plus visuelles et moins algébriques des correspondances de Galois. Prenez la fleur 1 à gauche de la figure ci-dessous, par exemple, que nous appelerons $l$ :
+  
   
   \begin{center}
-    \includegraphics[scale=0.19]{./pictures/flower2.png}
-    % flower2.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
+    \begin{minipage}{.3\textwidth}
+      \begin{center}
+	\includegraphics[scale=0.19]{./pictures/flower2.png}\\
+	% flower2.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
+	\textsc{fleur 1}
+      \end{center}
+    \end{minipage}
+    \begin{minipage}{.3\textwidth}
+      \begin{center}
+	\includegraphics[scale=0.19]{pictures/flower4.png}\\
+	\textsc{fleur 2}
+      \end{center}
+    \end{minipage}
+    \begin{minipage}{.3\textwidth}
+      \begin{center}
+	\includegraphics[scale=0.19]{./pictures/flower3.png}\\
+	\textsc{fleur 3}
+      \end{center}
+    \end{minipage}
   \end{center}
   
   Considérons que le domaine concret ($L$) est l'ensemble des dessins sur le plan ($l \in L$), et que le domaine abstrait ($M$) ne contient que des contours.
   
-  La fonction d'abstraction $\alpha\ : L \rightarrow M$ ne retient que les contours du dessin. Par exemple, voici $\alpha (l)$ :
-  
-  \begin{center}
-    \includegraphics[scale=0.19]{pictures/flower4.png}
-    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
-  \end{center}
+  La fonction d'abstraction $\alpha\ : L \rightarrow M$ ne retient que les contours du dessin. Par exemple, sur la figure ci-dessus, la fleur 2 est $\alpha (l)$.
 
-  La fonction de concrétisation $\gamma\ : M \rightarrow L$ remplit le dessin, de telle manière que $\gamma \circ \alpha$  soit :
+  La fonction de concrétisation $\gamma\ : M \rightarrow L$ remplit le dessin, de telle manière que $\gamma \circ \alpha (l)$  soit la fleur 3.
   
-  \begin{center}
-    \includegraphics[scale=0.19]{./pictures/flower3.png}
-    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
-  \end{center}
+  On se rend compte que la première propriété $(1)$ pour que $(L, \alpha, \gamma, M)$ soit une correspondance de Galois est respectée pour $l$, puisqu'on a $\gamma \circ \alpha (l) \sqsupset l$ (le dessin de la fleur 3 ``contient'' la fleur 1).
   
-  On se rend compte que la première propriété $(1)$ pour que $(L, \alpha, \gamma, M)$ soit une correspondance de Galois est respectée pour $l$, puisqu'on a $\gamma \circ \alpha (l) \sqsupset l$ (le dessin ci-dessus ``contient'' la fleur originale).
+  \medbreak
   
-  La deuxième propriété est assez triviale, puisque lorsqu'on prend un contour $m$ :
+  La deuxième propriété est assez triviale, puisque lorsqu'on prend un contour $m$ (comme sur la fleur 2 ci-dessus), qu'on le concrétise (on le ``remplit'') pour obtenir $\gamma (m)$ (fleur 3) et qu'on revient dans le monde abstrait, avec $\alpha \circ \gamma (m)$ fleur 2), on obtient toujours l'identité ($id_M$).
   
-  \begin{center}
-    \includegraphics[scale=0.19]{pictures/flower4.png}
-    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
-  \end{center}
-  
-  qu'on le concrétise (on le ``remplit'') pour obtenir $\gamma (m)$ :
-  
-  \begin{center}
-    \includegraphics[scale=0.19]{./pictures/flower3.png}
-    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
-  \end{center}
-  
-  et qu'on revienne dans le monde abstrait ($\alpha \circ \gamma (m)$) :
-  
-  \begin{center}
-    \includegraphics[scale=0.19]{pictures/flower4.png}
-    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
-  \end{center}
-  
-  On obtient toujours l'identité ($id_M$). $\alpha \circ \gamma$ est donc \textit{égal} à $id_M$, et à fortiori la condition $(2)$ est respectée ($\alpha \circ \gamma \sqsubseteq id_M$). Nous n'avons montré ces propriétés que sur un exemple, celui de la fleur $l$, nous n'avons donc rien prouvé (ce n'est pas l'objet) mais nous avons déjà donné quelques éléments d'intuition.
-  
-  Quel intérêt pour l'analyse d'un programme ? Nous voulons trouver des chemins infaisables dans un programme, dont l'état initial est schématisé par cette fleur :
-  
-  \begin{center}
-    \includegraphics[scale=0.19]{./pictures/flower2.png}
-    % flower2.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
-  \end{center}
-  
-  Dans la métaphore, cela revient, par exemple, à vérifier que le dessin ne disparait jamais entièrement (il n'est jamais vide) au fur et à mesure de l'exécution du programme. Pour cela, nous nous représentons l'état du programme, une abstraction de la réalité :
-  
-  
-  \begin{center}
-    \includegraphics[scale=0.19]{pictures/flower4.png}
-    % flower3.png: 604x788 pixel, 96dpi, 15.98x20.85 cm, bb=0 0 453 591
-  \end{center}
-  
-  Nous suivons le fil d'exécution du programme, en appliquant à notre état abstrait (notre contour) les modifications subies par le programme, c'est-à-dire la lecture d'instruction. Par exemple, nous lisons une instruction qui fait, dans notre métaphore, pivoter la fleur de 90$^{\circ}$ :  
-  
-  \begin{center}
-    \includegraphics[scale=0.19]{./pictures/flower5.png}
-    % flower5.png: 788x604 pixel, 96dpi, 20.85x15.98 cm, bb=0 0 591 453
-  \end{center}
-  
-  Pour que notre analyse reste juste, il faut que notre état abstrait reste une surapproximation de la réalité (c'est-à-dire ici que le dessin concrétisé contient toujours le dessin obtenu en faisant les modifications à l'original) :
-
-  \begin{center}
-    \includegraphics[scale=0.19]{./pictures/flower6.png}
-    % flower6.png: 788x604 pixel, 96dpi, 20.85x15.98 cm, bb=0 0 591 453
-  \end{center}
-  
-  Comme on surestime grâce à la propriété $(1)$ de la correspondace de la Galois ($\gamma \circ \alpha \sqsupset id_L$), il se peut qu'on ne détecte pas des chemins infaisables (c'est-à-dire des disparitions du dessin), en revanche \textbf{on ne peut pas trouver de chemins infaisables faux} (c'est-à-dire notre dessin ne disparaîtra pas sans raison), et c'est là l'essentiel : en analyse statique, on abstrait des domaines complexes en domaines plus simples en faisant des surestimations, on peut manquer des propriétés mais on ne peut pas en trouver de fausses.
-  
-  Par exemple, si nous lisons des instructions qui nous demandent maintenant de supprimer la tige :
-  
-  \begin{center}
-    \includegraphics[scale=0.19]{./pictures/flower7.png}
-    % flower7.png: 788x604 pixel, 96dpi, 20.85x15.98 cm, bb=0 0 591 453
-  \end{center}
-  
-  puis de supprimer toutes les pétales une à une, jusqu'à arriver à :
-  
-  \begin{center}
-    \includegraphics[scale=0.19]{./pictures/flower8.png}
-  \end{center}
-  
-  et enfin :
-
-  \begin{center}
-    \includegraphics[scale=0.19]{./pictures/flower9.png}
-  \end{center}
-  
-  Il s'agit là d'un exemple de chemin infaisable que nous n'avons pas pu trouver à cause de notre surestimation (dans la réalité, ce rond restant correspond au ``noyau'' vide de la fleur, et la fleur a donc disparu).
+  $\alpha \circ \gamma$ est donc \textit{égal} à $id_M$, et à fortiori la condition $(2)$ est respectée ($\alpha \circ \gamma \sqsubseteq id_M$). Nous n'avons montré ces propriétés que sur un exemple, celui de la fleur $l$, nous n'avons donc rien prouvé (ce n'est pas l'objet) mais nous avons déjà donné quelques éléments d'intuition.
   
   \bigbreak
   
-  Dans notre travail, au lieu d'abstraire les contours d'un dessin, nous allons abstraire l'état de l'exécution du programme dans la machine à un moment donné par une liste de prédicats. Il faut garder en tête que cette représentation du programme sera imprécise et surestimée, [but that it will always be sound]. % TODO
-
+  Quel intérêt pour l'analyse d'un programme ? Nous voulons trouver des chemins infaisables dans un programme, dont l'état initial est schématisé par la fleur 1.
+  
+  Dans la métaphore, cela revient, par exemple, à vérifier que le dessin ne disparait jamais entièrement (il n'est jamais vide) au fur et à mesure de l'exécution du programme. Pour cela, nous nous représentons l'état du programme, une abstraction de la réalité, la fleur 2.
+  
+  Nous suivons le fil d'exécution du programme, en appliquant à notre état abstrait (notre contour) les modifications subies par le programme, c'est-à-dire la lecture d'instructions. Par exemple, nous lisons une instruction qui fait, dans notre métaphore, pivoter la fleur de 90$^{\circ}$ (fleur 4 ci-dessous) :  
+  
+  \begin{center}
+    \begin{minipage}{.45\textwidth}
+      \begin{center}
+	\includegraphics[scale=0.19]{./pictures/flower5.png}\\
+	% flower5.png: 788x604 pixel, 96dpi, 20.85x15.98 cm, bb=0 0 591 453
+	\textsc{fleur 4}
+      \end{center}
+    \end{minipage}
+    \begin{minipage}{.45\textwidth}
+      \begin{center}
+	\includegraphics[scale=0.19]{./pictures/flower6.png}\\
+	% flower6.png: 788x604 pixel, 96dpi, 20.85x15.98 cm, bb=0 0 591 453
+	\textsc{fleur 5}
+      \end{center}
+    \end{minipage}
+  \end{center}
+  
+  Pour que notre analyse reste juste, il faut que notre état abstrait reste une surapproximation de la réalité (c'est-à-dire ici que le dessin concrétisé contient toujours le dessin obtenu en faisant les modifications à l'original), comme sur la fleur 5.
+  
+  Comme on surestime grâce à la propriété $(1)$ de la correspondace de la Galois ($\gamma \circ \alpha \sqsupset id_L$), il se peut qu'on ne détecte pas certains chemins infaisables (c'est-à-dire des disparitions du dessin), en revanche \textbf{on ne peut pas trouver de chemins infaisables faux} (c'est-à-dire notre dessin ne disparaîtra pas sans raison), et c'est là l'essentiel : en analyse statique, on abstrait des domaines complexes en domaines plus simples en faisant des surestimations, on peut manquer des propriétés mais on ne peut pas en trouver de fausses.
+  
+  Par exemple, nous lisons des instructions qui nous demandent maintenant de supprimer la tige (fleur 6) :
+  
+  \begin{center}
+    \begin{minipage}{.3\textwidth}
+      \begin{center}
+	\includegraphics[scale=0.19]{./pictures/flower7.png}\\
+	% flower7.png: 788x604 pixel, 96dpi, 20.85x15.98 cm, bb=0 0 591 453
+	\textsc{fleur 6}
+      \end{center}
+    \end{minipage}
+    \begin{minipage}{.3\textwidth}
+      \begin{center}
+	\includegraphics[scale=0.19]{./pictures/flower8.png}\\
+	\textsc{fleur 7}
+      \end{center}
+    \end{minipage}
+    \begin{minipage}{.3\textwidth}
+      \begin{center}
+	\includegraphics[scale=0.19]{./pictures/flower9.png}\\
+	\textsc{fleur 8}
+      \end{center}
+    \end{minipage}
+  \end{center}
+  
+  puis de supprimer toutes les pétales une à une, jusqu'à arriver à la fleur 7, et enfin à la fleur 8.
+  
+  Il s'agit là d'un exemple de chemin infaisable que nous n'avons pas pu trouver à cause de notre surestimation (dans la réalité, ce rond restant correspond au ``noyau'' vide de la fleur 1, et le dessin a donc disparu).
+  
+  \bigbreak
+  
+  Dans notre travail, au lieu d'abstraire les contours d'un dessin, nous allons abstraire l'état de l'exécution du programme dans la machine à un moment donné par une liste de prédicats. Il faut garder en tête que cette représentation du programme sera imprécise et surestimée, mais que nous resterons toujours correct.
+  
+  
   
 % Cela explique le fonctionnement du invalidate().
 % NOTE: soit S l'ens des états du programme et S' = { s in S \ (P1 /\ P2 /\ P3) s = T }, les prédicats induisent un sous-ensemble des états et il est facile de voir que S" = { s in S \ (P1 /\ P2) s = T } inclus S'.
@@ -713,7 +710,7 @@ pire-cas}\\[0.4cm] \HRule \\[0.5cm]
   
   Nous avons également implémenté des stratégies pour essayer de préserver l'information autant que possible lors de l'invalidation d'une variable. Par exemple, si on a un prédicat \texttt{r0 = r1} et que l'on doit invalider \texttt{r0}, on se contentera de supprimer ce premier prédicat et remplacer toutes les occurences de \texttt{r0} par \texttt{r1}.
   
-  \ccc{Il faut bien voir que nous avons la liberté de perdre autant d'informations (c'est-à-dire de supprimer des prédicats) que nous le voulons sur l'état du programme. Par exemple, si on a $\{p_1, p_2, p_3\}$ (c'est-à-dire $p_1 \land p_2 \land p_3$), on peut enlever n'importe quel prédicat $p_1$, $p_2$ ou $p_3$ et garder un résultat valide : on a juste perdu de la précision.}
+  Il faut bien voir que nous avons la liberté de perdre autant d'informations (c'est-à-dire de supprimer des prédicats) que nous le voulons sur l'état du programme. Par exemple, si on a $\{p_1, p_2, p_3\}$ (c'est-à-dire $p_1 \land p_2 \land p_3$), on peut enlever n'importe quel prédicat $p_1$, $p_2$ ou $p_3$ et garder un résultat valide : on a juste perdu de la précision.
 
   \bigbreak
 
@@ -1175,9 +1172,17 @@ pire-cas}\\[0.4cm] \HRule \\[0.5cm]
   \newpage{}
   \addcontentsline{toc}{section}{Conclusion}
   \section*{Conclusion}
-  Petit récap...\\
-  Tout ce qu'il y a à faire en thèse !\\
-  Parler un peu de la théorie, analyse statique...\\
+  En me basant sur l'outil open-source OTAWA~\cite{otawa} développé par l'équipe TRACES, j'ai développé une analyse des chemins infaisables de programmes écrits en langage assembleur, dans le but ultime d'améliorer notre estimation du pire temps d'exécution. OTAWA m'a fourni les outils nécessaires pour m'abstraire des spécificités de chaque langage machine et me permettre de travailler sur un langage générique, ainsi que de nombreuses facilités pour parcourir le flot d'un programme en considérant ce dernier comme un graphe (CFG).
+  
+  En utilisant l'interprétation abstraite~\cite{cousot} comme base théorique, j'ai représenté les états de l'exécution d'un programme assemmbleur par des listes de prédicats qui décrivent l'état du système (registres et mémoire). J'a utilisé une technique énumération implicite des chemins (IPET) du CFG, et tout en parcourant le chemin et en faisant évoluer la liste de prédicats, j'ai cherché des inconsistances dans cette liste, afin d'identifier des chemins infaisables.
+  
+  J'ai utilisé un solveur SMT reconnu, CVC4~\cite{smt_cvc4}, pour détecter des insatisfiabilités dans ces prédicats. Une fois l'insatisfiabilité levée (et donc un chemin infaisable détecté), il a fallu en extraire les chemins infaisables minimaux pour en maximiser l'exploitabilité.
+  
+  Une fois l'exécution du programme finie, ces prédicats ont été traduits en contraintes ILP pour être ensuite injectées dans le calcul de WCET d'OTAWA et l'améliorer.
+  
+  Bien que le programme d'analyse soit fonctionnel et trouve effectivement les chemins infaisables sur les benchmarks simples sur lesquels nous l'avons testé, il subit encore certaines limitations, dont la plus importante est probablement l'absence de gestion des boucles.
+  
+  L'extension de cette analyse (notamment à des programmes avec boucles) fera l'objet d'une thèse au sein de la même équipe l'année prochaine, et peut-être de collaborations avec d'autres membres de l'équipe, en particulier en ce qui concerne l'exploitation des chemins infaisables trouvés.
 
 \newpage{}
 %\bibliographystyle{plain}
