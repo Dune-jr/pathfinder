@@ -49,7 +49,7 @@
 \newsavebox\CBox
 \newcommand\strike[2][0.5pt]{%
   \ifmmode\sbox\CBox{$#2$}\else\sbox\CBox{#2}\fi%
-  \makebox[0pt][l]{\usebox\CBox}%  
+  \makebox[0pt][l]{\usebox\CBox}%
   \rule[0.5\ht\CBox-#1/2]{\wd\CBox}{#1}}
 
 % define bijection map arrow
@@ -85,19 +85,19 @@
     {\large Année 2013 - 2014}\\[0.5cm]
   \end{center}
     \vfill
-  
+
   {\textit{Résumé :}
-    Le calcul du pire temps d'exécution ou WCET est un composant 
+    Le calcul du pire temps d'exécution ou WCET est un composant
     clé de la vérification des systèmes temps-réel critiques.
     Son calcul par analyse statique produit de manière conservative
     une surestimation qui peut mener à surévaluer le matériel nécessaire.
     Actuellement, la cause majeure de surestimation sont les chemins
     infaisables : le chemin du WCET est bien un majorant mais
     ne correspond à aucun chemin réel.
-    
+
     Ce travail se propose de détecter et d'exploiter les chemins
     infaisables pour réduire le WCET sur des programmes en langage machine,
-    la forme la plus proche de l'exécution réelle. La liste des chemins 
+    la forme la plus proche de l'exécution réelle. La liste des chemins
     est énumérée et les états du programme sont représentés par un
     ensemble de prédicats: dès que cet ensemble n'est plus satisfiable,
     un chemin infaisable est détecté et une analyse plus fine
@@ -124,7 +124,7 @@
 
   Dans le cadre de mon étude, je fais abstraction de certains problèmes très bas niveau comme la gestion du cache ou le fonctionnement du pipeline et des prédictions de branchement. Ces problèmes ne sont pas ignorés, ils sont simplement traités par d'autres travaux, d'autres outils que les miens.
 
-  Le calcul du WCET consiste en une \textbf{surestimation} : on ne donne certes pas une mesure exacte du pire temps d'exécution, mais on garantit que cette mesure est en tout cas supérieure au pire temps réel. Le but de mon étude est d'améliorer, d'affiner, donc de \textbf{réduire} la surestimation du WCET calculée par notre outil OTAWA, tout en restant correct. On cherche à avoir le plus petit majorant possible.
+  Le calcul du WCET consiste en une \textbf{surestimation} : on ne donne certes pas une mesure exacte du pire temps d'exécution, mais on garantit que cette mesure est en tout cas supérieure au pire temps réel. Le but de mon étude est d'améliorer, d'affiner, donc de \textbf{réduire} la surestimation du WCET calculée par notre outil OTAWA~\cite{otawa}, tout en restant correct. On cherche à avoir le plus petit majorant possible.
 
   La stratégie que je vais mettre en oeuvre pour la réduction de notre évaluation du WCET est la recherche de chemins infaisables.
 
@@ -227,12 +227,16 @@
 
   Toutefois, l'interprétation de la valeur d'un registre est identique tant que le bit de poids fort est à 0, c'est à dire tant que la valeur interprétée appartient à l'intervalle $\llbracket0, 2^{n-1}-1\rrbracket$, où $n$ est le nombre de bits du registre.
 
-  Et bien sûr, toutes les instructions qui ne sont pas supportées par OTAWA (impossibles à traduire en expression sémantiques) ne sont pas non plus supportées par notre programme, même si ce type d'erreur est géré de manière à ne pas être critique : on va perdre de l'information et donc peut-être détecter moins de chemins infaisables, mais l'analyse n'échoue pas.
+  Et bien sûr, toutes les instructions qui ne sont pas supportées par OTAWA (impossibles à traduire en expression sémantiques) ne sont pas non plus supportées par notre programme, même si ce type d'erreur est géré de manière à ne pas être critique : on va perdre de l'information et donc peut-être détecter moins de chemins infaisables, mais l'analyse n'échoue pas \ccc{et ne donne pas de faux résultats}.
 
   \newpage{}
   \section{Contexte}
+  \ccc{
+  Nous commençons par introduire les outils, théoriques ou concrets, sur lesquels nous allons nous appuyer pour notre analyse.
+  }
+  
   \subsection{Choix du solveur SMT}
-  Pour le choix de notre solveur SMT, nous avons dressé un petit état de l'art en nous basant principalement sur des résultats de la SMT-COMP~\cite{SMT-COMP}, une compétition entre solveurs, en éliminant d'office les solveurs qui ne présentaient pas d'API utilisable en C++ :
+  Pour le choix de notre solveur SMT, nous avons dressé un petit état de l'art en nous basant principalement sur des résultats de la SMT-COMP~\cite{SMT-COMP}, une compétition entre solveurs, en éliminant d'office les solveurs qui ne présentaient pas d'API utilisable en C++ \ccc{puisque le framework OTAWA est en C++} :
 
   \begin{itemize}
     \item Z3~\cite{smt_z3}
@@ -278,7 +282,7 @@
     \end{itemize}
   \end{itemize}
 
-  \begin{wrapfigure}{R}{1.5in}
+  \begin{wrapfigure}{r}{1.5in}
     \centering
     \includegraphics{./pictures/cvc4.png}
     % cvc4.png: 300x168 pixel, 300dpi, 2.54x1.42 cm, bb=0 0 72 40
@@ -329,7 +333,7 @@
 
   Prenons pour exemple l'algorithme~\ref{alg:1} que nous avions présenté plus haut. Le CFG en pseudo-code correspondant est exhibé sur la figure~\ref{cfg}. On y voit bien apparaître les 4 chemins cités précédemment. %TOLDO: vérifier que l'algo soit bien présent *plus haut*
 
-  La figure~\ref{cfg_genere} montre le CFG généré par OTAWA à partir du code ARM correspondant à l'algorithme~\ref{alg:1} (compilé à partir d'un fichier C). On y observe à peu près la même structure que sur le CFG en pseudo-code, avec des calls à la fonction \texttt{sauvegarder} et des instructions ARM plus volumineuses à l'intérieur des blocs.
+  La figure~\ref{cfg_genere} montre le CFG généré par OTAWA à partir du code ARM correspondant à l'algorithme~\ref{alg:1} (compilé à partir d'un fichier C). On y observe à peu près la même structure que sur le CFG en pseudo-code, avec des \ccc{appels} à la fonction \texttt{sauvegarder} et des instructions ARM plus volumineuses à l'intérieur des blocs.
 
   \begin{figure}
     \centering
@@ -345,10 +349,10 @@
     \caption{CFG généré par OTAWA}
     \label{cfg_genere}
   \end{figure}
-  
+
   \newpage{} % TOLDO: maybe remove this
-  \subsection{Les instructions sémantiques d'OTAWA} 
- 
+  \subsection{Les instructions sémantiques d'OTAWA}
+
   \begin{figure}
     \begin{tabular}{|l|l|} \hline
       \textbf{Instruction} & \textbf{Sémantique}\\ \hline \hline
@@ -388,25 +392,25 @@
     \label{seminsts}
     \caption{Liste des instructions sémantiques d'OTAWA}
   \end{figure}
-  
+
   \'Etant donné que les systèmes temps-réels embarqués tournent sur des architectures très différentes, OTAWA fournit une abstraction de la sémantique des instructions machine, nous l'avions déjà évoqué au chapitre 1.3. %TOLDO
-  
+
   Ce langage, présenté sur la figure~\ref{seminsts} est composé d'instructions simplifiées de type RISC qui utilisent des registres machine ou des variable temporaires. \'Etant donné sa simplicité par rapport aux assembleurs réels, la plupart de leurs instructions sont traduites par un bloc d'instructions sémantiques. Le langage sémantique définit des registres temporaires $t_0, ..., t_n$ dont la durée de vie est limitée à un bloc d'instructions sémantiques (correspondant à une seule instruction assembleur), et qui ne servent qu'à passer des valeurs entre les différentes instructions sémantiques du bloc.
-  
+
   Nous distinguons donc deux types de variables :
-  
+
   \begin{itemize}
-    \item les registres machine, notés $r_0$, $r_1$, ..., $r_n$ ou parfois $?0, ?1, ?n$, qui sont permanentes ;
+    \item les registres machine, notés $r_0$, $r_1$, ..., $r_n$ ou parfois $?0, ?1, ?n$, qui sont permanents ;
     \item les variables temporaires, notées $t_1$, $t_2$, ..., $t_n$, qui sont locales à un bloc.
   \end{itemize}
-  
+
   Décortiquons l'exemple précédemment utilisé :
-  
+
   \begin{lstlisting}[language={[ARM]Assembler}]
     mov r1, #0
     @	seti ?1, 0x0
   \end{lstlisting}
-  
+
   Ici, on a une instruction machine assez basique qui peut être traduite en une seule instruction sémantique. \texttt{mov r1, \#0} correspond à ``mettre la valeur 0 dans le registre $r_1$'', ce qui s'écrit en instructions sémantique comme \texttt{seti, ?1, 0x0}.
 
   \begin{lstlisting}[language={[ARM]Assembler}]
@@ -414,7 +418,7 @@
     @	set t1, ?1
     @	set ?2, t1
   \end{lstlisting}
-  
+
   Cette fois-ci c'est un peu plus compliqué puisque nous faisons à la fois la lecture d'un registre et l'écriture dans un registre : nous avons besoin de deux instructions sémantiques pour traduire ce que fait ``\texttt{mov r2, r1}'', c'est-à-dire ``mettre dans $r_2$ la valeur de $r_1$'', nous utilisons donc une variable temporaire ($t_1$) qui fait l'intermédiaire. La première instruction lit le registre $r_1$, la deuxième écrit dans le registre $r_2$.
 
   \begin{lstlisting}[language={[ARM]Assembler}]
@@ -425,73 +429,73 @@
   \end{lstlisting}
 
   Il s'agit ici d'un branchement avec lien (on se souvient d'où on a fait l'appel de fonction pour y revenir quand la fonction se termine). Techniquement, cela se traduit par un simple branchement avec la sauvegarde au préalable de l'adresse de la prochaine instruction dans $r_{14}$ (on l'appelle aussi le registre \textit{link}).
-  
-  OTAWA génère donc une première instruction sémantique qui écrit l'adresse sur laquelle brancher (c'est-à-dire, là où il faut aller, le début de la fonction) qui est fournise en paramètre de \texttt{bl} (ici, \texttt{0x8574}). La deuxième instruction sémantique s'occupe de mettre l'adresse de la prochaine instruction machine dans $r_14$ (ici, \texttt{0x8318}). Enfin, nous faisons le branchement sur $t_1$ avec \texttt{branch t1}.
-  
+
+  OTAWA génère donc une première instruction sémantique qui écrit l'adresse sur laquelle brancher (c'est-à-dire, là où il faut aller, le début de la fonction) qui est fournie en paramètre de \texttt{bl} (ici, \texttt{0x8574}). La deuxième instruction sémantique s'occupe de mettre l'adresse de la prochaine instruction machine dans $r_14$ (ici, \texttt{0x8318}). Enfin, nous faisons le branchement sur $t_1$ avec \texttt{branch t1}.
+
   Nous nous désintéressons complètement au fonctionnement de cette traduction, qui est expliqué plus en détail dans cet article de H. Cassé, F. Birée et P. Sainrat~\cite{otawa}, puisque nous ne travaillerons dans le cadre de notre analyse qu'avec les instructions sémantiques fournies par OTAWA.
-  
+
   \subsection{Interprétation abstraite}
   Il s'agit maintenant d'introduire brièvement la théorie derrière notre travail, l'interprétation abstraite~\cite{cousot}.
-  
+
   Une quadruplet  $(L, \alpha, \gamma, M)$, composé deux domaines et deux fonctions, un domaine concret $L$, un domaine abstrait $M$, une fonction d'abstraction $\alpha : L \rightarrow M$ et une fonction de concrétisation $\gamma : M \rightarrow L$, est une \textit{correspondance de Galois}~\cite{nielson} si elle respecte les deux propriétés suivantes :
-  
+
   \begin{align}
     \gamma \circ \alpha \sqsupseteq id_L\\
     \alpha \circ \gamma \sqsubseteq id_M
   \end{align}
 
   où $id_L$ et $id_M$ sont les fonctions d'identité respectives de $L$ et $M$.
-  
+
   Regardons tout de suite un exemple pour mieux comprendre : prenons $L \coloneqq \mathscr{P}(\mathds{Z})$, $M \coloneqq \{\perp, +, -\}$, et
-  
+
   \begin{align*}
-    \alpha (l) \coloneqq \left\{ 
+    \alpha (l) \coloneqq \left\{
     \begin{array}{ll}
       + & \si\ l \subseteq \mathds{Z}_{\geq 0}\\
       - & \si\ l \subseteq \mathds{Z}_{< 0}\\
       \perp & \sinon\
     \end{array} \right.
   \end{align*}
-  
+
   \begin{align*}
-    \gamma (m) \coloneqq \left\{ 
+    \gamma (m) \coloneqq \left\{
     \begin{array}{ll}
       \llbracket 0, +\infty\llbracket & \si\ m = -\\
       \rrbracket -\infty, -1\rrbracket & \si\ m = +\\
       \rrbracket -\infty, +\infty\llbracket  & \si\ m =\ \perp\\
     \end{array} \right.
   \end{align*}
-  
+
   ``$\sqsupseteq$'' correspond ici à ``$\supseteq$'' et ``$\sqsubseteq$'' à ``$=$'' dans $M$. Essayons maintenant de vérifier que $(L, \alpha, \gamma, M)$ est une correspondance de Galois :
-  
+
   \begin{align*}
-    \gamma \circ \alpha (l) = \left\{ 
+    \gamma \circ \alpha (l) = \left\{
     \begin{array}{ll}
       \llbracket 0, +\infty\llbracket & \si\ l \subseteq \mathds{Z}_{\geq 0}\\
       \rrbracket -\infty, -1\rrbracket & \si\ l \subseteq \mathds{Z}_{< 0}\\
       \rrbracket -\infty, +\infty\llbracket & \sinon\
     \end{array} \right.
   \end{align*}
-  
+
   Or,
-  
+
   \begin{align*}
     \forall l \subseteq \mathds{Z}_{\geq 0},\ & \llbracket 0, +\infty\llbracket \supseteq l\\
     \forall l \subseteq \mathds{Z}_{< 0},\    & \rrbracket -\infty, -1\rrbracket \supseteq l\\
     \forall l \in \mathscr{P}(\mathds{Z}),\   & \rrbracket -\infty, +\infty\llbracket \supseteq l
   \end{align*}
-  
+
   Donc $\forall l \in L, \gamma \circ \alpha (l) \supseteq l = id_L(l)$. Donc la propriété $(1)$ est bien respectée.
   La deuxième propriété est plus rapide à vérifier, nous allons donc la détailler un peu :
-  
+
   \begin{align*}
-    \alpha \circ \gamma (m)\ &=\ \left\{ 
+    \alpha \circ \gamma (m)\ &=\ \left\{
     \begin{array}{ll}
       \alpha (\llbracket 0, +\infty\llbracket) & \si\ m = -\\
       \alpha (\rrbracket -\infty, -1\rrbracket) & \si\ m = +\\
       \alpha (\rrbracket -\infty, +\infty\llbracket)  & \si\ m =\ \perp\\
     \end{array} \right.\\
-    &= \ \left\{ 
+    &= \ \left\{
     \begin{array}{ll}
       - & \si\ m = -\\
       + & \si\ m = +\\
@@ -499,16 +503,16 @@
     \end{array} \right.\\
     &= m
   \end{align*}
-  
+
   Donc $\forall m \in M, \alpha \circ \gamma (m) = m = id_M(m)$. Donc la propriété $(2)$ est bien repectée.
-  
+
   $(L, \alpha, \gamma, M)$ est donc bien une correspondance de Galois. \hfill $\blacksquare$
-  
+
   \bigbreak
-  
+
   Il existe d'autres approches plus visuelles et moins algébriques des correspondances de Galois. Prenez la fleur 1 à gauche de la figure ci-dessous, par exemple, que nous appelerons $l$ :
-  
-  
+
+
   \begin{center}
     \begin{minipage}{.3\textwidth}
       \begin{center}
@@ -530,29 +534,29 @@
       \end{center}
     \end{minipage}
   \end{center}
-  
+
   Considérons que le domaine concret ($L$) est l'ensemble des dessins sur le plan ($l \in L$), et que le domaine abstrait ($M$) ne contient que des contours.
-  
+
   La fonction d'abstraction $\alpha\ : L \rightarrow M$ ne retient que les contours du dessin. Par exemple, sur la figure ci-dessus, la fleur 2 est $\alpha (l)$.
 
   La fonction de concrétisation $\gamma\ : M \rightarrow L$ remplit le dessin, de telle manière que $\gamma \circ \alpha (l)$  soit la fleur 3.
-  
+
   On se rend compte que la première propriété $(1)$ pour que $(L, \alpha, \gamma, M)$ soit une correspondance de Galois est respectée pour $l$, puisqu'on a $\gamma \circ \alpha (l) \sqsupset l$ (le dessin de la fleur 3 ``contient'' la fleur 1).
-  
+
   \medbreak
-  
+
   La deuxième propriété est assez triviale, puisque lorsqu'on prend un contour $m$ (comme sur la fleur 2 ci-dessus), qu'on le concrétise (on le ``remplit'') pour obtenir $\gamma (m)$ (fleur 3) et qu'on revient dans le monde abstrait, avec $\alpha \circ \gamma (m)$ fleur 2), on obtient toujours l'identité ($id_M$).
-  
+
   $\alpha \circ \gamma$ est donc \textit{égal} à $id_M$, et à fortiori la condition $(2)$ est respectée ($\alpha \circ \gamma \sqsubseteq id_M$). Nous n'avons montré ces propriétés que sur un exemple, celui de la fleur $l$, nous n'avons donc rien prouvé (ce n'est pas l'objet) mais nous avons déjà donné quelques éléments d'intuition.
-  
+
   \bigbreak
-  
+
   Quel intérêt pour l'analyse d'un programme ? Nous voulons trouver des chemins infaisables dans un programme, dont l'état initial est schématisé par la fleur 1.
-  
+
   Dans la métaphore, cela revient, par exemple, à vérifier que le dessin ne disparait jamais entièrement (il n'est jamais vide) au fur et à mesure de l'exécution du programme. Pour cela, nous nous représentons l'état du programme, une abstraction de la réalité, la fleur 2.
-  
-  Nous suivons le fil d'exécution du programme, en appliquant à notre état abstrait (notre contour) les modifications subies par le programme, c'est-à-dire la lecture d'instructions. Par exemple, nous lisons une instruction qui fait, dans notre métaphore, pivoter la fleur de 90$^{\circ}$ (fleur 4 ci-dessous) :  
-  
+
+  Nous suivons le fil d'exécution du programme, en appliquant à notre état abstrait (notre contour) les modifications subies par le programme, c'est-à-dire la lecture d'instructions. Par exemple, nous lisons une instruction qui fait, dans notre métaphore, pivoter la fleur de 90$^{\circ}$ (fleur 4 ci-dessous) :
+
   \begin{center}
     \begin{minipage}{.45\textwidth}
       \begin{center}
@@ -569,13 +573,13 @@
       \end{center}
     \end{minipage}
   \end{center}
-  
+
   Pour que notre analyse reste juste, il faut que notre état abstrait reste une surapproximation de la réalité (c'est-à-dire ici que le dessin concrétisé contient toujours le dessin obtenu en faisant les modifications à l'original), comme sur la fleur 5.
-  
+
   Comme on surestime grâce à la propriété $(1)$ de la correspondace de la Galois ($\gamma \circ \alpha \sqsupset id_L$), il se peut qu'on ne détecte pas certains chemins infaisables (c'est-à-dire des disparitions du dessin), en revanche \textbf{on ne peut pas trouver de chemins infaisables faux} (c'est-à-dire notre dessin ne disparaîtra pas sans raison), et c'est là l'essentiel : en analyse statique, on abstrait des domaines complexes en domaines plus simples en faisant des surestimations, on peut manquer des propriétés mais on ne peut pas en trouver de fausses.
-  
+
   Par exemple, nous lisons des instructions qui nous demandent maintenant de supprimer la tige (fleur 6) :
-  
+
   \begin{center}
     \begin{minipage}{.3\textwidth}
       \begin{center}
@@ -597,29 +601,31 @@
       \end{center}
     \end{minipage}
   \end{center}
-  
+
   puis de supprimer toutes les pétales une à une, jusqu'à arriver à la fleur 7, et enfin à la fleur 8.
-  
+
   Il s'agit là d'un exemple de chemin infaisable que nous n'avons pas pu trouver à cause de notre surestimation (dans la réalité, ce rond restant correspond au ``noyau'' vide de la fleur 1, et le dessin a donc disparu).
-  
+
   \bigbreak
-  
+
   Dans notre travail, au lieu d'abstraire les contours d'un dessin, nous allons abstraire l'état de l'exécution du programme dans la machine à un moment donné par une liste de prédicats. Il faut garder en tête que cette représentation du programme sera imprécise et surestimée, mais que nous resterons toujours correct.
-  
-  
-  
+
+
+
 % Cela explique le fonctionnement du invalidate().
 % NOTE: soit S l'ens des états du programme et S' = { s in S \ (P1 /\ P2 /\ P3) s = T }, les prédicats induisent un sous-ensemble des états et il est facile de voir que S" = { s in S \ (P1 /\ P2) s = T } inclus S'.
 % En fait, on peut voir un prédicat comme une fonction P: S -> Bool
 % De plus, un ensemble de prédicats insatisfiable, Ps donnerait un ensemble d'état vide { } montrant par là qu'il n'existe aucun chemin d'exécution permettant d'atteindre ce point du programme.
-  
+
   \newpage{}
-  \section{Algorithme de recherche de chemins infaisables}  
+  \section{Algorithme de recherche de chemins infaisables}
+  \ccc{Nous allons maintenant examiner le fonctionnement de l'algorithme d'analyse, et les structures de données qu'il manipule.}
+  
   \subsection{Représentation des prédicats}
   Nous utilisons nos propres structures de prédicats, appropriées à l'usage qui leur est destiné. En voici la grammaire abstraite :
 
   Un prédicat est composé de deux opérandes et d'un opérateur de comparaison :
-  
+
   \begin{algorithm}[H]
     \textbf{Prédicat}: Expression \texttimes~Comparateur \texttimes~Expression\\
         \textbf{Comparateur}:\\
@@ -628,9 +634,9 @@
             \qquad |\quad LE,\, // $\leq$\\
             \qquad |\quad LT\: // $<$\\
   \end{algorithm}
-  
+
   Pour limiter le nombre de cas à traiter, nous n'avons pas inclus les opérateurs $>$ et $\geq$ (on peut les retrouver en inversant l'ordre des opérandes avec $<$ et $\leq$). Ce genre d'astuce est aussi utilisé dans l'API fournie par le solveur SMT CVC4, à cela près qu'ils préfèrent exclure $\leq$ et $<$.
-  
+
   Une expression peut être une constante, une variable, une valeur en mémoire, ou une expression arithmétique composée d'un opérateur arithmétique et de deux opérandes, elles-mêmes des expressions :
 
   \begin{algorithm}[H]
@@ -645,9 +651,9 @@
             \qquad |\quad Expression / Expression\\
             \qquad |\quad Expression \textit{mod} Expression\\
   \end{algorithm}
-  
+
   Nous ne supportons pour le moment que les opérations sur les entiers signés ($\mathds{Z}$), donc pas d'opérateurs ``non signés'' (sur $\mathds{N}$), ou d'opérateurs logiques (sur $\mathds{Z}/$\raisebox{-0.5ex}{$2\mathds{Z}$}), comme \texttt{ET}, \texttt{OU} et \texttt{NON}.
-  
+
   Une variable peut être un registre temporaire (un entier strictement positif) ou un registre (un entier positif). La quantité de registres est généralement très limitée mais comme nous travaillons indépendemment de l'architecture, nous ne pouvons pas connaître cette limitation (et nous n'en avons pas besoin).
 
   \begin{algorithm}[H]
@@ -655,9 +661,9 @@
             \qquad |\quad Temporaire(k: $\mathds{N^*}$)\\
             \qquad |\quad Registre(k: $\mathds{N}$)\\
   \end{algorithm}
-  
+
   Une adresse peut être absolue (par exemple, \texttt{0x8014}), ou relative à une variable (par exemple \texttt{r13 + 4}).
-  
+
   \begin{algorithm}[H]
         \textbf{Adresse}:\\
             \qquad |\quad Absolu(k: $\mathds{Z}$)\\
@@ -668,14 +674,14 @@
 
 %OKHUG: pas de représentation du ET, OU, NON logiques ? Expliquer pourquoi.
 
-  A chaque prédicat nous lui associerons un arc du CFG, qui correspondra, sur le chemin emprunté, à l'arc immédiatement après le bloc de base qui contenait l'instruction qui a généré le prédicat en question.
-  
+  \`A chaque prédicat nous associerons un arc du CFG, qui correspondra, sur le chemin emprunté, à l'arc immédiatement après le bloc de base qui contenait l'instruction qui a généré le prédicat en question.
+
   Nous ne transportons donc pas exactement une liste de prédicats (qui correspond à une conjonction de prédicats), mais plutôt une liste de couples \texttt{(Prédicat, Edge)} qui contiennent des informations sur l'origine de leur prédicats. Cela nous permettra ensuite, une fois que nous aurons trouvé une insatisfiabilité, de remonter jusqu'aux arêtes responsables du CFG et d'identifier le chemin infaisable. Par exemple, à partir de la liste :
-  
+
   \[\{(x = 0)^{1\rightarrow 2}, (y = x)^{3\rightarrow 5}, (y > 10)^{3\rightarrow 5} \}\]
-  
-  on pourra en déduire que le chemin qui passe par les arcs $\{1\rightarrow 2, 3\rightarrow 5\}$ est infaisable.
-  
+
+  on pourra en déduire que le chemin qui passe par les arcs $\{1\rightarrow 2, 3\rightarrow 5\}$ est infaisable \ccc{(par transitivité du ``$=$'')}.
+
   \subsection{Analyse d'un graphe de flot de contrôle}
   Comme nous travaillons sans boucles, l'algorithme ci-dessous n'est pas correct, ou du moins ne terminera pas si on le fait fonctionner sur un CFG avec boucles. Nous initialisons d'abord l'algorithme de parcours de graphe de contrôle avec le premier bloc de base du CFG, qui nous est donné par OTAWA.
 
@@ -704,7 +710,7 @@
 	\popline);\\
     }
   \end{algorithm}
-  
+
 
   \subsection{Analyse des instructions sémantiques d'un bloc de base}
   Le programme parcourt les blocs de base linéairement en mettant à jour la liste de prédicats.
@@ -729,9 +735,9 @@
   \end{align*}
 
   Si par exemple nous rencontrons une instruction qui nous demande d'incrémenter de \texttt{1} la variable \texttt{r0}, nous pourrons simplement remplacer \texttt{r0} par \texttt{r0~-~1} dans les prédicats \texttt{r0 = r1} et \texttt{r0 = 2}. Nous obtenons les nouveaux prédicats \texttt{r0 - 1 = r1} et \texttt{r0 - 1 = 2} (c'est-à-dire \texttt{r0 = 3}).
-  
+
   Nous avons également implémenté des stratégies pour essayer de préserver l'information autant que possible lors de l'invalidation d'une variable. Par exemple, si on a un prédicat \texttt{r0 = r1} et que l'on doit invalider \texttt{r0}, on se contentera de supprimer ce premier prédicat et remplacer toutes les occurences de \texttt{r0} par \texttt{r1}.
-  
+
   Il faut bien voir que nous avons la liberté de perdre autant d'informations (c'est-à-dire de supprimer des prédicats) que nous le voulons sur l'état du programme. Par exemple, si on a $\{p_1, p_2, p_3\}$ (c'est-à-dire $p_1 \land p_2 \land p_3$), on peut enlever n'importe quel prédicat $p_1$, $p_2$ ou $p_3$ et garder un résultat valide : on a juste perdu de la précision.
 
   \bigbreak
@@ -745,14 +751,14 @@
   \end{lstlisting}
 
   La fonction de traduction \texttt{t} opère sur une instruction (ici \texttt{NOP}) et la liste de prédicats \texttt{p}.
-  
+
   Voici un exemple simple d'utilisation de la fonction d'invalidation.
-  
+
   \begin{lstlisting}
     t [SCRATCH d] p =
 	(invalidate d p)
   \end{lstlisting}
-  
+
   C'est le principe même de l'instruction sémantique \texttt{SCRATCH} que de signaler que le programme assembleur exécute une instruction non supportée par OTAWA ou dont on ne connaît pas les conséquences sur la variable \texttt{d} : \texttt{SCRATCH} est un témoin des limites du langage sémantique.
 
   Regardons maintenant comment est traitée l'instruction d'assignation d'une variable à une autre variable (\texttt{SET}) :
@@ -801,8 +807,8 @@
   \item Dans l'autre cas, il faut mettre à jour les prédicats qui contiennent \texttt{d} pour prendre en compte la modification appliquée sur \texttt{d}.
 \end{itemize}
 
-  \begin{lstlisting}[mathescape]
-    t [ADD d a b] p = % TODO: on a oublie un cas, a changer dans le code aussi !!!
+  \begin{lstlisting}[mathescape] % TODO: on a oublie un cas, a changer dans le code aussi !!! (ADD et SUB)
+    t [ADD d a b] p =
         if (d = a) then (* d <- d+b *)
             (update d (d - b) p)
         else if (d = b) (* d <- a+d *)
@@ -813,7 +819,7 @@
     t [SUB d a b] p =
         if (d = a) then
             if (d = b) then (* d <- d-d *)
-                (d = 0) @ (invalidate d p) % TODO a changer dans le vrai code !!!
+                (d = 0) @ (invalidate d p)
             else (* d <- d-b *)
                 (update d (d+b) p)
         else
@@ -899,58 +905,57 @@
 
   L'intérêt de faire cette réduction est que, comme nous le verrons plus loin, % TOLDO: est-ce vraiment plus loin ?
   l'exploitabilité des chemins infaisables trouvés (pour réduire l'estimation du WCET) diminue plus le chemin infaisable contient d'arcs.
-  
+
   Pour cela, nous présentons trois algorithmes :
-  
+
   % TOLDO: vérifier qu'on a déjà introduit la notation p_1^{c_1}
   % TODO: pour etre complet on considère que c'est un ensemble d'éléments
   % peut etre considérer suelement le cas simpel dans le mémoire
   \subsection{Algorithme complet naïf (en $\theta(n!)$)}
   Cet algorithme naïf va tout simplement, à partir d'une liste de prédicats $\{p_1^{c_1}, p_2^{c_2}, ..., p_n^{c_n}\}$, tester la satisfiabilité des $n!$ combinaisons possibles (par exemple, $\{p_1, p_3\}$).
-  
+
   On relève ensuite la liste des conjonctions de prédicats qui ont donné lieu à des insatisfiabilités, par exemple pour $n = 4$ :
-  
+
   \begin{itemize}
     \item $\{p_1^{c_1}, p_2^{c_2}, p_3^{c_3}\}$
     \item $\{p_1^{c_1}, p_2^{c_2}\}$
     \item $\{p_1^{c_1}, p_4^{c_4}\}$
   \end{itemize}
-  
+
   On simplifie ensuite (à l'aide d'une disjonction globale) pour obtenir un nombre minimal de conjonctions de prédicats. Pour l'exemple précédent, on obtiendrait :
-  
+
   \begin{itemize}
     \item $\{p_1^{c_1}, p_2^{c_2}\}$
     \item $\{p_1^{c_1}, p_4^{c_4}\}$
   \end{itemize}
-  
-  On a donc obtenu l'information ``$\{c_1, c_2\}$ et $\{c_1, c_4\}$'' sont des chemins infaisables, au lieu de ``$\{c_1, c_2, c_3, c_4\}$'' est un chemin infaisable. C'est beaucoup mieux : imaginez un repas avec une entrée, des pâtes, du riz, et un dessert. Vous avez beaucoup moins de choix si on vous dit ``vous ne pouvez pas prendre à la fois une entrée et des pâtes ou à la fois une entrée et un dessert'' que si on vous dit ``vous ne pouvez pas prendre les 4 plats '' !
-%OKHUG: pourquoi c'est mieux ?
-  
+
+  On a donc obtenu l'information ``$\{c_1, c_2\}$ et $\{c_1, c_4\}$'' sont des chemins infaisables, au lieu de ``$\{c_1, c_2, c_3, c_4\}$'' est un chemin infaisable. C'est beaucoup mieux \ccc{: on exclut plus de chemins (3 en l'occurence).}
+
   Le problème de cet algorithme est bien sûr sa complexité exponentielle qui fait qu'il explose sur des grosses listes : il fait 3,6 millions d'appels au solveur SMT pour une liste de 10 prédicats !
-  
+
   \subsection{Algorithme incomplet (en $\theta(n)$)}
   En partant d'une liste de prédicats $\{p_1^{c_1}, p_2^{c_2}, ..., p_n^{c_n}\}$, on parcourt une fois la liste en testant pour chaque prédicat $p_i$ :
-  
+
   \begin{itemize}
    \item Si, en supprimant $p_i$ de la liste des prédicats, la liste reste insatisfiable, alors on supprime $p_i$ définitivement.
-   \item Si, en supprimant $p_i$ de la liste des prédicats, la liste devient insatisfiable, alors on laisse $p_i$ dans la liste.
+   \item Si, en supprimant $p_i$ de la liste des prédicats, la liste devient satisfiable, alors on laisse $p_i$ dans la liste.
   \end{itemize}
-  
+
   Après une seule passe, on s'arrête et on obtient un \textbf{unique} chemin infaisable. L'inconvénient de cette méthode très rapide est que l'on peut manquer des chemins infaisables que l'on pourrait ne pas retrouver ailleurs. Le chemin retenu est arbitraire et décidé par l'ordre d'analyse. Par exemple, nous avons la liste de prédicats suivantes :
-  
+
   \[\{x = 0^{c_1}, x > 1^{c_2}, x > 2^{c_3}\}\]
-  
+
   L'algorithme essaye de supprimer $x = 0^{c_1}$, mais $\{x > 1^{c_2}, x > 2^{c_3}\}$ est satisfiable, donc le premier prédicat est conservé.
-  
+
   L'algorithme essaye de supprimer le deuxième prédicat $x > 1^{c_2}$, et obtient $\{x = 0^{c_1}, x > 2^{c_3}\}$, qui est insatisfiable. Par conséquent, il supprimé définitivement ce prédicat.
-  
+
   La troisième passe ne donne rien, vu que ${x = 0^{c_1}}$ tout seul est satisfiable.
-  
+
   On obtient ainsi un seul chemin infaisable, $\{c_1, c_3\}$, alors qu'il y en a en réalité deux, $\{c_1, c_3\}$ \textbf{et} $\{c_1, c_2\}$ !
-  
+
   La complexité est en revanche très bonne, $\theta(n)$. L'algorithme suivant a pour but de résoudre ce problème tout en conservant une complexité acceptable.
-  
-  
+
+
   \subsection{Algorithme complet (entre $\theta(n)$ et $\theta(2^n)$)}
   En partant d’une liste de prédicats $\{p_1^{c_1}, p_2^{c_2}, ..., p_n^{c_n}\}$, on parcourt une fois la liste d’un bout à l’autre. Pour chaque prédicat $p_i$, on teste la satisfiabilité après l’avoir supprimé de la liste, et :
   \begin{itemize}
@@ -961,31 +966,31 @@
       \item une analyse où on garde quand même le prédicat dans la liste
     \end{itemize}
   \end{itemize}
-  
+
   Voici donc, en fonction de résultat obtenu après enlèvement du prédicat, le fonctionnement schématisé de l'analyse :
-  
+
   \begin{center}
     \includegraphics[scale=0.7]{./pictures/alg3.png}
     % alg3.png: 525x305 pixel, 96dpi, 13.89x8.07 cm, bb=0 0 394 229
   \end{center}
-  
+
   La complexité de cet algorithme est beaucoup moins prévisible que celle des deux précédents, pour une même liste de prédicats, on peut avoir une complexité différente (du simple au double) selon l'ordre des éléments.
-  
+
   Imaginons par exemple une liste où un seul élément est superflu. Dans le cas de gauche, nous analysons ce prédicat en premier, dans le cas de droite, nous l'analysons en dernier. Les points verts sur la figure signifient que le solveur a retourné \SAT après qu'on ait retiré le prédicat en question (et donc on le laisse).
-  
+
   \begin{center}
     \includegraphics[scale=0.7]{./pictures/alg3_complexity.png}
     % alg3_complexity.png: 549x539 pixel, 96dpi, 14.52x14.26 cm, bb=0 0 412 404
   \end{center}
 
-  Ici l'unité de complexité et le nombre d'appels au solveur SMT. Si $n$ est la taille de la liste de prédicats, la complexité est de $2n-1$ dans le premier cas et de $n+1$ dans le deuxième, et cela pour une même liste !
-  
+  Ici l'unité de complexité est le nombre d'appels au solveur SMT. Si $n$ est la taille de la liste de prédicats, la complexité est de $2n-1$ dans le premier cas et de $n+1$ dans le deuxième, et cela pour une même liste !
+
   La liste de prédicats qui donne le pire cas possible est celle dont tous les éléments sont insatisfiables à eux tous seuls, la complexité avoisine dans ce cas $2^{n-1}$.
-  
+
   \bigbreak
-  
+
   Nous allons maintenant exécuter l'algorithme sur un exemple précis. Nous avons :
-  
+
   \begin{itemize}
     \item $p_1 \coloneqq (x = y)$
     \item $p_2 \coloneqq (x > 1)$
@@ -994,9 +999,9 @@
   \end{itemize}
 
   La liste $\{p_1, p_2, p_3, p_4\}$ est effectivement \UNSAT.
-  
+
   Inutitivement, on voit que $\{p_1, p_2, p_4\}$ et $\{p_1, p_3, p_4\}$ sont les plus petits démonitateurs insatisfiables de cette liste, ce sont donc les deux résultats auxquels nous souhaitons arriver. Appliquons maintenant l'algorithme :
-  
+
   \begin{algorithm}[H]
     $\{\strike{p_1}, p_2, p_3, p_4\}$ : \SAT\\
     $\{p_1, \strike{p_2}, p_3, p_4\}$ : \UNSAT\\
@@ -1015,28 +1020,28 @@
     \qquad \qquad $\{p_1, p_2, p_3, \strike{p_4}\}$ : \SAT\\
     \qquad \qquad $\mathbb{\Rightarrow}$ \textbf{Résultat :} $\{p_1, p_2, p_3, p_4\}$\\
   \end{algorithm}
-  
+
   Nous avons donc maintenant trois listes de prédicats insatisfiables, qui sont des sous-listes de la liste de départ :
-  
+
   \begin{itemize}
     \item $\{p_1, p_3, p_4\}$
     \item $\{p_1, p_2, p_4\}$
     \item $\{p_1, p_2, p_3, p_4\}$
   \end{itemize}
-  
+
   Cet algorithme renvoie la liste \textbf{exhaustive} des conjonctions de prédicats insatisfiables, c'est d'ailleurs pourquoi on retrouvera toujours la liste de départ. Pour l'instant, nous avons le même résultat que celui de l'algorithme naïf (mais avec une meilleure complexité).
-  
+
   Il faut maintenant ``épurer'' cette liste pour ne conserver que les listes de prédicats \textit{minimales}, c'est-à-dire celles qui sont telles que si on supprime un élément quelconque de la liste, elle perdra toujours son insatisfiabilité (tous ses éléments lui sont nécessaires).
-  
+
   Une fois ce test fait sur les listes trouvées, nous nous apercevons que la dernière liste ($\{p_1, p_2, p_3, p_4\}$) n'est pas minimale, elle est donc enlevée. L'algorithme retourne finalement :
-  
+
   \begin{itemize}
     \item $\{p_1, p_3, p_4\}$
     \item $\{p_1, p_2, p_4\}$
   \end{itemize}
-  
+
   qui sont bien les deux sous-listes minimales de $\{p_1, p_2, p_3, p_4\}$.
-  
+
   Ce test de minimalité des conjonctions de prédicats a été en implémenté avec une approche moins naïve que celle-ci, en utilisant des masques de bits pour accélérer cette partie de l'algorithme. S'agissant là d'un détail technique sans grand rapport au reste de l'analyse, je ne le développerai pas ici.
 
   \newpage{}
@@ -1100,7 +1105,7 @@
   \end{align*}
 
   \subsection{Cas avec trois if en séquence}
-  
+
   \begin{minipage}[c]{.45\linewidth}
   Voyons maintenant ce qui se passe lorsque l'on rajoute un autre \texttt{if... then... else ...} en séquence, ainsi que deux arcs notés \texttt{z} et \texttt{\textlnot z}.
 
@@ -1211,22 +1216,25 @@
   \addcontentsline{toc}{section}{Conclusion}
   \section*{Conclusion}
   En me basant sur l'outil open-source OTAWA~\cite{otawa} développé par l'équipe TRACES, j'ai développé une analyse des chemins infaisables de programmes écrits en langage assembleur, dans le but ultime d'améliorer notre estimation du pire temps d'exécution. OTAWA m'a fourni les outils nécessaires pour m'abstraire des spécificités de chaque langage machine et me permettre de travailler sur un langage générique, ainsi que de nombreuses facilités pour parcourir le flot d'un programme en considérant ce dernier comme un graphe (CFG).
-  
-  En utilisant l'interprétation abstraite~\cite{cousot} comme base théorique, j'ai représenté les états de l'exécution d'un programme assemmbleur par des listes de prédicats qui décrivent l'état du système (registres et mémoire). J'a utilisé une technique énumération implicite des chemins (IPET) du CFG, et tout en parcourant le chemin et en faisant évoluer la liste de prédicats, j'ai cherché des inconsistances dans cette liste, afin d'identifier des chemins infaisables.
-  
-  J'ai utilisé un solveur SMT reconnu, CVC4~\cite{smt_cvc4}, pour détecter des insatisfiabilités dans ces prédicats. Une fois l'insatisfiabilité levée (et donc un chemin infaisable détecté), il a fallu en extraire les chemins infaisables minimaux pour en maximiser l'exploitabilité.
-  
+
+  En utilisant l'interprétation abstraite~\cite{cousot} comme base théorique, j'ai représenté les états de l'exécution d'un programme assembleur par des listes de prédicats qui décrivent l'état du système (registres et mémoire). J'a utilisé une technique énumération implicite des chemins (IPET) du CFG, et tout en parcourant le chemin et en faisant évoluer la liste de prédicats, j'ai cherché des inconsistances dans cette liste, afin d'identifier des chemins infaisables.
+
+  J'ai utilisé un solveur SMT reconnu, CVC4~\cite{smt_cvc4}, pour détecter des insatisfiabilités dans ces prédicats. Une fois l'insatisfiabilité levée (et donc un chemin infaisable détecté), il a fallu en extraire les chemins infaisables minimaux pour en maximiser \ccc{l'exploitation. L'algorithme souffre notamment de l'absence de support du typage implicite des données en assembleur, et de celle de l'analyse des sous-programmes ; il faudrait également étendre le traitement de la mémoire (déjà bien avancé) aux tableaux.}
+
   Une fois l'exécution du programme finie, ces prédicats ont été traduits en contraintes ILP pour être ensuite injectées dans le calcul de WCET d'OTAWA et l'améliorer.
-  
+
   Bien que le programme d'analyse soit fonctionnel et trouve effectivement les chemins infaisables sur les benchmarks simples sur lesquels nous l'avons testé, il subit encore certaines limitations, dont la plus importante est probablement l'absence de gestion des boucles.
-  
+
   L'extension de cette analyse (notamment à des programmes avec boucles) fera l'objet d'une thèse au sein de la même équipe l'année prochaine, et peut-être de collaborations avec d'autres membres de l'équipe, en particulier en ce qui concerne l'exploitation des chemins infaisables trouvés.
 
 \newpage{}
 %\bibliographystyle{plain}
 \addcontentsline{toc}{section}{Références}
 \begin{thebibliography}{1}
-    
+
+    \bibitem{otawa}Hugues Cassé, Christine Rochange, Pascal Sainrat. An Open Framework for
+    WCET Analysis. Dans : IEEE Real-Time Systems Symposium - WIP
+    session, Lisbonne, 05/12/2004-07/12/2004, IEEE, p. 13-16, décembre 2004.
     \bibitem{cousot}Patrick Cousot and Rahida Cousot. 1992. \textit{Abstract interpretation and application to logic programs}. J. Log. Program. 13, 2-3 (July 1992), 103-179. http://dx.doi.org/10.1016/0743-1066(92)90030-7
     \bibitem{nielson}Flemming Nielson, Hanne R. Nielson, and Chris Hankin. 1999. \textit{Principles of Program Analysis}. Springer-Verlag New York, Inc., Secaucus, NJ, USA.
     \bibitem{entcs}\textit{Electronic Notes in Theoretical Computer Science (Entcs)}. Elsevier Sci. Pub. B. V., Amsterdam, The Netherlands, The Netherlands. http://dx.doi.org/10.1016/j.entcs.2010.09.014
