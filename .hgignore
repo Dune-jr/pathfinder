@@ -7,6 +7,13 @@ report/*.log
 report/*.toc
 report/report.tex.backup
 report/report.tex~
+presentation/*.aux
+presentation/*.log
+presentation/*.toc
+presentation/*.out
+presentation/*.nav
+presentation/presentation.tex.backup
+presentation/presentation.tex~
 
 .bam
 .depend
