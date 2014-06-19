@@ -73,18 +73,40 @@
 \begin{document}
   \begin{titlepage}
   \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
-  \center
-  \textsc{\	 IRIT - Equipe TRACES}\\[0.4cm]
-  \textsc{\Large Rapport de Stage - M2R IT Spé. SRLC}\\[0.4cm]
-  \textsc{\large 01 Mars 2014 - 03 Août 2014}
-  \HRule \\[0.5cm] { \huge \bfseries Détermination de propriétés de flot de données pour l'amélioration du temps d'exécution
-pire-cas}\\[0.4cm] \HRule \\[0.5cm]
-  \begin{minipage}{0.5\textwidth} \begin{flushleft} \large \emph{Auteur:}\\ Jordy \textsc{Ruiz} \end{flushleft} \end{minipage}\begin{minipage}{0.5\textwidth} \begin{flushright} \large \emph{Encadrant:} \\ Hugues \textsc{Cassé}\end{flushright} \end{minipage}\\[0.5cm]
-  {\large Année 2013 - 2014}\\[1cm]
+  \begin{center}
+    \textsc{\	 IRIT - Equipe TRACES}\\[0.35cm]
+    \textsc{\Large Rapport de Stage - M2R IT Spé. SRLC}\\[0.3cm]
+    \textsc{\large 01 Mars 2014 - 03 Août 2014}
+    \HRule \\[0.4cm]
+    { \huge \bfseries Détermination de propriétés de flot de données pour l'amélioration du temps d'exécution
+    pire-cas}
+    \HRule \\[0.4cm]
+    \begin{minipage}{0.5\textwidth} \begin{flushleft} \large \emph{Auteur:}\\ Jordy \textsc{Ruiz} \end{flushleft} \end{minipage}\begin{minipage}{0.5\textwidth} \begin{flushright} \large \emph{Encadrant:} \\ Hugues \textsc{Cassé}\end{flushright} \end{minipage}\\
+    {\large Année 2013 - 2014}\\[0.5cm]
+  \end{center}
+    \vfill
   
-  {\large \textit{Résumé :} Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.} \\[1cm]
-  \includegraphics[scale=0.6]{pictures/logo_univ_tlse.png}\\[1cm]
+  {\textit{Résumé :}
+    Le calcul du pire temps d'exécution ou WCET est un composant 
+    clé de la vérification des systèmes temps-réel critiques.
+    Son calcul par analyse statique produit de manière conservative
+    une surestimation qui peut mener à surévaluer le matériel nécessaire.
+    Actuellement, la cause majeure de surestimation sont les chemins
+    infaisables : le chemin du WCET est bien un majorant mais
+    ne correspond à aucun chemin réel.
+    
+    Ce travail se propose de détecter et d'exploiter les chemins
+    infaisables pour réduire le WCET sur des programmes en langage machine,
+    la forme la plus proche de l'exécution réelle. La liste des chemins 
+    est énumérée et les états du programme sont représentés par un
+    ensemble de prédicats: dès que cet ensemble n'est plus satisfiable,
+    un chemin infaisable est détecté et une analyse plus fine
+    permet d'identifier les conditions en cause. Ce résultat
+    est ensuite traduit dans le système ILP utilisé pour calculer le WCET.
+  }\\
   \vfill
+  \center
+    \includegraphics[scale=0.5]{pictures/logo_univ_tlse.png}\\
   \end{titlepage}
 
   %\selectlanguage{french}
@@ -723,6 +745,15 @@ pire-cas}\\[0.4cm] \HRule \\[0.5cm]
   \end{lstlisting}
 
   La fonction de traduction \texttt{t} opère sur une instruction (ici \texttt{NOP}) et la liste de prédicats \texttt{p}.
+  
+  Voici un exemple simple d'utilisation de la fonction d'invalidation.
+  
+  \begin{lstlisting}
+    t [SCRATCH d] p =
+	(invalidate d p)
+  \end{lstlisting}
+  
+  C'est le principe même de l'instruction sémantique \texttt{SCRATCH} que de signaler que le programme assembleur exécute une instruction non supportée par OTAWA ou dont on ne connaît pas les conséquences sur la variable \texttt{d} : \texttt{SCRATCH} est un témoin des limites du langage sémantique.
 
   Regardons maintenant comment est traitée l'instruction d'assignation d'une variable à une autre variable (\texttt{SET}) :
 
@@ -731,7 +762,7 @@ pire-cas}\\[0.4cm] \HRule \\[0.5cm]
         (d = a) @ (invalidate d p)
   \end{lstlisting}
 
-  Un nouveau prédicat \texttt{d = a} est généré après qu'on ait invalidé \texttt{d}, c'est-à-dire qu'on ait supprimé tous les prédicats qui contiennent t.
+  Un nouveau prédicat \texttt{d = a} est généré après qu'on ait invalidé \texttt{d}, c'est-à-dire qu'on ait supprimé tous les prédicats qui contiennent \texttt{d}.
   De même pour l'instruction \texttt{SETI} qui assigne une constante à une variable, puisque pour tout n, la fonction $\textit{assigner}_n$ définie ci-dessous n'est pas bijective :
 
   \begin{align*}
@@ -1069,14 +1100,8 @@ pire-cas}\\[0.4cm] \HRule \\[0.5cm]
   \end{align*}
 
   \subsection{Cas avec trois if en séquence}
-  \begin{wrapfigure}{R}{0in}
-    \centering
-    \includegraphics[scale=0.4]{./pictures/if_3seq.png}
-    % if_3seq.png: 363x923 pixel, 72dpi, 12.80x32.56 cm, bb=0 0 363 923
-    \caption{Deuxième exemple : trois if en séquence}
-    \label{if_3seq}
-  \end{wrapfigure}
-
+  
+  \begin{minipage}[c]{.45\linewidth}
   Voyons maintenant ce qui se passe lorsque l'on rajoute un autre \texttt{if... then... else ...} en séquence, ainsi que deux arcs notés \texttt{z} et \texttt{\textlnot z}.
 
   Supposons que \texttt{x-y-z} soit un chemin infaisable. Inutitivement, on en déduit que si un chemin passe par \texttt{x}, alors il passera par \texttt{\textlnot y} ou par \texttt{\textlnot z}. C'est-à-dire, exprimé en termes de nombre d'exécution des arcs :
@@ -1091,24 +1116,37 @@ pire-cas}\\[0.4cm] \HRule \\[0.5cm]
   \end{align*}
 
   Une fois de plus, nous allons prouver que ces trois assertions sont équivalentes. Nous avons toujours la propriété de flots de graphes (cette sorte de loi des noeuds) qui dit que :
+  \end{minipage}
+  \hfill
+  \begin{minipage}[r]{.45\linewidth}
+    \includegraphics[scale=0.4]{./pictures/if_3seq.png}
+  \end{minipage}
+
+%   \begin{wrapfigure}{r}{0in}
+%     \centering
+%     \includegraphics[scale=0.4]{./pictures/if_3seq.png}
+%     % if_3seq.png: 363x923 pixel, 72dpi, 12.80x32.56 cm, bb=0 0 363 923
+%     \caption{Deuxième exemple : trois if en séquence}
+%     \label{if_3seq}
+%   \end{wrapfigure}
 
   \[ n_x + n_{\neg x} = n_y + n_{\neg y} = n_z + n_{\neg z} = N\]
 
   Montrons alors ces équivalences :
 
   \begin{align*}
-    &\boxed{n_x \leq n_{\neg y} + n_{\neg z}} \\
-    \Leftrightarrow& n_x \leq n_{\neg y} + (n_y - n_y) + n_{\neg z} \\
-    \Leftrightarrow& n_x \leq (n_{\neg y} + n_y) - n_y + n_{\neg z} \\
-    \Leftrightarrow& n_x \leq N - n_y + n_{\neg z} \\
-    \Leftrightarrow& n_x + n_y \leq N + n_{\neg z} \\
-    \Leftrightarrow& n_y \leq N - n_x + n_{\neg z} \\
-    \Leftrightarrow& n_y \leq (n_x + n_{\neg x}) - n_x + n_{\neg z} \\
-    \Leftrightarrow& \boxed{n_y \leq n_{\neg x} + n_{\neg z}} \\
-    \Leftrightarrow& n_y \leq n_{\neg x} + n_{\neg z} \\
-    \Leftrightarrow& n_y \leq n_{\neg x} + (N - n_z) \\
-    \Leftrightarrow& n_z \leq n_{\neg x} + N - n_y \\
-    \Leftrightarrow& \boxed{n_z \leq n_{\neg x} + n_{\neg y}} & \pushright{\blacksquare}
+    &\ \boxed{n_x \leq n_{\neg y} + n_{\neg z}} \\
+    \Leftrightarrow&\ n_x \leq n_{\neg y} + (n_y - n_y) + n_{\neg z} \\
+    \Leftrightarrow&\ n_x \leq (n_{\neg y} + n_y) - n_y + n_{\neg z} \\
+    \Leftrightarrow&\ n_x \leq N - n_y + n_{\neg z} \\
+    \Leftrightarrow&\ n_x + n_y \leq N + n_{\neg z} \\
+    \Leftrightarrow&\ n_y \leq N - n_x + n_{\neg z} \\
+    \Leftrightarrow&\ n_y \leq (n_x + n_{\neg x}) - n_x + n_{\neg z} \\
+    \Leftrightarrow&\ \boxed{n_y \leq n_{\neg x} + n_{\neg z}} \\
+    \Leftrightarrow&\ n_y \leq n_{\neg x} + n_{\neg z} \\
+    \Leftrightarrow&\ n_y \leq n_{\neg x} + (N - n_z) \\
+    \Leftrightarrow&\ n_z \leq n_{\neg x} + N - n_y \\
+    \Leftrightarrow&\ \boxed{n_z \leq n_{\neg x} + n_{\neg y}} & \pushright{\blacksquare}
   \end{align*}
 
   Générer une seule de ces trois contraintes est donc suffisant. On peut remarquer que cela entraîne également la propriété suivante :
