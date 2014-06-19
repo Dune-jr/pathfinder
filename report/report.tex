@@ -82,7 +82,25 @@ pire-cas}\\[0.4cm] \HRule \\[0.5cm]
   \begin{minipage}{0.5\textwidth} \begin{flushleft} \large \emph{Auteur:}\\ Jordy \textsc{Ruiz} \end{flushleft} \end{minipage}\begin{minipage}{0.5\textwidth} \begin{flushright} \large \emph{Encadrant:} \\ Hugues \textsc{Cassé}\end{flushright} \end{minipage}\\[0.5cm]
   {\large Année 2013 - 2014}\\[1cm]
   
-  {\large \textit{Résumé :} Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.} \\[1cm]
+{\large \textit{Résumé :}
+  Le calcul du pire temps d'exécution ou WCET (Worst Case Execution Time)
+  est un composant clé de la vérification des systèmes temps-réel critiques.
+  Son calcul par analyse statique produit de manière conservative
+  une surestimation qui peut mener à surévaluer le matériel nécessaire.
+  Actuellement, la cause majeure de surestimation sont les chemins
+  infaisable: le chemin du WCET est bien un majorant mais
+  ne correspond à aucun chemin réel.
+  
+  Ce travail se propose de détecter et d'exploiter les chemins
+  infaisables pour réduire le WCET sur des programmes en langage machine,
+  forme utilisée pour le calcul du WCET et la plus proche
+  de l'exécution réelle. La liste des chemins est énumérée
+  et les états et conditions du programme sont représentés par un
+  ensemble de prédicats: dès que cet ensemble n'est plus être satisfiable,
+  un chemin infaisable est détecté et une analyse plus fine
+  permet d'identifier les conditions en cause. Ce résultat
+  est ensuite traduit dans le système ILP utilisé pour calculer le WCET.
+} \\[1cm]
   \includegraphics[scale=0.6]{pictures/logo_univ_tlse.png}\\[1cm]
   \vfill
   \end{titlepage}
