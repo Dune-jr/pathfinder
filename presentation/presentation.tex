@@ -105,13 +105,6 @@
 		\end{column}
 	\end{columns}
 }
-
-\frame{\frametitle{Graphe en langage machine}
-	\begin{center}
-		\includegraphics[height=0.9\textheight]{pictures/generated_cfg.png}
-	\end{center}
-}
-
     
 \frame{\frametitle{Choix du solveur SMT}
     \begin{wrapfigure}{r}{0in}
@@ -124,6 +117,12 @@
 	\item De très bons résultats à la SMT-COMP
 	\item Une API C++ riche et bien documentée
     \end{itemize}
+}
+
+\frame{\frametitle{Graphe en langage machine}
+	\begin{center}
+		\includegraphics[height=0.9\textheight]{pictures/generated_cfg.png}
+	\end{center}
 }
 
 \begin{frame}[fragile]
@@ -220,9 +219,9 @@
    
 
 \section{Solution} % Algorithme de recherche de chemins infaisables
-% \frame{\frametitle{Représentation des prédicats}
-%     
-% }
+\frame{\frametitle{Représentation des prédicats}
+    
+}
 
 \frame{%\frametitle{}
 	\begin{center}
@@ -232,6 +231,16 @@
 \frame{%\frametitle{}
 	\begin{center}
 		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_goal.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_edges.png}
 	\end{center}
 }
 \frame{%\frametitle{}
