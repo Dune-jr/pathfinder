@@ -10,6 +10,7 @@
 %\usepackage{anyfontsize}
 % User packages
 \usepackage{lstlangarm}
+\usepackage{ulem}
 
 \usetheme{Warsaw}
 \beamertemplatenavigationsymbolsempty
@@ -34,13 +35,13 @@
 }
 \date{\today}
 
-% \AtBeginSection[]
-% {
-%  \begin{frame}<beamer>
-%  \frametitle{Plan}
-%  \tableofcontents[currentsection]
-%  \end{frame}
-% }
+\AtBeginSection[]
+{
+ \begin{frame}<beamer>
+ \frametitle{Plan}
+ \tableofcontents[currentsection]
+ \end{frame}
+}
 
 \begin{document}
 \frame{\titlepage}
@@ -97,9 +98,9 @@
 
 		\begin{column}{.63\textwidth}
 			\alt<1>{
-			    \makebox[\textheight]{\includegraphics[height=220px]{pictures/cfg.png}}
+			    \makebox[\textheight]{\includegraphics[height=210px]{pictures/cfg.png}}
 			}{
-			    \makebox[\textheight]{\includegraphics[height=220px]{pictures/cfg_infeasible.png}}
+			    \makebox[\textheight]{\includegraphics[height=210px]{pictures/cfg_infeasible.png}}
 			}
 		\end{column}
 	\end{columns}
@@ -111,16 +112,23 @@
 	\end{center}
 }
 
-%\frame{\frametitle{Instructions sémantiques}
-%      \begin{lstlisting}
-% .
-% int x = 0;
-%      \end{lstlisting}
-%}
+    
+\frame{\frametitle{Choix du solveur SMT}
+    \begin{wrapfigure}{r}{0in}
+	\includegraphics{pictures/cvc4.png}
+    \end{wrapfigure}
+    Notre choix de solveur s'est porté sur \textbf{CVC4} :
+    
+    \begin{itemize}[<+->]
+	\item Open-source, licence très libre
+	\item De très bons résultats à la SMT-COMP
+	\item Une API C++ riche et bien documentée
+    \end{itemize}
+}
 
 \begin{frame}[fragile]
     \frametitle{Les instructions sémantiques d'OTAWA}
-    \begin{minipage}{.46\linewidth}
+    \begin{minipage}{.36\linewidth}
 	\begin{lstlisting}[language={[ARM]Assembler}]
 	    ldr r0, [pc, #20]
 	    @	seti ?15, 0x8310
@@ -141,87 +149,157 @@
 	    @	branch t1
 	\end{lstlisting}
     \end{minipage}
-    \begin{minipage}{.46\linewidth}
+    \begin{minipage}{.62\linewidth}
+	Les variables d'OTAWA :
+    
 	\begin{itemize}
-	    \item Variables temporaires du type \texttt{t1}
-	    \item Registres machine du type \texttt{?0}
+	    \item les registres machine \texttt{?0}, \texttt{?1}...(16, 32... ou plus selon l'architecture)
+	    \item des variables temporaires \texttt{t1}, \texttt{t2}...
+	    \begin{itemize}
+		\item locales à une instruction machine (détruites à la fin)
+		\item aident à la traduction en instructions sémantiques
+	    \end{itemize}
 	\end{itemize}
     \end{minipage}
 \end{frame}
 
-\renewcommand\arraystretch{0.8} \setlength\minrowclearance{0.8pt}
+%\renewcommand\arraystretch{0.8} \setlength\minrowclearance{0.8pt}
 
-\begin{frame}[fragile]
-    \frametitle{Les instructions sémantiques d'OTAWA}
-    \begin{table} \tiny
-	\begin{tabular}{|l|l|} \hline
-	\textbf{Instruction} & \textbf{Sémantique}\\ \hline \hline
-	\texttt{NOP} & (rien)\\ \hline
-	\texttt{BRANCH, TRAP, CONT} & Indicateurs du flot du programme\\ \hline
-	\texttt{IF cond sr jump} & si la condition \texttt{cond} sur le registre \texttt{sr} est vraie, continuer,\\
-	& sinon sauter \texttt{jump} instructions\\ \hline
-	\texttt{LOAD reg addr type} & reg $\leftarrow$ \texttt{MEM\textsubscript{type}} \\ \hline
-	\texttt{STORE reg addr type} & \texttt{MEM\textsubscript{type}} $\leftarrow$ \texttt{reg}\\ \hline
-	\texttt{SCRATCH d} & \texttt{d $\leftarrow$ $\top$} \textit{(invalidation)}\\ \hline
-	\texttt{SET d a} & \texttt{d $\leftarrow$ a}\\ \hline
-	\texttt{SETI d cst} & \texttt{d $\leftarrow$ cst}\\ \hline
-% 	\rowcolor{Gray} \texttt{SETP d cst} & \texttt{page(d) $\leftarrow$ cst}\\ \hline
-	\texttt{CMP d a b} & \texttt{d $\leftarrow$ a $\sim$ b}\\ \hline
-	\rowcolor{Gray} \texttt{CMPU d a b} & \texttt{d $\leftarrow$ a $\sim$\textsubscript{unsigned} b}\\ \hline
-	\texttt{ADD d a b} & \texttt{d $\leftarrow$ a $+$ b}\\ \hline
-	\texttt{SUB d a b} & \texttt{d $\leftarrow$ a $-$ b}\\ \hline
-	\rowcolor{Gray} \texttt{SHL d a b} & \texttt{d $\leftarrow$ unsigned(a) <{<} b}\\ \hline
-	\rowcolor{Gray} \texttt{SHR d a b} & \texttt{d $\leftarrow$ unsigned(a) >{>} b}\\ \hline
-	\texttt{ASR d a b} & \texttt{d $\leftarrow$ a >{>} b}\\ \hline
-	\texttt{NEG d a} & \texttt{d $\leftarrow$ $-$a}\\ \hline
-	\rowcolor{Gray} \texttt{NOT d a} & \texttt{d $\leftarrow$ $\neg$a}\\ \hline
-	\rowcolor{Gray} \texttt{AND d a b} & \texttt{d $\leftarrow$ a \& b}\\ \hline
-	\rowcolor{Gray} \texttt{OR d a b} & \texttt{d $\leftarrow$ a | b}\\ \hline
-	\rowcolor{Gray} \texttt{XOR d a b} & \texttt{d $\leftarrow$ a $\oplus$ b}\\ \hline
-	\texttt{MUL d a b} & \texttt{d $\leftarrow$ a $\times$ b}\\ \hline
-	\rowcolor{Gray} \texttt{MULU d a b} & \texttt{d $\leftarrow$ unsigned(a) $\times$ unsigned(b)}\\ \hline
-	\texttt{DIV d a b} & \texttt{d $\leftarrow$ a / b}\\ \hline
-	\rowcolor{Gray} \texttt{DIVU d a b} & \texttt{d $\leftarrow$ unsigned(a) / unsigned(b)}\\ \hline
-	\texttt{MOD d a b} & \texttt{d $\leftarrow$ a \% b}\\ \hline
-	\rowcolor{Gray} \texttt{MODU d a b} & \texttt{d $\leftarrow$ unsigned(a) \% unsigned(b)}\\ \hline
-% 	\rowcolor{Gray} \texttt{SPEC} & (instruction spéciale non supportée par OTAWA)\\ \hline
-	\end{tabular}
-  \end{table}
-\end{frame}
+% \begin{frame}[fragile]
+%     \frametitle{Les instructions sémantiques d'OTAWA}
+%     \begin{table} \tiny
+% 	\begin{tabular}{|l|l|} \hline
+% 	\textbf{Instruction} & \textbf{Sémantique}\\ \hline \hline
+% 	\texttt{NOP} & (rien)\\ \hline
+% 	\texttt{BRANCH, TRAP, CONT} & Indicateurs du flot du programme\\ \hline
+% 	\texttt{IF cond sr jump} & si la condition \texttt{cond} sur le registre \texttt{sr} est vraie, continuer,\\
+% 	& sinon sauter \texttt{jump} instructions\\ \hline
+% 	\texttt{LOAD reg addr type} & reg $\leftarrow$ \texttt{MEM\textsubscript{type}} \\ \hline
+% 	\texttt{STORE reg addr type} & \texttt{MEM\textsubscript{type}} $\leftarrow$ \texttt{reg}\\ \hline
+% 	\texttt{SCRATCH d} & \texttt{d $\leftarrow$ $\top$} \textit{(invalidation)}\\ \hline
+% 	\texttt{SET d a} & \texttt{d $\leftarrow$ a}\\ \hline
+% 	\texttt{SETI d cst} & \texttt{d $\leftarrow$ cst}\\ \hline
+% % 	\rowcolor{Gray} \texttt{SETP d cst} & \texttt{page(d) $\leftarrow$ cst}\\ \hline
+% 	\texttt{CMP d a b} & \texttt{d $\leftarrow$ a $\sim$ b}\\ \hline
+% 	\rowcolor{Gray} \texttt{CMPU d a b} & \texttt{d $\leftarrow$ a $\sim$\textsubscript{unsigned} b}\\ \hline
+% 	\texttt{ADD d a b} & \texttt{d $\leftarrow$ a $+$ b}\\ \hline
+% 	\texttt{SUB d a b} & \texttt{d $\leftarrow$ a $-$ b}\\ \hline
+% 	\rowcolor{Gray} \texttt{SHL d a b} & \texttt{d $\leftarrow$ unsigned(a) <{<} b}\\ \hline
+% 	\rowcolor{Gray} \texttt{SHR d a b} & \texttt{d $\leftarrow$ unsigned(a) >{>} b}\\ \hline
+% 	\texttt{ASR d a b} & \texttt{d $\leftarrow$ a >{>} b}\\ \hline
+% 	\texttt{NEG d a} & \texttt{d $\leftarrow$ $-$a}\\ \hline
+% 	\rowcolor{Gray} \texttt{NOT d a} & \texttt{d $\leftarrow$ $\neg$a}\\ \hline
+% 	\rowcolor{Gray} \texttt{AND d a b} & \texttt{d $\leftarrow$ a \& b}\\ \hline
+% 	\rowcolor{Gray} \texttt{OR d a b} & \texttt{d $\leftarrow$ a | b}\\ \hline
+% 	\rowcolor{Gray} \texttt{XOR d a b} & \texttt{d $\leftarrow$ a $\oplus$ b}\\ \hline
+% 	\texttt{MUL d a b} & \texttt{d $\leftarrow$ a $\times$ b}\\ \hline
+% 	\rowcolor{Gray} \texttt{MULU d a b} & \texttt{d $\leftarrow$ unsigned(a) $\times$ unsigned(b)}\\ \hline
+% 	\texttt{DIV d a b} & \texttt{d $\leftarrow$ a / b}\\ \hline
+% 	\rowcolor{Gray} \texttt{DIVU d a b} & \texttt{d $\leftarrow$ unsigned(a) / unsigned(b)}\\ \hline
+% 	\texttt{MOD d a b} & \texttt{d $\leftarrow$ a \% b}\\ \hline
+% 	\rowcolor{Gray} \texttt{MODU d a b} & \texttt{d $\leftarrow$ unsigned(a) \% unsigned(b)}\\ \hline
+% % 	\rowcolor{Gray} \texttt{SPEC} & (instruction spéciale non supportée par OTAWA)\\ \hline
+% 	\end{tabular}
+%   \end{table}
+% \end{frame}
 
-    
-\frame{\frametitle{Choix du solveur SMT}
-    \begin{wrapfigure}{r}{0in}
-	\includegraphics{pictures/cvc4.png}
-    \end{wrapfigure}
-    Notre choix de solveur s'est porté sur \textbf{CVC4} :
+\frame{\frametitle{Les instructions sémantiques d'OTAWA}
+    Des instructions...
     
     \begin{itemize}[<+->]
-	\item Open-source, licence très libre
-	\item De très bons résultats à la SMT-COMP
-	\item Une API C++ riche et bien documentée
+	\item indicatrices du flot du programme : \texttt{BRANCH}, \texttt{TRAP}, \texttt{CONT}
+	\item d'invalidation : \texttt{SCRATCH}
+	\item d'assignation de valeur : \texttt{SET}, \texttt{SETI}
+	\item arithmétiques : \texttt{ADD}, \texttt{SUB}, \texttt{MUL}, \texttt{DIV}, \texttt{MOD}
+	\item \sout{logiques : \texttt{NOT}, \texttt{AND}, \texttt{OR}, \texttt{XOR}}
+	\item conditionelles : \texttt{CMP}, \texttt{IF}
+	\item d'accès mémoire : \texttt{LOAD}, \texttt{STORE}\\[0.7cm]
+	\item \sout{... et les équivalents \textit{unsigned} : \texttt{CMPU, MULU, DIVU, MODU}}
     \end{itemize}
 }
+   
 
 \section{Solution} % Algorithme de recherche de chemins infaisables
-\section{Représentation des prédicats}
-\frame{\frametitle{Représentation des prédicats}
-    
-}
+% \frame{\frametitle{Représentation des prédicats}
+%     
+% }
 
-
-\section{Sujet de thèse proposé}
-\frame{\frametitle{État des travaux}
+\frame{%\frametitle{}
 	\begin{center}
-		\includegraphics[height=0.7\paperheight]{pictures/pathfinder3.png}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_goal.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_bb.png}
+	\end{center}
+}
+% \frame{%\frametitle{}
+% 	\begin{center}
+% 		\includegraphics[height=0.75\paperheight]{pictures/pathfinder.png}
+% 	\end{center}
+% }
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_arminst.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_seminst.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_preds_generated.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_preds_invalidated.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_preds_updated.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_exit.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_result.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder.png}
 	\end{center}
 }
 
-\frame{
+\section{Ouvertures et conclusion}
+\frame{\frametitle{Extensions}
 	\begin{textblock*}{\textwidth}(0cm,-2cm)
 		\begin{itemize}
-			\item Thèse dans la continuation du stage M2R
-			\item Problème difficile, très restreint pour le stage. Beaucoup d'extensions à faire :
+			\item Thèse future dans la continuation du stage M2R, beaucoup d'extensions à faire :
 			\begin{itemize}
 				\item<2-> Traiter des programmes \textbf{avec boucles}\\
 				$\Longrightarrow$ découpage du programme en partie sans boucles (ou avec boucles simples)
@@ -255,10 +333,12 @@
 		\end{itemize}
 	\end{textblock*}
 }
-\section{Conclusion}
 \frame{\frametitle{Conclusion}
 	\begin{itemize}[<+->]
 		\item La recherche de chemins infaisables : un problème d'actualité
+		\item A l'heure actuelle, on traite déjà certaines classes de programme
+		\item Un travail qui trouve ses fondations dans l'interprétation abstraite
+		\item \`A poursuivre en thèse...
 	\end{itemize}
 }
 
