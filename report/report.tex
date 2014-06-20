@@ -432,7 +432,7 @@
 
   OTAWA génère donc une première instruction sémantique qui écrit l'adresse sur laquelle brancher (c'est-à-dire, là où il faut aller, le début de la fonction) qui est fournie en paramètre de \texttt{bl} (ici, \texttt{0x8574}). La deuxième instruction sémantique s'occupe de mettre l'adresse de la prochaine instruction machine dans $r_14$ (ici, \texttt{0x8318}). Enfin, nous faisons le branchement sur $t_1$ avec \texttt{branch t1}.
 
-  Nous nous désintéressons complètement au fonctionnement de cette traduction, qui est expliqué plus en détail dans cet article de H. Cassé, F. Birée et P. Sainrat~\cite{otawa}, puisque nous ne travaillerons dans le cadre de notre analyse qu'avec les instructions sémantiques fournies par OTAWA.
+  Nous nous désintéressons complètement au fonctionnement de cette traduction, qui est expliqué plus en détail dans cet article de H. Cassé, F. Birée et P. Sainrat~\cite{otawa2}, puisque nous ne travaillerons dans le cadre de notre analyse qu'avec les instructions sémantiques fournies par OTAWA.
 
   \subsection{Interprétation abstraite}
   Il s'agit maintenant d'introduire brièvement la théorie derrière notre travail, l'interprétation abstraite~\cite{cousot}.
@@ -807,7 +807,8 @@
   \item Dans l'autre cas, il faut mettre à jour les prédicats qui contiennent \texttt{d} pour prendre en compte la modification appliquée sur \texttt{d}.
 \end{itemize}
 
-  \begin{lstlisting}[mathescape] % TODO: on a oublie un cas, a changer dans le code aussi !!! (ADD et SUB)
+  % TODO: on a oublie un cas, a changer dans le code aussi !!! (ADD et SUB)
+  \begin{lstlisting}[mathescape]
     t [ADD d a b] p =
         if (d = a) then (* d <- d+b *)
             (update d (d - b) p)
@@ -1243,7 +1244,7 @@
     \bibitem{intlconf11}S. Andalam, P. Roop, and A. Girault. \textit{Pruning Infeasible Paths for Tight WCRT Analysis of Synchronous Programs}. In Intl’ Conf. on Design, Automation and Test in Europe (DATE), 2011.
     \bibitem{smtintro}Leonardo De Moura and Nikolaj Bjørner. 2011. \textit{Satisfiability modulo theories: introduction and applications}. Commun. ACM 54, 9 (September 2011), 69-77.
     \url{http://doi.acm.org/10.1145/1995376.1995394}
-    \bibitem{otawa}Hugues Cassé, Florian Birée, Pascal Sainrat. Multi-architecture Value Analysis for Machine Code (regular paper). Dans / In : Workshop on Worst-Case Execution Time Analysis, Paris, 09/07/2013, (Eds.), OASICs, Dagstuhl Publishing, p. 42-52, juillet / july 2013.
+    \bibitem{otawa2}Hugues Cassé, Florian Birée, Pascal Sainrat. Multi-architecture Value Analysis for Machine Code (regular paper). Dans / In : Workshop on Worst-Case Execution Time Analysis, Paris, 09/07/2013, (Eds.), OASICs, Dagstuhl Publishing, p. 42-52, juillet / july 2013.
 
     \bibitem{ARM instruction set} ARM Instruction Set Quick Reference Card. \url{http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf}
     \bibitem{SMT-COMP} SMT-COMP: Satisfiability Modulo Theories Competition. Édition 2012. \url{http://smtcomp.sourceforge.net/2012/}
