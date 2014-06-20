@@ -37,7 +37,7 @@
 
 \newtheorem{theorem}{Theorème}
 
-\newcommand\ccc[1]{\color{red}{#1}\color{black}} % TOLDO : check this is unused
+% \newcommand\ccc[1]{\color{red}{#1}\color{black}}
 \newcommand\SAT{\texttt{SAT}}
 \newcommand\UNSAT{\texttt{UNSAT}}
 \newcommand\si{\textit{si}}
@@ -227,16 +227,14 @@
 
   Toutefois, l'interprétation de la valeur d'un registre est identique tant que le bit de poids fort est à 0, c'est à dire tant que la valeur interprétée appartient à l'intervalle $\llbracket0, 2^{n-1}-1\rrbracket$, où $n$ est le nombre de bits du registre.
 
-  Et bien sûr, toutes les instructions qui ne sont pas supportées par OTAWA (impossibles à traduire en expression sémantiques) ne sont pas non plus supportées par notre programme, même si ce type d'erreur est géré de manière à ne pas être critique : on va perdre de l'information et donc peut-être détecter moins de chemins infaisables, mais l'analyse n'échoue pas \ccc{et ne donne pas de faux résultats}.
+  Et bien sûr, toutes les instructions qui ne sont pas supportées par OTAWA (impossibles à traduire en expression sémantiques) ne sont pas non plus supportées par notre programme, même si ce type d'erreur est géré de manière à ne pas être critique : on va perdre de l'information et donc peut-être détecter moins de chemins infaisables, mais l'analyse n'échoue pas et ne donne pas de faux résultats.
 
   \newpage{}
   \section{Contexte}
-  \ccc{
   Nous commençons par introduire les outils, théoriques ou concrets, sur lesquels nous allons nous appuyer pour notre analyse.
-  }
   
   \subsection{Choix du solveur SMT}
-  Pour le choix de notre solveur SMT, nous avons dressé un petit état de l'art en nous basant principalement sur des résultats de la SMT-COMP~\cite{SMT-COMP}, une compétition entre solveurs, en éliminant d'office les solveurs qui ne présentaient pas d'API utilisable en C++ \ccc{puisque le framework OTAWA est en C++} :
+  Pour le choix de notre solveur SMT, nous avons dressé un petit état de l'art en nous basant principalement sur des résultats de la SMT-COMP~\cite{SMT-COMP}, une compétition entre solveurs, en éliminant d'office les solveurs qui ne présentaient pas d'API utilisable en C++ puisque le framework OTAWA est en C++ :
 
   \begin{itemize}
     \item Z3~\cite{smt_z3}
@@ -308,13 +306,7 @@
 
   Les arêtes représentent les chemins d'exécution du programme, elles correspondent à des branchements où à l'exécution séquentielle du programme. Il y a deux types de branchements : les branchements conditionnels et les branchements inconditionnels.
 
-  Parmi les \textbf{branchements conditionnels}, ceux qui correspondent à l'arc ``pris'', c'est-à-dire au cas où la condition évoquée est vérifiée, sont annotés sur le CFG avec l'étiquette ``\textit{taken}'', l'arc dit ''non pris'' n'a conventionellement pas d'étiquette.
-
-  Parmi les \textbf{branchements inconditionnels}, il peut s'agir de l'exécution séquentielle du programme ou d'un branchement non conditionnel (ce qui revient en assembleur à changer le registre pointeur d'instruction \texttt{pc} ou \texttt{r15} pour l'ARM) auquel cas l'arc n'est pas annoté, ou il peut s'agir d'un appel de fonction (\textit{Branch with Link} en assembleur), auquel cas l'arc est dessiné en pointillés et annoté ``\textit{call}''.
-
-  Les figures \ref{branchement conditionnel} et \ref{branchement inconditionnel} montrent des exemples de ces branchements.
-
-  \begin{figure}
+  \begin{figure}[b]
     \begin{minipage}[c]{.46\linewidth}
       \includegraphics[scale=0.5]{./pictures/conditional_branch.png}
       % conditional_branch.png: 419x248 pixel, 96dpi, 11.08x6.56 cm, bb=0 0 314 186
@@ -329,11 +321,17 @@
    \end{minipage}
 \end{figure}
 
+  Parmi les \textbf{branchements conditionnels}, ceux qui correspondent à l'arc ``pris'', c'est-à-dire au cas où la condition évoquée est vérifiée, sont annotés sur le CFG avec l'étiquette ``\textit{taken}'', l'arc dit ''non pris'' n'a conventionellement pas d'étiquette.
+
+  Parmi les \textbf{branchements inconditionnels}, il peut s'agir de l'exécution séquentielle du programme ou d'un branchement non conditionnel (ce qui revient en assembleur à changer le registre pointeur d'instruction \texttt{pc} ou \texttt{r15} pour l'ARM) auquel cas l'arc n'est pas annoté, ou il peut s'agir d'un appel de fonction (\textit{Branch with Link} en assembleur), auquel cas l'arc est dessiné en pointillés et annoté ``\textit{call}''.
+
+  Les figures \ref{branchement conditionnel} et \ref{branchement inconditionnel} montrent des exemples de ces branchements.
+
   \bigbreak
 
   Prenons pour exemple l'algorithme~\ref{alg:1} que nous avions présenté plus haut. Le CFG en pseudo-code correspondant est exhibé sur la figure~\ref{cfg}. On y voit bien apparaître les 4 chemins cités précédemment. %TOLDO: vérifier que l'algo soit bien présent *plus haut*
 
-  La figure~\ref{cfg_genere} montre le CFG généré par OTAWA à partir du code ARM correspondant à l'algorithme~\ref{alg:1} (compilé à partir d'un fichier C). On y observe à peu près la même structure que sur le CFG en pseudo-code, avec des \ccc{appels} à la fonction \texttt{sauvegarder} et des instructions ARM plus volumineuses à l'intérieur des blocs.
+  La figure~\ref{cfg_genere} montre le CFG généré par OTAWA à partir du code ARM correspondant à l'algorithme~\ref{alg:1} (compilé à partir d'un fichier C). On y observe à peu près la même structure que sur le CFG en pseudo-code, avec des appels à la fonction \texttt{sauvegarder} et des instructions ARM plus volumineuses à l'intérieur des blocs.
 
   \begin{figure}
     \centering
@@ -619,7 +617,7 @@
 
   \newpage{}
   \section{Algorithme de recherche de chemins infaisables}
-  \ccc{Nous allons maintenant examiner le fonctionnement de l'algorithme d'analyse, et les structures de données qu'il manipule.}
+  Nous allons maintenant examiner le fonctionnement de l'algorithme d'analyse, et les structures de données qu'il manipule.
   
   \subsection{Représentation des prédicats}
   Nous utilisons nos propres structures de prédicats, appropriées à l'usage qui leur est destiné. En voici la grammaire abstraite :
@@ -680,7 +678,7 @@
 
   \[\{(x = 0)^{1\rightarrow 2}, (y = x)^{3\rightarrow 5}, (y > 10)^{3\rightarrow 5} \}\]
 
-  on pourra en déduire que le chemin qui passe par les arcs $\{1\rightarrow 2, 3\rightarrow 5\}$ est infaisable \ccc{(par transitivité du ``$=$'')}.
+  on pourra en déduire que le chemin qui passe par les arcs $\{1\rightarrow 2, 3\rightarrow 5\}$ est infaisable (par transitivité du ``$=$'').
 
   \subsection{Analyse d'un graphe de flot de contrôle}
   Comme nous travaillons sans boucles, l'algorithme ci-dessous n'est pas correct, ou du moins ne terminera pas si on le fait fonctionner sur un CFG avec boucles. Nous initialisons d'abord l'algorithme de parcours de graphe de contrôle avec le premier bloc de base du CFG, qui nous est donné par OTAWA.
@@ -810,12 +808,19 @@
   % TODO: on a oublie un cas, a changer dans le code aussi !!! (ADD et SUB)
   \begin{lstlisting}[mathescape]
     t [ADD d a b] p =
-        if (d = a) then (* d <- d+b *)
-            (update d (d - b) p)
-        else if (d = b) (* d <- a+d *)
-            (update d (d - a) p)
-        else
-            (d = a + b) @ (invalidate d p)
+        if (d = a) then
+	    if (d = b) then (* d <- d+d *)
+		(* on rajoute un predicat pour dire que d est pair *)
+		(d % 2 = 0)
+		@ (* et on remplace d par d/2 *)
+		(update d (d/2) p)
+	    else (* d <- d+b *)
+		(update d (d-b) p)
+        else 
+	    if (d = b) then (* d <- a+d *)
+		(update d (d - a) p)
+	    else (* d <- a+b *)
+		(d = a + b) @ (invalidate d p)
 
     t [SUB d a b] p =
         if (d = a) then
@@ -909,10 +914,10 @@
 
   Pour cela, nous présentons trois algorithmes :
 
-  % TOLDO: vérifier qu'on a déjà introduit la notation p_1^{c_1}
   % TODO: pour etre complet on considère que c'est un ensemble d'éléments
-  % peut etre considérer suelement le cas simpel dans le mémoire
   \subsection{Algorithme complet naïf (en $\theta(n!)$)}
+  Nous allons noter, dans cet algorithme et dans les suivants $p_i^{c_i}$ le prédicat annoté par l'arc $c_i$.
+  
   Cet algorithme naïf va tout simplement, à partir d'une liste de prédicats $\{p_1^{c_1}, p_2^{c_2}, ..., p_n^{c_n}\}$, tester la satisfiabilité des $n!$ combinaisons possibles (par exemple, $\{p_1, p_3\}$).
 
   On relève ensuite la liste des conjonctions de prédicats qui ont donné lieu à des insatisfiabilités, par exemple pour $n = 4$ :
@@ -930,7 +935,7 @@
     \item $\{p_1^{c_1}, p_4^{c_4}\}$
   \end{itemize}
 
-  On a donc obtenu l'information ``$\{c_1, c_2\}$ et $\{c_1, c_4\}$'' sont des chemins infaisables, au lieu de ``$\{c_1, c_2, c_3, c_4\}$'' est un chemin infaisable. C'est beaucoup mieux \ccc{: on exclut plus de chemins (3 en l'occurence).}
+  On a donc obtenu l'information ``$\{c_1, c_2\}$ et $\{c_1, c_4\}$'' sont des chemins infaisables, au lieu de ``$\{c_1, c_2, c_3, c_4\}$'' est un chemin infaisable. C'est beaucoup mieux : on exclut plus de chemins (3 en l'occurence).
 
   Le problème de cet algorithme est bien sûr sa complexité exponentielle qui fait qu'il explose sur des grosses listes : il fait 3,6 millions d'appels au solveur SMT pour une liste de 10 prédicats !
 
@@ -1044,6 +1049,10 @@
   qui sont bien les deux sous-listes minimales de $\{p_1, p_2, p_3, p_4\}$.
 
   Ce test de minimalité des conjonctions de prédicats a été en implémenté avec une approche moins naïve que celle-ci, en utilisant des masques de bits pour accélérer cette partie de l'algorithme. S'agissant là d'un détail technique sans grand rapport au reste de l'analyse, je ne le développerai pas ici.
+  
+  \bigbreak
+  
+  Il est à noter que l'algorithme a été simplifié puisqu'en réalité il ne manipule pas exactement des prédicats annotés par des arcs $c_i$, mais plutôt des \textit{listes} d'arcs $c_i$, afin de traiter les cas où plusieurs parties du programme sont responsables de la génération de ce prédicat. Le principe reste toutefois le même : pour une liste de prédicats $\{p_1^{c_1}, p_2^{c_2}, ..., p_n^{c_n}\}$ formant une conjonction insatisfiable, le chemin infaisable est $c_1 \cup c_2 \cup ... \cup c_n$.
 
   \newpage{}
   \section{Traduction en contraintes ILP}
@@ -1220,7 +1229,7 @@
 
   En utilisant l'interprétation abstraite~\cite{cousot} comme base théorique, j'ai représenté les états de l'exécution d'un programme assembleur par des listes de prédicats qui décrivent l'état du système (registres et mémoire). J'a utilisé une technique énumération implicite des chemins (IPET) du CFG, et tout en parcourant le chemin et en faisant évoluer la liste de prédicats, j'ai cherché des inconsistances dans cette liste, afin d'identifier des chemins infaisables.
 
-  J'ai utilisé un solveur SMT reconnu, CVC4~\cite{smt_cvc4}, pour détecter des insatisfiabilités dans ces prédicats. Une fois l'insatisfiabilité levée (et donc un chemin infaisable détecté), il a fallu en extraire les chemins infaisables minimaux pour en maximiser \ccc{l'exploitation. L'algorithme souffre notamment de l'absence de support du typage implicite des données en assembleur, et de celle de l'analyse des sous-programmes ; il faudrait également étendre le traitement de la mémoire (déjà bien avancé) aux tableaux.}
+  J'ai utilisé un solveur SMT reconnu, CVC4~\cite{smt_cvc4}, pour détecter des insatisfiabilités dans ces prédicats. Une fois l'insatisfiabilité levée (et donc un chemin infaisable détecté), il a fallu en extraire les chemins infaisables minimaux pour en maximiser l'exploitation. L'algorithme souffre notamment de l'absence de support du typage implicite des données en assembleur, et de celle de l'analyse des sous-programmes ; il faudrait également étendre le traitement de la mémoire (déjà bien avancé) aux tableaux.
 
   Une fois l'exécution du programme finie, ces prédicats ont été traduits en contraintes ILP pour être ensuite injectées dans le calcul de WCET d'OTAWA et l'améliorer.
 
@@ -1236,11 +1245,10 @@
     \bibitem{otawa}Hugues Cassé, Christine Rochange, Pascal Sainrat. An Open Framework for
     WCET Analysis. Dans : IEEE Real-Time Systems Symposium - WIP
     session, Lisbonne, 05/12/2004-07/12/2004, IEEE, p. 13-16, décembre 2004.
-    \bibitem{cousot}Patrick Cousot and Rahida Cousot. 1992. \textit{Abstract interpretation and application to logic programs}. J. Log. Program. 13, 2-3 (July 1992), 103-179. http://dx.doi.org/10.1016/0743-1066(92)90030-7
+    \bibitem{cousot}Patrick Cousot and Rahida Cousot. 1992. \textit{Abstract interpretation and application to logic programs}. J. Log. Program. 13, 2-3 (July 1992), 103-179. \url{http://dx.doi.org/10.1016/0743-1066(92)90030-7}
     \bibitem{nielson}Flemming Nielson, Hanne R. Nielson, and Chris Hankin. 1999. \textit{Principles of Program Analysis}. Springer-Verlag New York, Inc., Secaucus, NJ, USA.
-    \bibitem{entcs}\textit{Electronic Notes in Theoretical Computer Science (Entcs)}. Elsevier Sci. Pub. B. V., Amsterdam, The Netherlands, The Netherlands. http://dx.doi.org/10.1016/j.entcs.2010.09.014
+    \bibitem{entcs}\textit{Electronic Notes in Theoretical Computer Science (Entcs)}. Elsevier Sci. Pub. B. V., Amsterdam, The Netherlands, The Netherlands. \url{http://dx.doi.org/10.1016/j.entcs.2010.09.014}
     \bibitem{wcet05} T. Chen, T. Mitra, A. Roychoudhury, and V. Suhendra. \textit{Exploiting branch constraints without exhaustive path enumeration}. In Int’l Workshop on WCET Analysis, 2005.
-    \url{http://www.comp.nus.edu.sg/~tulika/wcet05.pdf}
     \bibitem{intlconf11}S. Andalam, P. Roop, and A. Girault. \textit{Pruning Infeasible Paths for Tight WCRT Analysis of Synchronous Programs}. In Intl’ Conf. on Design, Automation and Test in Europe (DATE), 2011.
     \bibitem{smtintro}Leonardo De Moura and Nikolaj Bjørner. 2011. \textit{Satisfiability modulo theories: introduction and applications}. Commun. ACM 54, 9 (September 2011), 69-77.
     \url{http://doi.acm.org/10.1145/1995376.1995394}
