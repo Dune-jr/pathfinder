@@ -11,6 +11,7 @@
 % User packages
 \usepackage{lstlangarm}
 \usepackage{ulem}
+\usepackage{dsfont}
 
 \usetheme{Warsaw}
 \beamertemplatenavigationsymbolsempty
@@ -105,13 +106,13 @@
 		\end{column}
 	\end{columns}
 }
-    
+
 \frame{\frametitle{Choix du solveur SMT}
     \begin{wrapfigure}{r}{0in}
 	\includegraphics{pictures/cvc4.png}
     \end{wrapfigure}
     Notre choix de solveur s'est porté sur \textbf{CVC4} :
-    
+
     \begin{itemize}[<+->]
 	\item Open-source, licence très libre
 	\item De très bons résultats à la SMT-COMP
@@ -150,7 +151,7 @@
     \end{minipage}
     \begin{minipage}{.62\linewidth}
 	Les variables d'OTAWA :
-    
+
 	\begin{itemize}
 	    \item les registres machine \texttt{?0}, \texttt{?1}...(16, 32... ou plus selon l'architecture)
 	    \item des variables temporaires \texttt{t1}, \texttt{t2}...
@@ -203,24 +204,26 @@
 % \end{frame}
 
 \frame{\frametitle{Les instructions sémantiques d'OTAWA}
-    Des instructions...
-    
-    \begin{itemize}[<+->]
-	\item indicatrices du flot du programme : \texttt{BRANCH}, \texttt{TRAP}, \texttt{CONT}
-	\item d'invalidation : \texttt{SCRATCH}
-	\item d'assignation de valeur : \texttt{SET}, \texttt{SETI}
-	\item arithmétiques : \texttt{ADD}, \texttt{SUB}, \texttt{MUL}, \texttt{DIV}, \texttt{MOD}
-	\item \sout{logiques : \texttt{NOT}, \texttt{AND}, \texttt{OR}, \texttt{XOR}}
-	\item conditionelles : \texttt{CMP}, \texttt{IF}
-	\item d'accès mémoire : \texttt{LOAD}, \texttt{STORE}\\[0.7cm]
-	\item \sout{... et les équivalents \textit{unsigned} : \texttt{CMPU, MULU, DIVU, MODU}}
+    \begin{itemize}%[<+->]
+	\item Une trentaine d'instructions sémantiques
+    \item On fait de l'analyse abstraite : on met à $\top$ quand on ne sait pas gérer\\
+    \;$\Longrightarrow$ instruction \texttt{SCRATCH}\\
+    \;$\Longrightarrow$ Il s'agit de toujours rester \textbf{correct}
     \end{itemize}
 }
-   
+
 
 \section{Solution} % Algorithme de recherche de chemins infaisables
 \frame{\frametitle{Représentation des prédicats}
-    
+    \begin{itemize}%
+        \item \textbf{Prédicat} : Expression $\times$ Comparateur $\times$ Expression
+        \item \textbf{Expression} :\\
+        \qquad | Constante(k $\in \mathds{Z}$)\\
+        \qquad | Variable(id $\in \mathds{Z}$)\\
+        \qquad | Memoire(addr $\in \mathds{Z}$)\\[0.2cm]
+        \qquad | ExprArithmétique
+        \item \textbf{ExprArithmétique} : Expression $\times$ Operateur $\times$ Expression
+    \end{itemize}
 }
 
 \frame{%\frametitle{}
@@ -286,6 +289,16 @@
 \frame{%\frametitle{}
 	\begin{center}
 		\includegraphics[height=0.75\paperheight]{pictures/pathfinder.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_end_bb_generated_preds.png}
+	\end{center}
+}
+\frame{%\frametitle{}
+	\begin{center}
+		\includegraphics[height=0.75\paperheight]{pictures/pathfinder_smt_calls.png}
 	\end{center}
 }
 \frame{%\frametitle{}
@@ -358,4 +371,4 @@
     \end{center}
 }
 
-\end{document} 
+\end{document}
