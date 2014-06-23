@@ -126,24 +126,39 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					}
 					break;
 				case ADD:
-					opd1 = new OperandVar(d);
 					{
-						if(d == a) // d <- d+b
-						{	// [d-b / d]
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(b)));
-						}
-						else if(d == b) // d <- d+a
-						{	// [d-a / d]
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(a)));
-						}
-						else
+						if(d == a)
 						{
-							// d is not related to a or b, invalidate predicates that involve d
-							invalidateVar(d);
-							make_pred = true;
-							Operand *opd21 = new OperandVar(a);
-							Operand *opd22 = new OperandVar(b);
-							opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
+							if(d == b) // d <- d+d
+							{	// [d/2 / d]
+								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(2)));
+								Operand *opd11 = new OperandVar(d);
+								Operand *opd12 = new OperandVar(2);
+								opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
+								opd2 = new OperandConst(0);
+								make_pred = true; // d % 2 = 0
+							}
+							else // d <- d+b
+							{	// [d-b / d]
+								update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(b)));
+							}
+						}
+						else 
+						{
+							if(d == b) // d <- d+a
+							{	// [d-a / d]
+								update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(a)));
+							}
+							else
+							{
+								// d is not related to a or b, invalidate predicates that involve d
+								invalidateVar(d);
+								opd1 = new OperandVar(d);
+								Operand *opd21 = new OperandVar(a);
+								Operand *opd22 = new OperandVar(b);
+								opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
+								make_pred = true; // d = a + b
+							}
 						}
 					}
 					break;
