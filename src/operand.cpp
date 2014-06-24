@@ -29,9 +29,13 @@ bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) cons
 	return false; // We haven't found an isolated tempvar
 }
 bool OperandConst::involvesVariable(const OperandVar& opdv) const { return false; }
+bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return false; }
+bool OperandConst::involvesMemory() const { return false; }
 operand_state_t OperandConst::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
-Option<OperandConst> OperandConst::evalConstantOperand() const { return some(*this); }
+Option<OperandConst> OperandConst::
+evalConstantOperand() const { return some(*this); }
 Option<Operand*> OperandConst::simplify() { return none; }
+
 
 // Operands: Variables
 OperandVar::OperandVar(const OperandVar& opd) : _addr(opd._addr) { }
@@ -71,10 +75,13 @@ bool OperandVar::involvesVariable(const OperandVar& opdv) const
 {
 	return opdv == *this;
 }
+bool OperandVar::involvesMemoryCell(const OperandMem& opdm) const { return false; }
+bool OperandVar::involvesMemory() const { return false; }
 // since the parent has to do the modification, and var has no child, return false
 operand_state_t OperandVar::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
 Option<OperandConst> OperandVar::evalConstantOperand() const { return none; }
 Option<Operand*> OperandVar::simplify() { return none; }
+
 
 // Operands: Memory
 OperandMem::OperandMem(const OperandConst& opdc) : _kind(OPERANDMEM_ABSOLUTE)
@@ -97,6 +104,7 @@ OperandMem::OperandMem(const OperandMem& opd) : _kind(opd.memkind())
 	if(opd.hasVar())
 		_opdv = new OperandVar(opd.getVar());
 }
+OperandMem::OperandMem() : _kind(OPERANDMEM_ABSOLUTE), _opdc(NULL), _opdv(NULL) { }
 Operand* OperandMem::copy() const
 {
 	switch(_kind)
@@ -128,9 +136,9 @@ bool OperandMem::operator==(const Operand& o) const
 		OperandMem& o_mem = (OperandMem&)o; // Force conversion
 		if(o_mem.memkind() != _kind)
 			return false;
-		if((_kind & OPERANDMEMFLAG_HASCONST) && *_opdc == o_mem.getConst())
+		if((_kind & OPERANDMEMFLAG_HASCONST) && !(*_opdc == o_mem.getConst()))
 			return false;
-		if((_kind & OPERANDMEMFLAG_HASVAR) && *_opdv == o_mem.getVar())
+		if((_kind & OPERANDMEMFLAG_HASVAR) && !(*_opdv == o_mem.getVar()))
 			return false;
 		return true;
 	}
@@ -154,6 +162,11 @@ bool OperandMem::involvesVariable(const OperandVar& opdv) const
 		return *_opdv == opdv;
 	return false;
 }
+bool OperandMem::involvesMemoryCell(const OperandMem& opdm) const
+{
+	return *this == opdm;
+}
+bool OperandMem::involvesMemory() const { return true; }
 operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {
 	// if: this OperandMem involves a variable, and it matches the variable we have to update
@@ -267,6 +280,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
 Option<Operand*> OperandMem::simplify() { return none; } // TODO: simplify within the [ ], makes more sense even tho it shouldn't be very useful
 
+
 // Operands: Arithmetic Expressions
 OperandArithExpr::OperandArithExpr(arithoperator_t opr, const Operand& opd1_)
 	: _opr(opr)
@@ -342,8 +356,19 @@ bool OperandArithExpr::involvesVariable(const OperandVar& opdv) const
 		return opd1->involvesVariable(opdv);
 	return opd1->involvesVariable(opdv) || opd2->involvesVariable(opdv);
 }
-
-// TODO: unary fix
+bool OperandArithExpr::involvesMemoryCell(const OperandMem& opdm) const
+{
+	if(isUnary())
+		return opd1->involvesMemoryCell(opdm);
+	return opd1->involvesMemoryCell(opdm) || opd2->involvesMemoryCell(opdm);
+}
+bool OperandArithExpr::involvesMemory() const
+{
+	if(isUnary())
+		return opd1->involvesMemory();
+	return opd1->involvesMemory() || opd2->involvesMemory();	
+}
+// TODO: unary fix (is this already fixed?)
 operand_state_t OperandArithExpr::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {
 	operand_state_t rtn = OPERANDSTATE_UNCHANGED;

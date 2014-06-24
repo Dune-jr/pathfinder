@@ -3,7 +3,7 @@
 
 void addIndents(io::Output& out, int n) { for(int i=0; i<n; i++) out << "\t"; }
 
-Analysis::Analysis(CFG *cfg)
+Analysis::Analysis(CFG *cfg, int sp_id) : sp(sp_id)
 {
 	initializeAnalysis();
 	processCFG(cfg);

@@ -21,6 +21,15 @@ bool Predicate::involvesVariable(const OperandVar& opdv) const
 	return _opd1->involvesVariable(opdv) || _opd2->involvesVariable(opdv);
 }
 
+bool Predicate::involvesMemoryCell(const OperandMem& opdm) const
+{
+	return _opd1->involvesMemoryCell(opdm) || _opd2->involvesMemoryCell(opdm);
+}
+bool Predicate::involvesMemory() const
+{
+	return _opd1->involvesMemory() || _opd2->involvesMemory();
+}
+
 unsigned int Predicate::countTempVars() const
 {
 	return _opd1->countTempVars() + _opd2-> countTempVars();

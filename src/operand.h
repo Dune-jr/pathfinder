@@ -75,6 +75,8 @@ public:
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
 	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const = 0;
 	virtual bool involvesVariable(const OperandVar& opdv) const = 0;
+	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
+	virtual bool involvesMemory() const = 0;
 	virtual operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0;
 	virtual bool isComplete() const = 0;
 	virtual Option<OperandConst> evalConstantOperand() const = 0;
@@ -103,6 +105,8 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesVariable(const OperandVar& opdv) const;
+	bool involvesMemoryCell(const OperandMem& opdm) const;
+	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
@@ -132,6 +136,8 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesVariable(const OperandVar& opdv) const;
+	bool involvesMemoryCell(const OperandMem& opdm) const;
+	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
@@ -154,6 +160,7 @@ public:
 	OperandMem(const OperandConst& opdc);
 	OperandMem(const OperandVar& opdv);
 	OperandMem(const OperandVar& opdv, const OperandConst& opdc);
+	OperandMem(); // for use in Option
 	
 	inline operandmem_kind_t memkind() const { return _kind; }
 	inline bool hasConst() const { return _kind & OPERANDMEMFLAG_HASCONST; }
@@ -165,6 +172,8 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesVariable(const OperandVar& opdv) const;
+	bool involvesMemoryCell(const OperandMem& opdm) const;
+	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
@@ -201,6 +210,8 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesVariable(const OperandVar& opdv) const;
+	bool involvesMemoryCell(const OperandMem& opdm) const;
+	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!

@@ -8,7 +8,7 @@
 #include "debug.h"
 
 using namespace otawa;
-using namespace elm::genstruct;
+using namespace elm::genstruct; 
 
 template <class T> inline const SLList<T>& null(void) {
 	static SLList<T> _null;
@@ -23,7 +23,7 @@ template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l);
 
 class Analysis {
 public:
-	Analysis(CFG *cfg);
+	Analysis(CFG *cfg, int sp_id);
 	
 	typedef SLList<const Edge*> Path;
 	
@@ -35,19 +35,16 @@ public:
 	
 	public:
 		LabelledPredicate(const Predicate& pred, const Edge* label);
-		
-		// Accessors
 		inline const Predicate& pred() const { return _pred; };
-		inline const Edge* label() const { return _label; };
-		
+		inline const Edge* label() const { return _label; };		
 		friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lp) { return lp.print(out); }
 	};
 	
-private:	
+private:
+	int sp; // ID of the Stack Pointer register
 	SLList<Predicate> generated_preds;
 	SLList<Predicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here
 											 // and the not taken preds will stay in generated_preds
-	
 	// The actual struct
 	SLList<Path>						infeasible_paths;
 	SLList<SLList<LabelledPredicate> >	labelled_preds;
@@ -70,11 +67,15 @@ private:
 	void analyzeBB(const BasicBlock *bb);
 	bool invalidateVar(const OperandVar& var);
 	inline bool invalidateVar(const t::int32& addr) { return invalidateVar(OperandVar(addr)); }
+	bool invalidateMem(const OperandVar& var);
+	inline bool invalidateMem(const t::int32& addr) { return invalidateMem(OperandVar(addr)); }
 	bool invalidateTempVars();
 	bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);
 	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
 	bool findConstantValueOfTempVar(const OperandVar& var, t::int32& val);
 	bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
+	Option<OperandMem> findAddressOfVar(const OperandVar& var);
+	void invalidateAllMemory();
 	Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken);
 };
 

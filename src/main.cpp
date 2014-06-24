@@ -4,6 +4,7 @@
 #include <otawa/otawa.h>
 #include <otawa/app/Application.h> // main Display class
 #include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
+#include <otawa/hard/Platform.h>
 
 #include "analysis.h"
 #include "predicate.h"
@@ -30,7 +31,7 @@ protected:
 		assert(cfgs->count() > 0); // make sure we have at least one CFG
 		CFG *cfg = cfgs->get(0); // then get the first CFG
 	
-		Analysis analysis = Analysis(cfg);
+		Analysis analysis = Analysis(cfg, workspace()->platform()->getSP()->number());
 		// testSimplify();
 	}
 };

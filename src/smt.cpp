@@ -6,7 +6,6 @@
 #include <otawa/cfg/Edge.h>
 #include "smt.h"
 #include "smt_variable_stack.h"
-#include "analysis.h"
 #include "debug.h"
 
 using namespace CVC4::kind;

@@ -32,6 +32,8 @@ public:
 	inline bool isIdent() const { return (*_opd1 == *_opd2) && _opr == CONDOPR_EQ; }
 	inline bool isComplete() const { return _opd1->isComplete() && _opd2->isComplete(); }
 	bool involvesVariable(const OperandVar& opdv) const;
+	bool involvesMemoryCell(const OperandMem& opdm) const;
+	bool involvesMemory() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);

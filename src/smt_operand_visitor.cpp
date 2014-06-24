@@ -1,6 +1,5 @@
 #include <cvc4/expr/expr_manager.h>
 #include "smt_operand_visitor.h"
-#include "smt_variable_stack.h"
 
 using namespace CVC4::kind;
 using CVC4::Expr;
