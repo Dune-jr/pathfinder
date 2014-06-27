@@ -96,7 +96,7 @@ void Analysis::processBB(BasicBlock* bb)
 	}
 }
 
-void Analysis::processEdge(Edge* edge)
+void Analysis::processEdge(const Edge* edge)
 {
 	BasicBlock* target = edge->target();
 	DBG(COLOR_Whi << "Processing Edge: " << edge)	
@@ -104,12 +104,15 @@ void Analysis::processEdge(Edge* edge)
 	processBB(target);
 }
 
-SLList<Analysis::LabelledPredicate> Analysis::labelPredicateList(const SLList<Predicate>& pred_list, Edge* label)
+SLList<Analysis::LabelledPredicate> Analysis::labelPredicateList(const SLList<Predicate>& pred_list, const Edge* label)
 {
+	SLList<const Edge*> sll_containing_only_label;
+	sll_containing_only_label += label;
+
 	SLList<LabelledPredicate> LP_list;
 	for(SLList<Predicate>::Iterator preds(pred_list); preds; preds++)
 	{
-		LabelledPredicate lp(*preds, label);
+		LabelledPredicate lp(*preds, sll_containing_only_label);
 		LP_list.addFirst(lp);
 	}
 	return LP_list;

@@ -178,7 +178,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 			case OPERAND_CONST:
 				{
 					OperandConst& o = (OperandConst&)opd_modifier;
-					// delete _opdv; // TODO (also _opdc?)
+					// delete _opdv; // TODO (also _opdc)
 					if(_kind == OPERANDMEM_RELATIVE)
 						_opdc = new OperandConst(_opdc->value() + o.value());
 					else // OPERANDMEM_VARIABLE
@@ -237,7 +237,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 							OperandArithExpr* o_arithexpr = (OperandArithExpr*) o_new;
 							operand_kind_t left_kind = o_arithexpr->leftOperand().kind(), right_kind = o_arithexpr->rightOperand().kind();
 							if(o_arithexpr->opr() == ARITHOPR_SUB) // try to reduce (t1 - 4) to (t1 + -4)
-							{	// TODO! we _NEED_ to try to identificate t2 in the case (t1 - t2), that is the most realistic case!
+							{	// TODO! we _NEED_ to try to identify t2 in the case (t1 - t2), that is the most realistic case!
 								if(left_kind == OPERAND_VAR && right_kind == OPERAND_CONST)
 								{
 									_kind = OPERANDMEM_RELATIVE;

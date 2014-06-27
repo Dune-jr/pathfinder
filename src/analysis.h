@@ -30,18 +30,18 @@ public:
 	class LabelledPredicate {
 	private:
 		Predicate _pred;
-		const Edge* _label;
+		SLList<const Edge*> _labels;
 		io::Output& print(io::Output& out) const;
 	
 	public:
-		LabelledPredicate(const Predicate& pred, const Edge* label);
+		LabelledPredicate(const Predicate& pred, SLList<const Edge*> labels);
 		inline const Predicate& pred() const { return _pred; };
-		inline const Edge* label() const { return _label; };		
+		inline const SLList<const Edge*>& labels() const { return _labels; };
 		friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lp) { return lp.print(out); }
 	};
 	
 private:
-	int sp; // ID of the Stack Pointer register
+	int sp; // id of the Stack Pointer register
 	SLList<Predicate> generated_preds;
 	SLList<Predicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here
 											 // and the not taken preds will stay in generated_preds
@@ -49,6 +49,10 @@ private:
 	SLList<Path>						infeasible_paths;
 	SLList<SLList<LabelledPredicate> >	labelled_preds;
 	// bool								solverHasBeenCalled;
+
+ 	// this is reset before any BB analysis, indicates previously generated preds (in another BB) that have been updated and need
+ 	// to have their labels list updated (add the next edge to the LabelledPreds struct)
+	SLList<SLList<LabelledPredicate>* > updated_preds;
 	
 	// Private methods
 	// analysis.cpp
@@ -60,8 +64,8 @@ private:
 	// analysis_cfg.cpp
 	void processBB(BasicBlock *bb);
 	void processCFG(CFG *cfg);
-	void processEdge(Edge *edge);
-	SLList<LabelledPredicate> labelPredicateList (const SLList<Predicate>& pred_list, Edge* label);
+	void processEdge(const Edge *edge);
+	SLList<LabelledPredicate> labelPredicateList (const SLList<Predicate>& pred_list, const Edge* label);
 	
 	// analysis_bb.cpp
 	void analyzeBB(const BasicBlock *bb);

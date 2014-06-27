@@ -9,12 +9,22 @@ Analysis::Analysis(CFG *cfg, int sp_id) : sp(sp_id)
 	processCFG(cfg);
 }
 
-Analysis::LabelledPredicate::LabelledPredicate(const Predicate& pred, const Edge* label)
-	: _pred(pred), _label(label) { }
+Analysis::LabelledPredicate::LabelledPredicate(const Predicate& pred, SLList<const Edge*> labels)
+	: _pred(pred), _labels(labels) { }
 	
 io::Output& Analysis::LabelledPredicate::print(io::Output &out) const
 {
-	return (out << "(" << _pred << " | "  << _label->source()->number() << "->" << _label->target()->number() << ")");
+	out << "(" << _pred << " | ";
+	bool first_time = true;
+	for(SLList<const Edge*>::Iterator iter(_labels); iter; iter++)
+	{
+		if(first_time)
+			first_time = false;
+		else
+			out << ", ";
+		out << (*iter)->source()->number() << "->" << (*iter)->target()->number();
+	}
+	return (out << ")");
 }
 
 void Analysis::addElemToTopList(const SLList<LabelledPredicate>& lps)

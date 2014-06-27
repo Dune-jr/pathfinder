@@ -65,17 +65,17 @@ SLList<Analysis::Path> SMT::getAllInfeasiblePaths(const SLList<Analysis::Labelle
 	}
 	if(!index_in_range) // we're done parsing predicates
 	{
-		// typedef SLList<const Edge*> Path;
-		SLList<const Edge*> path;
+		SLList<const Edge*> path; // typedef SLList<const Edge*> Path;
 		SLList<Analysis::Path> path_list;
 		for(SLList<Analysis::LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
-			path += (*parse_iter).label();
+			path += (*parse_iter).labels();
 		path_list += path;
 		return path_list;
 	}
 	labelled_preds_truncated.remove(iter);
-	// DBG(COLOR_Whi << "LPs: " << labelled_preds)
-	// DBG(COLOR_Whi << "LPs_truncated: " << labelled_preds_truncated)
+	// TODO comment this
+	DBG(COLOR_Whi << "LPs: " << labelled_preds)
+	DBG(COLOR_Whi << "LPs_truncated: " << labelled_preds_truncated)
 
 	if(checkPredSat(labelled_preds_truncated))
 	{	// SAT: keep predicate in list

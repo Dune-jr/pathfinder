@@ -15,6 +15,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 	sem::inst condition;
 	generated_preds.clear();
 	generated_preds_taken.clear();
+	updated_preds.clear();
 	
 	// parse assembly instructions
 	for(BasicBlock::InstIterator insts(bb); insts; insts++)
@@ -200,20 +201,41 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						}
 					}
 					break;
-				case SHL: // (*) TODO! don't we need to check for cases d <- d << 2 ???
+				case SHL:
 					opd1 = new OperandVar(d);
 					{
+						if(d == b) // safety test, shouldn't happen unless assembly language allows variable bit shifting
+						{
+							invalidateVar(d);
+							break;
+						}
+
 						Operand *opd21 = new OperandVar(a);
 						t::int32 val;
 						// b is usually a tempvar that has been previously set to a constant value
 						if(!findConstantValueOfTempVar(b, val))
 						{
-							DBG(COLOR_Blu << "  [t1 could not be identified as a constant value]")
+							DBG(COLOR_Blu << "  [" << OperandVar(b) << " could not be identified as a constant value]")
 							invalidateVar(d); // only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
+							break;
 						}
-						else
+						DBG(COLOR_Blu << "  [" << OperandVar(b) << " identified as 0x" << io::hex(val) << "]")
+						if(d == a) // d <- d << b
 						{
-							DBG(COLOR_Blu << "  [t1 identified as 0x" << io::hex(val) << "]")
+							assert(!UNTESTED_CRITICAL);
+							DBG(COLOR_BIRed << "Untested case of operator SHL running!")
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << val)));
+							// we also add a predicate to say that d is now a multiple of 2^b
+							make_pred = true;
+							{
+								Operand *opd11 = new OperandVar(d);
+								Operand *opd12 = new OperandCst(1 << val);
+								opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
+							}
+							opd2 = new OperandConst(0);
+						}
+						else // d <- a << b
+						{
 							invalidateVar(d);
 							make_pred = true;
 							Operand *opd22 = new OperandConst(1 << val); // 2^val
@@ -224,7 +246,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case ASR: // TODO test: is this really legit?
 					assert(!UNTESTED_CRITICAL);
 					DBG(COLOR_BIRed << "Untested operator running!")
-				case SHR: // TODO: see previously (*)
+				case SHR:
 					opd1 = new OperandVar(d);
 					{
 						Operand *opd21 = new OperandVar(a);
@@ -233,13 +255,14 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						if(!findConstantValueOfTempVar(b, val))
 						{
 							DBG(COLOR_Blu << "  [" << OperandVar(b) << " could not be identified as a constant value]")
+							invalidateVar(d);
 							break;
 						}
-						else
-							DBG(COLOR_Blu << "  [" << OperandVar(b) << " identified as 0x" << io::hex(val) << "]")
-						
-						// only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
+						DBG(COLOR_Blu << "  [" << OperandVar(b) << " identified as 0x" << io::hex(val) << "]")
+
 						invalidateVar(d);
+						if(d == a) // d <- d >> b
+							break; // not much we can do since we lost info (cf (*))
 						make_pred = true;
 						Operand *opd22 = new OperandConst(1 << val); // 2^val
 						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
@@ -354,7 +377,16 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							invalidateVar(d);
 						}
 						else // d <- d / b
-						{
+						{	/* TODO (*): we can actually handle this, the following way:
+							* Example: 2y - (x + z) = 5		(problem: if - is *, there is no bijective reverse function...)
+							* Instruction : x <- x / 2 		(can be DIV or SHR/ASR!)
+							* <=> x + z = 2y - 5
+							* <=> x = 2y - 5 - z
+							* Now x <- x / 2
+							* <=> x = (2y - 5 - z) / 2y 		(instead of trying to update x!)
+							* 
+							* this looks hard to implement though
+							*/
 							invalidateVar(d); // we cannot just write [d*a / d] because we lost info
 						}
 					}
@@ -597,13 +629,13 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 			assert(state != OPERANDSTATE_UNCHANGED);
 			if(state == OPERANDSTATE_UPDATED) // making sure something is updated
 			{
-				LabelledPredicate lp = LabelledPredicate(p, (*iter).label());
+				LabelledPredicate lp = LabelledPredicate(p, (*iter).labels()); // TODO!!!
 				top_list.set(iter, lp);
 				rtn = true;
 				DBG(COLOR_ICya << "  + " << lp)
 			}
 			else if(state == OPERANDSTATE_INVALID)
-			{
+			{	// TODO (**) ?4 = [t1], t1 <- t1-t2, we should try to identify t2
 				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya "(new indirection is too complex)")
 				top_list.remove(iter);
 				continue;
@@ -630,7 +662,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_ICya " + " << *iter)
 			}
 			else if(state == OPERANDSTATE_INVALID)
-			{
+			{	// see (**)
 				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya "(new indirection is too complex)")
 				generated_preds.remove(iter);
 				continue;
