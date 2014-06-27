@@ -589,4 +589,19 @@ io::Output& operator<<(io::Output& out, arithoperator_t opr)
 	}
 	return out;
 }
-
+io::Output& operator<<(io::Output& out, operand_state_t state)
+{
+	switch(state)
+	{
+		case OPERANDSTATE_UNCHANGED:
+			out << "(UNCHANGED)";
+			break;
+		case OPERANDSTATE_UPDATED:
+			out << "(UPDATED)";
+			break;
+		case OPERANDSTATE_INVALID:
+			out << "(INVALID)";
+			break;
+	}
+	return out;
+}

@@ -233,6 +233,6 @@ private:
 io::Output& operator<<(io::Output& out, operand_kind_t kind);
 io::Output& operator<<(io::Output& out, operandmem_kind_t kind);
 io::Output& operator<<(io::Output& out, arithoperator_t opr);
-// io::Output& operator<<(io::Output& out, operand_state_t state); // TODO
+io::Output& operator<<(io::Output& out, operand_state_t state); // TODO
 
 #endif

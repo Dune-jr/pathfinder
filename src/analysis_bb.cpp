@@ -229,7 +229,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							make_pred = true;
 							{
 								Operand *opd11 = new OperandVar(d);
-								Operand *opd12 = new OperandCst(1 << val);
+								Operand *opd12 = new OperandConst(1 << val);
 								opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
 							}
 							opd2 = new OperandConst(0);
@@ -412,7 +412,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case MODU:
 				case MOD:
 					invalidateVar(d);
-					if(d == a || d == b) // TODO: it's right to not handle these weird cases, right?
+					if(d == a || d == b) // TODO: it's okay to not handle these weird cases, right?
 						break;
 					make_pred = true;
 					opd1 = new OperandVar(d);
