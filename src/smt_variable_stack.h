@@ -17,6 +17,7 @@ public:
 	Expr getExpr(CVC4::ExprManager& em, const OperandMem& o); //, const Expr& expr_addr);
 	
 private:
+	/*
 	struct relative_address
 	{	// Example for [?13+0x8]
 		t::int32 variable; // 13
@@ -34,11 +35,13 @@ private:
 			return variable > x.variable;
 		}
 	};
+	*/
 
-	// lonely vars such as [?13] are identified as [?13+0] (makes sense that the SMT doesn't differentiate these two)
-	AVLMap<t::int32, Expr> varmap; // registers, templars (these should be invalidated prior to SMT call though)
-	AVLMap<t::int32, 		 Expr> memmap_absolute; // absolute addresses in memory
-	AVLMap<relative_address, Expr> memmap_relative; // (stack- but not only) relative addresses in memory
+	// outdated: lonely vars such as [?13] are identified as [?13+0] (makes sense that the SMT doesn't differentiate these two)
+	AVLMap<t::int32, Expr> varmap; // registers, tempvars (these should be invalidated prior to SMT call though)
+	AVLMap<t::int32, Expr> memmap_absolute; // absolute addresses in memory
+	AVLMap<t::int32, Expr> memmap_relative; // relative addresses in memory
+	//AVLMap<relative_address, Expr> memmap_relative; // (stack- but not only) relative addresses in memory
 };
 
 #endif

@@ -84,90 +84,63 @@ Option<Operand*> OperandVar::simplify() { return none; }
 
 
 // Operands: Memory
-OperandMem::OperandMem(const OperandConst& opdc) : _kind(OPERANDMEM_ABSOLUTE)
+OperandMem::OperandMem(const OperandConst& opdc, bool relative)
 {
 	_opdc = new OperandConst(opdc);
+	if(relative)
+		_kind = OPERANDMEM_RELATIVE;
+	else
+		_kind = OPERANDMEM_ABSOLUTE;
 }
-OperandMem::OperandMem(const OperandVar& opdv) : _kind(OPERANDMEM_VARIABLE)
+OperandMem::OperandMem(const OperandMem& opd)
 {
-	_opdv = new OperandVar(opdv);
+	_opdc = new OperandConst(opd.getConst());
+	if(opd.isRelative())
+		_kind = OPERANDMEM_RELATIVE;
+	else
+		_kind = OPERANDMEM_ABSOLUTE;
 }
-OperandMem::OperandMem(const OperandVar& opdv, const OperandConst& opdc) : _kind(OPERANDMEM_RELATIVE)
-{
-	_opdc = new OperandConst(opdc);
-	_opdv = new OperandVar(opdv);
-}
-OperandMem::OperandMem(const OperandMem& opd) : _kind(opd.memkind())
-{
-	if(opd.hasConst())
-		_opdc = new OperandConst(opd.getConst());
-	if(opd.hasVar())
-		_opdv = new OperandVar(opd.getVar());
-}
-OperandMem::OperandMem() : _kind(OPERANDMEM_ABSOLUTE), _opdc(NULL), _opdv(NULL) { }
+OperandMem::OperandMem() : _kind(OPERANDMEM_ABSOLUTE), _opdc(NULL) { }
 Operand* OperandMem::copy() const
 {
-	switch(_kind)
-	{
-		case OPERANDMEM_ABSOLUTE:
-			return new OperandMem(*_opdc);
-		case OPERANDMEM_VARIABLE:
-			return new OperandMem(*_opdv);
-		case OPERANDMEM_RELATIVE:
-			return new OperandMem(*_opdv, *_opdc);
-	}
+	if(isRelative())
+		return new OperandMem(*_opdc, true);
+	else
+		return new OperandMem(*_opdc);
 }
 io::Output& OperandMem::print(io::Output& out) const
 {
 	out << "[";
-	if(_kind & OPERANDMEMFLAG_HASVAR)
-		out << *_opdv;
-	if(_kind == OPERANDMEM_RELATIVE)
-		out << " + ";
-	if(_kind & OPERANDMEMFLAG_HASCONST)
-		out << *_opdc;
-	out << "]";
+	if(isRelative())
+		out << "sp + ";
+	out << *_opdc << "]";
 	return out;
 }
 bool OperandMem::operator==(const Operand& o) const
 {	// untested so far	
 	if(o.kind() == kind())
-	{
-		OperandMem& o_mem = (OperandMem&)o; // Force conversion
-		if(o_mem.memkind() != _kind)
-			return false;
-		if((_kind & OPERANDMEMFLAG_HASCONST) && !(*_opdc == o_mem.getConst()))
-			return false;
-		if((_kind & OPERANDMEMFLAG_HASVAR) && !(*_opdv == o_mem.getVar()))
-			return false;
-		return true;
-	}
-	else
 		return false; // Operand types are not matching
+	OperandMem& o_mem = (OperandMem&)o; // Force conversion
+	if(o_mem.isRelative() != isRelative())
+		return false;
+	if(!(*_opdc == o_mem.getConst()))
+		return false;
+	return true;
 }
-unsigned int OperandMem::countTempVars() const
-{
-	if(_kind & OPERANDMEMFLAG_HASVAR && _opdv->isTempVar())
-		return 1;
-	return 0;
-}
+unsigned int OperandMem::countTempVars() const { return 0; }
 bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 {
 	expr = this->copy(); // Assume we are the expr
 	return false; // We haven't found an isolated tempvar
 }
-bool OperandMem::involvesVariable(const OperandVar& opdv) const
-{
-	if(_kind & OPERANDMEMFLAG_HASVAR)
-		return *_opdv == opdv;
-	return false;
-}
-bool OperandMem::involvesMemoryCell(const OperandMem& opdm) const
-{
-	return *this == opdm;
-}
+bool OperandMem::involvesVariable(const OperandVar& opdv) const { return false; }
+bool OperandMem::involvesMemoryCell(const OperandMem& opdm) const {	return *this == opdm; }
 bool OperandMem::involvesMemory() const { return true; }
 operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
+{
+	return OPERANDSTATE_UNCHANGED; // no match
+}
+/*operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {
 	// if: this OperandMem involves a variable, and it matches the variable we have to update
 	if((_kind & OPERANDMEMFLAG_HASVAR) && *_opdv == opdv)
@@ -276,7 +249,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 		return OPERANDSTATE_UPDATED;
 	}
 	return OPERANDSTATE_UNCHANGED; // no match
-}
+}*/
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
 Option<Operand*> OperandMem::simplify() { return none; } // TODO: simplify within the [ ], makes more sense even tho it shouldn't be very useful
 
@@ -548,9 +521,6 @@ io::Output& operator<<(io::Output& out, operandmem_kind_t kind)
 	{
 		case OPERANDMEM_ABSOLUTE:
 			out << "(ABSOLUTE)";
-			break;
-		case OPERANDMEM_VARIABLE:
-			out << "(VARIABLE)";
 			break;
 		case OPERANDMEM_RELATIVE:
 			out << "(RELATIVE)";

@@ -37,12 +37,8 @@ enum operand_kind_t
 
 enum operandmem_kind_t
 {
-	OPERANDMEMFLAG_HASCONST=0b01,
-	OPERANDMEMFLAG_HASVAR=0b10,
-
-	OPERANDMEM_ABSOLUTE=0b01, // Const
-	OPERANDMEM_VARIABLE=0b10, // Var
-	OPERANDMEM_RELATIVE=0b11, // Const+Var
+	OPERANDMEM_ABSOLUTE, // Const
+	OPERANDMEM_RELATIVE, // sp+Const
 };
 
 enum operand_state_t
@@ -157,16 +153,16 @@ class OperandMem : public Operand
 {	
 public:
 	OperandMem(const OperandMem& opd);
-	OperandMem(const OperandConst& opdc);
-	OperandMem(const OperandVar& opdv);
-	OperandMem(const OperandVar& opdv, const OperandConst& opdc);
+	OperandMem(const OperandConst& opdc, bool relative = false); // relative to true means the memory is relative to the stack pointer
+	//OperandMem(const OperandVar& opdv);
+	//OperandMem(const OperandVar& opdv, const OperandConst& opdc);
 	OperandMem(); // for use in Option
 	
-	inline operandmem_kind_t memkind() const { return _kind; }
-	inline bool hasConst() const { return _kind & OPERANDMEMFLAG_HASCONST; }
-	inline bool hasVar()   const { return _kind & OPERANDMEMFLAG_HASVAR;   }
-	inline const OperandConst& getConst() const { assert(hasConst() && _opdc); return *_opdc; }
-	inline const OperandVar&   getVar()   const { assert(hasVar()   && _opdv); return *_opdv; }
+	inline bool isRelative() const { return _kind == OPERANDMEM_ABSOLUTE; }
+	inline bool isAbsolute() const { return _kind == OPERANDMEM_RELATIVE; }
+	// inline bool hasConst() const { return _kind & OPERANDMEMFLAG_HASCONST; }
+	// inline bool hasVar()   const { return _kind & OPERANDMEMFLAG_HASVAR;   }
+	inline const OperandConst& getConst() const { assert(_opdc); return *_opdc; }
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
@@ -177,7 +173,7 @@ public:
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
-	inline bool isComplete() const { return !hasVar() || _opdv->isComplete(); }
+	inline bool isComplete() const { return true; }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_MEM; }
 	
@@ -186,7 +182,7 @@ public:
 	
 private:
 	OperandConst* _opdc;
-	OperandVar*   _opdv;
+	// OperandVar*   _opdv;
 	operandmem_kind_t _kind;
 	io::Output& print(io::Output& out) const;
 };

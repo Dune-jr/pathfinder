@@ -91,13 +91,13 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					invalidateVar(reg);
 					make_pred = true;
 					opd1 = new OperandVar(reg);
-					opd2 = new OperandMem(OperandVar(addr));
+					opd2 = new OperandMem(OperandVar(addr)); // TODO!!!
 					break;
 				case STORE:	// MEM_type(addr) <- reg
 					invalidateMem(addr);
-					make_pred = true;
-					opd1 = new OperandMem(OperandVar(addr));
+					opd1 = new OperandMem(OperandVar(addr)); // TODO!!!
 					opd2 = new OperandVar(reg);
+					make_pred = true;
 					break;
 				case SCRATCH:
 					invalidateVar(d);
@@ -215,7 +215,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						// b is usually a tempvar that has been previously set to a constant value
 						if(!findConstantValueOfTempVar(b, val))
 						{
-							DBG(COLOR_Blu << "  [" << OperandVar(b) << " could not be identified as a constant value]")
+							DBG(COLOR_Blu << "  [" << OperandVar(b) << " could not be identified to a constant value]")
 							invalidateVar(d); // only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
 							break;
 						}

@@ -25,9 +25,9 @@ Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o)
 //
 Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, const Expr& expr_addr)
 {
-	if(o.hasConst())
+	const t::int32 addr = o.getConst().value();
+	if(o.isAbsolute())
 	{	// case: absolute addr
-		const t::int32 addr = o.getConst().value();
 		if(Option<Expr> opt_expr = memmap_absolute.get(addr))
 			return *opt_expr; // already in the stack
 		else
@@ -39,13 +39,7 @@ Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, cons
 		}
 	}
 	else
-	{	// case: relative or variable (no const) addr
-		relative_address addr;
-		if(o.hasConst())
-			addr.constant = o.getConst().value();
-		else
-			addr.constant = 0;
-		addr.variable = o.getVar().addr();
+	{	// case: relative addr
 		if(Option<Expr> opt_expr = memmap_relative.get(addr))
 			return *opt_expr; // already in the stack
 		else
@@ -57,11 +51,3 @@ Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, cons
 		}
 	}
 }
-
-// bool VariableStack::operator>(relative_address x, relative_address y)
-// {
-// 	// arbitrary order: variables come first
-// 	if(x.variable == y.variable)
-// 		return x.constant > y.constant;
-// 	return x.variable > y.variable;
-// }
