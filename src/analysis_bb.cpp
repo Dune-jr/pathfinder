@@ -89,15 +89,32 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					break;
 				case LOAD: // reg <- MEM_type(addr)
 					invalidateVar(reg);
-					make_pred = true;
-					opd1 = new OperandVar(reg);
-					opd2 = new OperandMem(OperandVar(addr)); // TODO!!!
+					if(Option<OperandMem> addr_mem = getOperandMem(addr))
+					{
+						make_pred = true;
+						opd1 = new OperandVar(reg);
+						opd2 = new OperandMem(*addr_mem);
+					}
+					else
+					{
+						OperandVar addr_var = OperandVar(addr);
+						DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_IYel	"Could not simplify " << addr_var)
+					}
 					break;
 				case STORE:	// MEM_type(addr) <- reg
-					invalidateMem(addr);
-					opd1 = new OperandMem(OperandVar(addr)); // TODO!!!
-					opd2 = new OperandVar(reg);
-					make_pred = true;
+					if(Option<OperandMem> addr_mem = getOperandMem(addr))
+					{
+						invalidateMem(*addr_mem);
+						make_pred = true;
+						opd1 = new OperandMem(*addr_mem);
+						opd2 = new OperandVar(reg);
+					}
+					else
+					{
+						OperandVar addr_var = OperandVar(addr);
+						DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_IYel "Could not simplify " << addr_var << ", invalidating whole memory")
+						invalidateAllMemory();
+					}
 					break;
 				case SCRATCH:
 					invalidateVar(d);
@@ -169,10 +186,9 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case SUB:
 					opd1 = new OperandVar(d);
 					{
-						bool d_eq_a = d == a, d_eq_b = d == b;
-						if(d_eq_a)
+						if(d == a)
 						{
-							if(d_eq_b) // d <- d-d
+							if(d == b) // d <- d-d
 							{	// [0 / d], d is set to 0!
 								invalidateVar(d);
 								opd1 = new OperandVar(d);
@@ -185,7 +201,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						}
 						else
 						{
-							if(d_eq_b) // d <- a-d
+							if(d == b) // d <- a-d
 							{	// [a-d / d], this function f has a f°f=Id property
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(a), OperandVar(d)));
 							}
@@ -213,7 +229,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						Operand *opd21 = new OperandVar(a);
 						t::int32 val;
 						// b is usually a tempvar that has been previously set to a constant value
-						if(!findConstantValueOfTempVar(b, val))
+						if(!findConstantValueOfVar(b, val))
 						{
 							DBG(COLOR_Blu << "  [" << OperandVar(b) << " could not be identified to a constant value]")
 							invalidateVar(d); // only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
@@ -252,7 +268,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						Operand *opd21 = new OperandVar(a);
 						t::int32 val;
 						// b is usually a tempvar that has been previously set to a constant value
-						if(!findConstantValueOfTempVar(b, val))
+						if(!findConstantValueOfVar(b, val))
 						{
 							DBG(COLOR_Blu << "  [" << OperandVar(b) << " could not be identified as a constant value]")
 							invalidateVar(d);
@@ -487,14 +503,18 @@ bool Analysis::invalidateVar(const OperandVar& var)
 
 bool Analysis::invalidateMem(const OperandVar& var)
 {
-	Option<OperandMem> addr = findAddressOfVar(var);
+	Option<OperandMem> addr = getOperandMem(var);
 	if(!addr)
 	{
-		DBG(COLOR_IPur " " COLOR_IYel " Identification of " << var << " failed, invalidating whole memory")
+		DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_IYel "Could not simplify " << var << ", invalidating whole memory")
 		invalidateAllMemory();
 		return true;
 	}
+	invalidateMem(*addr);
+}
 
+bool Analysis::invalidateMem(const OperandMem& addr)
+{
 	bool rtn = false;
 	// Invalidate predicates that have already been labelled
 	SLList<LabelledPredicate> top_list = getTopList();
@@ -674,31 +694,80 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 }
 
 /**
- * @fn bool Analysis::findConstantValueOfTempVar(const OperandVar& var, OperandConst& val);
- * For a temporary variable tX, try to find a predicate tX=cst, and return cst when it finds it.
+ * @fn bool Analysis::findConstantValueOfVar(const OperandVar& var, OperandConst& val);
+ * For a variable tX or ?X, try to find a predicate tX=cst or ?X=cst, and return cst when successful.
+ * If the variable is a tempvar (tX), does not browse predicates that have not been generated in the current BB
  * @return true if a value was found
  */
-bool Analysis::findConstantValueOfTempVar(const OperandVar& var, t::int32& val)
+// TODO: I think it is reasonable not to browse previously generated predicates that have been updated, is it really OK?
+// TODO: elaborate with recursive calls to find things like t1 = t2, t2 = 4 or t1 = 3 + t2 and t2 = 1, as described below
+// TODO: change this to Option<OperandConst> Analysis::findConstantValueOfVar(const OperandVar& var)
+bool Analysis::findConstantValueOfVar(const OperandVar& var, t::int32& val)
 {
+	/* TODO! things to do here... separate kinds:
+	*  OperandConst or OperandMem : nothing to do
+	*  OperandArith or OperandVar : recursive call to findConstantValueOfVar with an exclusion list to avoid infinite loops
+	*  complexity issues! :(
+	*  split these in two functions : let this one as is and create a findConstantValueOfVarRecursively
+	*  if this (simpler) first function fails, call the second one
+	*  that does not improve worst-case scenario complexity but avoids worst case scanrios a lot
+	*/
 	for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++)
 	{
 		if((*iter).opr() == CONDOPR_EQ) // operator is =
 		{
-			if((*iter).leftOperand() == var) // left operand matches our tempvar
-				if((*iter).rightOperand().kind() == OPERAND_CONST) // other operand is const (maybe we could eval arithoprs too)
+			if((*iter).leftOperand() == var) // left operand matches our var
+				if(Option<OperandConst> maybe_val = (*iter).rightOperand().evalConstantOperand()) // other operand can be evald to const
 				{
-					val = ((OperandConst&)(*iter).rightOperand()).value();
+					// val = ((OperandConst&)(*iter).rightOperand()).value();
+					val = (*maybe_val).value();
 					return true;
 				}
 				
-			if((*iter).rightOperand() == var) // right operand matches our tempvar
-				if((*iter).leftOperand().kind() == OPERAND_CONST) // other operand is const
+			if((*iter).rightOperand() == var) // right operand matches our var
+				if(Option<OperandConst> maybe_val = (*iter).leftOperand().evalConstantOperand()) // other operand can be evald to const
 				{
-					val = ((OperandConst&)(*iter).leftOperand()).value();
+					// val = ((OperandConst&)(*iter).leftOperand()).value();
+					val = (*maybe_val).value();
 					return true;
 				}
 		}
 	}
+	if(!var.isTempVar()) // we need to parse previously generated preds as well
+	{
+		SLList<LabelledPredicate> top_list = getTopList();
+		for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; iter++)
+		{
+			if((*iter).pred().opr() == CONDOPR_EQ) // operator is =
+			{
+				if((*iter).pred().leftOperand() == var) // left operand matches our var
+					if(Option<OperandConst> maybe_val = (*iter).pred().rightOperand().evalConstantOperand()) // other operand can be evald to const
+					{
+						// val = ((OperandConst&)(*iter).rightOperand()).value();
+						val = (*maybe_val).value();
+						return true;
+					}
+					
+				if((*iter).pred().rightOperand() == var) // right operand matches our var
+					if(Option<OperandConst> maybe_val = (*iter).pred().leftOperand().evalConstantOperand()) // other operand can be evald to const
+					{
+						// val = ((OperandConst&)(*iter).leftOperand()).value();
+						val = (*maybe_val).value();
+						return true;
+					}
+			}
+		}
+	}
+	return false; // No matches found
+}
+/**
+ * @fn bool Analysis::findStackRelativeValueOfVar(const OperandVar& var, OperandConst& val);
+ * For a variable tX or ?X, try to find a predicate tX=sp+cst or ?X=sp+cst, and return cst when successful.
+ * @return true if a value was found
+ */
+// TODO!!! implement
+bool Analysis::findStackRelativeValueOfVar(const OperandVar& var, t::int32& val)
+{
 	return false; // No matches found
 }
 /**
@@ -744,11 +813,16 @@ bool Analysis::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Ope
 	}
 	return false; // No matches found
 }
-
-Option<OperandMem> Analysis::findAddressOfVar(const OperandVar& var)
+Option<OperandMem> Analysis::getOperandMem(const OperandVar& var)
 {
-	return none; // TODO!!!
+	t::int32 val;
+	if(findConstantValueOfVar(var, val))
+		return some(OperandMem(OperandConst(val)));
+	if(findStackRelativeValueOfVar(var, val))
+		return some(OperandMem(OperandConst(val), true));
+	return none;
 }
+
 
 void Analysis::invalidateAllMemory()
 {

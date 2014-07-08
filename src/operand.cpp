@@ -32,8 +32,7 @@ bool OperandConst::involvesVariable(const OperandVar& opdv) const { return false
 bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 bool OperandConst::involvesMemory() const { return false; }
 operand_state_t OperandConst::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
-Option<OperandConst> OperandConst::
-evalConstantOperand() const { return some(*this); }
+Option<OperandConst> OperandConst::evalConstantOperand() const { return some(*this); }
 Option<Operand*> OperandConst::simplify() { return none; }
 
 

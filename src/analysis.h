@@ -41,7 +41,7 @@ public:
 	};
 	
 private:
-	int sp; // id of the Stack Pointer register
+	OperandVar sp; // the Stack Pointer register
 	SLList<Predicate> generated_preds;
 	SLList<Predicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here
 											 // and the not taken preds will stay in generated_preds
@@ -71,14 +71,16 @@ private:
 	void analyzeBB(const BasicBlock *bb);
 	bool invalidateVar(const OperandVar& var);
 	inline bool invalidateVar(const t::int32& addr) { return invalidateVar(OperandVar(addr)); }
+	bool invalidateMem(const OperandMem& addr);
 	bool invalidateMem(const OperandVar& var);
 	inline bool invalidateMem(const t::int32& addr) { return invalidateMem(OperandVar(addr)); }
 	bool invalidateTempVars();
-	bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);
-	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
-	bool findConstantValueOfTempVar(const OperandVar& var, t::int32& val);
-	bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
-	Option<OperandMem> findAddressOfVar(const OperandVar& var);
+	bool replaceTempVar				 (const OperandVar& temp_var, const Operand& expr);
+	bool update 					 (const OperandVar& opd_to_update, const Operand& opd_modifier);
+	bool findConstantValueOfVar		 (const OperandVar& var, t::int32& val);
+	bool findStackRelativeValueOfVar (const OperandVar& var, t::int32& val);
+	bool findValueOfCompVar			 (const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
+	Option<OperandMem> getOperandMem (const OperandVar& var);
 	void invalidateAllMemory();
 	Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken);
 };
