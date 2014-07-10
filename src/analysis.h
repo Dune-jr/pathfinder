@@ -23,7 +23,7 @@ template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l);
 
 class Analysis {
 public:
-	Analysis(CFG *cfg, int sp_id);
+	Analysis(CFG *cfg, int sp_id, unsigned int max_tempvars, unsigned int max_registers);
 	
 	typedef SLList<const Edge*> Path;
 	
@@ -39,12 +39,53 @@ public:
 		inline const SLList<const Edge*>& labels() const { return _labels; };
 		friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lp) { return lp.print(out); }
 	};
+
+	class ConstantVariables {
+	private:
+		Option<t::int32>* tempvars;
+		Option<t::int32>* registers;
+		unsigned int _max_tempvars;
+		unsigned int _max_registers;
+
+		Option<t::int32>& getCell(const OperandVar& opdv) const;
+		io::Output& print(io::Output& out) const;
+
+	public:
+		ConstantVariables(unsigned int max_tempvars, unsigned int max_registers);
+		ConstantVariables(const ConstantVariables& cv);
+		// ~ConstantVariables(); // TODO
+		inline unsigned int maxTempVars() const { return _max_tempvars; }
+		inline unsigned int maxRegisters() const { return _max_registers; }
+			   bool isConstant(const OperandVar& opdv) const;
+		inline bool isConstant(t::int32 var_id) const { return isConstant(OperandVar(var_id)); }
+			   t::int32 getValue(const OperandVar& opdv) const; // this must not be called if !isConstant(opdv)...
+		inline t::int32 getValue(t::int32 var_id) const { return getValue(OperandVar(var_id)); }
+			   void set(const OperandVar& opdv, t::int32 val);
+		inline void set(const t::int32 var_id, OperandConst opdc) { set(OperandVar(var_id), opdc.value()); }
+		inline void set(const t::int32 var_id, t::int32 val) { set(OperandVar(var_id), val); }
+		inline void set(const OperandVar& opdv, OperandConst opdc) { set(opdv, opdc.value()); }
+			   void invalidate(const OperandVar& opdv);
+		inline void invalidate(t::int32 var_id) { invalidate(OperandVar(var_id)); }
+		void invalidateTempVars();
+		inline t::int32 operator[](const OperandVar& opdv) const { return getValue(opdv); }
+		inline t::int32 operator[](t::int32 var_id) const { return getValue(var_id); }
+		ConstantVariables& operator=(const ConstantVariables& cv);
+		friend io::Output& operator<<(io::Output& out, const ConstantVariables& cv) { return cv.print(out); }
+	};
+
+	enum
+	{
+		KEEP_CONSTANT_INFO = false,
+		INVALIDATE_CONSTANT_INFO = true,
+	};
 	
 private:
 	OperandVar sp; // the Stack Pointer register
+	ConstantVariables constants; // Remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
+
 	SLList<Predicate> generated_preds;
-	SLList<Predicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here
-											 // and the not taken preds will stay in generated_preds
+	SLList<Predicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
+	
 	// The actual struct
 	SLList<Path>						infeasible_paths;
 	SLList<SLList<LabelledPredicate> >	labelled_preds;
@@ -69,20 +110,23 @@ private:
 	
 	// analysis_bb.cpp
 	void analyzeBB(const BasicBlock *bb);
-	bool invalidateVar(const OperandVar& var);
-	inline bool invalidateVar(const t::int32& addr) { return invalidateVar(OperandVar(addr)); }
+	bool invalidateVar(const OperandVar& var, bool invalidate_constant_info = true);
+	inline bool invalidateVar(const t::int32& addr, bool invalidate_constant_info = true) { return invalidateVar(OperandVar(addr), invalidate_constant_info); }
 	bool invalidateMem(const OperandMem& addr);
 	bool invalidateMem(const OperandVar& var);
 	inline bool invalidateMem(const t::int32& addr) { return invalidateMem(OperandVar(addr)); }
 	bool invalidateTempVars();
 	bool replaceTempVar				 (const OperandVar& temp_var, const Operand& expr);
 	bool update 					 (const OperandVar& opd_to_update, const Operand& opd_modifier);
-	bool findConstantValueOfVar		 (const OperandVar& var, t::int32& val);
+	bool findConstantValueOfVar		 (const OperandVar& var, t::int32& val); // changed to a simple lookup to "constants"
+	bool findConstantValueOfVar_old	 (const OperandVar& var, t::int32& val); // old version may be better?... think about a case where t1 is sp + 4 + 2 + 6
 	bool findStackRelativeValueOfVar (const OperandVar& var, t::int32& val);
 	bool findValueOfCompVar			 (const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
 	Option<OperandMem> getOperandMem (const OperandVar& var);
 	void invalidateAllMemory();
 	Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken);
+	inline bool isConstant(t::int32 var_id) const { return constants.isConstant(var_id); }
+	inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 };
 
 template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l)

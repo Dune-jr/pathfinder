@@ -167,7 +167,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 					{
 						_kind = OPERANDMEM_VARIABLE;
 						_opdc = NULL;
-						_opdv = new OperandVar(o); // TODO! is this the right move? I don't think so, we'll have to check whether it is sp!
+						_opdv = new OperandVar(o);
 						return OPERANDSTATE_UPDATED;
 					}
 				}

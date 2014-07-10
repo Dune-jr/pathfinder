@@ -30,8 +30,11 @@ protected:
         const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
 		assert(cfgs->count() > 0); // make sure we have at least one CFG
 		CFG *cfg = cfgs->get(0); // then get the first CFG
+		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
+		int max_registers = workspace()->platform()->regCount(); // retrieve the count of registers
+		int max_tempvars = 10; // TODO!!!
 	
-		Analysis analysis = Analysis(cfg, workspace()->platform()->getSP()->number());
+		Analysis analysis = Analysis(cfg, sp_id, max_tempvars, max_registers);
 		// testSimplify();
 	}
 };

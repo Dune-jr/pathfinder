@@ -71,6 +71,7 @@ void Analysis::processBB(BasicBlock* bb)
 	SLList<Predicate> generated_preds_backup	   = generated_preds;
 	SLList<Predicate> generated_preds_taken_backup = generated_preds_taken;
 	SLList<LabelledPredicate> top_list_backup	   = getTopList();
+	ConstantVariables constants_backup(constants);
 	
 	int edgeId = 0;
 	for(BasicBlock::OutIterator outs(bb); outs; outs++)
@@ -88,7 +89,10 @@ void Analysis::processBB(BasicBlock* bb)
 			SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(relevant_preds, *outs);
 			
 			if(edgeId++) // if this is not the first valid edge
+			{
 				labelled_preds += top_list_backup; // copy the predicates we have generated until this node into a new list
+				constants = constants_backup; // also reset the constants
+			}
 			
 			addElemToTopList(labelled_analysis_result);
 			processEdge(*outs);
