@@ -80,22 +80,25 @@ t::int32 Analysis::ConstantVariables::getValue(const OperandVar& opdv) const
 void Analysis::ConstantVariables::set(const OperandVar& opdv, t::int32 val)
 {
 	Option<t::int32>& k = getCell(opdv);
+	invalidate(opdv);
+	DBG(COLOR_IPur DBG_SEPARATOR COLOR_IGre " + " << opdv << "==" << OperandConst(val))
 	k = some(val);
-	DBG(COLOR_IGre << *this << COLOR_BIGre " +" << opdv << "=" << val)
 }
 
 void Analysis::ConstantVariables::invalidate(const OperandVar& opdv)
 {
 	Option<t::int32>& k = getCell(opdv);
+	if(!k.isOne())
+		return; // nothing to do
+	DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << opdv << "==" << OperandConst(k.value()))
 	k = none;
-	DBG(COLOR_IRed << *this << COLOR_BIRed " -" << opdv)
 }
 
 void Analysis::ConstantVariables::invalidateTempVars()
 {
 	for(int i = 0; i < _max_tempvars; i++)
 		tempvars[i] = none;
-	DBG(COLOR_IRed << *this << COLOR_BIRed " -tempvars")
+	// DBG(COLOR_IRed << *this << COLOR_BIRed " -tempvars")
 }
 
 io::Output& Analysis::ConstantVariables::print(io::Output& out) const

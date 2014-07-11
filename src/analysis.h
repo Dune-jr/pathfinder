@@ -116,16 +116,16 @@ private:
 	bool invalidateMem(const OperandVar& var);
 	inline bool invalidateMem(const t::int32& addr) { return invalidateMem(OperandVar(addr)); }
 	bool invalidateTempVars();
-	bool replaceTempVar				 (const OperandVar& temp_var, const Operand& expr);
-	bool update 					 (const OperandVar& opd_to_update, const Operand& opd_modifier);
-	bool findConstantValueOfVar		 (const OperandVar& var, t::int32& val); // changed to a simple lookup to "constants"
-	bool findConstantValueOfVar_old	 (const OperandVar& var, t::int32& val); // old version may be better?... think about a case where t1 is sp + 4 + 2 + 6
-	bool findStackRelativeValueOfVar (const OperandVar& var, t::int32& val);
-	bool findValueOfCompVar			 (const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
-	Option<OperandMem> getOperandMem (const OperandVar& var);
+	bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);
+	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
+	Option<t::int32> findConstantValueOfVar(const OperandVar& var); // changed to a simple lookup to "constants"
+	bool findConstantValueOfVar_old(const OperandVar& var, t::int32& val); // old version may be better?... think about a case where t1 is sp + 4 + 2 + 6
+	Option<t::int32> findStackRelativeValueOfVar(const OperandVar& var);
+	bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
+	Option<OperandMem> getOperandMem(const OperandVar& var);
 	void invalidateAllMemory();
 	Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken);
-	inline bool isConstant(t::int32 var_id) const { return constants.isConstant(var_id); }
+	inline bool isConstant(t::int32 var_id)		  const { return constants.isConstant(var_id); }
 	inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 };
 

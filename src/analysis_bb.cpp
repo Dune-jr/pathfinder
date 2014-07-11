@@ -123,15 +123,18 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					invalidateVar(d);
 					opd1 = new OperandVar(d);
 					opd2 = new OperandVar(a);
-					make_pred = true; // d = a
 					if(isConstant(a)) // if a is already identified as a constant
 						constants.set(d, constants[a]); // then constants[d] = constants[a]
+					// else // no use generating this predicate if it is a constant, because the ConstantVariables object handles that
+						make_pred = true; // d = a
 					break;
 				case SETI:
 					invalidateVar(d);
+					//* // everything should already be handled by the ConstantVariables object
 					opd1 = new OperandVar(d);
 					opd2 = new OperandConst(cst);
 					make_pred = true; // d = cst
+					//*/
 					constants.set(d, cst); // constants[d] = cst
 					break;
 				case SETP:
@@ -268,39 +271,37 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						}
 
 						Operand *opd21 = new OperandVar(a);
-						t::int32 b_val;
+						Option<t::int32> b_val;
 						// b is usually a tempvar that has been previously set to a constant value
-						if(!findConstantValueOfVar(b, b_val))
+						if(!(b_val = findConstantValueOfVar(b)))
 						{
 							DBG(COLOR_Blu << "  [" << OperandVar(b) << " could not be identified to a constant value]")
 							invalidateVar(d); // only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
 							break;
 						}
-						DBG(COLOR_Blu << "  [" << OperandVar(b) << " identified as 0x" << io::hex(b_val) << "]")
+						DBG(COLOR_Blu << "  [" << OperandVar(b) << " identified as 0x" << io::hex(*b_val) << "]")
 						if(d == a) // d <- d << b
 						{
 							assert(!UNTESTED_CRITICAL);
 							DBG(COLOR_BIRed << "Untested case of operator SHL running!")
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << b_val)));
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << *b_val)));
 							// we also add a predicate to say that d is now a multiple of 2^b
 							make_pred = true;
-							{
-								Operand *opd11 = new OperandVar(d);
-								Operand *opd12 = new OperandConst(1 << b_val);
-								opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
-							}
+							Operand *opd11 = new OperandVar(d);
+							Operand *opd12 = new OperandConst(1 << *b_val);
+							opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
 							opd2 = new OperandConst(0);
 							if(isConstant(d)) // we must update constant value of d
-								constants.set(d, constants[d] << b_val);
+								constants.set(d, constants[d] << *b_val);
 						}
 						else // d <- a << b
 						{
 							invalidateVar(d);
 							make_pred = true;
-							Operand *opd22 = new OperandConst(1 << b_val); // 2^b_val
+							Operand *opd22 = new OperandConst(1 << *b_val); // 2^b_val
 							opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);							
 							if(isConstant(a))
-								constants.set(d, constants[a] << b_val);
+								constants.set(d, constants[a] << *b_val);
 						}
 					}
 					break;
@@ -310,22 +311,22 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case SHR:
 					opd1 = new OperandVar(d);
 					{
-						t::int32 b_val;
+						Option<t::int32> b_val;
 						// b is usually a tempvar that has been previously set to a constant value
-						if(!findConstantValueOfVar(b, b_val))
+						if(!(b_val = findConstantValueOfVar(b)))
 						{
 							DBG(COLOR_Blu << "  [" << OperandVar(b) << " could not be identified as a constant value]")
 							invalidateVar(d);
 							break;
 						}
-						DBG(COLOR_Blu << "  [" << OperandVar(b) << " identified as 0x" << io::hex(b_val) << "]")
+						DBG(COLOR_Blu << "  [" << OperandVar(b) << " identified as 0x" << io::hex(*b_val) << "]")
 						invalidateVar(d);
 						if(d == a) // d <- d >> b
 							break; // not much we can do because we lost info (cf (*))
 						// d <- a >> b
 						make_pred = true;
 						Operand *opd21 = new OperandVar(a);
-						Operand *opd22 = new OperandConst(1 << b_val); // 2^b_val
+						Operand *opd22 = new OperandConst(1 << *b_val); // 2^b_val
 						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
 						if(isConstant(a))
 							constants.set(d, constants[a] >> constants[b]);
@@ -717,7 +718,17 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 // second operand is usually an OperandArithExpr
 bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifier)
 {
-	DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " [" << opd_modifier << " / " << opd_to_update << "]")
+	Operand* opd_modifier_new = opd_modifier.copy();
+	// replace constants
+
+	// amongst other things this can simplify constant arithopr such as 8+(4-2)
+	if(Option<Operand*> opd_modifier_new_simplified = opd_modifier_new->simplify())
+	{
+		DBG(COLOR_Pur DBG_SEPARATOR COLOR_Blu " Simplified " << *opd_modifier_new << " to " << **opd_modifier_new_simplified)
+		opd_modifier_new = *opd_modifier_new_simplified;
+	}
+
+	DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " [" << *opd_modifier_new << " / " << opd_to_update << "]")
 	bool rtn = false;
 	
 	// Update predicates that have already been labelled
@@ -730,7 +741,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 			
 			// updating the predicate
 			Predicate p = (*iter).pred();
-			operand_state_t state = p.updateVar(opd_to_update, opd_modifier);
+			operand_state_t state = p.updateVar(opd_to_update, *opd_modifier_new);
 			assert(state != OPERANDSTATE_UNCHANGED);
 			if(state == OPERANDSTATE_UPDATED) // making sure something is updated
 			{
@@ -758,7 +769,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 			// updating the predicate
 			Predicate p = *iter;
 			DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya " - " << *iter)
-			operand_state_t state = p.updateVar(opd_to_update, opd_modifier);
+			operand_state_t state = p.updateVar(opd_to_update, *opd_modifier_new);
 			assert(state != OPERANDSTATE_UNCHANGED);
 			if(state == OPERANDSTATE_UPDATED) // making sure something is updated
 			{
@@ -785,12 +796,11 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
  * @return true if a value was found
  */
 // TODO: change this to Option<OperandConst> Analysis::findConstantValueOfVar(const OperandVar& var)
-bool Analysis::findConstantValueOfVar(const OperandVar& var, t::int32& val)
+Option<t::int32> Analysis::findConstantValueOfVar(const OperandVar& var)
 {
 	if(!isConstant(var))
-		return false;
-	val = constants[var];
-	return true;
+		return none;
+	return some(constants[var]);
 }
 
 // TODO: I think it is reasonable not to browse previously generated predicates that have been updated, is it really OK?
@@ -863,9 +873,9 @@ bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
 //		then we get something like ?0 - sp = t2 + 4,
 //		where ?0 and t2 are constant values
 //		and good luck with that!
-bool Analysis::findStackRelativeValueOfVar(const OperandVar& var, t::int32& val)
+Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 {
-	return false; // No matches found
+	return none; // No matches found
 }
 /**
  * @fn bool Analysis::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
@@ -912,11 +922,11 @@ bool Analysis::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Ope
 }
 Option<OperandMem> Analysis::getOperandMem(const OperandVar& var)
 {
-	t::int32 val;
-	if(findConstantValueOfVar(var, val))
-		return some(OperandMem(OperandConst(val)));
-	if(findStackRelativeValueOfVar(var, val))
-		return some(OperandMem(OperandConst(val), true));
+	Option<t::int32> val;
+	if(val = findConstantValueOfVar(var))
+		return some(OperandMem(OperandConst(*val)));
+	if(val = findStackRelativeValueOfVar(var))
+		return some(OperandMem(OperandConst(*val), true));
 	return none;
 }
 

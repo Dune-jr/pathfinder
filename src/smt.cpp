@@ -73,9 +73,8 @@ SLList<Analysis::Path> SMT::getAllInfeasiblePaths(const SLList<Analysis::Labelle
 		return path_list;
 	}
 	labelled_preds_truncated.remove(iter);
-	// TODO comment this
-	DBG(COLOR_Whi << "LPs: " << labelled_preds)
-	DBG(COLOR_Whi << "LPs_truncated: " << labelled_preds_truncated)
+	// DBG(COLOR_Whi << "LPs: " << labelled_preds)
+	// DBG(COLOR_Whi << "LPs_truncated: " << labelled_preds_truncated)
 
 	if(checkPredSat(labelled_preds_truncated))
 	{	// SAT: keep predicate in list

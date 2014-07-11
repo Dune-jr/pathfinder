@@ -211,7 +211,7 @@ public:
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
-	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && opd2->isComplete(); }
+	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	

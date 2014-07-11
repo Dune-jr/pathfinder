@@ -420,7 +420,7 @@ Option<OperandConst> OperandArithExpr::evalConstantOperand() const
 // Warning: Option=none does not warrant that nothing has been simplified!
 Option<Operand*> OperandArithExpr::simplify()
 {
-	// before anything, test whether we are constant
+	// before anything, test our groudness
 	if(Option<OperandConst> val = evalConstantOperand())
 	{
 		return some((Operand*)((*val).copy()));
