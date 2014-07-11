@@ -873,6 +873,7 @@ bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
 //		then we get something like ?0 - sp = t2 + 4,
 //		where ?0 and t2 are constant values
 //		and good luck with that!
+//		and we need to label all the edge dependencies...
 Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 {
 	return none; // No matches found

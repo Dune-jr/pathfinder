@@ -32,7 +32,7 @@ protected:
 		CFG *cfg = cfgs->get(0); // then get the first CFG
 		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
 		int max_registers = workspace()->platform()->regCount(); // retrieve the count of registers
-		int max_tempvars = 10; // TODO!!!
+		int max_tempvars = workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
 	
 		Analysis analysis = Analysis(cfg, sp_id, max_tempvars, max_registers);
 		// testSimplify();
