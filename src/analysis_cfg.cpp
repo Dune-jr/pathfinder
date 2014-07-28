@@ -6,6 +6,7 @@
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include <otawa/cfg/BasicBlock.h>
+#include <otawa/cfg/features.h>
 
 #include "analysis.h"
 #include "smt.h"
@@ -16,6 +17,8 @@ using namespace elm::io;
 
 void Analysis::initializeAnalysis()
 {	// labelled_preds := [[]]
+	generated_preds.clear();
+	labelled_preds.clear();
 	labelled_preds += null<LabelledPredicate>(); // add an empty list as first element
 }
 
@@ -56,7 +59,7 @@ void Analysis::processBB(BasicBlock* bb)
 	// SMT call
 	// TODO: this should be put at a smarter place
 	SMT smt;
-	if(Option<SLList<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(getTopList()))
+	if(Option<SLList<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(labelled_preds.first()))
 	{
 		infeasible_paths += *maybe_infeasible_paths;
 		DBG(COLOR_BIYel "Current path identified as infeasible, stopping analysis")
@@ -70,7 +73,7 @@ void Analysis::processBB(BasicBlock* bb)
 	// these will be overwritten by further analysis, so back them up
 	SLList<Predicate> generated_preds_backup	   = generated_preds;
 	SLList<Predicate> generated_preds_taken_backup = generated_preds_taken;
-	SLList<LabelledPredicate> top_list_backup	   = getTopList();
+	SLList<LabelledPredicate> top_list_backup	   = labelled_preds.first();
 	ConstantVariables constants_backup(constants);
 	
 	int edgeId = 0;
@@ -94,7 +97,11 @@ void Analysis::processBB(BasicBlock* bb)
 				constants = constants_backup; // also reset the constants
 			}
 			
-			addElemToTopList(labelled_analysis_result);
+			// Add result to topList
+			SLList<LabelledPredicate> topList = labelled_preds.first();
+			topList += labelled_analysis_result;
+			labelled_preds.removeFirst();
+			labelled_preds.addFirst(topList);
 			processEdge(*outs);
 		}
 	}
@@ -103,6 +110,7 @@ void Analysis::processBB(BasicBlock* bb)
 void Analysis::processEdge(const Edge* edge)
 {
 	BasicBlock* target = edge->target();
+	// DBG(COLOR_Whi << "Processing Edge: " << edge->source()->number() << "->" << (*subiter)->target()->number());)	
 	DBG(COLOR_Whi << "Processing Edge: " << edge)	
 	// DBG("State of the analysis: " << labelled_preds)	
 	processBB(target);

@@ -99,7 +99,7 @@ OperandMem::OperandMem(const OperandMem& opd)
 	else
 		_kind = OPERANDMEM_ABSOLUTE;
 }
-OperandMem::OperandMem() : _kind(OPERANDMEM_ABSOLUTE), _opdc(NULL) { }
+OperandMem::OperandMem() : _opdc(NULL), _kind(OPERANDMEM_ABSOLUTE) { }
 Operand* OperandMem::copy() const
 {
 	if(isRelative())
@@ -464,6 +464,8 @@ Option<Operand*> OperandArithExpr::simplify()
 			break;
 		case ARITHOPR_CMP:
 			return none;
+		default:
+			ASSERT(false); // unary operators should have been handled earlier
 	}
 	// additional tests
 	// TODO: test [x + y / x - -y] and vice-versa
@@ -491,6 +493,8 @@ Option<Operand*> OperandArithExpr::simplify()
 			break;
 		case ARITHOPR_CMP:
 			return none;
+		default:
+			ASSERT(false); // unary operators should have been handled earlier
 	}
 	return none;
 }

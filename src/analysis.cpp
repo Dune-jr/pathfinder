@@ -6,17 +6,23 @@ void addIndents(io::Output& out, int n) { for(int i=0; i<n; i++) out << "\t"; }
 Analysis::Analysis(CFG *cfg, int sp_id, unsigned int max_tempvars, unsigned int max_registers)
 	: sp(sp_id), constants(max_tempvars, max_registers)
 {
-	DBG("Stack pointer identified to " << sp)
+	DBG("Stack pointer identified to " << sp)	
 	initializeAnalysis();
 	processCFG(cfg);
 }
 
 // LabelledPredicate
-Analysis::LabelledPredicate::LabelledPredicate(const Predicate& pred, SLList<const Edge*> labels)
+Analysis::LabelledPredicate::LabelledPredicate(const Predicate& pred, const SLList<const Edge*>& labels)
 	: _pred(pred), _labels(labels) { }
+
+Analysis::LabelledPredicate::LabelledPredicate(const LabelledPredicate& lp)
+	: _pred(lp._pred), _labels(lp._labels) { }
 	
 io::Output& Analysis::LabelledPredicate::print(io::Output &out) const
 {
+	if(_labels.isEmpty())
+		return (out << _pred);
+
 	out << "(" << _pred << " | ";
 	bool first_time = true;
 	for(SLList<const Edge*>::Iterator iter(_labels); iter; iter++)
@@ -28,6 +34,27 @@ io::Output& Analysis::LabelledPredicate::print(io::Output &out) const
 		out << (*iter)->source()->number() << "->" << (*iter)->target()->number();
 	}
 	return (out << ")");
+}
+
+void Analysis::setPredicate(PredIterator &iter, const LabelledPredicate &labelled_predicate)
+{
+	ASSERT(!iter.ended());
+	if(iter.state == PredIterator::GENERATED_PREDS)
+		generated_preds.set(iter.gp_iter, labelled_predicate.pred());
+	else if(iter.state == PredIterator::LABELLED_PREDS)
+		labelled_preds.first().set(iter.lp_iter, labelled_predicate);
+	else DBG(COLOR_BIRed "Analysis::removePredicate(): unhandled iter.state!")
+}
+
+void Analysis::removePredicate(PredIterator &iter)
+{
+	ASSERT(!iter.ended());
+	if(iter.state == PredIterator::GENERATED_PREDS)
+		generated_preds.remove(iter.gp_iter);
+	else if(iter.state == PredIterator::LABELLED_PREDS)
+		labelled_preds.first().remove(iter.lp_iter);
+	else DBG(COLOR_BIRed "Analysis::removePredicate(): unhandled iter.state!")
+	iter.updateState();
 }
 
 // ConstantVariables
@@ -51,9 +78,9 @@ Analysis::ConstantVariables& Analysis::ConstantVariables::operator=(const Consta
 	// the two ConstantVariables must have the same size!
 	assert(_max_tempvars == cv.maxTempVars());
 	assert(_max_registers == cv.maxRegisters());
-	for(int i = 0; i < _max_tempvars; i++)
+	for(unsigned int i = 0; i < _max_tempvars; i++)
 		tempvars[i] = cv.tempvars[i];
-	for(int i = 0; i < _max_registers; i++)
+	for(unsigned int i = 0; i < _max_registers; i++)
 		registers[i] = cv.registers[i];
 	return *this;
 }
@@ -96,7 +123,7 @@ void Analysis::ConstantVariables::invalidate(const OperandVar& opdv)
 
 void Analysis::ConstantVariables::invalidateTempVars()
 {
-	for(int i = 0; i < _max_tempvars; i++)
+	for(unsigned int i = 0; i < _max_tempvars; i++)
 		tempvars[i] = none;
 	// DBG(COLOR_IRed << *this << COLOR_BIRed " -tempvars")
 }
@@ -104,36 +131,17 @@ void Analysis::ConstantVariables::invalidateTempVars()
 io::Output& Analysis::ConstantVariables::print(io::Output& out) const
 {
 	out << "[" << endl;
-	for(int i = 0; i < _max_tempvars; i++)
+	for(unsigned int i = 0; i < _max_tempvars; i++)
 	{
 		if(!tempvars[i])
 			continue; // do not print variables we know nothing about
 		out << "\tt" << i+1 << " = " << *(tempvars[i]) << endl;
 	}
-	for(int i = 0; i < _max_registers; i++)
+	for(unsigned int i = 0; i < _max_registers; i++)
 	{
 		if(!registers[i])
 			continue;
 		out << "\t?" << i << " = " << *(registers[i]) << endl;
 	}
-	out << "]";
-}
-
-// topList shortcuts
-void Analysis::addElemToTopList(const SLList<LabelledPredicate>& lps)
-{	
-	SLList<LabelledPredicate> topList = getTopList(); // get topList
-	topList.addAll(lps);							  // append to topList
-	setTopList(topList); 							  // set topList as new first item of attribute labelled_preds
-}
-
-SLList<Analysis::LabelledPredicate> Analysis::getTopList()
-{
-	return labelled_preds.first();
-}
-
-void Analysis::setTopList(const SLList<LabelledPredicate>& lps)
-{
-	labelled_preds.removeFirst();
-	labelled_preds.addFirst(lps);
+	return (out << "]");
 }

@@ -551,33 +551,16 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 bool Analysis::invalidateVar(const OperandVar& var, bool invalidate_constant_info)
 {
 	bool rtn = false;
-	
-	// Invalidate predicates that have already been labelled
-	SLList<LabelledPredicate> top_list = getTopList();
-	for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; )
+
+	for(PredIterator piter(*this); piter; )
 	{
-		if((*iter).pred().involvesVariable(var))
+		if(piter.pred().involvesVariable(var))
 		{
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *iter)
-			top_list.remove(iter);
+			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *piter)
+			removePredicate(piter);
 			rtn = true;
-			continue;
 		}
-		iter++;
-	}
-	setTopList(top_list);
-	
-	// Also invalidate predicates of the current BB
-	for(SLList<Predicate>::Iterator iter(generated_preds); iter; )
-	{
-		if((*iter).involvesVariable(var))
-		{
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *iter)
-			generated_preds.remove(iter);
-			rtn = true;
-			continue;
-		}
-		iter++;
+		else piter++;
 	}
 
 	if(invalidate_constant_info)
@@ -592,41 +575,25 @@ bool Analysis::invalidateMem(const OperandVar& var)
 	{
 		DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_IYel "Could not simplify " << var << ", invalidating whole memory")
 		invalidateAllMemory();
-		return true;
+		return true; // TODO: check if invalidateAllMemory does invalidate anything
 	}
 	invalidateMem(*addr);
+	return true;
 }
 
 bool Analysis::invalidateMem(const OperandMem& addr)
 {
 	bool rtn = false;
-	// Invalidate predicates that have already been labelled
-	SLList<LabelledPredicate> top_list = getTopList();
-	for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; )
+	for(PredIterator piter(*this); piter; )
 	{
-		if((*iter).pred().involvesMemoryCell(addr))
+		if(piter.pred().involvesMemoryCell(addr))
 		{
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *iter)
-			top_list.remove(iter);
+			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *piter)
+			removePredicate(piter);
 			rtn = true;
-			continue;
 		}
-		iter++;
+		else piter++;
 	}
-	setTopList(top_list);
-	
-	// Also invalidate predicates of the current BB
-	for(SLList<Predicate>::Iterator iter(generated_preds); iter; )
-	{
-		if((*iter).involvesMemoryCell(addr))
-		{
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *iter)
-			generated_preds.remove(iter);
-			rtn = true;
-			continue;
-		}
-		iter++;
-	}	
 	return rtn;
 }
 
@@ -648,9 +615,9 @@ bool Analysis::invalidateTempVars()
 				Operand* expr = NULL;
 				if((*iter).getIsolatedTempVar(temp_var, expr)) // returns false if several tempvars
 				{
+					// try to keep the info
 					rtn |= replaceTempVar(temp_var, *expr);
-					
-					// remove the predicate
+					// then remove the predicate
 					DBG(COLOR_IYel << "- " << *iter)
 					generated_preds.remove(iter);
 					loop = true;
@@ -697,14 +664,12 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 			{
 				iter++;
 				continue;
-			}
-				
+			}				
 			if(rtn == false) // first time
 			{
 				DBG(COLOR_IBlu << "[" << expr << " / " << temp_var << "]")
 				rtn = true;
-			}
-				
+			}				
 			DBG(COLOR_IBlu DBG_SEPARATOR " " COLOR_Cya "- " << prev_str)
 			DBG(COLOR_IBlu DBG_SEPARATOR " " COLOR_ICya "+ " << p)
 			generated_preds.set(iter, p);
@@ -731,61 +696,32 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " [" << *opd_modifier_new << " / " << opd_to_update << "]")
 	bool rtn = false;
 	
-	// Update predicates that have already been labelled
-	SLList<LabelledPredicate> top_list = getTopList();
-	for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; )
+	for(PredIterator piter(*this); piter; )
 	{
-		if((*iter).pred().involvesVariable(opd_to_update))
+		if(piter.pred().involvesVariable(opd_to_update))
 		{
-			DBG(COLOR_Cya << "  - " << *iter)
+			DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya " - " << *piter)
 			
 			// updating the predicate
-			Predicate p = (*iter).pred();
+			Predicate p = piter.pred();
 			operand_state_t state = p.updateVar(opd_to_update, *opd_modifier_new);
 			assert(state != OPERANDSTATE_UNCHANGED);
 			if(state == OPERANDSTATE_UPDATED) // making sure something is updated
 			{
-				LabelledPredicate lp = LabelledPredicate(p, (*iter).labels()); // TODO!!!
-				top_list.set(iter, lp);
+				LabelledPredicate lp = LabelledPredicate(p, piter.labels()); // TODO!!!
+				setPredicate(piter, lp);
 				rtn = true;
-				DBG(COLOR_ICya << "  + " << lp)
+				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_ICya " + " << *piter)
 			}
 			else if(state == OPERANDSTATE_INVALID)
 			{	// TODO (**) ?4 = [t1], t1 <- t1-t2, we should try to identify t2
 				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya "(new indirection is too complex)")
-				top_list.remove(iter);
+				removePredicate(piter);
 				continue;
 			}
 		}
-		iter++;
+		piter++;
 	}
-	setTopList(top_list);
-	
-	// Also update predicates of the current BB
-	for(SLList<Predicate>::Iterator iter(generated_preds); iter; )
-	{
-		if((*iter).involvesVariable(opd_to_update))
-		{			
-			// updating the predicate
-			Predicate p = *iter;
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya " - " << *iter)
-			operand_state_t state = p.updateVar(opd_to_update, *opd_modifier_new);
-			assert(state != OPERANDSTATE_UNCHANGED);
-			if(state == OPERANDSTATE_UPDATED) // making sure something is updated
-			{
-				generated_preds.set(iter, p); 
-				rtn = true;
-				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_ICya " + " << *iter)
-			}
-			else if(state == OPERANDSTATE_INVALID)
-			{	// see (**)
-				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya "(new indirection is too complex)")
-				generated_preds.remove(iter);
-				continue;
-			}
-		}
-		iter++;
-	}	
 	return rtn;
 }
 
@@ -838,7 +774,7 @@ bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
 	}
 	if(!var.isTempVar()) // we need to parse previously generated preds as well
 	{
-		SLList<LabelledPredicate> top_list = getTopList();
+		SLList<LabelledPredicate> top_list = labelled_preds.first(); // getTopList();
 		for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; iter++)
 		{
 			if((*iter).pred().opr() == CONDOPR_EQ) // operator is =
@@ -931,31 +867,17 @@ Option<OperandMem> Analysis::getOperandMem(const OperandVar& var)
 	return none;
 }
 
-
 void Analysis::invalidateAllMemory()
 {
-	SLList<LabelledPredicate> top_list = getTopList();
-	for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; )
+	for(PredIterator piter(*this); piter; )
 	{
-		if((*iter).pred().involvesMemory())
+		if(piter.pred().involvesMemory())
 		{
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *iter)
-			top_list.remove(iter);
+			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *piter)
+			removePredicate(piter);
 			continue;
 		}
-		iter++;
-	}
-	setTopList(top_list);
-	
-	for(SLList<Predicate>::Iterator iter(generated_preds); iter; )
-	{
-		if((*iter).involvesMemory())
-		{
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *iter)
-			generated_preds.remove(iter);
-			continue;
-		}
-		iter++;
+		piter++;
 	}
 }
 

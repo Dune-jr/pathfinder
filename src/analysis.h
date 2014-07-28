@@ -34,7 +34,8 @@ public:
 		io::Output& print(io::Output& out) const;
 	
 	public:
-		LabelledPredicate(const Predicate& pred, SLList<const Edge*> labels);
+		LabelledPredicate(const Predicate& pred, const SLList<const Edge*>& labels);
+		LabelledPredicate(const LabelledPredicate& lp);
 		inline const Predicate& pred() const { return _pred; };
 		inline const SLList<const Edge*>& labels() const { return _labels; };
 		friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lp) { return lp.print(out); }
@@ -65,7 +66,7 @@ public:
 		inline void set(const t::int32 var_id, t::int32 val) { set(OperandVar(var_id), val); }
 		inline void set(const OperandVar& opdv, OperandConst opdc) { set(opdv, opdc.value()); }
 			   void invalidate(const OperandVar& opdv);
-		inline void invalidate(t::int32 var_id) { invalidate(OperandVar(var_id)); }
+		inline void invalidatee(t::int32 var_id) { invalidate(OperandVar(var_id)); }
 		void invalidateTempVars();
 		inline t::int32 operator[](const OperandVar& opdv) const { return getValue(opdv); }
 		inline t::int32 operator[](t::int32 var_id) const { return getValue(var_id); }
@@ -81,28 +82,72 @@ public:
 	
 private:
 	OperandVar sp; // the Stack Pointer register
-	ConstantVariables constants; // Remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
+	ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
 
-	SLList<Predicate> generated_preds;
+	SLList<SLList<LabelledPredicate> > labelled_preds; // previously generated predicates
+	SLList<Predicate> generated_preds; // predicates local to the current BB
 	SLList<Predicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
-	
-	// The actual struct
-	SLList<Path>						infeasible_paths;
-	SLList<SLList<LabelledPredicate> >	labelled_preds;
-	// bool								solverHasBeenCalled;
+	SLList<SLList<LabelledPredicate> > updated_preds; // this is reset before any BB analysis, indicates previously generated preds (in another BB)
+		// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
 
- 	// this is reset before any BB analysis, indicates previously generated preds (in another BB) that have been updated and need
- 	// to have their labels list updated (add the next edge to the LabelledPreds struct)
-	SLList<SLList<LabelledPredicate>* > updated_preds;
+	SLList<Path> infeasible_paths;
+	// bool solverHasBeenCalled;
+
+	// PredIterator class
+	class PredIterator: public PreIterator<PredIterator, LabelledPredicate> {
+		enum pred_iterator_state_t
+		{
+			GENERATED_PREDS, // must have !gp_iter.ended()
+			LABELLED_PREDS, // must have gp_iter.ended() && !lp_iter.ended()
+			DONE, // must have gp_iter.ended() && lp_iter.ended()
+		};
+
+	public:
+		inline PredIterator(void) { }
+		inline PredIterator(const Analysis& analysis)
+			: state(GENERATED_PREDS), gp_iter(analysis.generated_preds), lp_iter(analysis.labelled_preds.first())	{ updateState(); }
+		inline PredIterator(const PredIterator& source): gp_iter(source.gp_iter), lp_iter(source.lp_iter) { }
+		inline PredIterator& operator=(const PredIterator& i)
+			{ state = i.state; gp_iter = i.gp_iter; lp_iter = i.lp_iter; return *this; }
+		
+		inline bool ended(void) const { return (state == DONE); }
+		inline LabelledPredicate item(void) const {
+			switch(state) {
+				case GENERATED_PREDS: return LabelledPredicate(gp_iter.item(), SLList<const Edge*>::null);
+				case LABELLED_PREDS: return lp_iter.item();
+				default: assert(false);
+			}
+		}
+		inline void next(void) {
+			if(state == GENERATED_PREDS) gp_iter++;
+			if(state == LABELLED_PREDS) lp_iter++;
+			updateState();
+		}
+
+		inline Predicate pred(void) const { return item().pred(); }
+		inline SLList<const Edge*> labels(void) const { return item().labels(); }
+	
+	private:
+		void nextState() { if(state == GENERATED_PREDS) state = LABELLED_PREDS; else if (state == LABELLED_PREDS) state = DONE; }
+		void updateState() {
+			if(state == GENERATED_PREDS && !gp_iter) { nextState(); updateState(); }
+			if(state == LABELLED_PREDS && !lp_iter) { nextState(); updateState(); }
+		}
+
+		friend class Analysis;
+		pred_iterator_state_t state;
+		SLList<Predicate>::Iterator gp_iter; // Generated predicates (local) iterator 
+		SLList<LabelledPredicate>::Iterator lp_iter; // Labelled predicates (previous BBs) iterator
+	};
 	
 	// Private methods
 	// analysis.cpp
-	void initializeAnalysis();
-	SLList<LabelledPredicate> getTopList();
-	void setTopList(const SLList<LabelledPredicate>& lps);
-	void addElemToTopList(const SLList<LabelledPredicate>& lps);
+	void setPredicate(PredIterator &iter, const LabelledPredicate &labelled_predicate);
+	void removePredicate(PredIterator &iter);
+	inline void dumpPredicates() { for(PredIterator iter(*this); iter; iter++) DBG(*iter) }
 	
 	// analysis_cfg.cpp
+	void initializeAnalysis();
 	void processBB(BasicBlock *bb);
 	void processCFG(CFG *cfg);
 	void processEdge(const Edge *edge);
