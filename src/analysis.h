@@ -22,6 +22,7 @@ public:
 	
 	typedef SLList<const Edge*> Path;
 	
+	// LabelledPredicate class
 	class LabelledPredicate {
 	private:
 		Predicate _pred;
@@ -33,17 +34,33 @@ public:
 		LabelledPredicate(const LabelledPredicate& lp);
 		inline const Predicate& pred() const { return _pred; };
 		inline const SLList<const Edge*>& labels() const { return _labels; };
-		friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lp) { return lp.print(out); }
 	};
 
+	// ConstantVariables class
 	class ConstantVariables {
 	private:
-		Option<t::int32>* tempvars;
-		Option<t::int32>* registers;
+		// LabelledValue strcut
+		class LabelledValue
+		{
+		public:
+			LabelledValue() {}
+			LabelledValue(t::int32 val, Path labels) : _val(val), _labels(labels) { }
+			inline t::int32 val() const { return _val; }
+			inline const Path& labels() const { return _labels; }
+			io::Output& print(io::Output& out) const;			
+			friend io::Output& operator<<(io::Output& out, const LabelledValue& lv) { return lv.print(out); } // TODO: remove friend?
+
+		private:
+			t::int32 _val;
+			Path _labels;
+		};
+
+		Option<LabelledValue>* tempvars;
+		Option<LabelledValue>* registers;
 		unsigned int _max_tempvars;
 		unsigned int _max_registers;
 
-		Option<t::int32>& getCell(const OperandVar& opdv) const;
+		Option<LabelledValue>& getCell(const OperandVar& opdv) const;
 		io::Output& print(io::Output& out) const;
 
 	public:

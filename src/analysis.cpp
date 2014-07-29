@@ -61,15 +61,15 @@ void Analysis::removePredicate(PredIterator &iter)
 Analysis::ConstantVariables::ConstantVariables(unsigned int max_tempvars, unsigned int max_registers)
 	: _max_tempvars(max_tempvars), _max_registers(max_registers)
 {
-	tempvars = new Option<t::int32>[max_tempvars];
-	registers = new Option<t::int32>[max_registers];
+	tempvars = new Option<LabelledValue>[max_tempvars];
+	registers = new Option<LabelledValue>[max_registers];
 }
 
 Analysis::ConstantVariables::ConstantVariables(const ConstantVariables& cv)
 	: _max_tempvars(cv.maxTempVars()), _max_registers(cv.maxRegisters())
 {
-	tempvars = new Option<t::int32>[cv.maxTempVars()];
-	registers = new Option<t::int32>[cv.maxRegisters()];
+	tempvars = new Option<LabelledValue>[cv.maxTempVars()];
+	registers = new Option<LabelledValue>[cv.maxRegisters()];
 	*this = cv;
 }
 
@@ -85,7 +85,7 @@ Analysis::ConstantVariables& Analysis::ConstantVariables::operator=(const Consta
 	return *this;
 }
 
-Option<t::int32>& Analysis::ConstantVariables::getCell(const OperandVar& opdv) const
+Option<Analysis::ConstantVariables::LabelledValue>& Analysis::ConstantVariables::getCell(const OperandVar& opdv) const
 {	
 	if(opdv.isTempVar())
 		return tempvars[-1-opdv.addr()]; // tempvars id start at 1 and are negative
@@ -99,25 +99,25 @@ bool Analysis::ConstantVariables::isConstant(const OperandVar& opdv) const
 
 t::int32 Analysis::ConstantVariables::getValue(const OperandVar& opdv) const
 {
-	Option<t::int32>& k = getCell(opdv);
+	Option<LabelledValue>& k = getCell(opdv);
 	assert(k.isOne());
-	return k.value();
+	return k.value().val();
 }
 
 void Analysis::ConstantVariables::set(const OperandVar& opdv, t::int32 val)
 {
-	Option<t::int32>& k = getCell(opdv);
+	Option<LabelledValue>& k = getCell(opdv);
 	invalidate(opdv);
 	DBG(COLOR_IPur DBG_SEPARATOR COLOR_IGre " + " << opdv << "==" << OperandConst(val))
-	k = some(val);
+	k = some(LabelledValue(val, SLList<const Edge*>::null));
 }
 
 void Analysis::ConstantVariables::invalidate(const OperandVar& opdv)
 {
-	Option<t::int32>& k = getCell(opdv);
+	Option<LabelledValue>& k = getCell(opdv);
 	if(!k.isOne())
 		return; // nothing to do
-	DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << opdv << "==" << OperandConst(k.value()))
+	DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << opdv << "==" << OperandConst(k.value().val()))
 	k = none;
 }
 
@@ -155,4 +155,23 @@ io::Output& Analysis::ConstantVariables::print(io::Output& out) const
 		out << "\t?" << i << " = " << *(registers[i]) << endl;
 	}
 	return (out << "]");
+}
+
+io::Output& Analysis::ConstantVariables::LabelledValue::print(io::Output& out) const
+{
+	out << _val;
+	if(_labels.isEmpty())
+		return out;
+
+	out << "(";
+	bool first_time = true;
+	for(SLList<const Edge*>::Iterator iter(_labels); iter; iter++)
+	{
+		if(first_time)
+			first_time = false;
+		else
+			out << ", ";
+		out << (*iter)->source()->number() << "->" << (*iter)->target()->number();
+	}
+	return (out << ")");
 }
