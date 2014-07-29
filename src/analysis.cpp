@@ -121,11 +121,22 @@ void Analysis::ConstantVariables::invalidate(const OperandVar& opdv)
 	k = none;
 }
 
-void Analysis::ConstantVariables::invalidateTempVars()
+bool Analysis::ConstantVariables::invalidateTempVars()
 {
+	int changes = 0;
 	for(unsigned int i = 0; i < _max_tempvars; i++)
-		tempvars[i] = none;
-	// DBG(COLOR_IRed << *this << COLOR_BIRed " -tempvars")
+	{
+		if(tempvars[i])
+		{
+			tempvars[i] = none;
+			changes++;
+		}
+	}
+	if(!changes)
+		return false;
+	DBG(COLOR_IYel " - " << changes << " tempvars")
+	// DBG(COLOR_IRed << "State: " << *this)
+	return true;
 }
 
 io::Output& Analysis::ConstantVariables::print(io::Output& out) const

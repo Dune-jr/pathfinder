@@ -601,9 +601,10 @@ bool Analysis::invalidateMem(const OperandMem& addr)
 // by replacing them by their values in other predicates before removing them
 bool Analysis::invalidateTempVars()
 {
-	constants.invalidateTempVars();
-
 	bool loop, rtn = false;
+
+	rtn |= constants.invalidateTempVars();
+
 	// First step: try and replace everything we can
 	do {
 		loop = false;

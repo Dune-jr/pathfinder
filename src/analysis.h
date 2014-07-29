@@ -10,11 +10,6 @@
 using namespace otawa;
 using namespace elm::genstruct; 
 
-template <class T> inline const SLList<T>& null(void) {
-	static SLList<T> _null;
-	return _null;
-}
-
 template <class T> inline SLList<T>& operator+=(SLList<T> &t, const T& h) { t.addFirst(h); return t; }
 template <class T> inline SLList<T>& operator+=(SLList<T> &t, const SLList<T>& l) { t.addAll(l); return t; }
 
@@ -62,12 +57,12 @@ public:
 			   t::int32 getValue(const OperandVar& opdv) const; // this must not be called if !isConstant(opdv)...
 		inline t::int32 getValue(t::int32 var_id) const { return getValue(OperandVar(var_id)); }
 			   void set(const OperandVar& opdv, t::int32 val);
-		inline void set(const t::int32 var_id, OperandConst opdc) { set(OperandVar(var_id), opdc.value()); }
-		inline void set(const t::int32 var_id, t::int32 val) { set(OperandVar(var_id), val); }
 		inline void set(const OperandVar& opdv, OperandConst opdc) { set(opdv, opdc.value()); }
+		inline void set(const t::int32 var_id, t::int32 val) { set(OperandVar(var_id), val); }
+		inline void set(const t::int32 var_id, OperandConst opdc) { set(OperandVar(var_id), opdc.value()); }
 			   void invalidate(const OperandVar& opdv);
-		inline void invalidatee(t::int32 var_id) { invalidate(OperandVar(var_id)); }
-		void invalidateTempVars();
+		inline void invalidate(t::int32 var_id) { invalidate(OperandVar(var_id)); }
+		bool invalidateTempVars();
 		inline t::int32 operator[](const OperandVar& opdv) const { return getValue(opdv); }
 		inline t::int32 operator[](t::int32 var_id) const { return getValue(var_id); }
 		ConstantVariables& operator=(const ConstantVariables& cv);

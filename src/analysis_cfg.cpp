@@ -19,7 +19,7 @@ void Analysis::initializeAnalysis()
 {	// labelled_preds := [[]]
 	generated_preds.clear();
 	labelled_preds.clear();
-	labelled_preds += null<LabelledPredicate>(); // add an empty list as first element
+	labelled_preds += SLList<LabelledPredicate>::null; // add an empty list as first element
 }
 
 // WARNING: atm, this function assumes we have NO LOOPS!
