@@ -6,6 +6,7 @@
 #include <otawa/cfg/Edge.h>
 #include "smt.h"
 #include "smt_variable_stack.h"
+#include "operand.h"
 #include "debug.h"
 
 using namespace CVC4::kind;
@@ -18,7 +19,17 @@ SMT::SMT(): smt(&em), integer(em.integerType())
 	smt.setLogic("QF_LIA"); // Quantifier-Free (no forall, exists...) Linear Integer Arithmetic
 }
 
-Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<Analysis::LabelledPredicate> labelled_preds)
+Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)
+{
+	DBG(COLOR_ICya "labelled_preds = " << labelled_preds)
+	DBG(COLOR_ICya "constants = " << constants)
+	//DBG("constants.toPredicates() = " << constants.toPredicates())
+	// add the constant info to the the list of predicates
+	labelled_preds += constants.toPredicates();
+	return seekInfeasiblePaths(labelled_preds);
+}
+
+Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds)
 {
 	if(checkPredSat(labelled_preds, true))
 		return elm::none; // no inconsistency found
@@ -34,14 +45,14 @@ Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<Analysis::Labell
 	return elm::some(filterPaths(bitcode_vector, map_bit_to_pathpoint, paths_to_keep, true)); // generate the list of non-redundant paths and return it
 }
 
-void SMT::removeIncompletePredicates(SLList<Analysis::LabelledPredicate>& labelled_preds)
+void SMT::removeIncompletePredicates(SLList<LabelledPredicate>& labelled_preds)
 {
-	SLList<Analysis::LabelledPredicate>::Iterator iter(labelled_preds);
+	SLList<LabelledPredicate>::Iterator iter(labelled_preds);
 	while(iter)
 	{
 		if(!(*iter).pred().isComplete())
 		{
-			SLList<Analysis::LabelledPredicate>::Iterator prev_iter(iter);
+			SLList<LabelledPredicate>::Iterator prev_iter(iter);
 			iter++;
 			labelled_preds.remove(prev_iter);
 		}
@@ -50,11 +61,11 @@ void SMT::removeIncompletePredicates(SLList<Analysis::LabelledPredicate>& labell
 	}
 }
 
-SLList<Analysis::Path> SMT::getAllInfeasiblePaths(const SLList<Analysis::LabelledPredicate>& labelled_preds, int index)
+SLList<Analysis::Path> SMT::getAllInfeasiblePaths(const SLList<LabelledPredicate>& labelled_preds, int index)
 {	// Algorithm 3 (n~2^n)
 	bool index_in_range = false;
-	SLList<Analysis::LabelledPredicate> labelled_preds_truncated = labelled_preds;
-	SLList<Analysis::LabelledPredicate>::Iterator iter(labelled_preds_truncated);
+	SLList<LabelledPredicate> labelled_preds_truncated = labelled_preds;
+	SLList<LabelledPredicate>::Iterator iter(labelled_preds_truncated);
 	for(int i = 0; iter; iter++)
 	{
 		if(i++ == index)
@@ -67,7 +78,7 @@ SLList<Analysis::Path> SMT::getAllInfeasiblePaths(const SLList<Analysis::Labelle
 	{
 		SLList<const Edge*> path; // typedef SLList<const Edge*> Path;
 		SLList<Analysis::Path> path_list;
-		for(SLList<Analysis::LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
+		for(SLList<LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
 			path += (*parse_iter).labels();
 		path_list += path;
 		return path_list;
@@ -185,10 +196,10 @@ SLList<Analysis::Path> SMT::filterPaths(const Vector<BitVector>& bitcode_vector,
 }
 
 // check predicates satisfiability
-bool SMT::checkPredSat(const SLList<Analysis::LabelledPredicate>& labelled_preds, bool print_results)
+bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool print_results)
 {
 	smt.push();
-	for(SLList<Analysis::LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
+	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
 	{
 		Predicate pred = (*iter).pred();
 		if(Option<Expr> expr = getExpr(pred))

@@ -32,7 +32,7 @@ void Analysis::processCFG(CFG* cfg)
 	DBG(COLOR_BIGre << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found:")
 	for(SLList<Path>::Iterator iter(infeasible_paths); iter; iter++)
 	{
-		SLList<const Edge*> l = *iter;
+		SLList<const Edge*> l = *iter; // Path is SLList<const Edge*>
 		bool first = true;
 		elm::String str = "    - [";
 		for(SLList<const Edge*>::Iterator subiter(l); subiter; subiter++)
@@ -53,18 +53,28 @@ void Analysis::processBB(BasicBlock* bb)
 	if(bb->isExit())
 	{
 		DBG(COLOR_BIYel << "EXIT block reached")
+		DBG(COLOR_BIYel << "EXIT block reached")
+		DBG(COLOR_BIYel << "EXIT block reached")
+		DBG(COLOR_BIYel << "EXIT block reached")
+		DBG(COLOR_BIYel << "EXIT block reached")
+		DBG(COLOR_BIYel << "EXIT block reached")
+		DBG(COLOR_BIYel << "EXIT block reached")
+		DBG(COLOR_BIYel << "EXIT block reached")
+		DBG(COLOR_BIYel << "EXIT block reached")
 		return;
 	}
 		
 	// SMT call
 	// TODO: this should be put at a smarter place
 	SMT smt;
-	if(Option<SLList<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(labelled_preds.first()))
+	if(Option<SLList<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(labelled_preds.first(), constants))
 	{
 		infeasible_paths += *maybe_infeasible_paths;
 		DBG(COLOR_BIYel "Current path identified as infeasible, stopping analysis")
 		return; // No point to continue an infeasible path
-	}	
+	}
+	else
+		DBG(COLOR_Cya "labelled_preds= " << labelled_preds)
 	
 	DBG(COLOR_Whi << "Processing " << bb)
 	analyzeBB(bb); // generates lists of predicates in generated_preds and generated_preds_taken	
@@ -84,24 +94,27 @@ void Analysis::processBB(BasicBlock* bb)
 		|| outs->kind() == Edge::VIRTUAL
 		|| outs->kind() == Edge::VIRTUAL_RETURN) // Filter out irrelevant edges (calls...)
 		{	
-			SLList<Predicate>& relevant_preds = (outs->kind() == Edge::TAKEN) ?
+			SLList<Predicate> &relevant_preds = (outs->kind() == Edge::TAKEN) ?
 				generated_preds_taken_backup :
 				generated_preds_backup;
-			
-			// label our list of predicates with the current edge then append it
-			SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(relevant_preds, *outs);
 			
 			if(edgeId++) // if this is not the first valid edge
 			{
 				labelled_preds += top_list_backup; // copy the predicates we have generated until this node into a new list
 				constants = constants_backup; // also reset the constants
-			}
+			}			
+
+			// label our list of predicates with the current edge then append it
+			SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(relevant_preds, *outs);
+			// label the constants as well
+			constants.label(*outs);
 			
 			// Add result to topList
 			SLList<LabelledPredicate> topList = labelled_preds.first();
 			topList += labelled_analysis_result;
 			labelled_preds.removeFirst();
 			labelled_preds.addFirst(topList);
+
 			processEdge(*outs);
 		}
 	}
@@ -116,7 +129,7 @@ void Analysis::processEdge(const Edge* edge)
 	processBB(target);
 }
 
-SLList<Analysis::LabelledPredicate> Analysis::labelPredicateList(const SLList<Predicate>& pred_list, const Edge* label)
+SLList<LabelledPredicate> Analysis::labelPredicateList(const SLList<Predicate>& pred_list, const Edge* label)
 {
 	SLList<const Edge*> sll_containing_only_label;
 	sll_containing_only_label += label;

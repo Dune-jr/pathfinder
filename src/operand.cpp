@@ -1,6 +1,5 @@
 #include <elm/io/Output.h>
 #include "operand.h"
-#include "debug.h"
 
 using namespace elm;
 
@@ -34,7 +33,7 @@ bool OperandConst::involvesMemory() const { return false; }
 operand_state_t OperandConst::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
 Option<OperandConst> OperandConst::evalConstantOperand() const { return some(*this); }
 Option<Operand*> OperandConst::simplify() { return none; }
-
+Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesSimplified& constants) { return none; }
 
 // Operands: Variables
 OperandVar::OperandVar(const OperandVar& opd) : _addr(opd._addr) { }
@@ -80,7 +79,12 @@ bool OperandVar::involvesMemory() const { return false; }
 operand_state_t OperandVar::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
 Option<OperandConst> OperandVar::evalConstantOperand() const { return none; }
 Option<Operand*> OperandVar::simplify() { return none; }
-
+Option<Operand*> OperandVar::replaceConstants(const ConstantVariablesSimplified& constants)
+{
+	if(constants.isConstant(this->_addr))
+		return new OperandConst(constants[this->_addr]);
+	return none;
+}
 
 // Operands: Memory
 OperandMem::OperandMem(const OperandConst& opdc, bool relative)
@@ -251,8 +255,8 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 }*/
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
 Option<Operand*> OperandMem::simplify() { return none; } // TODO: simplify within the [ ], makes more sense even tho it shouldn't be very useful
-
-
+Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesSimplified& constants) { return none; } // TODO! we really should handle this
+ 
 // Operands: Arithmetic Expressions
 OperandArithExpr::OperandArithExpr(arithoperator_t opr, const Operand& opd1_)
 	: _opr(opr)
@@ -496,6 +500,14 @@ Option<Operand*> OperandArithExpr::simplify()
 		default:
 			ASSERT(false); // unary operators should have been handled earlier
 	}
+	return none;
+}
+Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesSimplified& constants)
+{
+	if(Option<Operand*> o = opd1->replaceConstants(constants))
+		opd1 = *o;
+	if(Option<Operand*> o = opd2->replaceConstants(constants))
+		opd2 = *o;
 	return none;
 }
 

@@ -5,6 +5,7 @@
 #include <otawa/app/Application.h> // main Display class
 #include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
 #include <otawa/hard/Platform.h>
+#include <elm/options.h>
 
 #include "analysis.h"
 #include "predicate.h"
@@ -19,11 +20,26 @@ void testSimplify();
 void testAnalysis(CFG *cfg);
 void makeRainbow();
 
+class MyCommand: public option::Manager {
+public:
+        MyCommand(void): option::Manager(Make("my-command", Version(1, 0, 0))
+                .description("This is my command !")
+                .author("me <me@here.there>")),
+        opt(option::SwitchOption::Make(*this).cmd("-o").cmd("--com").description("option 1")) { }
+        
+private:
+        option::SwitchOption opt;
+};
+
 class Display: public Application {
 public:
-    Display(void): Application("display", Version(1, 0, 0)) { }
+    Display(void): Application("display", Version(1, 0, 0)),
+    	opt1(option::SwitchOption::Make(manager).cmd("-o").cmd("--com").description("option 1")) { }
 
 protected:
+	option::Manager manager;
+	option::SwitchOption opt1;
+
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
 		// makeRainbow(); // to easily see where the output begins
 		workspace()->require(COLLECTED_CFG_FEATURE, props); 

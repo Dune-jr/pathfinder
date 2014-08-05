@@ -5,9 +5,11 @@
 #include <elm/util/Option.h>
 #include <cvc4/expr/expr.h>
 #include <cvc4/expr/type.h>
+#include "constant_variables_simplified.h"
+// #include "constant_variables.h"
 
 using namespace elm;
-	
+
 enum arithoperator_t
 {
 	// Unary
@@ -50,8 +52,8 @@ enum operand_state_t
 
 class OperandConst;
 class OperandVar;
-class OperandMem;
 class OperandArithExpr;
+class OperandMem;
 
 // The visitor: an abstract class
 class OperandVisitor
@@ -65,7 +67,7 @@ public:
 
 // Abstract Operand class
 class Operand
-{	
+{
 public:
 	virtual Operand* copy() const = 0;
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
@@ -77,6 +79,7 @@ public:
 	virtual bool isComplete() const = 0;
 	virtual Option<OperandConst> evalConstantOperand() const = 0;
 	virtual Option<Operand*> simplify() = 0; // Warning: Option=none does not warrant that nothing has been simplified!
+	virtual Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants) = 0;
 	virtual void accept(OperandVisitor& visitor) const = 0;
 	virtual operand_kind_t kind() const = 0;
 	
@@ -106,6 +109,7 @@ public:
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
+	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
 	inline bool isComplete() const { return true; }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
@@ -137,6 +141,7 @@ public:
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
+	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
 	inline bool isComplete() const { return true; }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
@@ -173,6 +178,7 @@ public:
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
+	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
 	inline bool isComplete() const { return true; }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_MEM; }
@@ -204,13 +210,14 @@ public:
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
-	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesVariable(const OperandVar& opdv) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
+	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }

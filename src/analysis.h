@@ -4,7 +4,8 @@
 #include <otawa/cfg/Edge.h>
 #include <elm/genstruct/SLList.h>
 #include <otawa/sem/inst.h>
-#include "predicate.h"
+#include "constant_variables.h"
+#include "labelled_predicate.h"
 #include "debug.h"
 
 using namespace otawa;
@@ -21,71 +22,8 @@ public:
 	Analysis(CFG *cfg, int sp_id, unsigned int max_tempvars, unsigned int max_registers);
 	
 	typedef SLList<const Edge*> Path;
-	
-	// LabelledPredicate class
-	class LabelledPredicate {
-	private:
-		Predicate _pred;
-		SLList<const Edge*> _labels;
-		io::Output& print(io::Output& out) const;
-	
-	public:
-		LabelledPredicate(const Predicate& pred, const SLList<const Edge*>& labels);
-		LabelledPredicate(const LabelledPredicate& lp);
-		inline const Predicate& pred() const { return _pred; };
-		inline const SLList<const Edge*>& labels() const { return _labels; };
-	};
 
-	// ConstantVariables class
-	class ConstantVariables {
-	private:
-		// LabelledValue strcut
-		class LabelledValue
-		{
-		public:
-			LabelledValue() {}
-			LabelledValue(t::int32 val, Path labels) : _val(val), _labels(labels) { }
-			inline t::int32 val() const { return _val; }
-			inline const Path& labels() const { return _labels; }
-			io::Output& print(io::Output& out) const;			
-			friend io::Output& operator<<(io::Output& out, const LabelledValue& lv) { return lv.print(out); } // TODO: remove friend?
-
-		private:
-			t::int32 _val;
-			Path _labels;
-		};
-
-		Option<LabelledValue>* tempvars;
-		Option<LabelledValue>* registers;
-		unsigned int _max_tempvars;
-		unsigned int _max_registers;
-
-		Option<LabelledValue>& getCell(const OperandVar& opdv) const;
-		io::Output& print(io::Output& out) const;
-
-	public:
-		ConstantVariables(unsigned int max_tempvars, unsigned int max_registers);
-		ConstantVariables(const ConstantVariables& cv);
-		// ~ConstantVariables(); // TODO
-		inline unsigned int maxTempVars() const { return _max_tempvars; }
-		inline unsigned int maxRegisters() const { return _max_registers; }
-			   bool isConstant(const OperandVar& opdv) const;
-		inline bool isConstant(t::int32 var_id) const { return isConstant(OperandVar(var_id)); }
-			   t::int32 getValue(const OperandVar& opdv) const; // this must not be called if !isConstant(opdv)...
-		inline t::int32 getValue(t::int32 var_id) const { return getValue(OperandVar(var_id)); }
-			   void set(const OperandVar& opdv, t::int32 val);
-		inline void set(const OperandVar& opdv, OperandConst opdc) { set(opdv, opdc.value()); }
-		inline void set(const t::int32 var_id, t::int32 val) { set(OperandVar(var_id), val); }
-		inline void set(const t::int32 var_id, OperandConst opdc) { set(OperandVar(var_id), opdc.value()); }
-			   void invalidate(const OperandVar& opdv);
-		inline void invalidate(t::int32 var_id) { invalidate(OperandVar(var_id)); }
-		bool invalidateTempVars();
-		inline t::int32 operator[](const OperandVar& opdv) const { return getValue(opdv); }
-		inline t::int32 operator[](t::int32 var_id) const { return getValue(var_id); }
-		ConstantVariables& operator=(const ConstantVariables& cv);
-		friend io::Output& operator<<(io::Output& out, const ConstantVariables& cv) { return cv.print(out); }
-	};
-
+	// bool invalidate_constant_info 
 	enum
 	{
 		KEEP_CONSTANT_INFO = false,
@@ -123,14 +61,14 @@ private:
 			{ state = i.state; gp_iter = i.gp_iter; lp_iter = i.lp_iter; return *this; }
 		
 		inline bool ended(void) const { return (state == DONE); }
-		inline LabelledPredicate item(void) const {
+		LabelledPredicate item(void) const {
 			switch(state) {
 				case GENERATED_PREDS: return LabelledPredicate(gp_iter.item(), SLList<const Edge*>::null);
 				case LABELLED_PREDS: return lp_iter.item();
 				default: assert(false);
 			}
 		}
-		inline void next(void) {
+		void next(void) {
 			if(state == GENERATED_PREDS) gp_iter++;
 			if(state == LABELLED_PREDS) lp_iter++;
 			updateState();
@@ -138,7 +76,7 @@ private:
 
 		inline Predicate pred(void) const { return item().pred(); }
 		inline SLList<const Edge*> labels(void) const { return item().labels(); }
-	
+
 	private:
 		void nextState() { if(state == GENERATED_PREDS) state = LABELLED_PREDS; else if (state == LABELLED_PREDS) state = DONE; }
 		void updateState() {

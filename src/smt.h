@@ -7,6 +7,7 @@
 #include <cvc4/smt/smt_engine.h>
 #include <elm/util/BitVector.h>
 #include "analysis.h"
+#include "constant_variables.h"
 #include "smt_operand_visitor.h"
 #include "smt_variable_stack.h"
 
@@ -19,16 +20,17 @@ class SMT
 {
 public:
 	SMT();
-	Option<SLList<Analysis::Path> > seekInfeasiblePaths(SLList<Analysis::LabelledPredicate> labelled_preds);
-	bool checkPredSat(const SLList<Analysis::LabelledPredicate>& labelled_preds, bool print_result = false);
+	Option<SLList<Analysis::Path> > seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants);
+	Option<SLList<Analysis::Path> > seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds);
+	bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool print_result = false);
 	
 private:
 	CVC4::ExprManager em;
 	CVC4::SmtEngine smt;
 	VariableStack variables;
 
-	SLList<Analysis::Path> getAllInfeasiblePaths(const SLList<Analysis::LabelledPredicate>& labelled_preds, int index = 0);
-	void removeIncompletePredicates(SLList<Analysis::LabelledPredicate>& labelled_preds);
+	SLList<Analysis::Path> getAllInfeasiblePaths(const SLList<LabelledPredicate>& labelled_preds, int index = 0);
+	void removeIncompletePredicates(SLList<LabelledPredicate>& labelled_preds);
 	void genPathPointBitMaps(const SLList<Analysis::Path>& paths, AVLMap<const Edge*, unsigned int>& map_pathpoint_to_bit, Vector<const Edge*>& map_bit_to_pathpoint);
 	Vector<BitVector> genBitCodes(const SLList<Analysis::Path>& paths, const AVLMap<const Edge*, unsigned int>& map_pathpoint_to_bit, unsigned int used_bits);
 	BitVector getListOfPathsToKeep(const Vector<BitVector>& bitcode_vector);
