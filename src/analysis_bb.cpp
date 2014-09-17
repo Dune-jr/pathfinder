@@ -126,11 +126,11 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					if(isConstant(a)) // if a is already identified as a constant
 						constants.set(d, constants[a]); // then constants[d] = constants[a]
 					else // no use generating this predicate if it is a constant, because the ConstantVariables object handles that
-						make_pred = true; // d = a
+						make_pred = true; // d = already
 					break;
 				case SETI:
 					invalidateVar(d);
-					/* // everything should already be handled by the ConstantVariables object
+					/* // TODO: everything should already be handled by the ConstantVariables object
 					opd1 = new OperandVar(d);
 					opd2 = new OperandConst(cst);
 					make_pred = true; // d = cst
@@ -530,8 +530,22 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				assert(opd1);
 				assert(opd2);
 				// If we have predicates such as ?16 = ?4 ~ t1, make sure none of these are identified as constants in the constantVariables table!
-				opd1->replaceConstants(constants.toSimplified());
-				opd2->replaceConstants(constants.toSimplified());
+				if(Option<Operand*> maybe_opd1 = opd1->replaceConstants(constants.toSimplified()))
+				{
+					// TODO: remove
+					if(*((OperandConst*)*maybe_opd1) == OperandConst(0))
+					{
+						DBG(COLOR_BIRed << "WARNING! <<<")
+						DBG("opd1 was:" << *opd1 << " (row addr = " << ((OperandVar*)opd1)->addr() << ")")
+						DBG("isConstant(" << ((OperandVar*)opd1)->addr() << ") = " << constants.toSimplified().isConstant(((OperandVar*)opd1)->addr()))
+						DBG("and the value is " << constants.toSimplified().getValue(((OperandVar*)opd1)->addr()))
+					}
+					// remove the above
+
+					opd1 = *maybe_opd1;
+				}
+				if(Option<Operand*> maybe_opd2 = opd2->replaceConstants(constants.toSimplified()))
+					opd2 = *maybe_opd2;
 				DBG(COLOR_IPur DBG_SEPARATOR COLOR_IGre " + " << Predicate(opr, *opd1, *opd2))
 				generated_preds += Predicate(opr, *opd1, *opd2);
 			}

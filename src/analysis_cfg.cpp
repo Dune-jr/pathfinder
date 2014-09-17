@@ -53,14 +53,6 @@ void Analysis::processBB(BasicBlock* bb)
 	if(bb->isExit())
 	{
 		DBG(COLOR_BIYel << "EXIT block reached")
-		DBG(COLOR_BIYel << "EXIT block reached")
-		DBG(COLOR_BIYel << "EXIT block reached")
-		DBG(COLOR_BIYel << "EXIT block reached")
-		DBG(COLOR_BIYel << "EXIT block reached")
-		DBG(COLOR_BIYel << "EXIT block reached")
-		DBG(COLOR_BIYel << "EXIT block reached")
-		DBG(COLOR_BIYel << "EXIT block reached")
-		DBG(COLOR_BIYel << "EXIT block reached")
 		return;
 	}
 		
@@ -73,8 +65,7 @@ void Analysis::processBB(BasicBlock* bb)
 		DBG(COLOR_BIYel "Current path identified as infeasible, stopping analysis")
 		return; // No point to continue an infeasible path
 	}
-	else
-		DBG(COLOR_Cya "labelled_preds= " << labelled_preds)
+	// else DBG(COLOR_Cya "labelled_preds= " << labelled_preds) // TODO REMOVE
 	
 	DBG(COLOR_Whi << "Processing " << bb)
 	analyzeBB(bb); // generates lists of predicates in generated_preds and generated_preds_taken	

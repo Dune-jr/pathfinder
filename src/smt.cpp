@@ -21,8 +21,9 @@ SMT::SMT(): smt(&em), integer(em.integerType())
 
 Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)
 {
-	DBG(COLOR_ICya "labelled_preds = " << labelled_preds)
-	DBG(COLOR_ICya "constants = " << constants)
+	// TODO remove comments
+	// DBG(COLOR_ICya "labelled_preds = " << labelled_preds)
+	// DBG(COLOR_ICya "constants = " << constants)
 	//DBG("constants.toPredicates() = " << constants.toPredicates())
 	// add the constant info to the the list of predicates
 	labelled_preds += constants.toPredicates();

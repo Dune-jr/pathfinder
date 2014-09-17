@@ -62,7 +62,7 @@ void ConstantVariables::set(const OperandVar& opdv, t::int32 val, bool updated_f
 	invalidate(opdv);
 	DBG(COLOR_IPur DBG_SEPARATOR COLOR_IGre " + " << opdv << "==" << OperandConst(val))
 	k = some(LabelledValue(val, SLList<const Edge*>::null, updated_flag));
-	DBG(COLOR_IRed << "State: " << *this)
+	// DBG(COLOR_IRed << "State: " << *this) // TODO remove
 }
 
 // set to a value without changing the labels

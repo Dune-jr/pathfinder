@@ -1,5 +1,6 @@
 #include <elm/io/Output.h>
 #include "operand.h"
+#include "debug.h"
 
 using namespace elm;
 
@@ -508,6 +509,7 @@ Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesSimpl
 		opd1 = *o;
 	if(Option<Operand*> o = opd2->replaceConstants(constants))
 		opd2 = *o;
+	else DBG("constants_simplified=" << constants)
 	return none;
 }
 

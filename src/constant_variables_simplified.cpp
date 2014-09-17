@@ -5,6 +5,10 @@ ConstantVariablesSimplified::ConstantVariablesSimplified(unsigned int max_tempva
 {
 	tempvars = new Option<t::int32>[max_tempvars];
 	registers = new Option<t::int32>[max_registers];
+	for(unsigned int i = 0; i < max_tempvars; i++)
+		tempvars[i] = none;
+	for(unsigned int i = 0; i < max_registers; i++)
+		registers[i] = none;
 }
 
 Option<t::int32>& ConstantVariablesSimplified::getCell(t::int32 var_id) const
@@ -22,4 +26,20 @@ bool ConstantVariablesSimplified::isConstant(t::int32 var_id) const
 t::int32 ConstantVariablesSimplified::getValue(t::int32 var_id) const
 {
 	return getCell(var_id).value();
+}
+
+io::Output& ConstantVariablesSimplified::print(io::Output& out) const
+{
+	out << "[" << endl;
+	for(unsigned int i = 0; i < _max_tempvars; i++)
+	{
+		if(tempvars[i])
+			out << "\tt" << i+1 << " = " << *(tempvars[i]) << endl;
+	}
+	for(unsigned int i = 0; i < _max_registers; i++)
+	{
+		if(registers[i])
+			out << "\t?" << i << " = " << *(registers[i]) << endl;
+	}
+	return (out << "]");
 }
