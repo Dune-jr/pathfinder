@@ -1,0 +1,34 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [style=dashed, weight=1];
+	"1" [label="{BB 1 (00008d7c) | main:\l00008d7c    stmdb sp!, \{fp, lr\}\l00008d80    add fp, sp, #4\l00008d84    sub sp, sp, #16\l00008d88    str r0, [fp, #-16]\l00008d8c    str r1, [fp, #-20]\l00008d90    ldr r3, [fp, #-16]\l00008d94    str r3, [fp, #-8]\l00008d98    ldr r3, [fp, #-8]\l00008d9c    cmp r3, #10\l00008da0    bgt 8dac    # 00008dac\l }"]
+	"1" -> "3" [label="taken", weight=3];
+	"1" -> "2" [weight=4];
+	"2" [label="{BB 2 (00008da4) | 00008da4    bl 8d0c    # f1\l }"]
+	"00000000023c8cd0f1" [label="f1"]
+	"2" -> "00000000023c8cd0f1" [label="call", style=dashed, weight=1]
+	"2" -> "4" [weight=4];
+	"3" [label="{BB 3 (00008dac) | 00008dac    bl 8d28    # f2\l }"]
+	"00000000023c8aa0f2" [label="f2"]
+	"3" -> "00000000023c8aa0f2" [label="call", style=dashed, weight=1]
+	"3" -> "5" [weight=4];
+	"4" [label="{BB 4 (00008da8) | 00008da8    b 8db0    # 00008db0\l }"]
+	"4" -> "5" [label="taken", weight=3];
+	"5" [label="{BB 5 (00008db0) | 00008db0    ldr r3, [fp, #-8]\l00008db4    cmp r3, #0\l00008db8    bgt 8dc4    # 00008dc4\l }"]
+	"5" -> "7" [label="taken", weight=3];
+	"5" -> "6" [weight=4];
+	"6" [label="{BB 6 (00008dbc) | 00008dbc    bl 8d44    # f3\l }"]
+	"00000000023c83a0f3" [label="f3"]
+	"6" -> "00000000023c83a0f3" [label="call", style=dashed, weight=1]
+	"6" -> "8" [weight=4];
+	"7" [label="{BB 7 (00008dc4) | 00008dc4    bl 8d60    # f4\l }"]
+	"00000000023c81a0f4" [label="f4"]
+	"7" -> "00000000023c81a0f4" [label="call", style=dashed, weight=1]
+	"7" -> "9" [weight=4];
+	"8" [label="{BB 8 (00008dc0) | 00008dc0    b 8dc8    # 00008dc8\l }"]
+	"8" -> "9" [label="taken", weight=3];
+	"9" [label="{BB 9 (00008dc8) | 00008dc8    mov r3, #0\l00008dcc    mov r0, r3\l00008dd0    sub sp, fp, #4\l00008dd4    ldmia sp!, \{fp, pc\}\l }"]
+	"9" -> "10" [style=dashed, weight=1];
+	"10" [label="EXIT"]
+}

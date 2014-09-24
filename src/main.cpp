@@ -6,6 +6,7 @@
 [...alysis_bb.cpp:714]   [t3 − t1 / t3]
 [..._variables.cpp:87]   - t3==8
 */
+// #define DBG_NO_DEBUG
 
 #include <elm/io.h>
 #include <elm/io/Output.h>

@@ -46,13 +46,16 @@ void Analysis::processCFG(CFG* cfg)
 		str = _ << str << "]";
 		DBG(COLOR_IGre << str)
 	}
+	cout << infeasible_paths_count << " infeasible path(s) found.\r\n";
 }
 
 void Analysis::processBB(BasicBlock* bb)
 {
+	static int paths_count = 0;
 	if(bb->isExit())
 	{
 		DBG(COLOR_BIYel << "EXIT block reached")
+		cout << "(" << ++paths_count << ")\r\n";
 		return;
 	}
 		

@@ -701,8 +701,10 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 // second operand is usually an OperandArithExpr
 bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifier)
 {
-	Operand* opd_modifier_new = opd_modifier.copy();
-	// replace constants
+	Operand* opd_modifier_prenew = opd_modifier.copy();
+	Option<Operand*> maybe_opd_modifier_new = opd_modifier_prenew->replaceConstants(constants.toSimplified()); // replace constants
+	// for example instead of doing [?13+t1/?13], do [?13+4/?13]
+	Operand* opd_modifier_new = maybe_opd_modifier_new ? *maybe_opd_modifier_new : opd_modifier_prenew;
 
 	// amongst other things this can simplify constant arithopr such as 8+(4-2)
 	if(Option<Operand*> opd_modifier_new_simplified = opd_modifier_new->simplify())
