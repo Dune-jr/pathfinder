@@ -24,6 +24,7 @@ class Predicate
 {
 public:
 	Predicate(condoperator_t opr, Operand& opd1, Operand& opd2);
+	~Predicate();
 	
 	inline condoperator_t opr() const { return _opr; }
 	inline Operand& leftOperand() const { return *_opd1; }

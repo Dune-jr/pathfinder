@@ -541,14 +541,19 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						DBG("and the value is " << constants.toSimplified().getValue(((OperandVar*)opd1)->addr()))
 					}
 					// remove the above
-
+					delete opd1;
 					opd1 = *maybe_opd1;
 				}
 				if(Option<Operand*> maybe_opd2 = opd2->replaceConstants(constants.toSimplified()))
+				{
+					delete opd2;
 					opd2 = *maybe_opd2;
+				}
 				DBG(COLOR_IPur DBG_SEPARATOR COLOR_IGre " + " << Predicate(opr, *opd1, *opd2))
 				generated_preds += Predicate(opr, *opd1, *opd2);
 			}
+			if(opd1) delete opd1;
+			if(opd2) delete opd2;
 		}
 		// all tempprary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();
@@ -710,6 +715,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	if(Option<Operand*> opd_modifier_new_simplified = opd_modifier_new->simplify())
 	{
 		DBG(COLOR_Pur DBG_SEPARATOR COLOR_Blu " Simplified " << *opd_modifier_new << " to " << **opd_modifier_new_simplified)
+		delete opd_modifier_new;
 		opd_modifier_new = *opd_modifier_new_simplified;
 	}
 
@@ -742,6 +748,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 		}
 		piter++;
 	}
+	delete opd_modifier_new;
 	return rtn;
 }
 
@@ -942,5 +949,8 @@ Predicate* Analysis::getPredicateGeneratedByCondition(sem::inst condition, bool 
 		default:
 			return NULL; // invalid condition, exit
 	}
-	return new Predicate(opr, reverse ? *opd_right : *opd_left, reverse ? *opd_left : *opd_right);
+	Predicate *rtn = new Predicate(opr, reverse ? *opd_right : *opd_left, reverse ? *opd_left : *opd_right);
+	delete opd_left;
+	delete opd_right;
+	return rtn;
 }

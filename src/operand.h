@@ -69,6 +69,7 @@ public:
 class Operand
 {
 public:
+	virtual ~Operand() { }
 	virtual Operand* copy() const = 0;
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
 	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const = 0;
@@ -97,6 +98,7 @@ public:
 	OperandConst(const OperandConst& opd);
 	OperandConst(t::int32 value);
 	OperandConst(); // for use in Option
+	~OperandConst();
 	
 	inline t::int32 value() const { return _value; }
 	
@@ -128,6 +130,7 @@ class OperandVar : public Operand
 public:
 	OperandVar(const OperandVar& opd);
 	OperandVar(t::int32 addr);
+	~OperandVar();
 	
 	inline t::int32 addr() const { return _addr; }
 	inline bool isTempVar() const { return _addr < 0; }
@@ -162,6 +165,7 @@ public:
 	//OperandMem(const OperandVar& opdv);
 	//OperandMem(const OperandVar& opdv, const OperandConst& opdc);
 	OperandMem(); // for use in Option
+	~OperandMem();
 	
 	inline bool isRelative() const { return _kind == OPERANDMEM_ABSOLUTE; }
 	inline bool isAbsolute() const { return _kind == OPERANDMEM_RELATIVE; }
@@ -200,6 +204,7 @@ public:
 	OperandArithExpr(const OperandArithExpr& opd);
 	OperandArithExpr(arithoperator_t opr, const Operand& opd1_); // unary constructor 
 	OperandArithExpr(arithoperator_t opr, const Operand& opd1_, const Operand& opd2_);
+	~OperandArithExpr();
 	
 	inline arithoperator_t opr() const { return _opr; }
 	inline const Operand& leftOperand() const { return *opd1; }

@@ -47,7 +47,7 @@ private:
 public:
 	ConstantVariables(unsigned int max_tempvars, unsigned int max_registers);
 	ConstantVariables(const ConstantVariables& cv);
-	// ~ConstantVariables(); // TODO
+	~ConstantVariables();
 	inline unsigned int maxTempVars() const { return _max_tempvars; }
 	inline unsigned int maxRegisters() const { return _max_registers; }
 		   bool isConstant(const OperandVar& opdv) const;

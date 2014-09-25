@@ -25,6 +25,7 @@ private:
 
 public:
 	ConstantVariablesSimplified(unsigned int max_tempvars, unsigned int max_registers);
+	~ConstantVariablesSimplified();
 	inline void setTempVar(int id, Option<t::int32> val) { tempvars[id] = val; }
 	inline void setRegister(int id, Option<t::int32> val) { registers[id] = val; }
 	bool isConstant(t::int32 var_id) const;

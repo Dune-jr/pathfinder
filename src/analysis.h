@@ -41,6 +41,8 @@ private:
 		// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
 
 	SLList<Path> infeasible_paths;
+	int processed_paths;
+	int total_paths;
 	// bool solverHasBeenCalled;
 
 	// PredIterator class
@@ -98,8 +100,9 @@ private:
 	
 	// analysis_cfg.cpp
 	void initializeAnalysis();
-	void processBB(BasicBlock *bb);
 	void processCFG(CFG *cfg);
+	void processBB(BasicBlock *bb);
+	void placeboProcessBB(BasicBlock *bb);
 	void processEdge(const Edge *edge);
 	SLList<LabelledPredicate> labelPredicateList (const SLList<Predicate>& pred_list, const Edge* label);
 	

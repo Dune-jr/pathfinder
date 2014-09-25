@@ -16,6 +16,12 @@ ConstantVariables::ConstantVariables(const ConstantVariables& cv)
 	*this = cv;
 }
 
+ConstantVariables::~ConstantVariables()
+{
+	delete[] tempvars;
+	delete[] registers;
+}
+
 ConstantVariables::LabelledValue& ConstantVariables::LabelledValue::operator=(const LabelledValue& lv)
 {
 	_val = lv._val;

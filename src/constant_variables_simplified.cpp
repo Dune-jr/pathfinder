@@ -11,6 +11,12 @@ ConstantVariablesSimplified::ConstantVariablesSimplified(unsigned int max_tempva
 		registers[i] = none;
 }
 
+ConstantVariablesSimplified::~ConstantVariablesSimplified()
+{
+	delete[] tempvars;
+	delete[] registers;
+}
+
 Option<t::int32>& ConstantVariablesSimplified::getCell(t::int32 var_id) const
 {
 	if(var_id < 0)

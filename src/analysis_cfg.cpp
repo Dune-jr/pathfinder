@@ -26,6 +26,15 @@ void Analysis::initializeAnalysis()
 void Analysis::processCFG(CFG* cfg)
 {
 	DBG(COLOR_Whi << "Processing CFG " << cfg)
+	total_paths = 0;
+	placeboProcessBB(cfg->firstBB());
+#	ifndef DBG_NO_DEBUG
+		DBG(COLOR_Whi << "Running pre-analysis... ")
+		DBG(COLOR_Whi << total_paths << " paths found.")
+#	else
+		cout << "Running pre-analysis... ";
+		cout << total_paths << " paths found." << endl;
+#	endif
 	processBB(cfg->firstBB());
 	// DBG("\e[4mResult of the analysis: " << COLOR_RCol << labelled_preds)
 	int infeasible_paths_count = infeasible_paths.count();
@@ -55,7 +64,8 @@ void Analysis::processBB(BasicBlock* bb)
 	if(bb->isExit())
 	{
 		DBG(COLOR_BIYel << "EXIT block reached")
-		cout << "(" << ++paths_count << ")\r\n";
+		if((++paths_count % 100) == 0 || total_paths <= 1000)
+			cout << "(" << paths_count << "/" << total_paths << ")\r\n";
 		return;
 	}
 		
@@ -66,6 +76,7 @@ void Analysis::processBB(BasicBlock* bb)
 	{
 		infeasible_paths += *maybe_infeasible_paths;
 		DBG(COLOR_BIYel "Current path identified as infeasible, stopping analysis")
+		cout << "(" << ++paths_count << "/" << total_paths << ") !\r\n";
 		return; // No point to continue an infeasible path
 	}
 	// else DBG(COLOR_Cya "labelled_preds= " << labelled_preds) // TODO REMOVE
@@ -110,6 +121,26 @@ void Analysis::processBB(BasicBlock* bb)
 			labelled_preds.addFirst(topList);
 
 			processEdge(*outs);
+		}
+	}
+}
+
+void Analysis::placeboProcessBB(BasicBlock* bb)
+{
+	if(bb->isExit())
+	{
+		total_paths++;
+		return;
+	}
+
+	for(BasicBlock::OutIterator outs(bb); outs; outs++)
+	{
+		if(outs->kind() == Edge::TAKEN
+		|| outs->kind() == Edge::NOT_TAKEN
+		|| outs->kind() == Edge::VIRTUAL
+		|| outs->kind() == Edge::VIRTUAL_RETURN) // Filter out irrelevant edges (calls...)
+		{	
+			placeboProcessBB((*outs)->target());
 		}
 	}
 }

@@ -9,6 +9,12 @@ Predicate::Predicate(condoperator_t opr, Operand& opd1, Operand& opd2) : _opr(op
 	_opd1 = opd1.copy();
 	_opd2 = opd2.copy();
 }
+Predicate::~Predicate()
+{
+	// if(_opd1) delete _opd1;
+	// if(_opd2) delete _opd2;
+	// TODO: why does this crash
+}
 
 /**
  * @fn inline bool Predicate::isIdent(void);

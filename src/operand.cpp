@@ -8,6 +8,7 @@ using namespace elm;
 OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }
 OperandConst::OperandConst(t::int32 value) : _value(value) { }
 OperandConst::OperandConst() : _value(0) { }
+OperandConst::~OperandConst() { }
 Operand* OperandConst::copy() const { return new OperandConst(_value); }
 io::Output& OperandConst::print(io::Output& out) const
 {
@@ -39,6 +40,7 @@ Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesSimplifie
 // Operands: Variables
 OperandVar::OperandVar(const OperandVar& opd) : _addr(opd._addr) { }
 OperandVar::OperandVar(t::int32 addr) : _addr(addr) { }
+OperandVar::~OperandVar() { }
 Operand* OperandVar::copy() const { return new OperandVar(_addr); }
 io::Output& OperandVar::print(io::Output& out) const
 {
@@ -105,6 +107,10 @@ OperandMem::OperandMem(const OperandMem& opd)
 		_kind = OPERANDMEM_ABSOLUTE;
 }
 OperandMem::OperandMem() : _opdc(NULL), _kind(OPERANDMEM_ABSOLUTE) { }
+OperandMem::~OperandMem()
+{
+	// if(_opdc) delete _opdc; // TODO: Why does this cause a crash?
+}
 Operand* OperandMem::copy() const
 {
 	if(isRelative())
@@ -275,6 +281,12 @@ OperandArithExpr::OperandArithExpr(const OperandArithExpr& opd)
 {
 	opd1 = opd.opd1->copy();
 	opd2 = opd.opd2->copy();
+}
+OperandArithExpr::~OperandArithExpr()
+{
+	delete opd1;
+	if(isBinary())
+		delete opd2;
 }
 Operand* OperandArithExpr::copy() const
 {
@@ -509,7 +521,7 @@ Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesSimpl
 		opd1 = *o;
 	if(Option<Operand*> o = opd2->replaceConstants(constants))
 		opd2 = *o;
-	else DBG("constants_simplified=" << constants)
+	// else DBG("constants_simplified=" << constants)
 	return none;
 }
 

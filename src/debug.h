@@ -4,7 +4,7 @@
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 
-//#define DBG_NO_DEBUG
+#define DBG_NO_DEBUG
 // #define DBG_NO_COLOR
 // #define DBG_NO_INFO
 #define UNTESTED_CRITICAL false // Do not raise exception when executing untested code
