@@ -1,0 +1,85 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [label="call", style=dashed, weight=2];
+	"1" [label="{BB 1 (00008ce4) | main:\lallButOne10.c:3\l00008ce4    str fp, [sp,-#4]!\l00008ce8    add fp, sp, #0\l00008cec    sub sp, sp, #60\l00008cf0    str r0, [fp,-#56]\l00008cf4    str r1, [fp,-#60]\lallButOne10.c:4\l00008cf8    mov r3, #0\l00008cfc    str r3, [fp,-#48]\lallButOne10.c:6\l00008d00    ldr r3, [fp,-#44]\l00008d04    cmp r3, #0\l00008d08    beq 8d18    # 00008d18\l }"]
+	"1" -> "2" [weight=4];
+	"1" -> "3" [label="taken", weight=3];
+	"2" [label="{BB 2 (00008d0c) | allButOne10.c:6\l00008d0c    ldr r3, [fp,-#48]\l00008d10    add r3, r3, #1\l00008d14    str r3, [fp,-#48]\l }"]
+	"2" -> "3" [weight=4];
+	"3" [label="{BB 3 (00008d18) | allButOne10.c:7\l00008d18    ldr r3, [fp,-#40]\l00008d1c    cmp r3, #0\l00008d20    beq 8d30    # 00008d30\l }"]
+	"3" -> "4" [weight=4];
+	"3" -> "5" [label="taken", weight=3];
+	"4" [label="{BB 4 (00008d24) | allButOne10.c:7\l00008d24    ldr r3, [fp,-#48]\l00008d28    add r3, r3, #1\l00008d2c    str r3, [fp,-#48]\l }"]
+	"4" -> "5" [weight=4];
+	"5" [label="{BB 5 (00008d30) | allButOne10.c:8\l00008d30    ldr r3, [fp,-#36]\l00008d34    cmp r3, #0\l00008d38    beq 8d48    # 00008d48\l }"]
+	"5" -> "6" [weight=4];
+	"5" -> "7" [label="taken", weight=3];
+	"6" [label="{BB 6 (00008d3c) | allButOne10.c:8\l00008d3c    ldr r3, [fp,-#48]\l00008d40    add r3, r3, #1\l00008d44    str r3, [fp,-#48]\l }"]
+	"6" -> "7" [weight=4];
+	"7" [label="{BB 7 (00008d48) | allButOne10.c:9\l00008d48    ldr r3, [fp,-#32]\l00008d4c    cmp r3, #0\l00008d50    beq 8d60    # 00008d60\l }"]
+	"7" -> "8" [weight=4];
+	"7" -> "9" [label="taken", weight=3];
+	"8" [label="{BB 8 (00008d54) | allButOne10.c:9\l00008d54    ldr r3, [fp,-#48]\l00008d58    add r3, r3, #1\l00008d5c    str r3, [fp,-#48]\l }"]
+	"8" -> "9" [weight=4];
+	"9" [label="{BB 9 (00008d60) | allButOne10.c:10\l00008d60    ldr r3, [fp,-#28]\l00008d64    cmp r3, #0\l00008d68    beq 8d78    # 00008d78\l }"]
+	"9" -> "10" [weight=4];
+	"9" -> "11" [label="taken", weight=3];
+	"10" [label="{BB 10 (00008d6c) | allButOne10.c:10\l00008d6c    ldr r3, [fp,-#48]\l00008d70    add r3, r3, #1\l00008d74    str r3, [fp,-#48]\l }"]
+	"10" -> "11" [weight=4];
+	"11" [label="{BB 11 (00008d78) | allButOne10.c:11\l00008d78    ldr r3, [fp,-#24]\l00008d7c    cmp r3, #0\l00008d80    beq 8d90    # 00008d90\l }"]
+	"11" -> "12" [weight=4];
+	"11" -> "13" [label="taken", weight=3];
+	"12" [label="{BB 12 (00008d84) | allButOne10.c:11\l00008d84    ldr r3, [fp,-#48]\l00008d88    add r3, r3, #1\l00008d8c    str r3, [fp,-#48]\l }"]
+	"12" -> "13" [weight=4];
+	"13" [label="{BB 13 (00008d90) | allButOne10.c:12\l00008d90    ldr r3, [fp,-#20]\l00008d94    cmp r3, #0\l00008d98    beq 8da8    # 00008da8\l }"]
+	"13" -> "14" [weight=4];
+	"13" -> "15" [label="taken", weight=3];
+	"14" [label="{BB 14 (00008d9c) | allButOne10.c:12\l00008d9c    ldr r3, [fp,-#48]\l00008da0    add r3, r3, #1\l00008da4    str r3, [fp,-#48]\l }"]
+	"14" -> "15" [weight=4];
+	"15" [label="{BB 15 (00008da8) | allButOne10.c:13\l00008da8    ldr r3, [fp,-#16]\l00008dac    cmp r3, #0\l00008db0    beq 8dc0    # 00008dc0\l }"]
+	"15" -> "16" [weight=4];
+	"15" -> "17" [label="taken", weight=3];
+	"16" [label="{BB 16 (00008db4) | allButOne10.c:13\l00008db4    ldr r3, [fp,-#48]\l00008db8    add r3, r3, #1\l00008dbc    str r3, [fp,-#48]\l }"]
+	"16" -> "17" [weight=4];
+	"17" [label="{BB 17 (00008dc0) | allButOne10.c:14\l00008dc0    ldr r3, [fp,-#12]\l00008dc4    cmp r3, #0\l00008dc8    beq 8dd8    # 00008dd8\l }"]
+	"17" -> "18" [weight=4];
+	"17" -> "19" [label="taken", weight=3];
+	"18" [label="{BB 18 (00008dcc) | allButOne10.c:14\l00008dcc    ldr r3, [fp,-#48]\l00008dd0    add r3, r3, #1\l00008dd4    str r3, [fp,-#48]\l }"]
+	"18" -> "19" [weight=4];
+	"19" [label="{BB 19 (00008dd8) | allButOne10.c:15\l00008dd8    ldr r3, [fp,-#44]\l00008ddc    cmp r3, #0\l00008de0    beq 8e50    # 00008e50\l }"]
+	"19" -> "20" [weight=4];
+	"19" -> "21" [label="taken", weight=3];
+	"20" [label="{BB 20 (00008de4) | allButOne10.c:15\l00008de4    ldr r3, [fp,-#40]\l00008de8    cmp r3, #0\l00008dec    beq 8e50    # 00008e50\l }"]
+	"20" -> "22" [weight=4];
+	"20" -> "21" [label="taken", weight=3];
+	"21" [label="{BB 21 (00008e50) | allButOne10.c:15\l00008e50    ldr r3, [fp,-#48]\l00008e54    add r3, r3, #1\l00008e58    str r3, [fp,-#48]\l }"]
+	"21" -> "23" [weight=4];
+	"22" [label="{BB 22 (00008df0) | allButOne10.c:15\l00008df0    ldr r3, [fp,-#36]\l00008df4    cmp r3, #0\l00008df8    beq 8e50    # 00008e50\l }"]
+	"22" -> "24" [weight=4];
+	"22" -> "21" [label="taken", weight=3];
+	"23" [label="{BB 23 (00008e5c) | allButOne10.c:16\l00008e5c    ldr r3, [fp,-#48]\lallButOne10.c:17\l00008e60    mov r0, r3\l00008e64    add sp, fp, #0\l00008e68    ldmia sp!, \{fp\}\l00008e6c    bx lr\l }"]
+	"23" -> "31" [label="return", style=dashed, weight=2];
+	"24" [label="{BB 24 (00008dfc) | allButOne10.c:15\l00008dfc    ldr r3, [fp,-#32]\l00008e00    cmp r3, #0\l00008e04    beq 8e50    # 00008e50\l }"]
+	"24" -> "25" [weight=4];
+	"24" -> "21" [label="taken", weight=3];
+	"25" [label="{BB 25 (00008e08) | allButOne10.c:15\l00008e08    ldr r3, [fp,-#28]\l00008e0c    cmp r3, #0\l00008e10    beq 8e50    # 00008e50\l }"]
+	"25" -> "26" [weight=4];
+	"25" -> "21" [label="taken", weight=3];
+	"26" [label="{BB 26 (00008e14) | allButOne10.c:15\l00008e14    ldr r3, [fp,-#24]\l00008e18    cmp r3, #0\l00008e1c    beq 8e50    # 00008e50\l }"]
+	"26" -> "27" [weight=4];
+	"26" -> "21" [label="taken", weight=3];
+	"27" [label="{BB 27 (00008e20) | allButOne10.c:15\l00008e20    ldr r3, [fp,-#20]\l00008e24    cmp r3, #0\l00008e28    beq 8e50    # 00008e50\l }"]
+	"27" -> "28" [weight=4];
+	"27" -> "21" [label="taken", weight=3];
+	"28" [label="{BB 28 (00008e2c) | allButOne10.c:15\l00008e2c    ldr r3, [fp,-#16]\l00008e30    cmp r3, #0\l00008e34    beq 8e50    # 00008e50\l }"]
+	"28" -> "29" [weight=4];
+	"28" -> "21" [label="taken", weight=3];
+	"29" [label="{BB 29 (00008e38) | allButOne10.c:15\l00008e38    ldr r3, [fp,-#12]\l00008e3c    cmp r3, #0\l00008e40    beq 8e50    # 00008e50\l }"]
+	"29" -> "30" [weight=4];
+	"29" -> "21" [label="taken", weight=3];
+	"30" [label="{BB 30 (00008e44) | allButOne10.c:15\l00008e44    ldr r3, [fp,-#8]\l00008e48    cmp r3, #0\l00008e4c    bne 8e5c    # 00008e5c\l }"]
+	"30" -> "21" [weight=4];
+	"30" -> "23" [label="taken", weight=3];
+	"31" [label="EXIT"]
+}

@@ -1,0 +1,40 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [label="call", style=dashed, weight=2];
+	"1" [label="{BB 1 (00008ce4) | main:\latMostOneThen4.c:3\l00008ce4    str fp, [sp,-#4]!\l00008ce8    add fp, sp, #0\l00008cec    sub sp, sp, #36\l00008cf0    str r0, [fp,-#32]\l00008cf4    str r1, [fp,-#36]\latMostOneThen4.c:4\l00008cf8    mov r3, #0\l00008cfc    str r3, [fp,-#28]\latMostOneThen4.c:5\l00008d00    mov r3, #0\l00008d04    str r3, [fp,-#24]\latMostOneThen4.c:7\l00008d08    ldr r3, [fp,-#20]\l00008d0c    cmp r3, #0\l00008d10    beq 8d30    # 00008d30\l }"]
+	"1" -> "2" [weight=4];
+	"1" -> "3" [label="taken", weight=3];
+	"2" [label="{BB 2 (00008d14) | atMostOneThen4.c:7\l00008d14    ldr r3, [fp,-#24]\l00008d18    cmp r3, #0\l00008d1c    bne 8d30    # 00008d30\l }"]
+	"2" -> "4" [weight=4];
+	"2" -> "3" [label="taken", weight=3];
+	"3" [label="{BB 3 (00008d30) | atMostOneThen4.c:8\l00008d30    ldr r3, [fp,-#16]\l00008d34    cmp r3, #0\l00008d38    beq 8d58    # 00008d58\l }"]
+	"3" -> "5" [weight=4];
+	"3" -> "6" [label="taken", weight=3];
+	"4" [label="{BB 4 (00008d20) | atMostOneThen4.c:7\l00008d20    mov r3, #1\l00008d24    str r3, [fp,-#28]\l00008d28    mov r3, #1\l00008d2c    str r3, [fp,-#24]\l }"]
+	"4" -> "3" [weight=4];
+	"5" [label="{BB 5 (00008d3c) | atMostOneThen4.c:8\l00008d3c    ldr r3, [fp,-#24]\l00008d40    cmp r3, #0\l00008d44    bne 8d58    # 00008d58\l }"]
+	"5" -> "7" [weight=4];
+	"5" -> "6" [label="taken", weight=3];
+	"6" [label="{BB 6 (00008d58) | atMostOneThen4.c:9\l00008d58    ldr r3, [fp,-#12]\l00008d5c    cmp r3, #0\l00008d60    beq 8d80    # 00008d80\l }"]
+	"6" -> "8" [weight=4];
+	"6" -> "9" [label="taken", weight=3];
+	"7" [label="{BB 7 (00008d48) | atMostOneThen4.c:8\l00008d48    mov r3, #2\l00008d4c    str r3, [fp,-#28]\l00008d50    mov r3, #1\l00008d54    str r3, [fp,-#24]\l }"]
+	"7" -> "6" [weight=4];
+	"8" [label="{BB 8 (00008d64) | atMostOneThen4.c:9\l00008d64    ldr r3, [fp,-#24]\l00008d68    cmp r3, #0\l00008d6c    bne 8d80    # 00008d80\l }"]
+	"8" -> "10" [weight=4];
+	"8" -> "9" [label="taken", weight=3];
+	"9" [label="{BB 9 (00008d80) | atMostOneThen4.c:10\l00008d80    ldr r3, [fp,-#8]\l00008d84    cmp r3, #0\l00008d88    beq 8da8    # 00008da8\l }"]
+	"9" -> "11" [weight=4];
+	"9" -> "12" [label="taken", weight=3];
+	"10" [label="{BB 10 (00008d70) | atMostOneThen4.c:9\l00008d70    mov r3, #3\l00008d74    str r3, [fp,-#28]\l00008d78    mov r3, #1\l00008d7c    str r3, [fp,-#24]\l }"]
+	"10" -> "9" [weight=4];
+	"11" [label="{BB 11 (00008d8c) | atMostOneThen4.c:10\l00008d8c    ldr r3, [fp,-#24]\l00008d90    cmp r3, #0\l00008d94    bne 8da8    # 00008da8\l }"]
+	"11" -> "13" [weight=4];
+	"11" -> "12" [label="taken", weight=3];
+	"12" [label="{BB 12 (00008da8) | atMostOneThen4.c:11\l00008da8    ldr r3, [fp,-#28]\latMostOneThen4.c:12\l00008dac    mov r0, r3\l00008db0    add sp, fp, #0\l00008db4    ldmia sp!, \{fp\}\l00008db8    bx lr\l }"]
+	"12" -> "14" [label="return", style=dashed, weight=2];
+	"13" [label="{BB 13 (00008d98) | atMostOneThen4.c:10\l00008d98    mov r3, #4\l00008d9c    str r3, [fp,-#28]\l00008da0    mov r3, #1\l00008da4    str r3, [fp,-#24]\l }"]
+	"13" -> "12" [weight=4];
+	"14" [label="EXIT"]
+}
