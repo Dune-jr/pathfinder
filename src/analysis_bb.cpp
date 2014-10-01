@@ -130,7 +130,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					break;
 				case SETI:
 					invalidateVar(d);
-					/* // TODO: everything should already be handled by the ConstantVariables object
+					/* // everything should already be handled by the ConstantVariables object
 					opd1 = new OperandVar(d);
 					opd2 = new OperandConst(cst);
 					make_pred = true; // d = cst
@@ -154,58 +154,56 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					invalidateVar(d);
 					break;
 				case ADD:
+					if(d == a)
 					{
-						if(d == a)
-						{
-							if(d == b) // d <- d+d
-							{	// [d/2 / d]
-								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(2)));
-								Operand *opd11 = new OperandVar(d);
-								Operand *opd12 = new OperandVar(2);
-								opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
-								opd2 = new OperandConst(0);
-								make_pred = true; // d % 2 = 0
-								if(isConstant(d))
-									constants.set(d, 2*constants[d]);
-							}
-							else // d <- d+b
-							{	// [d-b / d]
-								update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(b)));
-								if(isConstant(d))
-								{
-									if(isConstant(b))
-										constants.set(d, constants[d]+constants[b]);
-									else
-										constants.invalidate(d);
-								}
+						if(d == b) // d <- d+d
+						{	// [d/2 / d]
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(2)));
+							Operand *opd11 = new OperandVar(d);
+							Operand *opd12 = new OperandVar(2);
+							opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
+							opd2 = new OperandConst(0);
+							make_pred = true; // d % 2 = 0
+							if(isConstant(d))
+								constants.set(d, 2*constants[d]);
+						}
+						else // d <- d+b
+						{	// [d-b / d]
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(b)));
+							if(isConstant(d))
+							{
+								if(isConstant(b))
+									constants.set(d, constants[d]+constants[b]);
+								else
+									constants.invalidate(d);
 							}
 						}
-						else 
-						{
-							if(d == b) // d <- d+a
-							{	// [d-a / d]
-								update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(a)));
-								if(isConstant(d))
-								{
-									if(isConstant(a))
-										constants.set(d, constants[d]+constants[a]);
-									else
-										constants.invalidate(d);
-								}
-							}
-							else
+					}
+					else 
+					{
+						if(d == b) // d <- d+a
+						{	// [d-a / d]
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(a)));
+							if(isConstant(d))
 							{
-								// d is not related to a or b, invalidate predicates that involve d
-								invalidateVar(d);
-								opd1 = new OperandVar(d);
-								Operand *opd21 = new OperandVar(a);
-								Operand *opd22 = new OperandVar(b);
-								opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
-								make_pred = true; // d = a+b
-								if(isConstant(a) && isConstant(b))
-									constants.set(d, constants[a]+constants[b]);
-								// the invalidation in constants is already handled by invalidateVar
+								if(isConstant(a))
+									constants.set(d, constants[d]+constants[a]);
+								else
+									constants.invalidate(d);
 							}
+						}
+						else
+						{
+							// d is not related to a or b, invalidate predicates that involve d
+							invalidateVar(d);
+							opd1 = new OperandVar(d);
+							Operand *opd21 = new OperandVar(a);
+							Operand *opd22 = new OperandVar(b);
+							opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
+							if(isConstant(a) && isConstant(b))
+								constants.set(d, constants[a]+constants[b]);
+							else make_pred = true; // d = a+b
+							// the invalidation in constants is already handled by invalidateVar
 						}
 					}
 					break;
@@ -217,8 +215,8 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							if(d == b) // d <- d-d
 							{	// [0 / d], d is set to 0!
 								invalidateVar(d);
-								opd1 = new OperandVar(d);
-								opd2 = new OperandConst(0);
+								// opd1 = new OperandVar(d);
+								// opd2 = new OperandConst(0);
 								constants.set(d, 0);
 							}
 							else // d <- d-b
@@ -240,10 +238,19 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(a), OperandVar(d)));
 								if(isConstant(d))
 								{
-									if(isConstant(a))
+									if(isConstant(a)) // everything is const, update const value of d
 										constants.set(d, constants[a]-constants[d]);
 									else
+									{
+										// d = a - constants[d]
+										opd1 = new OperandVar(d);
+										Operand *opd21 = new OperandVar(a);
+										Operand *opd22 = new OperandConst(constants[d]);
+										opd2 = new OperandArithExpr(ARITHOPR_SUB, *opd21, *opd22);
+										make_pred = true;
+
 										constants.invalidate(d);
+									}
 								}
 							}
 							else // d <- a-b
@@ -253,9 +260,9 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 								Operand *opd21 = new OperandVar(a);
 								Operand *opd22 = new OperandVar(b);
 								opd2 = new OperandArithExpr(ARITHOPR_SUB, *opd21, *opd22);
-								make_pred = true; // d = a-b
 								if(isConstant(a) && isConstant(b))
 									constants.set(d, constants[a]-constants[b]);
+								else make_pred = true; // d = a-b
 								// the invalidation in constants is already handled by invalidateVar
 							}
 						}
@@ -286,22 +293,22 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							DBG(COLOR_BIRed << "Untested case of operator SHL running!")
 							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << *b_val)));
 							// we also add a predicate to say that d is now a multiple of 2^b
-							make_pred = true;
 							Operand *opd11 = new OperandVar(d);
 							Operand *opd12 = new OperandConst(1 << *b_val);
 							opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
 							opd2 = new OperandConst(0);
 							if(isConstant(d)) // we must update constant value of d
 								constants.set(d, constants[d] << *b_val);
+							else make_pred = true;
 						}
 						else // d <- a << b
 						{
 							invalidateVar(d);
-							make_pred = true;
 							Operand *opd22 = new OperandConst(1 << *b_val); // 2^b_val
 							opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);							
 							if(isConstant(a))
 								constants.set(d, constants[a] << *b_val);
+							else make_pred = true;
 						}
 					}
 					break;
@@ -324,12 +331,12 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						if(d == a) // d <- d >> b
 							break; // not much we can do because we lost info (cf (*))
 						// d <- a >> b
-						make_pred = true;
 						Operand *opd21 = new OperandVar(a);
 						Operand *opd22 = new OperandConst(1 << *b_val); // 2^b_val
 						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
 						if(isConstant(a))
 							constants.set(d, constants[a] >> constants[b]);
+						else make_pred = true;
 					}
 					break;
 				case NEG: // TODO test
@@ -346,13 +353,13 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						else
 						{	
 							invalidateVar(d);
-							make_pred = true;
 							opd1 = new OperandVar(d);
 							Operand *opd21 = new OperandConst(-1);
 							Operand *opd22 = new OperandVar(a);
 							opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
 							if(isConstant(a))
 								constants.set(d, -constants[a]);
+							else make_pred = true;
 						}
 					}
 					break;
@@ -498,9 +505,9 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							Operand *opd21 = new OperandVar(a);
 							Operand *opd22 = new OperandVar(b);
 							opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
-							make_pred = true; // d = a / b
 							if(isConstant(a) && isConstant(b))
 								constants.set(d, constants[a]/constants[b]);
+							else make_pred = true; // d = a / b
 						}
 					}
 					break;
@@ -515,9 +522,9 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						Operand *opd22 = new OperandVar(b);
 						opd2 = new OperandArithExpr(ARITHOPR_MOD, *opd21, *opd22);
 					}
-					make_pred = true;
 					if(isConstant(a) && isConstant(b))
 						constants.set(d, constants[a]%constants[b]);
+					else make_pred = true;
 					break;
 				case SPEC: // special instruction (d: code, cst: sub-code)
 					invalidateVar(d);

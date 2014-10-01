@@ -1,11 +1,3 @@
-/*
-// TODO!!!
-[...alysis_bb.cpp:549]   + t1 = ?13
-...
-[...nalysis_bb.cpp:31] add t3, t1, t3
-[...alysis_bb.cpp:714]   [t3 − t1 / t3]
-[..._variables.cpp:87]   - t3==8
-*/
 // #define DBG_NO_DEBUG
 
 #include <elm/io.h>
@@ -30,26 +22,27 @@ void testSimplify();
 void testAnalysis(CFG *cfg);
 void makeRainbow();
 
+int dbg_flags = 0;
+
+/*
 class MyCommand: public option::Manager {
 public:
-        MyCommand(void): option::Manager(Make("my-command", Version(1, 0, 0))
-                .description("This is my command !")
-                .author("me <me@here.there>")),
-        opt(option::SwitchOption::Make(*this).cmd("-o").cmd("--com").description("option 1")) { }
-        
+    MyCommand(void): option::Manager(Make("my-command", Version(1, 0, 0))
+            .description("This is my command !")
+            .author("me <me@here.there>")),
+    opt(option::SwitchOption::Make(*this).cmd("-o").cmd("--com").description("option 1")) { }
+
 private:
-        option::SwitchOption opt;
-};
+    option::SwitchOption opt;
+};*/
 
 class Display: public Application {
 public:
     Display(void): Application("display", Version(1, 0, 0)),
-    	opt1(option::SwitchOption::Make(manager).cmd("-o").cmd("--com").description("option 1")) { }
-
+    	// opt1(option::SwitchOption::Make(manager).cmd("-o").cmd("--com").description("option 1")) { }
+    	opt_silent(option::SwitchOption::Make(*this).cmd("-s").cmd("--silent").description("run with minimal output")) { }
+        
 protected:
-	option::Manager manager;
-	option::SwitchOption opt1;
-
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
 		// makeRainbow(); // to easily see where the output begins
 		workspace()->require(COLLECTED_CFG_FEATURE, props); 
@@ -59,10 +52,15 @@ protected:
 		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
 		int max_registers = workspace()->platform()->regCount(); // retrieve the count of registers
 		int max_tempvars = workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
-	
+
+		if(opt_silent)
+			dbg_flags |= DBG_NO_DEBUG;
 		Analysis analysis = Analysis(cfg, sp_id, max_tempvars, max_registers);
-		// testSimplify();
 	}
+
+private:
+	option::Manager manager;
+	option::SwitchOption opt_silent;
 };
 
 OTAWA_RUN(Display)
@@ -83,10 +81,8 @@ void testSimplify()
 	DBG("two: " << two)
 	DBG("three: " << three)
 	DBG("e1: " << e1)
-	Operand* e1_new = &e1;
 	if(Option<Operand*> o = e1.simplify())
-		e1_new = o;
-	DBG("e1: " << *e1_new)
+		DBG("e1 simplified: " << **o)
 }
 
 void testPredicates()

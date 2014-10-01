@@ -96,7 +96,7 @@ private:
 	// analysis.cpp
 	void setPredicate(PredIterator &iter, const LabelledPredicate &labelled_predicate);
 	void removePredicate(PredIterator &iter);
-	inline void dumpPredicates() { for(PredIterator iter(*this); iter; iter++) DBG(*iter) }
+	inline void dumpPredicates() { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
 	
 	// analysis_cfg.cpp
 	void initializeAnalysis();
