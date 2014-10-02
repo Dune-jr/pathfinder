@@ -24,18 +24,6 @@ void makeRainbow();
 
 int dbg_flags = 0;
 
-/*
-class MyCommand: public option::Manager {
-public:
-    MyCommand(void): option::Manager(Make("my-command", Version(1, 0, 0))
-            .description("This is my command !")
-            .author("me <me@here.there>")),
-    opt(option::SwitchOption::Make(*this).cmd("-o").cmd("--com").description("option 1")) { }
-
-private:
-    option::SwitchOption opt;
-};*/
-
 class Display: public Application {
 public:
     Display(void): Application("display", Version(1, 0, 0)),

@@ -838,15 +838,53 @@ bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
  * For a variable tX or ?X, try to find a predicate tX=sp+cst or ?X=sp+cst, and return cst when successful.
  * @return true if a value was found
  */
-// TODO!!! implement
+// TODO! implement stronger version
 //      this is going to be complex as well, it will have to use recursive calls to find a predicate that includes SP
 //		then we get something like ?0 - sp = t2 + 4,
 //		where ?0 and t2 are constant values
 //		and good luck with that!
-//		and we need to label all the edge dependencies...
+//		and we need to label (all) the edge dependencies...
 Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 {
-	return none; // No matches found
+	// so let's write an ultra-simplified version for now, better than nothing...
+	// TODO!!! handle case where var = sp
+	
+	for(PredIterator piter(*this); piter; piter++)
+	{
+		Operand *opd_expr = NULL;
+		if(piter.pred().opr() != CONDOPR_EQ)
+			continue;
+		if(piter.pred().leftOperand() == var) // ?x = ...
+			opd_expr = piter.pred().rightOperand().copy();
+		if(piter.pred().rightOperand() == var) // ... = ?x
+			opd_expr = piter.pred().leftOperand().copy();
+		if(opd_expr && (*opd_expr).kind() == OPERAND_ARITHEXPR) // We found ?x to be equal to something
+		{
+			OperandArithExpr opda_expr(*(OperandArithExpr*)opd_expr);
+			if(opda_expr.isUnary()) // -(something)
+				continue;
+
+			// /limited\ we only handle (SP # x) or (x # SP) atm
+			if(opda_expr.leftOperand() == sp)
+			{
+				// only + and - are interesting
+				if(opda_expr.opr() == ARITHOPR_ADD)
+					if(Option<OperandConst> maybe_opdc_offset = opda_expr.rightOperand().evalConstantOperand())
+						return (*maybe_opdc_offset).value();
+				if(opda_expr.opr() == ARITHOPR_SUB)
+					if(Option<OperandConst> maybe_opdc_offset = opda_expr.rightOperand().evalConstantOperand())
+						return -(*maybe_opdc_offset).value(); // OPPOSITE of this value since it's SP - ...
+			}
+			else if(opda_expr.rightOperand() == sp) // reverse way! this is ... # SP!
+			{
+				// only + is interesting, 8-sp is bad! (and weird...)
+				if(opda_expr.opr() != ARITHOPR_ADD)
+					if(Option<OperandConst> maybe_opdc_offset = opda_expr.leftOperand().evalConstantOperand())
+						return (*maybe_opdc_offset).value();
+			}
+		}
+	}
+	return none; // no matches found
 }
 /**
  * @fn bool Analysis::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);

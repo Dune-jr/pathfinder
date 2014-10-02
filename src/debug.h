@@ -48,14 +48,14 @@ public:
 #endif
 
 // macros for debugging
-// #ifndef DBG_NO_INFO
-	#define DBG_INFO() /*((dbg_flags&DBG_NO_DEBUG) ? "" :*/ COLOR_Yel "[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "] " COLOR_RCol
+#ifndef DBG_NO_INFO
+	#define DBG_INFO() /*((dbg_flags&DBG_NO_DEBUG) ? "" :(*/ COLOR_Yel "[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "] " COLOR_RCol
 	// #define DBG_INFO() (dbg_flags&DBG_NO_DEBUG ? "" : ("pastest" << "non")
 	#define DBG_INFO_STD() COLOR_Yel "[" << Debug::formattedDbgInfo(__FILE__, __LINE__).chars() << "] " COLOR_RCol
-// #else
-// 	#define DBG_INFO() ""
-// 	#define DBG_INFO_STD() ""
-// #endif
+#else
+	#define DBG_INFO() ""
+	#define DBG_INFO_STD() ""
+#endif
 
 #define DBG(str) if(!(dbg_flags&DBG_NO_DEBUG)) cout << DBG_INFO() << str << COLOR_RCol << io::endl;
 #define DBG_STD(str) if(!(dbg_flags&DBG_NO_DEBUG)) std::cout << DBG_INFO_STD() << str << COLOR_RCol << io::endl;

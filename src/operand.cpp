@@ -121,14 +121,20 @@ Operand* OperandMem::copy() const
 io::Output& OperandMem::print(io::Output& out) const
 {
 	out << "[";
-	if(isRelative())
-		out << "sp + ";
-	out << *_opdc << "]";
-	return out;
+	if(isAbsolute())
+		return (out << *_opdc << "]");
+/*	else if((*_opdc).value() < 0)
+#ifndef NO_UFT8
+		return (out << "sp − " << -(*_opdc).value() << "]");
+#else
+		return (out << "sp - " << -(*_opdc).value() << "]");
+#endif
+	else*/
+		return (out << "sp + " << (*_opdc).value() << "]");
 }
 bool OperandMem::operator==(const Operand& o) const
 {	// untested so far	
-	if(o.kind() == kind())
+	if(o.kind() != kind())
 		return false; // Operand types are not matching
 	OperandMem& o_mem = (OperandMem&)o; // Force conversion
 	if(o_mem.isRelative() != isRelative())
