@@ -847,7 +847,8 @@ bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
 Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 {
 	// so let's write an ultra-simplified version for now, better than nothing...
-	// TODO!!! handle case where "var = sp"
+	if(var == sp)
+		return some(0); // var = sp+0
 	
 	for(PredIterator piter(*this); piter; piter++)
 	{

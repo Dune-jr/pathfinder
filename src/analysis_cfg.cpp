@@ -64,7 +64,7 @@ void Analysis::processBB(BasicBlock* bb)
 	static int paths_count = 0;
 	if(bb->isExit())
 	{
-		DBG(color::BIBla() << color::On_Yel() << "EXIT block reached")
+		DBG(color::BBla() << color::On_Yel() << "EXIT block reached")
 		if((++paths_count % 100) == 0 || total_paths <= 1000)
 			cout << "(" << paths_count << "/" << total_paths << ")\r\n";
 		return;
