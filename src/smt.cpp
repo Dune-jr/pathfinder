@@ -190,7 +190,7 @@ SLList<Analysis::Path> SMT::filterPaths(const Vector<BitVector>& bitcode_vector,
 		}
 		str = str.concat(_ << "]");
 		if(print_results)
-			DBG(color::IRed() << "[" << color::RCol() << "Inf. path found: " << str << " (bitcode=" << bitcode_vector[index] << ")" << color::IRed() << "]")
+			DBG(color::On_IRed() << "Inf. path found: " << str << " (bitcode=" << bitcode_vector[index] << ")")
 		filtered_paths += path;
 	}
 	return filtered_paths;

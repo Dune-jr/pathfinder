@@ -55,7 +55,8 @@ void Analysis::processCFG(CFG* cfg)
 		str = _ << str << "]";
 		DBG(color::IGre() << str)
 	}
-	cout << infeasible_paths_count << " infeasible path(s) found.\r\n";
+	if(dbg_flags&DBG_NO_DEBUG)
+		cout << infeasible_paths_count << " infeasible path(s) found.\r\n";
 }
 
 void Analysis::processBB(BasicBlock* bb)
@@ -63,7 +64,7 @@ void Analysis::processBB(BasicBlock* bb)
 	static int paths_count = 0;
 	if(bb->isExit())
 	{
-		DBG(color::BIYel() << "EXIT block reached")
+		DBG(color::BIBla() << color::On_Yel() << "EXIT block reached")
 		if((++paths_count % 100) == 0 || total_paths <= 1000)
 			cout << "(" << paths_count << "/" << total_paths << ")\r\n";
 		return;
