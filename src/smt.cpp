@@ -22,8 +22,8 @@ SMT::SMT(): smt(&em), integer(em.integerType())
 Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)
 {
 	// TODO remove comments
-	// DBG(COLOR_ICya "labelled_preds = " << labelled_preds)
-	// DBG(COLOR_ICya "constants = " << constants)
+	// DBG(color::ICya() "labelled_preds = " << labelled_preds)
+	// DBG(color::ICya() "constants = " << constants)
 	//DBG("constants.toPredicates() = " << constants.toPredicates())
 	// add the constant info to the the list of predicates
 	labelled_preds += constants.toPredicates();
@@ -85,8 +85,8 @@ SLList<Analysis::Path> SMT::getAllInfeasiblePaths(const SLList<LabelledPredicate
 		return path_list;
 	}
 	labelled_preds_truncated.remove(iter);
-	// DBG(COLOR_Whi << "LPs: " << labelled_preds)
-	// DBG(COLOR_Whi << "LPs_truncated: " << labelled_preds_truncated)
+	// DBG(color::Whi() << "LPs: " << labelled_preds)
+	// DBG(color::Whi() << "LPs_truncated: " << labelled_preds_truncated)
 
 	if(checkPredSat(labelled_preds_truncated))
 	{	// SAT: keep predicate in list
@@ -190,7 +190,7 @@ SLList<Analysis::Path> SMT::filterPaths(const Vector<BitVector>& bitcode_vector,
 		}
 		str = str.concat(_ << "]");
 		if(print_results)
-			DBG(COLOR_IRed "[" COLOR_RCol "Inf. path found: " << str << " (bitcode=" << bitcode_vector[index] << ")" COLOR_IRed "]")
+			DBG(color::IRed() << "[" << color::RCol() << "Inf. path found: " << str << " (bitcode=" << bitcode_vector[index] << ")" << color::IRed() << "]")
 		filtered_paths += path;
 	}
 	return filtered_paths;
@@ -205,7 +205,7 @@ bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool pri
 		Predicate pred = (*iter).pred();
 		if(Option<Expr> expr = getExpr(pred))
 		{
-			// DBG_STD(COLOR_Red << "Assumption: " << *expr)
+			// DBG_STD(color::Red() << "Assumption: " << *expr)
 			smt.assertFormula(*expr);
 		}
 	}
@@ -213,7 +213,7 @@ bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool pri
 	CVC4::Result result = smt.checkSat(em.mkConst(true)); // check satisfability
 	smt.pop();
 	if(print_results)
-		DBG(COLOR_BIWhi << "SMT call:" << (result.isSat() ? COLOR_BGre : COLOR_BIRed) << (result.isSat() ? " SAT" : " UNSAT"))
+		DBG(color::BIWhi() << "SMT call:" << (result.isSat() ? color::BGre() : color::BIRed()) << (result.isSat() ? " SAT" : " UNSAT"))
 	return result.isSat();
 }
 

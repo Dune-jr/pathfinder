@@ -25,20 +25,20 @@ void Analysis::initializeAnalysis()
 // WARNING: atm, this function assumes we have NO LOOPS!
 void Analysis::processCFG(CFG* cfg)
 {
-	DBG(COLOR_Whi << "Processing CFG " << cfg)
+	DBG(color::Whi() << "Processing CFG " << cfg)
 	total_paths = 0;
 	placeboProcessBB(cfg->firstBB());
 #	ifndef DBG_NO_DEBUG
-		DBG(COLOR_Whi << "Running pre-analysis... ")
-		DBG(COLOR_Whi << total_paths << " paths found.")
+		DBG(color::Whi() << "Running pre-analysis... ")
+		DBG(color::Whi() << total_paths << " paths found.")
 #	else
 		cout << "Running pre-analysis... ";
 		cout << total_paths << " paths found." << endl;
 #	endif
 	processBB(cfg->firstBB());
-	// DBG("\e[4mResult of the analysis: " << COLOR_RCol << labelled_preds)
+	// DBG("\e[4mResult of the analysis: " << color::RCol() << labelled_preds)
 	int infeasible_paths_count = infeasible_paths.count();
-	DBG(COLOR_BIGre << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found:")
+	DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found:")
 	for(SLList<Path>::Iterator iter(infeasible_paths); iter; iter++)
 	{
 		SLList<const Edge*> l = *iter; // Path is SLList<const Edge*>
@@ -53,7 +53,7 @@ void Analysis::processCFG(CFG* cfg)
 			str = str.concat(_ << (*subiter)->source()->number() << "->" << (*subiter)->target()->number());
 		}
 		str = _ << str << "]";
-		DBG(COLOR_IGre << str)
+		DBG(color::IGre() << str)
 	}
 	cout << infeasible_paths_count << " infeasible path(s) found.\r\n";
 }
@@ -63,7 +63,7 @@ void Analysis::processBB(BasicBlock* bb)
 	static int paths_count = 0;
 	if(bb->isExit())
 	{
-		DBG(COLOR_BIYel << "EXIT block reached")
+		DBG(color::BIYel() << "EXIT block reached")
 		if((++paths_count % 100) == 0 || total_paths <= 1000)
 			cout << "(" << paths_count << "/" << total_paths << ")\r\n";
 		return;
@@ -75,13 +75,13 @@ void Analysis::processBB(BasicBlock* bb)
 	if(Option<SLList<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(labelled_preds.first(), constants))
 	{
 		infeasible_paths += *maybe_infeasible_paths;
-		DBG(COLOR_BIYel "Current path identified as infeasible, stopping analysis")
+		DBG(color::BIYel() << "Current path identified as infeasible, stopping analysis")
 		cout << "(" << ++paths_count << "/" << total_paths << ") !\r\n";
 		return; // No point to continue an infeasible path
 	}
-	// else DBG(COLOR_Cya "labelled_preds= " << labelled_preds) // TODO REMOVE
+	// else DBG(color::Cya() "labelled_preds= " << labelled_preds) // TODO REMOVE
 	
-	DBG(COLOR_Whi << "Processing " << bb)
+	DBG(color::Whi() << "Processing " << bb)
 	analyzeBB(bb); // generates lists of predicates in generated_preds and generated_preds_taken	
 	assert(labelled_preds);
 	
@@ -148,8 +148,8 @@ void Analysis::placeboProcessBB(BasicBlock* bb)
 void Analysis::processEdge(const Edge* edge)
 {
 	BasicBlock* target = edge->target();
-	// DBG(COLOR_Whi << "Processing Edge: " << edge->source()->number() << "->" << (*subiter)->target()->number());)	
-	DBG(COLOR_Whi << "Processing Edge: " << edge)	
+	// DBG(color::Whi() << "Processing Edge: " << edge->source()->number() << "->" << (*subiter)->target()->number());)	
+	DBG(color::Whi() << "Processing Edge: " << edge)	
 	// DBG("State of the analysis: " << labelled_preds)	
 	processBB(target);
 }

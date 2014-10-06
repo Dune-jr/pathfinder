@@ -1,5 +1,7 @@
 #include "constant_variables.h"
 
+using namespace debug;
+
 // ConstantVariables
 ConstantVariables::ConstantVariables(unsigned int max_tempvars, unsigned int max_registers)
 	: _max_tempvars(max_tempvars), _max_registers(max_registers)
@@ -66,9 +68,9 @@ void ConstantVariables::set(const OperandVar& opdv, t::int32 val, bool updated_f
 {
 	Option<LabelledValue>& k = getCell(opdv);
 	invalidate(opdv);
-	DBG(COLOR_IPur DBG_SEPARATOR COLOR_IGre " + " << opdv << "==" << OperandConst(val))
+	DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << opdv << "==" << OperandConst(val))
 	k = some(LabelledValue(val, SLList<const Edge*>::null, updated_flag));
-	// DBG(COLOR_IRed << "State: " << *this) // TODO remove
+	// DBG(color::IRed() << "State: " << *this) // TODO remove
 }
 
 // set to a value without changing the labels
@@ -77,11 +79,11 @@ void ConstantVariables::update(const OperandVar& opdv, t::int32 val, bool update
 	Option<LabelledValue>& k = getCell(opdv);
 	if(k.isOne())
 	{
-		DBG(COLOR_IPur DBG_SEPARATOR COLOR_Cya " - " << opdv << "==" << OperandConst(k.value().val()))
-		DBG(COLOR_IPur DBG_SEPARATOR COLOR_ICya " + " << opdv << "==" << OperandConst(val))
+		DBG(color::IPur() << DBG_SEPARATOR << color::Cya() << " - " << opdv << "==" << OperandConst(k.value().val()))
+		DBG(color::IPur() << DBG_SEPARATOR << color::ICya() << " + " << opdv << "==" << OperandConst(val))
 	}
 	else
-		DBG(COLOR_IPur DBG_SEPARATOR COLOR_IGre " + " << opdv << "==" << OperandConst(val))
+		DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << opdv << "==" << OperandConst(val))
 	k = some(LabelledValue(val, (*k).labels(), updated_flag));
 }
 
@@ -90,7 +92,7 @@ void ConstantVariables::invalidate(const OperandVar& opdv)
 	Option<LabelledValue>& k = getCell(opdv);
 	if(k.isNone())
 		return; // nothing to do
-	DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << opdv << "==" << OperandConst(k.value().val()))
+	DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << opdv << "==" << OperandConst(k.value().val()))
 	k = none;
 }
 
@@ -108,8 +110,8 @@ bool ConstantVariables::invalidateTempVars()
 	}
 	if(!changes)
 		return false;
-	DBG(COLOR_IYel "- " << changes << (changes > 1 ? " tempvars" : " tempvar"))
-	// DBG(COLOR_IRed << "State: " << *this)
+	DBG(color::IYel() << "- " << changes << (changes > 1 ? " tempvars" : " tempvar"))
+	// DBG(color::IRed() << "State: " << *this)
 	return true;
 }
 

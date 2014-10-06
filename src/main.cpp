@@ -20,7 +20,6 @@ void testPredicates();
 void testOperands();
 void testSimplify();
 void testAnalysis(CFG *cfg);
-void makeRainbow();
 
 int dbg_flags = 0;
 
@@ -28,11 +27,11 @@ class Display: public Application {
 public:
     Display(void): Application("display", Version(1, 0, 0)),
     	// opt1(option::SwitchOption::Make(manager).cmd("-o").cmd("--com").description("option 1")) { }
-    	opt_silent(option::SwitchOption::Make(*this).cmd("-s").cmd("--silent").description("run with minimal output")) { }
+    	opt_silent(option::SwitchOption::Make(*this).cmd("-s").cmd("--silent").description("run with minimal output")),
+    	opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").description("do not use colors")) { }
         
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
-		// makeRainbow(); // to easily see where the output begins
 		workspace()->require(COLLECTED_CFG_FEATURE, props); 
         const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
 		assert(cfgs->count() > 0); // make sure we have at least one CFG
@@ -43,12 +42,15 @@ protected:
 
 		if(opt_silent)
 			dbg_flags |= DBG_NO_DEBUG;
+		if(opt_nocolor)
+			dbg_flags |= DBG_NO_COLOR;
 		Analysis analysis = Analysis(cfg, sp_id, max_tempvars, max_registers);
 	}
 
 private:
 	option::Manager manager;
 	option::SwitchOption opt_silent;
+	option::SwitchOption opt_nocolor;
 };
 
 OTAWA_RUN(Display)
@@ -129,21 +131,4 @@ void testAnalysis(CFG *cfg)
 		Edge* edge = *outs;
 		path += edge;
 #	endif
-}
-
-void makeRainbow()
-{
-	const char* colors[] = {
-		COLOR_BIBla,
-		COLOR_BIBlu,
-		COLOR_BICya,
-		COLOR_BIGre,
-		COLOR_BIPur,
-		COLOR_BIRed,
-		COLOR_BIWhi,
-		COLOR_BIYel
-	};
-	for(int i = 0; i < 160; i++)
-		cout << colors[(i%8)] << "#";
-	cout << COLOR_RCol << io::endl;
 }

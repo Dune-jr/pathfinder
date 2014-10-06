@@ -10,6 +10,7 @@
 
 using namespace otawa;
 using namespace elm::genstruct; 
+using namespace debug;
 
 template <class T> inline SLList<T>& operator+=(SLList<T> &t, const T& h) { t.addFirst(h); return t; }
 template <class T> inline SLList<T>& operator+=(SLList<T> &t, const SLList<T>& l) { t.addAll(l); return t; }
@@ -141,7 +142,7 @@ template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l)
 	
 	if(indented_output)
 		addIndents(out, indent++);
-	out << COLOR_Bold << "[" << COLOR_NoBold;
+	out << color::Bold() << "[" << color::NoBold();
 	if(indented_output)
 		out << io::endl;
 	bool first = true;
@@ -171,7 +172,7 @@ template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l)
 		addIndents(out, --indent);
 	}
 	
-	return (out << COLOR_Bold << "]" << COLOR_NoBold);
+	return (out << color::Bold() << "]" << color::NoBold());
 };
 
 #endif

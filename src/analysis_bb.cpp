@@ -20,7 +20,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 	// parse assembly instructions
 	for(BasicBlock::InstIterator insts(bb); insts; insts++)
 	{
-		DBG(COLOR_Pur << *insts)
+		DBG(color::Pur() << *insts)
 		Block block;
 		insts->semInsts(block);
 		
@@ -28,17 +28,17 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 		// parse semantical instructions with PathIter
 		for(seminsts.start(*insts); seminsts; seminsts++)
 		{
-			DBG(COLOR_IPur << *seminsts)
+			DBG(color::IPur() << *seminsts)
 			
 			if(seminsts.isCond()) // IF
 			{	// backup the list of generated predicates before entering the condition
 				generated_preds_before_condition = generated_preds; // side effect: reverses the order of the list
-				DBG(COLOR_IBlu << "(Parsing taken path)")
+				DBG(color::IBlu() << "(Parsing taken path)")
 			}
 			if(seminsts.pathEnd()) // CONT
 			{ 	// dumping the current generated_preds into the previous_paths_preds list
 				invalidateTempVars(); // do the end-of-instruction tempvar invalidation first
-				DBG(COLOR_IBlu << "(Parsing not taken path)")
+				DBG(color::IBlu() << "(Parsing not taken path)")
 				generated_preds_taken = generated_preds;
 				generated_preds = generated_preds_before_condition;
 				//previous_paths_preds += generated_preds;
@@ -58,7 +58,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 			{
 				case NOP:
 					assert(!UNTESTED_CRITICAL);
-					DBG(COLOR_BIRed << "Untested operand NOP running!")
+					DBG(color::BIRed() << "Untested operand NOP running!")
 					break;
 				case BRANCH:
 					break;
@@ -98,7 +98,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					else
 					{
 						OperandVar addr_var = OperandVar(addr);
-						DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_IYel	"Could not simplify " << addr_var)
+						DBG(color::IPur() << DBG_SEPARATOR " " << color::IYel() << "Could not simplify " << addr_var)
 					}
 					break;
 				case STORE:	// MEM_type(addr) <- reg
@@ -112,7 +112,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					else
 					{
 						OperandVar addr_var = OperandVar(addr);
-						DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_IYel "Could not simplify " << addr_var << ", invalidating whole memory")
+						DBG(color::IPur() << DBG_SEPARATOR " " << color::IYel() << "Could not simplify " << addr_var << ", invalidating whole memory")
 						invalidateAllMemory();
 					}
 					break;
@@ -139,7 +139,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					break;
 				case SETP:
 					assert(!UNTESTED_CRITICAL);
-					DBG(COLOR_BIRed << "Unimplemented operand SETP running!")
+					DBG(color::BIRed() << "Unimplemented operand SETP running!")
 					invalidateVar(d);
 					break;
 				case CMP:
@@ -282,15 +282,15 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						// b is usually a tempvar that has been previously set to a constant value
 						if(!(b_val = findConstantValueOfVar(b)))
 						{
-							DBG(COLOR_Blu << "  [" << OperandVar(b) << " could not be identified to a constant value]")
+							DBG(color::Blu() << "  [" << OperandVar(b) << " could not be identified to a constant value]")
 							invalidateVar(d); // only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
 							break;
 						}
-						DBG(COLOR_Blu << "  [" << OperandVar(b) << " identified as 0x" << io::hex(*b_val) << "]")
+						DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(*b_val) << "]")
 						if(d == a) // d <- d << b
 						{
 							assert(!UNTESTED_CRITICAL);
-							DBG(COLOR_BIRed << "Untested case of operator SHL running!")
+							DBG(color::BIRed() << "Untested case of operator SHL running!")
 							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << *b_val)));
 							// we also add a predicate to say that d is now a multiple of 2^b
 							Operand *opd11 = new OperandVar(d);
@@ -314,7 +314,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					break;
 				case ASR: // TODO test: is this really legit?
 					assert(!UNTESTED_CRITICAL);
-					DBG(COLOR_BIRed << "Untested operator running!")
+					DBG(color::BIRed() << "Untested operator running!")
 				case SHR:
 					opd1 = new OperandVar(d);
 					{
@@ -322,11 +322,11 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 						// b is usually a tempvar that has been previously set to a constant value
 						if(!(b_val = findConstantValueOfVar(b)))
 						{
-							DBG(COLOR_Blu << "  [" << OperandVar(b) << " could not be identified as a constant value]")
+							DBG(color::Blu() << "  [" << OperandVar(b) << " could not be identified as a constant value]")
 							invalidateVar(d);
 							break;
 						}
-						DBG(COLOR_Blu << "  [" << OperandVar(b) << " identified as 0x" << io::hex(*b_val) << "]")
+						DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(*b_val) << "]")
 						invalidateVar(d);
 						if(d == a) // d <- d >> b
 							break; // not much we can do because we lost info (cf (*))
@@ -341,7 +341,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					break;
 				case NEG: // TODO test
 					assert(!UNTESTED_CRITICAL);
-					DBG(COLOR_BIRed << "Untested operator running!")
+					DBG(color::BIRed() << "Untested operator running!")
 					{
 						if(a == d) // d <- -d
 						{	// [-1 * d / d]
@@ -368,12 +368,12 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case OR:		// d <- a | b
 				case XOR:		// d <- a ^ b
 					assert(!UNTESTED_CRITICAL);
-					DBG(COLOR_BIRed << "Unimplemented operator running!")
+					DBG(color::BIRed() << "Unimplemented operator running!")
 					invalidateVar(d);
 					break;
 				case MULU:
 					assert(!UNTESTED_CRITICAL);
-					DBG(COLOR_BIRed << "Untested unsigned variant running!")
+					DBG(color::BIRed() << "Untested unsigned variant running!")
 				case MUL:
 					make_pred = true;
 					opd1 = new OperandVar(d);
@@ -383,7 +383,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							if(d == b) // d <- d*d
 							{
 								assert(!UNTESTED_CRITICAL);
-								DBG(COLOR_BIRed << "Untested case of operator MUL running!")
+								DBG(color::BIRed() << "Untested case of operator MUL running!")
 								invalidateVar(d, KEEP_CONSTANT_INFO); // we have no way to do [sqrt(d) / d], so just invalidate
 								opr = CONDOPR_LE; // and add a "0 <= d" predicate
 								opd1 = new OperandConst(0);
@@ -396,7 +396,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							else // d <- d*b
 							{	// [d/b / d] // we will have to assume that 0/0 is scratch!
 								assert(!UNTESTED_CRITICAL);
-								DBG(COLOR_BIRed << "Untested case of operator MUL running!")
+								DBG(color::BIRed() << "Untested case of operator MUL running!")
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)));
 								if(isConstant(d))
 								{
@@ -418,7 +418,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							if(d == b) // d <- a*d
 							{	// [d/a / d] // we will have to assume that 0/0 is scratch!
 								assert(!UNTESTED_CRITICAL);
-								DBG(COLOR_BIRed << "Untested case of operator MUL running!")
+								DBG(color::BIRed() << "Untested case of operator MUL running!")
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)));
 								if(isConstant(d))
 								{
@@ -450,10 +450,10 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					break;
 				case DIVU:
 					assert(!UNTESTED_CRITICAL);
-					DBG(COLOR_BIRed << "Untested unsigned variant running!")
+					DBG(color::BIRed() << "Untested unsigned variant running!")
 				case DIV:
 					assert(!UNTESTED_CRITICAL);
-					DBG(COLOR_BIRed << "Untested operator running!")
+					DBG(color::BIRed() << "Untested operator running!")
 					if(d == a)
 					{
 						if(d == b) // d <- d / d
@@ -542,7 +542,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					// TODO: remove
 					if(*((OperandConst*)*maybe_opd1) == OperandConst(0))
 					{
-						DBG(COLOR_BIRed << "WARNING! <<<")
+						DBG(color::BIRed() << "WARNING! <<<")
 						DBG("opd1 was:" << *opd1 << " (row addr = " << ((OperandVar*)opd1)->addr() << ")")
 						DBG("isConstant(" << ((OperandVar*)opd1)->addr() << ") = " << constants.toSimplified().isConstant(((OperandVar*)opd1)->addr()))
 						DBG("and the value is " << constants.toSimplified().getValue(((OperandVar*)opd1)->addr()))
@@ -556,7 +556,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					delete opd2;
 					opd2 = *maybe_opd2;
 				}
-				DBG(COLOR_IPur DBG_SEPARATOR COLOR_IGre " + " << Predicate(opr, *opd1, *opd2))
+				DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << Predicate(opr, *opd1, *opd2))
 				generated_preds += Predicate(opr, *opd1, *opd2);
 			}
 			if(opd1) delete opd1;
@@ -585,7 +585,7 @@ bool Analysis::invalidateVar(const OperandVar& var, bool invalidate_constant_inf
 	{
 		if(piter.pred().involvesVariable(var))
 		{
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *piter)
+			DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << *piter)
 			removePredicate(piter);
 			rtn = true;
 		}
@@ -602,7 +602,7 @@ bool Analysis::invalidateMem(const OperandVar& var)
 	Option<OperandMem> addr = getOperandMem(var);
 	if(!addr)
 	{
-		DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_IYel "Could not simplify " << var << ", invalidating whole memory")
+		DBG(color::IPur() << DBG_SEPARATOR " " << color::IYel() << "Could not simplify " << var << ", invalidating whole memory")
 		invalidateAllMemory();
 		return true; // TODO: check if invalidateAllMemory does invalidate anything
 	}
@@ -617,7 +617,7 @@ bool Analysis::invalidateMem(const OperandMem& addr)
 	{
 		if(piter.pred().involvesMemoryCell(addr))
 		{
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *piter)
+			DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << *piter)
 			removePredicate(piter);
 			rtn = true;
 		}
@@ -648,7 +648,7 @@ bool Analysis::invalidateTempVars()
 					// try to keep the info
 					rtn |= replaceTempVar(temp_var, *expr);
 					// then remove the predicate
-					DBG(COLOR_IYel << "- " << *iter)
+					DBG(color::IYel() << "- " << *iter)
 					generated_preds.remove(iter);
 					loop = true;
 					break;
@@ -662,7 +662,7 @@ bool Analysis::invalidateTempVars()
 	{
 		if((*iter).countTempVars())
 		{	// remove the predicate
-			DBG(COLOR_IYel << "- " << *iter)
+			DBG(color::IYel() << "- " << *iter)
 			generated_preds.remove(iter);
 			continue;
 		}
@@ -687,7 +687,7 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 			if(state == OPERANDSTATE_INVALID)
 			{
 				assert(!UNTESTED_CRITICAL);
-				DBG(COLOR_BIRed << "Untested case of invalidation!")
+				DBG(color::BIRed() << "Untested case of invalidation!")
 				generated_preds.remove(iter);
 			}
 			if(p.isIdent()) // if we just transformed t1 = X into X = X
@@ -697,11 +697,11 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 			}				
 			if(rtn == false) // first time
 			{
-				DBG(COLOR_IBlu << "[" << expr << " / " << temp_var << "]")
+				DBG(color::IBlu() << "[" << expr << " / " << temp_var << "]")
 				rtn = true;
 			}				
-			DBG(COLOR_IBlu DBG_SEPARATOR " " COLOR_Cya "- " << prev_str)
-			DBG(COLOR_IBlu DBG_SEPARATOR " " COLOR_ICya "+ " << p)
+			DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
+			DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << p)
 			generated_preds.set(iter, p);
 		}
 		iter++;
@@ -721,19 +721,19 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	// amongst other things this can simplify constant arithopr such as 8+(4-2)
 	if(Option<Operand*> opd_modifier_new_simplified = opd_modifier_new->simplify())
 	{
-		DBG(COLOR_Pur DBG_SEPARATOR COLOR_Blu " Simplified " << *opd_modifier_new << " to " << **opd_modifier_new_simplified)
+		DBG(color::Pur() << DBG_SEPARATOR << color::Blu() << " Simplified " << *opd_modifier_new << " to " << **opd_modifier_new_simplified)
 		delete opd_modifier_new;
 		opd_modifier_new = *opd_modifier_new_simplified;
 	}
 
-	DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " [" << *opd_modifier_new << " / " << opd_to_update << "]")
+	DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [" << *opd_modifier_new << " / " << opd_to_update << "]")
 	bool rtn = false;
 	
 	for(PredIterator piter(*this); piter; )
 	{
 		if(piter.pred().involvesVariable(opd_to_update))
 		{
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya " - " << *piter)
+			DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " " DBG_SEPARATOR << color::Cya() << " - " << *piter)
 			
 			// updating the predicate
 			Predicate p = piter.pred();
@@ -744,11 +744,11 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 				LabelledPredicate lp = LabelledPredicate(p, piter.labels()); // TODO!!!
 				setPredicate(piter, lp);
 				rtn = true;
-				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_ICya " + " << *piter)
+				DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " " DBG_SEPARATOR << color::ICya() << " + " << *piter)
 			}
 			else if(state == OPERANDSTATE_INVALID)
 			{	// TODO (**) ?4 = [t1], t1 <- t1-t2, we should try to identify t2
-				DBG(COLOR_IPur DBG_SEPARATOR COLOR_Blu " " DBG_SEPARATOR COLOR_Cya "(new indirection is too complex)")
+				DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " " DBG_SEPARATOR << color::Cya() << "(new indirection is too complex)")
 				removePredicate(piter);
 				continue;
 			}
@@ -847,7 +847,7 @@ bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
 Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 {
 	// so let's write an ultra-simplified version for now, better than nothing...
-	// TODO!!! handle case where var = sp
+	// TODO!!! handle case where "var = sp"
 	
 	for(PredIterator piter(*this); piter; piter++)
 	{
@@ -860,6 +860,7 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 			opd_expr = piter.pred().leftOperand().copy();
 		if(opd_expr && (*opd_expr).kind() == OPERAND_ARITHEXPR) // We found ?x to be equal to something
 		{
+			// TODO: throw a opd_expr.simplify() in here
 			OperandArithExpr opda_expr(*(OperandArithExpr*)opd_expr);
 			if(opda_expr.isUnary()) // -(something)
 				continue;
@@ -945,7 +946,7 @@ void Analysis::invalidateAllMemory()
 	{
 		if(piter.pred().involvesMemory())
 		{
-			DBG(COLOR_IPur DBG_SEPARATOR COLOR_IYel " - " << *piter)
+			DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << *piter)
 			removePredicate(piter);
 			continue;
 		}
