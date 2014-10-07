@@ -36,6 +36,16 @@ bool Predicate::involvesMemory() const
 	return _opd1->involvesMemory() || _opd2->involvesMemory();
 }
 
+
+/**
+ * @fn inline bool Predicate::isAffine(void);
+ * Test if the predicate only contains + or - operations, and no memory cells
+ */
+bool Predicate::isAffine() const
+{
+	return (_opr == CONDOPR_EQ) && _opd1->isAffine() && _opd2->isAffine();
+}
+
 unsigned int Predicate::countTempVars() const
 {
 	return _opd1->countTempVars() + _opd2-> countTempVars();

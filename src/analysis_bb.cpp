@@ -741,7 +741,8 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 			assert(state != OPERANDSTATE_UNCHANGED);
 			if(state == OPERANDSTATE_UPDATED) // making sure something is updated
 			{
-				LabelledPredicate lp = LabelledPredicate(p, piter.labels()); // TODO!!!
+				LabelledPredicate lp = LabelledPredicate(p, piter.labels()); // TODO!!! this needs to be "stamped" with the label of current BB
+				// cf issue "ANALYSIS SOUNDNESS: predicates may lack labels"
 				setPredicate(piter, lp);
 				rtn = true;
 				DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " " DBG_SEPARATOR << color::ICya() << " + " << *piter)

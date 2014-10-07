@@ -78,6 +78,7 @@ public:
 	virtual bool involvesMemory() const = 0;
 	virtual operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0;
 	virtual bool isComplete() const = 0;
+	virtual bool isAffine() const = 0;
 	virtual Option<OperandConst> evalConstantOperand() const = 0;
 	virtual Option<Operand*> simplify() = 0; // Warning: Option=none does not warrant that nothing has been simplified!
 	virtual Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants) = 0;
@@ -113,6 +114,7 @@ public:
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
 	inline bool isComplete() const { return true; }
+	inline bool isAffine() const { return true; }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
 	
@@ -146,6 +148,7 @@ public:
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
 	inline bool isComplete() const { return true; }
+	inline bool isAffine() const { return true; }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
 	
@@ -184,6 +187,7 @@ public:
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
 	inline bool isComplete() const { return true; }
+	inline bool isAffine() const { return false; }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_MEM; }
 	
@@ -224,6 +228,7 @@ public:
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
+	inline bool isAffine() const { return (_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB); }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	

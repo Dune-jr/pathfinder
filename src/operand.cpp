@@ -226,7 +226,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 							OperandArithExpr* o_arithexpr = (OperandArithExpr*) o_new;
 							operand_kind_t left_kind = o_arithexpr->leftOperand().kind(), right_kind = o_arithexpr->rightOperand().kind();
 							if(o_arithexpr->opr() == ARITHOPR_SUB) // try to reduce (t1 - 4) to (t1 + -4)
-							{	// TODO! we _NEED_ to try to identify t2 in the case (t1 - t2), that is the most realistic case!
+							{	// TODO: we _NEED_ to try to identify t2 in the case (t1 - t2), that is the most realistic case!
 								if(left_kind == OPERAND_VAR && right_kind == OPERAND_CONST)
 								{
 									_kind = OPERANDMEM_RELATIVE;
@@ -268,7 +268,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 }*/
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
 Option<Operand*> OperandMem::simplify() { return none; } // TODO: simplify within the [ ], makes more sense even tho it shouldn't be very useful
-Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesSimplified& constants) { return none; } // TODO! we really should handle this
+Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesSimplified& constants) { return none; }
  
 // Operands: Arithmetic Expressions
 OperandArithExpr::OperandArithExpr(arithoperator_t opr, const Operand& opd1_)
