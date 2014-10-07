@@ -1,0 +1,20 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [style=dashed, weight=1];
+	"1" [label="{BB 1 (000097a4) | main:\l000097a4    stmdb sp!, \{fp, lr\}\l000097a8    add fp, sp, #4\l000097ac    bl 87d8    # i_n_sp_is_rst\l }"]
+	"00000000016e4400i_n_sp_is_rst" [label="i_n_sp_is_rst"]
+	"1" -> "00000000016e4400i_n_sp_is_rst" [label="call", style=dashed, weight=1]
+	"1" -> "2" [weight=4];
+	"2" [label="{BB 2 (000097b0) | 000097b0    bl 88c0    # c_n_sp_is\l }"]
+	"00000000016e4580c_n_sp_is" [label="c_n_sp_is"]
+	"2" -> "00000000016e4580c_n_sp_is" [label="call", style=dashed, weight=1]
+	"2" -> "3" [weight=4];
+	"3" [label="{BB 3 (000097b4) | 000097b4    bl 9510    # c_n_dif\l }"]
+	"00000000016e4280c_n_dif" [label="c_n_dif"]
+	"3" -> "00000000016e4280c_n_dif" [label="call", style=dashed, weight=1]
+	"3" -> "4" [weight=4];
+	"4" [label="{BB 4 (000097b8) | 000097b8    mov r3, #0\l000097bc    mov r0, r3\l000097c0    sub sp, fp, #4\l000097c4    ldmia sp!, \{fp, lr\}\l000097c8    bx lr\l }"]
+	"4" -> "5" [style=dashed, weight=1];
+	"5" [label="EXIT"]
+}
