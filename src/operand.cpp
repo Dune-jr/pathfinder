@@ -33,6 +33,7 @@ bool OperandConst::involvesVariable(const OperandVar& opdv) const { return false
 bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 bool OperandConst::involvesMemory() const { return false; }
 operand_state_t OperandConst::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
+pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 Option<OperandConst> OperandConst::evalConstantOperand() const { return some(*this); }
 Option<Operand*> OperandConst::simplify() { return none; }
 Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesSimplified& constants) { return none; }
@@ -80,6 +81,7 @@ bool OperandVar::involvesMemoryCell(const OperandMem& opdm) const { return false
 bool OperandVar::involvesMemory() const { return false; }
 // since the parent has to do the modification, and var has no child, return false
 operand_state_t OperandVar::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
+pop_result_t OperandVar::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 Option<OperandConst> OperandVar::evalConstantOperand() const { return none; }
 Option<Operand*> OperandVar::simplify() { return none; }
 Option<Operand*> OperandVar::replaceConstants(const ConstantVariablesSimplified& constants)
@@ -266,6 +268,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 	}
 	return OPERANDSTATE_UNCHANGED; // no match
 }*/
+pop_result_t OperandMem::doAffinePop(Operand*& opd_result, Operand*& new_opd) { return POPRESULT_FAIL; }
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
 Option<Operand*> OperandMem::simplify() { return none; } // TODO: simplify within the [ ], makes more sense even tho it shouldn't be very useful
 Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesSimplified& constants) { return none; }
@@ -394,6 +397,58 @@ operand_state_t OperandArithExpr::updateVar(const OperandVar& opdv, const Operan
 	}
 	
 	return rtn;
+}
+// TODO!!! handle ARITHOPR_NEG _and_ replace in isAffine() the (_opr == +) || (_opr == -) statements by adding the NEG case! Handle unary everywhere!
+pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_opd)
+{
+	// it's important to pop the items to the right side of the operator (otherwise problems with operator -)
+	pop_result_t result = opd2->doAffinePop(opd_result, new_opd);
+	switch(result)
+	{
+		case POPRESULT_FAIL:
+			return POPRESULT_FAIL;
+		case POPRESULT_DONE: // opd2 is an OperandConst / OperandVar, so case (.1.) + X
+			// opd_result already contains X
+			// and new_opd will contain (.1.)
+			new_opd = opd1->copy();
+			switch(_opr)
+			{
+				case ARITHOPR_ADD: // this is all fine and easy
+					return POPRESULT_CONTINUE;
+				case ARITHOPR_SUB:
+					if(opd_result->kind() == OPERAND_CONST)
+					{
+						opd_result = new OperandConst(-((OperandConst*)opd_result)->value()); // opposite of the value
+						return POPRESULT_CONTINUE;
+					}
+					else // OPERAND_VAR
+						return POPRESULT_FAIL; // we do not handle X - t1 or X - sp (TODO: is it bad? maybe we should improve this)
+				default:
+					return POPRESULT_FAIL; // this case shouldn't happen
+			}
+		case POPRESULT_CONTINUE: // opd2 is an OperandArithExpr, so case (.1.) +- (.2.)
+			// opd_result already contains some X into (.2.)
+			// new_opd already contains the new righ-handside (.2.)
+			new_opd = new OperandArithExpr(_opr, *opd1, *new_opd); // so return (.1.) +- (.2.)
+			switch(_opr)
+			{
+				case ARITHOPR_ADD: // all fine and easy, again
+					return POPRESULT_CONTINUE;
+				case ARITHOPR_SUB:
+					if(opd_result->kind() == OPERAND_CONST)
+					{
+						opd_result = new OperandConst(-((OperandConst*)opd_result)->value()); // we have to take opposite of the value everytime
+						return POPRESULT_CONTINUE;
+					}
+					// example of why we had  to do this: if we have (...) - (t1 + 2)
+					// (t1+2).doAffinePop() will return +2 even though it's actually -2
+					else // OPERAND_VAR
+						return POPRESULT_FAIL; // TODO: maybe improve this, see higher
+				default:
+					return POPRESULT_FAIL; // this case shouldn't happen
+			}
+	}
+	return POPRESULT_FAIL; // TODO! why do i have to write this???
 }
 // An ArithExpr can be const if all of its children are const!
 Option<OperandConst> OperandArithExpr::evalConstantOperand() const
@@ -606,6 +661,22 @@ io::Output& operator<<(io::Output& out, operand_state_t state)
 			break;
 		case OPERANDSTATE_INVALID:
 			out << "(INVALID)";
+			break;
+	}
+	return out;
+}
+io::Output& operator<<(io::Output& out, pop_result_t res)
+{
+	switch(res)
+	{
+		case POPRESULT_FAIL:
+			out << "(FAIL)";
+			break;
+		case POPRESULT_CONTINUE:
+			out << "(CONTINUE)";
+			break;
+		case POPRESULT_DONE:
+			out << "(DONE)";
 			break;
 	}
 	return out;

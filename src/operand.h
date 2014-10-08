@@ -50,6 +50,13 @@ enum operand_state_t
 	OPERANDSTATE_INVALID, // assert(INVALID > UPDATED)
 };
 
+enum pop_result_t // doAffinePop(Operand* opd_result, Operand* new_opd)
+{
+	POPRESULT_FAIL,     // stop everything and fail: nothing is filled
+	POPRESULT_CONTINUE, // success: opd_result and new_opd are filled
+	POPRESULT_DONE,     // last element: only opd_result is filled
+};
+
 class OperandConst;
 class OperandVar;
 class OperandArithExpr;
@@ -78,7 +85,8 @@ public:
 	virtual bool involvesMemory() const = 0;
 	virtual operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0;
 	virtual bool isComplete() const = 0;
-	virtual bool isAffine() const = 0;
+	virtual bool isAffine(const OperandVar& opdv, const OperandVar& sp) const = 0;
+	virtual pop_result_t doAffinePop(Operand*& opd_result, Operand*& new_opd) = 0;
 	virtual Option<OperandConst> evalConstantOperand() const = 0;
 	virtual Option<Operand*> simplify() = 0; // Warning: Option=none does not warrant that nothing has been simplified!
 	virtual Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants) = 0;
@@ -113,8 +121,9 @@ public:
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
+	pop_result_t doAffinePop(Operand*& opd_result, Operand*& new_opd);
 	inline bool isComplete() const { return true; }
-	inline bool isAffine() const { return true; }
+	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return true; }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
 	
@@ -147,8 +156,9 @@ public:
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
+	pop_result_t doAffinePop(Operand*& opd_result, Operand*& new_opd);
 	inline bool isComplete() const { return true; }
-	inline bool isAffine() const { return true; }
+	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return (_addr == opdv.addr()) || (_addr == sp.addr()); }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
 	
@@ -186,8 +196,9 @@ public:
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
+	pop_result_t doAffinePop(Operand*& opd_result, Operand*& new_opd);
 	inline bool isComplete() const { return true; }
-	inline bool isAffine() const { return false; }
+	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return false; }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_MEM; }
 	
@@ -227,8 +238,10 @@ public:
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
+	pop_result_t doAffinePop(Operand*& opd_result, Operand*& new_opd);
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
-	inline bool isAffine() const { return (_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB); }
+	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const
+		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv, sp) && opd2->isAffine(opdv, sp); }
 	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	
@@ -246,6 +259,7 @@ private:
 io::Output& operator<<(io::Output& out, operand_kind_t kind);
 io::Output& operator<<(io::Output& out, operandmem_kind_t kind);
 io::Output& operator<<(io::Output& out, arithoperator_t opr);
-io::Output& operator<<(io::Output& out, operand_state_t state); // TODO
+io::Output& operator<<(io::Output& out, operand_state_t state);
+io::Output& operator<<(io::Output& out, pop_result_t res);
 
 #endif

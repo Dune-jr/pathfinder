@@ -839,18 +839,14 @@ bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
  * For a variable tX or ?X, try to find a predicate tX=sp+cst or ?X=sp+cst, and return cst when successful.
  * @return true if a value was found
  */
-// TODO! implement stronger version
+// DONE implement stronger version
 //      this is going to be complex as well, it will have to use recursive calls to find a predicate that includes SP
 //		then we get something like ?0 - sp = t2 + 4,
 //		where ?0 and t2 are constant values
 //		and good luck with that!
-//		and we need to label (all) the edge dependencies...
+//TODO!: and we need to label (all) the edge dependencies...
 Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 {
-	// so let's write an ultra-simplified version for now, better than nothing...
-	if(var == sp)
-		return some(0); // var = sp+0
-	
 	for(PredIterator piter(*this); piter; piter++)
 	{
 		Operand *opd_expr = NULL;
@@ -860,30 +856,191 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 			opd_expr = piter.pred().rightOperand().copy();
 		if(piter.pred().rightOperand() == var) // ... = ?x
 			opd_expr = piter.pred().leftOperand().copy();
-		if(opd_expr && (*opd_expr).kind() == OPERAND_ARITHEXPR) // We found ?x to be equal to something
+
+		// Algorithm 1: ?var = sp
+		if(opd_expr && *opd_expr == sp) // easy: ?var = sp
+			return some(0);
+
+		// Algorithm 3: ?var = (...)
+		else if(opd_expr && (*opd_expr).kind() == OPERAND_ARITHEXPR) // We found ?var to be equal to something
 		{
 			// TODO: throw a opd_expr.simplify() in here
 			OperandArithExpr opda_expr(*(OperandArithExpr*)opd_expr);
-			if(opda_expr.isUnary()) // -(something)
-				continue;
-
-			// /limited\ we only handle (SP # x) or (x # SP) atm
-			if(opda_expr.leftOperand() == sp)
+			if(opda_expr.isBinary()) // make sure it's not -(something)
 			{
-				// only + and - are interesting
-				if(opda_expr.opr() == ARITHOPR_ADD)
-					if(Option<OperandConst> maybe_opdc_offset = opda_expr.rightOperand().evalConstantOperand())
-						return (*maybe_opdc_offset).value();
-				if(opda_expr.opr() == ARITHOPR_SUB)
-					if(Option<OperandConst> maybe_opdc_offset = opda_expr.rightOperand().evalConstantOperand())
-						return -(*maybe_opdc_offset).value(); // OPPOSITE of this value since it's SP - ...
+				// /limited\ we only handle (SP # x) or (x # SP) atm
+				if(opda_expr.leftOperand() == sp)
+				{
+					// only + and - are interesting
+					if(opda_expr.opr() == ARITHOPR_ADD)
+						if(Option<OperandConst> maybe_opdc_offset = opda_expr.rightOperand().evalConstantOperand())
+							return (*maybe_opdc_offset).value();
+					if(opda_expr.opr() == ARITHOPR_SUB)
+						if(Option<OperandConst> maybe_opdc_offset = opda_expr.rightOperand().evalConstantOperand())
+							return -(*maybe_opdc_offset).value(); // OPPOSITE of this value since it's SP - ...
+				}
+				else if(opda_expr.rightOperand() == sp) // reverse way! this is ... # SP!
+				{
+					// only + is interesting, 8-sp is bad! (and weird...)
+					if(opda_expr.opr() != ARITHOPR_ADD)
+						if(Option<OperandConst> maybe_opdc_offset = opda_expr.leftOperand().evalConstantOperand())
+							return (*maybe_opdc_offset).value();
+				}
 			}
-			else if(opda_expr.rightOperand() == sp) // reverse way! this is ... # SP!
+		}
+
+		// Algorithm 3 (affine): ((?var +- ...) +- ... = (...)
+		else if(piter.pred().isAffine(var, sp)) // try and look for an affine case ((.. + ..)-..) = (..-..)
+		{
+			DBG(color::IRed() << "Predicate \"" << color::BIRed() << piter.pred() << color::IRed() << "\" has been detected as affine, relative to " << var)
+			Operand* opd_left  = piter.pred().leftOperand().copy();
+			Operand* opd_right = piter.pred().rightOperand().copy();
+			Operand* opd_result = NULL;
+			Operand* new_opd = NULL;
+			// TODO: write this clearer maybe
+			int found_var = 0; // 0 = not found, 1 = found in opdleft, 2 = found in opdright
+			int found_sp = 0; // 0 = not found, 1 = found in opdleft, 2 = found in opdright
+			int delta = 0;
+			pop_result_t res;
+			/*** left operand ***/
+			DBG(color::IRed() << "Starting analysis of opd_left=" << *opd_left)
+
+			int iter = 0; // TODO! remove
+			do
 			{
-				// only + is interesting, 8-sp is bad! (and weird...)
-				if(opda_expr.opr() != ARITHOPR_ADD)
-					if(Option<OperandConst> maybe_opdc_offset = opda_expr.leftOperand().evalConstantOperand())
-						return (*maybe_opdc_offset).value();
+				res = opd_left->doAffinePop(opd_result, new_opd);
+				if(res == POPRESULT_DONE)
+				{
+					if(opd_result->kind() == OPERAND_CONST)
+						delta += ((OperandConst*)opd_result)->value();
+					if(opd_result->kind() == OPERAND_VAR)
+					{
+						if(*opd_result == var && !found_var)
+							found_var = 1; // we found it on the left side of the equation
+						else if(*opd_result == sp && !found_sp)
+							found_sp = 1; // we found it on the left side of the equation
+						else
+						{
+							// FAIL! we found something that is neither var nor sp, or we had already found them
+							res = POPRESULT_FAIL;
+							break;
+						}
+					}
+				}
+				if(res == POPRESULT_CONTINUE)
+				{
+					if(opd_result->kind() == OPERAND_CONST)
+					{
+						delta += ((OperandConst*)opd_result)->value();
+						opd_left = new_opd;
+					}
+					if(opd_result->kind() == OPERAND_VAR)
+					{
+						if(*opd_result == var && !found_var)
+						{
+							found_var = 1; // we found it on the left side of the equation
+							opd_left = new_opd;
+						}								
+						else if(*opd_result == sp && !found_sp)
+						{
+							found_sp = 1; // we found it on the left side of the equation
+							opd_left = new_opd;
+						}
+						else
+						{
+							// FAIL! we found something that is neither var nor sp, or we had already found them
+							res = POPRESULT_FAIL;
+							break;
+						}
+					}
+				}
+
+				iter++;
+				DBG(color::IRed() << "End of iteration #" << iter << ", res=" << res << ", opd_left=" << *opd_left)
+			} while(res == POPRESULT_CONTINUE);
+			if(res == POPRESULT_FAIL)
+			{
+				DBG(color::IRed() << "Analysis of opd_left FAILED!")
+				continue; // this affine analysis failed
+			}
+			DBG(color::IRed() << "Analysis of opd_left successful!")
+			DBG(color::IRed() << "|" << color::RCol() << " delta = " << delta)
+			DBG(color::IRed() << "|" << color::RCol() << " found_var=" << found_var)
+			DBG(color::IRed() << "|" << color::RCol() << " found_sp=" << found_sp)
+
+			/*** right operand ***/
+			DBG(color::IRed() << "Starting analysis of opd_right=" << *opd_right)
+			iter = 0; // TODO! remove
+			do
+			{
+				res = opd_right->doAffinePop(opd_result, new_opd);
+				if(res == POPRESULT_DONE)
+				{
+					if(opd_result->kind() == OPERAND_CONST)
+						delta -= ((OperandConst*)opd_result)->value();
+					if(opd_result->kind() == OPERAND_VAR)
+					{
+						if(*opd_result == var && !found_var)
+							found_var = 2; // we found it on the left side of the equation
+						else if(*opd_result == sp && !found_sp)
+							found_sp = 2; // we found it on the left side of the equation
+						else
+						{
+							// FAIL! we found something that is neither var nor sp, or we had already found them
+							res = POPRESULT_FAIL;
+							break;
+						}
+					}
+				}
+				if(res == POPRESULT_CONTINUE)
+				{
+					if(opd_result->kind() == OPERAND_CONST)
+					{
+						delta -= ((OperandConst*)opd_result)->value();
+						opd_right = new_opd;
+					}
+					if(opd_result->kind() == OPERAND_VAR)
+					{
+						if(*opd_result == var && !found_var)
+						{
+							found_var = 2; // we found it on the left side of the equation
+							opd_right = new_opd;
+						}								
+						else if(*opd_result == sp && !found_sp)
+						{
+							found_sp = 2; // we found it on the left side of the equation
+							opd_right = new_opd;
+						}
+						else
+						{
+							// FAIL! we found something that is neither var nor sp, or we had already found them
+							res = POPRESULT_FAIL;
+							break;
+						}
+					}
+				}
+				iter++;
+				DBG(color::IRed() << "End of iteration #" << iter << ", res=" << res << ", opd_right=" << *opd_right)
+			} while(res == POPRESULT_CONTINUE);
+			if(res == POPRESULT_FAIL)
+			{
+				DBG(color::IRed() << "Analysis of opd_right FAILED!")
+				continue; // this affine analysis failed
+			}
+			DBG(color::IRed() << "Analysis of opd_right successful!")
+			DBG(color::IRed() << "|" << color::RCol() << " delta = " << delta)
+			DBG(color::IRed() << "|" << color::RCol() << " found_var=" << found_var)
+			DBG(color::IRed() << "|" << color::RCol() << " found_sp=" << found_sp)
+			if(found_var && found_sp && found_sp != found_var) // we want them to be on opposite sides, otherwise we have ?var = -sp + K !
+			{
+				DBG(color::IRed() << "var and sp were successfully found once on opposite sides")
+				DBG(color::IRed() << "Therefore, the following equation:")
+				if(found_var == 1)
+					delta = -delta;
+				DBG(color::IGre() << "  " << var << " = sp" << (delta<0?"":"+") << delta)
+				DBG(color::IRed() << "is equivalent to \"" << piter.pred() << "\".")
+
+				return delta;
 			}
 		}
 	}

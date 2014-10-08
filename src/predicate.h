@@ -35,7 +35,7 @@ public:
 	bool involvesVariable(const OperandVar& opdv) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
-	bool isAffine() const;
+	bool isAffine(const OperandVar& opdv, const OperandVar& sp) const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
