@@ -1,0 +1,20 @@
+digraph i_n_sp_is_rst{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [style=dashed, weight=1];
+	"1" [label="{BB 1 (000087d8) | i_n_sp_is_rst:\l000087d8    stmdb sp!, \{r3, r4, fp, lr\}\l000087dc    add fp, sp, #12\l000087e0    ldr r3, [pc, #176]\l000087e4    ldr r4, [r3, #0]\l000087e8    ldr r3, [pc, #172]\l000087ec    ldr r3, [r3, #0]\l000087f0    mov r2, r3, lsl #1\l000087f4    ldr r3, [pc, #164]\l000087f8    ldr r3, [r3, #0]\l000087fc    mov r0, r2\l00008800    mov r1, r3\l00008804    bl 85b8    # s16_mul_s16_u8_fac1\l }"]
+	"00000000024a2400s16_mul_s16_u8_fac1" [label="s16_mul_s16_u8_fac1"]
+	"1" -> "00000000024a2400s16_mul_s16_u8_fac1" [label="call", style=dashed, weight=1]
+	"1" -> "2" [weight=4];
+	"2" [label="{BB 2 (00008808) | 00008808    mov r3, r0\l0000880c    mov r0, r4\l00008810    mov r1, r3\l00008814    bl 85f8    # u16_add_u16_s16\l }"]
+	"00000000024a2580u16_add_u16_s16" [label="u16_add_u16_s16"]
+	"2" -> "00000000024a2580u16_add_u16_s16" [label="call", style=dashed, weight=1]
+	"2" -> "3" [weight=4];
+	"3" [label="{BB 3 (00008818) | 00008818    mov r2, r0\l0000881c    ldr r3, [pc, #128]\l00008820    str r2, [r3, #0]\l00008824    ldr r3, [pc, #120]\l00008828    ldr r3, [r3, #0]\l0000882c    mov r0, r3\l00008830    ldr r1, [pc, #112]\l00008834    bl 82b0    # MIN\l }"]
+	"00000000024a2280MIN" [label="MIN"]
+	"3" -> "00000000024a2280MIN" [label="call", style=dashed, weight=1]
+	"3" -> "4" [weight=4];
+	"4" [label="{BB 4 (00008838) | 00008838    mov r2, r0\l0000883c    ldr r3, [pc, #96]\l00008840    str r2, [r3, #0]\l00008844    ldr r3, [pc, #88]\l00008848    ldr r2, [r3, #0]\l0000884c    ldr r3, [pc, #88]\l00008850    str r2, [r3, #0]\l00008854    ldr r3, [pc, #72]\l00008858    ldr r2, [r3, #0]\l0000885c    ldr r3, [pc, #76]\l00008860    str r2, [r3, #0]\l00008864    ldr r3, [pc, #68]\l00008868    ldr r3, [r3, #0]\l0000886c    mov r2, r3, lsl #4\l00008870    ldr r3, [pc, #60]\l00008874    str r2, [r3, #0]\l00008878    ldr r3, [pc, #56]\l0000887c    ldr r3, [r3, #0]\l00008880    mov r2, r3, lsl #5\l00008884    ldr r3, [pc, #48]\l00008888    str r2, [r3, #0]\l0000888c    sub sp, fp, #12\l00008890    ldmia sp!, \{r3, r4, fp, lr\}\l00008894    bx lr\l }"]
+	"4" -> "5" [style=dashed, weight=1];
+	"5" [label="EXIT"]
+}

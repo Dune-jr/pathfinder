@@ -29,7 +29,8 @@ public:
     	// opt1(option::SwitchOption::Make(manager).cmd("-o").cmd("--com").description("option 1")) { }
     	opt_silent(option::SwitchOption::Make(*this).cmd("-s").cmd("--silent").description("run with minimal output")),
     	opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").description("do not use colors")),
-    	opt_noinfo(option::SwitchOption::Make(*this).cmd("--no-info").description("do not print file/line number info")) { }
+    	opt_noinfo(option::SwitchOption::Make(*this).cmd("--no-info").description("do not print file/line number info")),
+    	opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")) { }
         
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
@@ -47,6 +48,8 @@ protected:
 			dbg_flags |= DBG_NO_COLOR;
 		if(opt_noinfo)
 			dbg_flags |= DBG_NO_INFO;
+		if(opt_nopred)
+			dbg_flags |= DBG_NO_PREDICATES;
 		Analysis analysis = Analysis(cfg, sp_id, max_tempvars, max_registers);
 	}
 
@@ -55,6 +58,7 @@ private:
 	option::SwitchOption opt_silent;
 	option::SwitchOption opt_nocolor;
 	option::SwitchOption opt_noinfo;
+	option::SwitchOption opt_nopred;
 };
 
 OTAWA_RUN(Display)

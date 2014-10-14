@@ -861,7 +861,7 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 		if(opd_expr && *opd_expr == sp) // easy: ?var = sp
 			return some(0);
 
-		// Algorithm 3: ?var = (...)
+		// Algorithm 2: ?var = (...)
 		else if(opd_expr && (*opd_expr).kind() == OPERAND_ARITHEXPR) // We found ?var to be equal to something
 		{
 			// TODO: throw a opd_expr.simplify() in here
@@ -892,7 +892,9 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 		// Algorithm 3 (affine): ((?var +- ...) +- ... = (...)
 		else if(piter.pred().isAffine(var, sp)) // try and look for an affine case ((.. + ..)-..) = (..-..)
 		{
+#ifdef DBG_TEST_ALGO3
 			DBG(color::IRed() << "Predicate \"" << color::BIRed() << piter.pred() << color::IRed() << "\" has been detected as affine, relative to " << var)
+#endif
 			Operand* opd_left  = piter.pred().leftOperand().copy();
 			Operand* opd_right = piter.pred().rightOperand().copy();
 			Operand* opd_result = NULL;
@@ -903,7 +905,9 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 			int delta = 0;
 			pop_result_t res;
 			/*** left operand ***/
+#ifdef DBG_TEST_ALGO3
 			DBG(color::IRed() << "Starting analysis of opd_left=" << *opd_left)
+#endif
 
 			int iter = 0; // TODO! remove
 			do
@@ -956,13 +960,18 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 				}
 
 				iter++;
+#ifdef DBG_TEST_ALGO3
 				DBG(color::IRed() << "End of iteration #" << iter << ", res=" << res << ", opd_left=" << *opd_left)
+#endif
 			} while(res == POPRESULT_CONTINUE);
 			if(res == POPRESULT_FAIL)
 			{
+#ifdef DBG_TEST_ALGO3
 				DBG(color::IRed() << "Analysis of opd_left FAILED!")
+#endif
 				continue; // this affine analysis failed
 			}
+#ifdef DBG_TEST_ALGO3
 			DBG(color::IRed() << "Analysis of opd_left successful!")
 			DBG(color::IRed() << "|" << color::RCol() << " delta = " << delta)
 			DBG(color::IRed() << "|" << color::RCol() << " found_var=" << found_var)
@@ -970,6 +979,7 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 
 			/*** right operand ***/
 			DBG(color::IRed() << "Starting analysis of opd_right=" << *opd_right)
+#endif
 			iter = 0; // TODO! remove
 			do
 			{
@@ -1020,25 +1030,35 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 					}
 				}
 				iter++;
+#ifdef DBG_TEST_ALGO3
 				DBG(color::IRed() << "End of iteration #" << iter << ", res=" << res << ", opd_right=" << *opd_right)
+#endif
 			} while(res == POPRESULT_CONTINUE);
 			if(res == POPRESULT_FAIL)
 			{
+#ifdef DBG_TEST_ALGO3
 				DBG(color::IRed() << "Analysis of opd_right FAILED!")
+#endif
 				continue; // this affine analysis failed
 			}
+#ifdef DBG_TEST_ALGO3
 			DBG(color::IRed() << "Analysis of opd_right successful!")
 			DBG(color::IRed() << "|" << color::RCol() << " delta = " << delta)
 			DBG(color::IRed() << "|" << color::RCol() << " found_var=" << found_var)
 			DBG(color::IRed() << "|" << color::RCol() << " found_sp=" << found_sp)
+#endif
 			if(found_var && found_sp && found_sp != found_var) // we want them to be on opposite sides, otherwise we have ?var = -sp + K !
 			{
+#ifdef DBG_TEST_ALGO3
 				DBG(color::IRed() << "var and sp were successfully found once on opposite sides")
 				DBG(color::IRed() << "Therefore, the following equation:")
+#endif
 				if(found_var == 1)
 					delta = -delta;
+#ifdef DBG_TEST_ALGO3
 				DBG(color::IGre() << "  " << var << " = sp" << (delta<0?"":"+") << delta)
 				DBG(color::IRed() << "is equivalent to \"" << piter.pred() << "\".")
+#endif
 
 				return delta;
 			}

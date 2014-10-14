@@ -7,8 +7,10 @@
 #define DBG_NO_DEBUG 0b001
 #define DBG_NO_COLOR 0b010
 #define DBG_NO_INFO  0b100
+#define DBG_NO_PREDICATES 0b1000
 #define UNTESTED_CRITICAL false // Do not raise exception when executing untested code
 #define DBG_SEPARATOR " "
+// #define DBG_TEST_ALGO3
 
 extern int dbg_flags;
 
@@ -109,16 +111,36 @@ public:
 		}		
 		return str;
 	}
+	static bool shouldPrint(elm::String str)
+	{
+		if(dbg_flags&DBG_NO_DEBUG)
+			return false;
+		if(dbg_flags&DBG_NO_PREDICATES)
+		{	
+			if(str.startsWith(_ << &color::IPur() << " "))
+				return false;
+			if(str.startsWith(_ << &color::IYel() << "-"))
+				return false;
+			if(str.startsWith("Predicates generated:") || str.startsWith("|-> "))
+				return false;
+			if(str.startsWith(_ << &color::IBlu()))
+				return false;
+		}
+		// if(str.startsWith(_ << &color::IPur() << " "))
+		// 	return false;
+		return true;
+	}
 	inline static elm::String dbgInfo(const char* file, int line)
 		{ return (dbg_flags&DBG_NO_INFO) ? (elm::String)"" : color::Yel() << "[" << Debug::formattedDbgInfo(file, line) << "] " << color::RCol(); }
 };
 } // debug
 
 // macros for debugging
-#define DBG_INFO()     color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "] " << color::RCol()
+#define DBG_INFO() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "] " << color::RCol()
 // #define DBG_INFO_STD() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__).chars() << "] " << color::RCol()
 
-#define DBG(str) if(!(dbg_flags&DBG_NO_DEBUG)) cout << Debug::dbgInfo(__FILE__, __LINE__) << str << color::RCol() << io::endl;
+#define DBG(str) {if(Debug::shouldPrint(_ << str)) \
+	/*if(!(dbg_flags&DBG_NO_DEBUG))*/ cout << Debug::dbgInfo(__FILE__, __LINE__) << str << color::RCol() << io::endl;}
 // #define DBG_STD(str) if(!(dbg_flags&DBG_NO_DEBUG)) std::cout << DBG_INFO_STD() << str << color::RCol() << io::endl;
 #define DBG_TEST(tested_cond, expected_cond) \
 	((tested_cond) == (expected_cond) ? "\033[92m" : "\033[91m") << \
