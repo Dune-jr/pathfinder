@@ -4,9 +4,9 @@
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 
-#define DBG_NO_DEBUG 0b001
-#define DBG_NO_COLOR 0b010
-#define DBG_NO_INFO  0b100
+#define DBG_NO_DEBUG	  0b0001
+#define DBG_NO_COLOR	  0b0010
+#define DBG_NO_INFO  	  0b0100
 #define DBG_NO_PREDICATES 0b1000
 #define UNTESTED_CRITICAL false // Do not raise exception when executing untested code
 #define DBG_SEPARATOR " "
@@ -123,7 +123,7 @@ public:
 				return false;
 			if(str.startsWith("Predicates generated:") || str.startsWith("|-> "))
 				return false;
-			if(str.startsWith(_ << &color::IBlu()))
+			if(str.startsWith(_ << &color::IBlu() << "["))
 				return false;
 		}
 		// if(str.startsWith(_ << &color::IPur() << " "))
