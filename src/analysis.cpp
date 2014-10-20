@@ -32,3 +32,7 @@ void Analysis::removePredicate(PredIterator &iter)
 	else DBG(color::BIRed() << "Analysis::removePredicate(): unhandled iter.state!")
 	iter.updateState();
 }
+
+/* 
+	inline SLList<Path> infeasiblePaths(void)
+*/

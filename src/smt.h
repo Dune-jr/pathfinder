@@ -20,6 +20,7 @@ class SMT
 {
 public:
 	SMT();
+	~SMT();
 	Option<SLList<Analysis::Path> > seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants);
 	Option<SLList<Analysis::Path> > seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds);
 	bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool print_result = false);

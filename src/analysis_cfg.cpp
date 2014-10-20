@@ -2,6 +2,7 @@
  * Skeleton of the analysis algorithm, defines the way we parse the CFG 
  */
 
+#include <ctime>
 #include <elm/io/Output.h>
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
@@ -35,10 +36,14 @@ void Analysis::processCFG(CFG* cfg)
 		cout << "Running pre-analysis... ";
 		cout << total_paths << " paths found." << endl;
 #	endif
+
+	std::time_t timestamp = clock(); // Timestamp before analysis
 	processBB(cfg->firstBB());
 	// DBG("\e[4mResult of the analysis: " << color::RCol() << labelled_preds)
 	int infeasible_paths_count = infeasible_paths.count();
-	DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found:")
+	int ms_diff = (clock()-timestamp)*1000/CLOCKS_PER_SEC;
+	DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
+		<< "(" << ms_diff/1000 << "." << ms_diff%1000 << "s)")
 	for(SLList<Path>::Iterator iter(infeasible_paths); iter; iter++)
 	{
 		SLList<const Edge*> l = *iter; // Path is SLList<const Edge*>
@@ -56,7 +61,7 @@ void Analysis::processCFG(CFG* cfg)
 		DBG(color::IGre() << str)
 	}
 	if(dbg_flags&DBG_NO_DEBUG)
-		cout << infeasible_paths_count << " infeasible path(s) found.\r\n";
+		cout << infeasible_paths_count << " infeasible path(s) found. (" << ms_diff/1000 << "." << ms_diff%1000 << "s)\n";
 }
 
 void Analysis::processBB(BasicBlock* bb)
@@ -80,7 +85,6 @@ void Analysis::processBB(BasicBlock* bb)
 		cout << "(" << ++paths_count << "/" << total_paths << ") !\r\n";
 		return; // No point to continue an infeasible path
 	}
-	// else DBG(color::Cya() "labelled_preds= " << labelled_preds) // TODO REMOVE
 	
 	DBG(color::Whi() << "Processing " << bb)
 	analyzeBB(bb); // generates lists of predicates in generated_preds and generated_preds_taken	

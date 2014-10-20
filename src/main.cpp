@@ -21,7 +21,7 @@ void testOperands();
 void testSimplify();
 void testAnalysis(CFG *cfg);
 
-int dbg_flags = 0;
+int dbg_flags = 0b0000;
 
 class Display: public Application {
 public:
@@ -51,6 +51,8 @@ protected:
 		if(opt_nopred)
 			dbg_flags |= DBG_NO_PREDICATES;
 		Analysis analysis = Analysis(cfg, sp_id, max_tempvars, max_registers);
+		const SLList<Analysis::Path>& infeasible_paths = analysis.infeasiblePaths();
+		// TODO!
 	}
 
 private:

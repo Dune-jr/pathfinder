@@ -17,14 +17,20 @@ using CVC4::Expr;
 SMT::SMT(): smt(&em), integer(em.integerType())
 {
 	smt.setLogic("QF_LIA"); // Quantifier-Free (no forall, exists...) Linear Integer Arithmetic
+
+	// smt.setOption("dump", "assertions:pre-everything");
+	// smt.setOption("dump-to", "dump.log");
+}
+
+SMT::~SMT()
+{
 }
 
 Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)
 {
-	// TODO remove comments
-	// DBG(color::ICya() "labelled_preds = " << labelled_preds)
-	// DBG(color::ICya() "constants = " << constants)
-	//DBG("constants.toPredicates() = " << constants.toPredicates())
+	// DBG(color::ICya() << "labelled_preds = " << labelled_preds)
+	// DBG(color::ICya() << "constants = " << constants)
+
 	// add the constant info to the the list of predicates
 	labelled_preds += constants.toPredicates();
 	return seekInfeasiblePaths(labelled_preds);

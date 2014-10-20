@@ -20,9 +20,10 @@ template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l);
 
 class Analysis {
 public:
-	Analysis(CFG *cfg, int sp_id, unsigned int max_tempvars, unsigned int max_registers);
-	
 	typedef SLList<const Edge*> Path;
+
+	Analysis(CFG *cfg, int sp_id, unsigned int max_tempvars, unsigned int max_registers);
+	inline SLList<Path> infeasiblePaths() const { return infeasible_paths; }
 
 	// bool invalidate_constant_info 
 	enum
