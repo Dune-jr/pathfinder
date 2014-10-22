@@ -11,6 +11,7 @@
 
 #include "analysis.h"
 #include "predicate.h"
+#include "ffx.h"
 #include "debug.h"
 
 using namespace elm;
@@ -28,6 +29,7 @@ public:
     Display(void): Application("display", Version(1, 0, 0)),
     	// opt1(option::SwitchOption::Make(manager).cmd("-o").cmd("--com").description("option 1")) { }
     	opt_silent(option::SwitchOption::Make(*this).cmd("-s").cmd("--silent").description("run with minimal output")),
+    	opt_output(option::SwitchOption::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file")),
     	opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").description("do not use colors")),
     	opt_noinfo(option::SwitchOption::Make(*this).cmd("--no-info").description("do not print file/line number info")),
     	opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")) { }
@@ -51,13 +53,21 @@ protected:
 		if(opt_nopred)
 			dbg_flags |= DBG_NO_PREDICATES;
 		Analysis analysis = Analysis(cfg, sp_id, max_tempvars, max_registers);
-		const SLList<Analysis::Path>& infeasible_paths = analysis.infeasiblePaths();
-		// TODO!
+
+		// outputing to .ffx
+		if(opt_output)
+		{
+			const SLList<Analysis::Path>& infeasible_paths = analysis.infeasiblePaths();
+			FFX ffx_output(infeasible_paths);
+			ffx_output.output(entry+".ffx");
+			cout << "output to " + entry + ".ffx" << endl;
+		}
 	}
 
 private:
 	option::Manager manager;
 	option::SwitchOption opt_silent;
+	option::SwitchOption opt_output;
 	option::SwitchOption opt_nocolor;
 	option::SwitchOption opt_noinfo;
 	option::SwitchOption opt_nopred;
