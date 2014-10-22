@@ -849,14 +849,14 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 {
 	for(PredIterator piter(*this); piter; piter++)
 	{
-		Operand *opd_expr = NULL;
 		if(piter.pred().opr() != CONDOPR_EQ)
 			continue;
+/*
+		Operand *opd_expr = NULL;
 		if(piter.pred().leftOperand() == var) // ?x = ...
 			opd_expr = piter.pred().rightOperand().copy();
 		if(piter.pred().rightOperand() == var) // ... = ?x
 			opd_expr = piter.pred().leftOperand().copy();
-
 		// Algorithm 1: ?var = sp
 		if(opd_expr && *opd_expr == sp) // easy: ?var = sp
 			return some(0);
@@ -888,13 +888,25 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 				}
 			}
 		}
-
+*/
 		// Algorithm 3 (affine): ((?var +- ...) +- ... = (...)
-		else if(piter.pred().isAffine(var, sp)) // try and look for an affine case ((.. + ..)-..) = (..-..)
-		{
-#ifdef DBG_TEST_ALGO3
-			DBG(color::IRed() << "Predicate \"" << color::BIRed() << piter.pred() << color::IRed() << "\" has been detected as affine, relative to " << var)
-#endif
+		if(piter.pred().isAffine(var, sp)) // try and look for an affine case ((.. + ..)-..) = (..-..)
+		{	
+// #ifdef DBG_TEST_ALGO3
+// 			DBG(color::IRed() << "Predicate \"" << color::BIRed() << piter.pred() << color::IRed() << "\" has been detected as affine, relative to " << var)
+// #endif
+			AffineEquationState state(sp.addr());
+			piter.pred().leftOperand().parseAffineEquation(state);
+			state.reverseSign();
+			piter.pred().rightOperand().parseAffineEquation(state);
+			if(state.spCounter() == +1 && state.varCounter() == -1) // var = sp + delta
+				return some(state.delta());
+			else if(state.spCounter() == -1 && state.varCounter() == +1) // sp = var + delta
+				return some(-state.delta()); // var = sp + (-delta)
+			// else algorithm failed (for example var = -sp or var = sp+sp)
+		}
+
+			/*
 			Operand* opd_left  = piter.pred().leftOperand().copy();
 			Operand* opd_right = piter.pred().rightOperand().copy();
 			Operand* opd_result = NULL;
@@ -904,12 +916,12 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 			int found_sp = 0; // 0 = not found, 1 = found in opdleft, 2 = found in opdright
 			int delta = 0;
 			pop_result_t res;
-			/*** left operand ***/
+			/// left operand ///-
 #ifdef DBG_TEST_ALGO3
 			DBG(color::IRed() << "Starting analysis of opd_left=" << *opd_left)
 #endif
 
-			int iter = 0; // TODO! remove
+			int iter = 0; // TODO remove when no longer used by debug
 			do
 			{
 				res = opd_left->doAffinePop(opd_result, new_opd);
@@ -977,7 +989,7 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 			DBG(color::IRed() << "|" << color::RCol() << " found_var=" << found_var)
 			DBG(color::IRed() << "|" << color::RCol() << " found_sp=" << found_sp)
 
-			/*** right operand ***/
+			/// right operand ///
 			DBG(color::IRed() << "Starting analysis of opd_right=" << *opd_right)
 #endif
 			iter = 0; // TODO! remove
@@ -1063,7 +1075,10 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 				return delta;
 			}
 		}
+		*/
 	}
+	static int nones = 0;
+	DBG(color::BIRed() << "none #" << ++nones)
 	return none; // no matches found
 }
 /**

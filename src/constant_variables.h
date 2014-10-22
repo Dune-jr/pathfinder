@@ -26,7 +26,7 @@ private:
 		inline void addLabel(const Edge* label) { if(!_labels.contains(label)) _labels += label; }
 		inline void setUpdatedFlag(bool updated = true) { _updated = updated; }
 		LabelledValue& operator=(const LabelledValue& lv);
-		friend io::Output& operator<<(io::Output& out, const LabelledValue& lv) { return lv.print(out); } // TODO: remove friend?
+		friend io::Output& operator<<(io::Output& out, const LabelledValue& lv) { return lv.print(out); }
 
 	private:
 		t::int32 _val;

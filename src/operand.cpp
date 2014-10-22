@@ -34,6 +34,7 @@ bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return fal
 bool OperandConst::involvesMemory() const { return false; }
 operand_state_t OperandConst::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
 pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
+void OperandConst::parseAffineEquation(AffineEquationState& state) const { state.addToDelta(_value); }
 Option<OperandConst> OperandConst::evalConstantOperand() const { return some(*this); }
 Option<Operand*> OperandConst::simplify() { return none; }
 Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesSimplified& constants) { return none; }
@@ -82,6 +83,7 @@ bool OperandVar::involvesMemory() const { return false; }
 // since the parent has to do the modification, and var has no child, return false
 operand_state_t OperandVar::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
 pop_result_t OperandVar::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
+void OperandVar::parseAffineEquation(AffineEquationState& state) const { state.onVarFound(this->_addr); }
 Option<OperandConst> OperandVar::evalConstantOperand() const { return none; }
 Option<Operand*> OperandVar::simplify() { return none; }
 Option<Operand*> OperandVar::replaceConstants(const ConstantVariablesSimplified& constants)
@@ -269,6 +271,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 	return OPERANDSTATE_UNCHANGED; // no match
 }*/
 pop_result_t OperandMem::doAffinePop(Operand*& opd_result, Operand*& new_opd) { return POPRESULT_FAIL; }
+void OperandMem::parseAffineEquation(AffineEquationState& state) const { assert(false); } // should never happen
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
 Option<Operand*> OperandMem::simplify() { return none; } // TODO: simplify within the [ ], makes more sense even tho it shouldn't be very useful
 Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesSimplified& constants) { return none; }
@@ -366,7 +369,7 @@ bool OperandArithExpr::involvesMemory() const
 		return opd1->involvesMemory();
 	return opd1->involvesMemory() || opd2->involvesMemory();	
 }
-// TODO: unary fix (is this already fixed?)
+
 operand_state_t OperandArithExpr::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {
 	operand_state_t rtn = OPERANDSTATE_UNCHANGED;
@@ -450,6 +453,31 @@ pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_o
 	}
 	return POPRESULT_FAIL; // TODO! why do i have to write this???
 }
+
+void OperandArithExpr::parseAffineEquation(AffineEquationState& state) const
+{
+	switch(_opr)
+	{
+		case ARITHOPR_NEG:
+			state.reverseSign();
+			opd1->parseAffineEquation(state);
+			state.reverseSign();
+			return;
+		case ARITHOPR_ADD:
+			opd1->parseAffineEquation(state);
+			opd2->parseAffineEquation(state);
+			return;
+		case ARITHOPR_SUB:
+			opd1->parseAffineEquation(state);
+			state.reverseSign();
+			opd2->parseAffineEquation(state);
+			state.reverseSign();
+			return;
+		default:
+			assert(false); // not affine!
+	}
+}
+
 // An ArithExpr can be const if all of its children are const!
 Option<OperandConst> OperandArithExpr::evalConstantOperand() const
 {
