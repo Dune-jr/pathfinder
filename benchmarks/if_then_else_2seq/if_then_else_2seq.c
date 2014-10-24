@@ -1,20 +1,26 @@
-#include <stdio.h>
+#include <math.h>
+
+volatile k;
 
 int f1()
 {
-	printf("abcbcb");
+//	time(NULL);
+	k = sqrt(0);
 }
 int f2()
 {
-	printf("bccdd");
+//	time(NULL);
+	k = sqrt(1);
 }
 int f3()
 {
-	printf("efefe");
+//	time(NULL);
+	k = sqrt(2);
 }
 int f4()
 {
-	printf("ghghg");
+//	time(NULL);
+	k = sqrt(3);
 }
 
 int main(int argc, char** argv)
@@ -34,7 +40,7 @@ int main(int argc, char** argv)
 	else {
 		f4();
 	}
-	printf("%d %d", y, z);
+	//printf("%d %d", y, z);
 	//return x;
 	return 0;
 }

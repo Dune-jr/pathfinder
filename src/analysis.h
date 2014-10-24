@@ -123,7 +123,7 @@ private:
 	Option<t::int32> findStackRelativeValueOfVar(const OperandVar& var);
 	bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
 	Option<OperandMem> getOperandMem(const OperandVar& var);
-	void invalidateAllMemory();
+	bool invalidateAllMemory();
 	Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken);
 	inline bool isConstant(t::int32 var_id)		  const { return constants.isConstant(var_id); }
 	inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }

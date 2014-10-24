@@ -155,13 +155,11 @@ BitVector SMT::getListOfPathsToKeep(const Vector<BitVector>& bitcode_vector)
 			if(!paths_to_keep[j])
 				continue;
 			const BitVector &opd1 = bitcode_vector[i], &opd2 = bitcode_vector[j];
-			// DBG("\t#" << i << "(" << opd1 << ") <= #" << j << "(" << opd2 << ") : " << DBG_TEST(opd1 <= opd2, false))
 			if(opd1 <= opd2)
 			{	// opd2 is superfluous
 				paths_to_keep.set(j, false);
 				continue;
 			}
-			// DBG("\t#" << i << "(" << opd1 << ") >= #" << j << "(" << opd2 << ") : " << DBG_TEST(opd1 >= opd2, false))
 			if(opd1 >= opd2)
 			{	// opd1 is superfluous
 				paths_to_keep.set(i, false);

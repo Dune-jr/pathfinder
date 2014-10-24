@@ -76,7 +76,6 @@ void Analysis::processBB(BasicBlock* bb)
 	}
 		
 	// SMT call
-	// TODO: this should be put at a smarter place
 	SMT smt;
 	if(Option<SLList<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(labelled_preds.first(), constants))
 	{
@@ -104,6 +103,10 @@ void Analysis::processBB(BasicBlock* bb)
 		|| outs->kind() == Edge::VIRTUAL
 		|| outs->kind() == Edge::VIRTUAL_RETURN) // Filter out irrelevant edges (calls...)
 		{	
+			// pid_t pid = fork();
+			// if(pid)
+			// 	continue;
+
 			SLList<Predicate> &relevant_preds = (outs->kind() == Edge::TAKEN) ?
 				generated_preds_taken_backup :
 				generated_preds_backup;
@@ -126,6 +129,8 @@ void Analysis::processBB(BasicBlock* bb)
 			labelled_preds.addFirst(topList);
 
 			processEdge(*outs);
+			// if(!pid)
+			// 	break;
 		}
 	}
 }

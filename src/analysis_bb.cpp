@@ -539,15 +539,6 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				// If we have predicates such as ?16 = ?4 ~ t1, make sure none of these are identified as constants in the constantVariables table!
 				if(Option<Operand*> maybe_opd1 = opd1->replaceConstants(constants.toSimplified()))
 				{
-					// TODO: remove
-					if(*((OperandConst*)*maybe_opd1) == OperandConst(0))
-					{
-						DBG(color::BIRed() << "WARNING! <<<")
-						DBG("opd1 was:" << *opd1 << " (row addr = " << ((OperandVar*)opd1)->addr() << ")")
-						DBG("isConstant(" << ((OperandVar*)opd1)->addr() << ") = " << constants.toSimplified().isConstant(((OperandVar*)opd1)->addr()))
-						DBG("and the value is " << constants.toSimplified().getValue(((OperandVar*)opd1)->addr()))
-					}
-					// remove the above
 					delete opd1;
 					opd1 = *maybe_opd1;
 				}
@@ -562,7 +553,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 			if(opd1) delete opd1;
 			if(opd2) delete opd2;
 		}
-		// all tempprary variables are freed at the end of any assembly instruction, so invalidate them
+		// all temporary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();
 	}
 	
@@ -603,8 +594,7 @@ bool Analysis::invalidateMem(const OperandVar& var)
 	if(!addr)
 	{
 		DBG(color::IPur() << DBG_SEPARATOR " " << color::IYel() << "Could not simplify " << var << ", invalidating whole memory")
-		invalidateAllMemory();
-		return true; // TODO: check if invalidateAllMemory does invalidate anything
+		return invalidateAllMemory();
 	}
 	invalidateMem(*addr);
 	return true;
@@ -766,7 +756,6 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
  * If the variable is a tempvar (tX), does not browse predicates that have not been generated in the current BB
  * @return true if a value was found
  */
-// TODO: change this to Option<OperandConst> Analysis::findConstantValueOfVar(const OperandVar& var)
 Option<t::int32> Analysis::findConstantValueOfVar(const OperandVar& var)
 {
 	if(!isConstant(var))
@@ -774,11 +763,9 @@ Option<t::int32> Analysis::findConstantValueOfVar(const OperandVar& var)
 	return some(constants[var]);
 }
 
-// TODO: I think it is reasonable not to browse previously generated predicates that have been updated, is it really OK?
-// TODO: elaborate with recursive calls to find things like t1 = t2, t2 = 4 or t1 = 3 + t2 and t2 = 1, as described below
 bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
 {
-	/* TODO! things to do here... separate kinds:
+	/* old TO*DO: things to do here... separate kinds:
 	*  OperandConst or OperandMem : nothing to do
 	*  OperandArith or OperandVar : recursive call to findConstantValueOfVar with an exclusion list to avoid infinite loops
 	*  complexity issues! :(
@@ -839,12 +826,7 @@ bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
  * For a variable tX or ?X, try to find a predicate tX=sp+cst or ?X=sp+cst, and return cst when successful.
  * @return true if a value was found
  */
-// DONE implement stronger version
-//      this is going to be complex as well, it will have to use recursive calls to find a predicate that includes SP
-//		then we get something like ?0 - sp = t2 + 4,
-//		where ?0 and t2 are constant values
-//		and good luck with that!
-//TODO!: and we need to label (all) the edge dependencies...
+//TODO! we need to label (all) the edge dependencies...
 Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 {
 	for(PredIterator piter(*this); piter; piter++)
@@ -864,7 +846,7 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 		// Algorithm 2: ?var = (...)
 		else if(opd_expr && (*opd_expr).kind() == OPERAND_ARITHEXPR) // We found ?var to be equal to something
 		{
-			// TODO: throw a opd_expr.simplify() in here
+			// TO*DO: throw a opd_expr.simplify() in here
 			OperandArithExpr opda_expr(*(OperandArithExpr*)opd_expr);
 			if(opda_expr.isBinary()) // make sure it's not -(something)
 			{
@@ -891,10 +873,7 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 */
 		// Algorithm 3 (affine): ((?var +- ...) +- ... = (...)
 		if(piter.pred().isAffine(var, sp)) // try and look for an affine case ((.. + ..)-..) = (..-..)
-		{	
-// #ifdef DBG_TEST_ALGO3
-// 			DBG(color::IRed() << "Predicate \"" << color::BIRed() << piter.pred() << color::IRed() << "\" has been detected as affine, relative to " << var)
-// #endif
+		{
 			AffineEquationState state(sp.addr());
 			piter.pred().leftOperand().parseAffineEquation(state);
 			state.reverseSign();
@@ -911,17 +890,12 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 			Operand* opd_right = piter.pred().rightOperand().copy();
 			Operand* opd_result = NULL;
 			Operand* new_opd = NULL;
-			// TODO: write this clearer maybe
+			// write this clearer maybe
 			int found_var = 0; // 0 = not found, 1 = found in opdleft, 2 = found in opdright
 			int found_sp = 0; // 0 = not found, 1 = found in opdleft, 2 = found in opdright
 			int delta = 0;
 			pop_result_t res;
 			/// left operand ///-
-#ifdef DBG_TEST_ALGO3
-			DBG(color::IRed() << "Starting analysis of opd_left=" << *opd_left)
-#endif
-
-			int iter = 0; // TODO remove when no longer used by debug
 			do
 			{
 				res = opd_left->doAffinePop(opd_result, new_opd);
@@ -970,29 +944,11 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 						}
 					}
 				}
-
-				iter++;
-#ifdef DBG_TEST_ALGO3
-				DBG(color::IRed() << "End of iteration #" << iter << ", res=" << res << ", opd_left=" << *opd_left)
-#endif
 			} while(res == POPRESULT_CONTINUE);
 			if(res == POPRESULT_FAIL)
 			{
-#ifdef DBG_TEST_ALGO3
-				DBG(color::IRed() << "Analysis of opd_left FAILED!")
-#endif
 				continue; // this affine analysis failed
 			}
-#ifdef DBG_TEST_ALGO3
-			DBG(color::IRed() << "Analysis of opd_left successful!")
-			DBG(color::IRed() << "|" << color::RCol() << " delta = " << delta)
-			DBG(color::IRed() << "|" << color::RCol() << " found_var=" << found_var)
-			DBG(color::IRed() << "|" << color::RCol() << " found_sp=" << found_sp)
-
-			/// right operand ///
-			DBG(color::IRed() << "Starting analysis of opd_right=" << *opd_right)
-#endif
-			iter = 0; // TODO! remove
 			do
 			{
 				res = opd_right->doAffinePop(opd_result, new_opd);
@@ -1041,37 +997,15 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 						}
 					}
 				}
-				iter++;
-#ifdef DBG_TEST_ALGO3
-				DBG(color::IRed() << "End of iteration #" << iter << ", res=" << res << ", opd_right=" << *opd_right)
-#endif
 			} while(res == POPRESULT_CONTINUE);
 			if(res == POPRESULT_FAIL)
 			{
-#ifdef DBG_TEST_ALGO3
-				DBG(color::IRed() << "Analysis of opd_right FAILED!")
-#endif
 				continue; // this affine analysis failed
 			}
-#ifdef DBG_TEST_ALGO3
-			DBG(color::IRed() << "Analysis of opd_right successful!")
-			DBG(color::IRed() << "|" << color::RCol() << " delta = " << delta)
-			DBG(color::IRed() << "|" << color::RCol() << " found_var=" << found_var)
-			DBG(color::IRed() << "|" << color::RCol() << " found_sp=" << found_sp)
-#endif
 			if(found_var && found_sp && found_sp != found_var) // we want them to be on opposite sides, otherwise we have ?var = -sp + K !
 			{
-#ifdef DBG_TEST_ALGO3
-				DBG(color::IRed() << "var and sp were successfully found once on opposite sides")
-				DBG(color::IRed() << "Therefore, the following equation:")
-#endif
 				if(found_var == 1)
 					delta = -delta;
-#ifdef DBG_TEST_ALGO3
-				DBG(color::IGre() << "  " << var << " = sp" << (delta<0?"":"+") << delta)
-				DBG(color::IRed() << "is equivalent to \"" << piter.pred() << "\".")
-#endif
-
 				return delta;
 			}
 		}
@@ -1134,18 +1068,21 @@ Option<OperandMem> Analysis::getOperandMem(const OperandVar& var)
 	return none;
 }
 
-void Analysis::invalidateAllMemory()
+bool Analysis::invalidateAllMemory()
 {
+	bool rtn = false;
 	for(PredIterator piter(*this); piter; )
 	{
 		if(piter.pred().involvesMemory())
 		{
 			DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << *piter)
 			removePredicate(piter);
+			rtn = true;
 			continue;
 		}
 		piter++;
 	}
+	return rtn;
 }
 
 Predicate* Analysis::getPredicateGeneratedByCondition(sem::inst condition, bool taken)

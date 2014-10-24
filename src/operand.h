@@ -202,15 +202,11 @@ class OperandMem : public Operand
 public:
 	OperandMem(const OperandMem& opd);
 	OperandMem(const OperandConst& opdc, bool relative = false); // relative to true means the memory is relative to the stack pointer
-	//OperandMem(const OperandVar& opdv);
-	//OperandMem(const OperandVar& opdv, const OperandConst& opdc);
 	OperandMem(); // for use in Option
 	~OperandMem();
 	
 	inline bool isRelative() const { return _kind == OPERANDMEM_ABSOLUTE; }
 	inline bool isAbsolute() const { return _kind == OPERANDMEM_RELATIVE; }
-	// inline bool hasConst() const { return _kind & OPERANDMEMFLAG_HASCONST; }
-	// inline bool hasVar()   const { return _kind & OPERANDMEMFLAG_HASVAR;   }
 	inline const OperandConst& getConst() const { assert(_opdc); return *_opdc; }
 	
 	Operand* copy() const;
@@ -235,7 +231,6 @@ public:
 	
 private:
 	OperandConst* _opdc;
-	// OperandVar*   _opdv;
 	operandmem_kind_t _kind;
 	io::Output& print(io::Output& out) const;
 };

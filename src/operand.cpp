@@ -230,7 +230,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 							OperandArithExpr* o_arithexpr = (OperandArithExpr*) o_new;
 							operand_kind_t left_kind = o_arithexpr->leftOperand().kind(), right_kind = o_arithexpr->rightOperand().kind();
 							if(o_arithexpr->opr() == ARITHOPR_SUB) // try to reduce (t1 - 4) to (t1 + -4)
-							{	// TODO: we _NEED_ to try to identify t2 in the case (t1 - t2), that is the most realistic case!
+							{	// TO*DO: we _NEED_ to try to identify t2 in the case (t1 - t2), that is the most realistic case!
 								if(left_kind == OPERAND_VAR && right_kind == OPERAND_CONST)
 								{
 									_kind = OPERANDMEM_RELATIVE;
@@ -401,7 +401,7 @@ operand_state_t OperandArithExpr::updateVar(const OperandVar& opdv, const Operan
 	
 	return rtn;
 }
-// TODO!!! handle ARITHOPR_NEG _and_ replace in isAffine() the (_opr == +) || (_opr == -) statements by adding the NEG case! Handle unary everywhere!
+// TO*DO handle ARITHOPR_NEG _and_ replace in isAffine() the (_opr == +) || (_opr == -) statements by adding the NEG case! Handle unary everywhere!
 pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_opd)
 {
 	// it's important to pop the items to the right side of the operator (otherwise problems with operator -)
@@ -425,7 +425,7 @@ pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_o
 						return POPRESULT_CONTINUE;
 					}
 					else // OPERAND_VAR
-						return POPRESULT_FAIL; // we do not handle X - t1 or X - sp (TODO: is it bad? maybe we should improve this)
+						return POPRESULT_FAIL; // we do not handle X - t1 or X - sp (TO*DO: is it bad? maybe we should improve this)
 				default:
 					return POPRESULT_FAIL; // this case shouldn't happen
 			}
@@ -446,12 +446,12 @@ pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_o
 					// example of why we had  to do this: if we have (...) - (t1 + 2)
 					// (t1+2).doAffinePop() will return +2 even though it's actually -2
 					else // OPERAND_VAR
-						return POPRESULT_FAIL; // TODO: maybe improve this, see higher
+						return POPRESULT_FAIL; // TO*DO: maybe improve this, see higher
 				default:
 					return POPRESULT_FAIL; // this case shouldn't happen
 			}
 	}
-	return POPRESULT_FAIL; // TODO! why do i have to write this???
+	return POPRESULT_FAIL; // TO*DO! why do i have to write this?
 }
 
 void OperandArithExpr::parseAffineEquation(AffineEquationState& state) const

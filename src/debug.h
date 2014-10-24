@@ -10,7 +10,6 @@
 #define DBG_NO_PREDICATES 0b1000
 #define UNTESTED_CRITICAL false // Do not raise exception when executing untested code
 #define DBG_SEPARATOR " "
-#define DBG_TEST_ALGO3
 
 extern int dbg_flags;
 
