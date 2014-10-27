@@ -13,6 +13,7 @@
 #include "predicate.h"
 #include "ffx.h"
 #include "debug.h"
+#include "constant.h"
 
 using namespace elm;
 using namespace otawa;
