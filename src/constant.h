@@ -1,7 +1,8 @@
 #ifndef _CONSTANT_H
 #define _CONSTANT_H
 
-#include <elm/util/Option.h> // TODO! find weaker way to include elm::t::int32
+#include <elm/int.h> // elm::t::int32
+#include <elm/io.h> // elm::io
 
 using namespace elm;
 
@@ -31,11 +32,14 @@ public:
 	inline bool isRelative() const { return _kind == CONSTANT_RELATIVE; }
 	inline bool isAbsolute() const { return _kind == CONSTANT_ABSOLUTE; }
 	inline bool isValid()    const { return _kind != CONSTANT_INVALID;  }
+	inline bool isPositive() const { return _sign == SIGN_POSITIVE; }
+	inline bool isNegative() const { return _sign == SIGN_NEGATIVE; }
 
-	inline operator bool() { return isValid(); }
+	// inline operator bool() const { return isValid(); } // TODO uncomment this 
 	Constant& operator=(const Constant& c);
 	Constant& operator=(t::int32 val);
 	bool operator==(const Constant& c) const;
+	inline bool operator==(int val) const { return *this == Constant(val); }
 	inline bool operator!=(const Constant& c) const { return !(*this == c); }
 	Constant operator+(const Constant& c) const;
 	Constant operator-(const Constant& c) const;
@@ -43,6 +47,8 @@ public:
 	Constant operator*(const Constant& c) const;
 	Constant operator/(const Constant& c) const;
 	Constant operator%(const Constant& c) const;
+	Constant operator<<(const Constant& c) const;
+	Constant operator>>(const Constant& c) const;
 	Constant& operator+=(const Constant& c);
 	Constant& operator-=(const Constant& c);
 	inline Constant operator+(int val) const { return *this + Constant(val); }
@@ -50,8 +56,12 @@ public:
 	inline Constant operator*(int val) const { return *this * Constant(val); }
 	inline Constant operator/(int val) const { return *this / Constant(val); }
 	inline Constant operator%(int val) const { return *this % Constant(val); }
+	inline Constant operator<<(int val) const { return *this << Constant(val); }
+	inline Constant operator>>(int val) const { return *this >> Constant(val); }
 	inline Constant& operator+=(int val) { return (*this += Constant(val)); }
 	inline Constant& operator-=(int val) { return (*this -= Constant(val)); }
+
+	bool operator>(const Constant& c) const; // for elm::Comparator in elm::genstruct::AVLMap
 
 	friend io::Output& operator<<(io::Output& out, const Constant& c) { return c.print(out); }
 

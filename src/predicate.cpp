@@ -22,9 +22,9 @@ Predicate::~Predicate()
  */
 
 // Test if the predicate contains (recursively) the variable represented by opdv
-bool Predicate::involvesVariable(const OperandVar& opdv) const
+int Predicate::involvesVariable(const OperandVar& opdv) const
 {
-	return _opd1->involvesVariable(opdv) || _opd2->involvesVariable(opdv);
+	return _opd1->involvesVariable(opdv) + _opd2->involvesVariable(opdv);
 }
 
 bool Predicate::involvesMemoryCell(const OperandMem& opdm) const
@@ -74,7 +74,7 @@ bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 
 // returns true if something was updated
 operand_state_t Predicate::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
-{	
+{
 	// we need to replace the OperandVar children
 	// (they can't do it on their own since the parent has to do the modification)
 	operand_state_t rtn = OPERANDSTATE_UNCHANGED;

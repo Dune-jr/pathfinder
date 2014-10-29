@@ -5,8 +5,8 @@
 #include <elm/util/Option.h>
 #include <cvc4/expr/expr.h>
 #include <cvc4/expr/type.h>
+#include "constant.h"
 #include "constant_variables_simplified.h"
-// #include "constant_variables.h"
 
 using namespace elm;
 
@@ -47,7 +47,7 @@ enum operand_state_t
 {
 	OPERANDSTATE_UNCHANGED=0,
 	OPERANDSTATE_UPDATED,
-	OPERANDSTATE_INVALID, // assert(INVALID > UPDATED)
+	// OPERANDSTATE_INVALID, // assert(INVALID > UPDATED)
 };
 
 // TODO: remove this
@@ -62,29 +62,7 @@ class OperandConst;
 class OperandVar;
 class OperandArithExpr;
 class OperandMem;
-
-class AffineEquationState
-{
-public:
-	AffineEquationState(t::int32 sp) : _is_negative(false), _delta(0), _sp_counter(0), _var_counter(0), _sp(sp) { }
-	// inline bool isNegative() const { return _is_negative; }
-	// inline bool isPositive() const { return !_is_negative; }
-	inline int delta()       const { return sign()*_delta;     }
-	inline int spCounter()   const { return sign()*_sp_counter;  }
-	inline int varCounter()  const { return sign()*_var_counter; }
-	inline void reverseSign() { _is_negative ^= 1; _delta = -_delta; _sp_counter = -_sp_counter; _var_counter = -_var_counter; }
-	inline void addToDelta(int d) { _delta += d; }
-	inline void onVarFound(t::int32 var) { if(var==_sp) _sp_counter++; else _var_counter++; }
-
-private:
-	inline int sign() const { if(_is_negative) return -1; else return +1; }
-
-	bool _is_negative;
-	int _delta;
-	int _sp_counter;
-	int _var_counter;
-	t::int32 _sp;
-};
+class AffineEquationState;
 
 // The visitor: an abstract class
 class OperandVisitor
@@ -104,7 +82,7 @@ public:
 	virtual Operand* copy() const = 0;
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
 	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const = 0;
-	virtual bool involvesVariable(const OperandVar& opdv) const = 0;
+	virtual int involvesVariable(const OperandVar& opdv) const = 0;
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
 	virtual bool involvesMemory() const = 0;
 	virtual operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0;
@@ -130,16 +108,16 @@ class OperandConst : public Operand
 {
 public:
 	OperandConst(const OperandConst& opd);
-	OperandConst(t::int32 value);
+	OperandConst(const Constant& value);
 	OperandConst(); // for use in Option
 	~OperandConst();
 	
-	inline t::int32 value() const { return _value; }
+	inline Constant value() const { return _value; }
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
-	bool involvesVariable(const OperandVar& opdv) const;
+	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
@@ -157,7 +135,7 @@ public:
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 	
 private:
-	t::int32 _value;
+	Constant _value;
 	io::Output& print(io::Output& out) const;
 };
 
@@ -175,7 +153,7 @@ public:
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
-	bool involvesVariable(const OperandVar& opdv) const;
+	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
@@ -197,6 +175,7 @@ private:
 	io::Output& print(io::Output& out) const;
 };
 
+// TODO! rework this
 class OperandMem : public Operand
 {	
 public:
@@ -205,14 +184,14 @@ public:
 	OperandMem(); // for use in Option
 	~OperandMem();
 	
-	inline bool isRelative() const { return _kind == OPERANDMEM_ABSOLUTE; }
-	inline bool isAbsolute() const { return _kind == OPERANDMEM_RELATIVE; }
+	inline bool isAbsolute() const { return _kind == OPERANDMEM_ABSOLUTE; }
+	inline bool isRelative() const { return _kind == OPERANDMEM_RELATIVE; }
 	inline const OperandConst& getConst() const { assert(_opdc); return *_opdc; }
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
-	bool involvesVariable(const OperandVar& opdv) const;
+	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
@@ -253,7 +232,7 @@ public:
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
-	bool involvesVariable(const OperandVar& opdv) const;
+	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesMemory() const;
@@ -278,6 +257,28 @@ private:
 	Operand* opd2; // unused if operator is unary
 		
 	io::Output& print(io::Output& out) const;
+};
+
+class AffineEquationState
+{
+public:
+	AffineEquationState(const OperandVar& sp) : _is_negative(false), _delta(0), _sp_counter(0), _var_counter(0), _sp(sp) { }
+	inline int delta()       const { return sign()*_delta;     }
+	inline int spCounter()   const { return sign()*_sp_counter;  }
+	inline int varCounter()  const { return sign()*_var_counter; }
+	inline void reverseSign() { _is_negative ^= 1; _delta = -_delta; _sp_counter = -_sp_counter; _var_counter = -_var_counter; }
+	inline void addToDelta(int d) { _delta += d; }
+	inline void onVarFound(const OperandVar& var) { if(var==_sp) _sp_counter++; else _var_counter++; } // TODO: eventually this should never be a sp, and only do _var_counter++
+	inline void onSpFound(bool sign = SIGN_POSITIVE) { if(sign == SIGN_POSITIVE) _sp_counter++; else _sp_counter--; }
+
+private:
+	inline int sign() const { if(_is_negative) return -1; else return +1; }
+
+	bool _is_negative;
+	int _delta;
+	int _sp_counter;
+	int _var_counter;
+	OperandVar _sp;
 };
 
 io::Output& operator<<(io::Output& out, operand_kind_t kind);

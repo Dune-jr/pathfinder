@@ -14,7 +14,7 @@ using elm::BitVector;
 using otawa::Edge;
 using CVC4::Expr;
 
-SMT::SMT(): smt(&em), integer(em.integerType())
+SMT::SMT(): smt(&em), variables(em), integer(em.integerType())
 {
 	smt.setLogic("QF_LIA"); // Quantifier-Free (no forall, exists...) Linear Integer Arithmetic
 
@@ -209,7 +209,8 @@ bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool pri
 		Predicate pred = (*iter).pred();
 		if(Option<Expr> expr = getExpr(pred))
 		{
-			// DBG_STD(color::Red() << "Assumption: " << *expr)
+			// if(print_results)
+			// 	DBG_STD(color::IRed().chars() << "Assumption: " << *expr)
 			smt.assertFormula(*expr);
 		}
 	}

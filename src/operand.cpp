@@ -6,14 +6,14 @@ using namespace elm;
 
 // Operands: Constants
 OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }
-OperandConst::OperandConst(t::int32 value) : _value(value) { }
+OperandConst::OperandConst(const Constant& value) : _value(value) { }
 OperandConst::OperandConst() : _value(0) { }
 OperandConst::~OperandConst() { }
 Operand* OperandConst::copy() const { return new OperandConst(_value); }
 io::Output& OperandConst::print(io::Output& out) const
 {
-	if(_value >= 64 || _value <= -63) // print large values in hex
-		return (out << "0x" << io::hex(_value));
+	// if(_value >= 64 || _value <= -63) // print large values in hex
+	// 	return (out << "0x" << io::hex(_value));
 	return (out << _value);
 }
 bool OperandConst::operator==(const Operand& o) const
@@ -29,13 +29,24 @@ bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) cons
 	expr = this->copy(); // Assume we are the expr
 	return false; // We haven't found an isolated tempvar
 }
-bool OperandConst::involvesVariable(const OperandVar& opdv) const { return false; }
+int OperandConst::involvesVariable(const OperandVar& opdv) const { return 0; }
 bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 bool OperandConst::involvesMemory() const { return false; }
 operand_state_t OperandConst::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
 pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
-void OperandConst::parseAffineEquation(AffineEquationState& state) const { state.addToDelta(_value); }
-Option<OperandConst> OperandConst::evalConstantOperand() const { return some(*this); }
+void OperandConst::parseAffineEquation(AffineEquationState& state) const
+{
+	assert(_value.isValid());
+	state.addToDelta(_value.val());
+	if(_value.isRelative())
+		state.onSpFound(_value.sign());
+}
+Option<OperandConst> OperandConst::evalConstantOperand() const
+{
+	if(!_value.isValid()) // TODO! make sure this is necessary and not removable
+		return none;
+	return some(*this);
+}
 Option<Operand*> OperandConst::simplify() { return none; }
 Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesSimplified& constants) { return none; }
 
@@ -74,9 +85,9 @@ bool OperandVar::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 		return false;
 	}
 }
-bool OperandVar::involvesVariable(const OperandVar& opdv) const
+int OperandVar::involvesVariable(const OperandVar& opdv) const
 {
-	return opdv == *this;
+	return (int)(opdv == *this);
 }
 bool OperandVar::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 bool OperandVar::involvesMemory() const { return false; }
@@ -102,13 +113,9 @@ OperandMem::OperandMem(const OperandConst& opdc, bool relative)
 	else
 		_kind = OPERANDMEM_ABSOLUTE;
 }
-OperandMem::OperandMem(const OperandMem& opd)
+OperandMem::OperandMem(const OperandMem& opd) : _kind(opd._kind)
 {
 	_opdc = new OperandConst(opd.getConst());
-	if(opd.isRelative())
-		_kind = OPERANDMEM_RELATIVE;
-	else
-		_kind = OPERANDMEM_ABSOLUTE;
 }
 OperandMem::OperandMem() : _opdc(NULL), _kind(OPERANDMEM_ABSOLUTE) { }
 OperandMem::~OperandMem()
@@ -132,8 +139,8 @@ io::Output& OperandMem::print(io::Output& out) const
 		return (out << "sp − " << -(*_opdc).value() << "]");
 #else
 		return (out << "sp - " << -(*_opdc).value() << "]");
-#endif
-	else*/
+#endif*/
+	else
 		return (out << "sp + " << (*_opdc).value() << "]");
 }
 bool OperandMem::operator==(const Operand& o) const
@@ -153,13 +160,10 @@ bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 	expr = this->copy(); // Assume we are the expr
 	return false; // We haven't found an isolated tempvar
 }
-bool OperandMem::involvesVariable(const OperandVar& opdv) const { return false; }
+int OperandMem::involvesVariable(const OperandVar& opdv) const { return 0; }
 bool OperandMem::involvesMemoryCell(const OperandMem& opdm) const {	return *this == opdm; }
 bool OperandMem::involvesMemory() const { return true; }
-operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
-{
-	return OPERANDSTATE_UNCHANGED; // no match
-}
+operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
 /*operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {
 	// if: this OperandMem involves a variable, and it matches the variable we have to update
@@ -351,11 +355,11 @@ bool OperandArithExpr::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) 
 	expr = this->copy();
 	return false;
 }
-bool OperandArithExpr::involvesVariable(const OperandVar& opdv) const
+int OperandArithExpr::involvesVariable(const OperandVar& opdv) const
 {
 	if(isUnary())
 		return opd1->involvesVariable(opdv);
-	return opd1->involvesVariable(opdv) || opd2->involvesVariable(opdv);
+	return opd1->involvesVariable(opdv) + opd2->involvesVariable(opdv);
 }
 bool OperandArithExpr::involvesMemoryCell(const OperandMem& opdm) const
 {
@@ -488,7 +492,7 @@ Option<OperandConst> OperandArithExpr::evalConstantOperand() const
 			switch(_opr)
 			{
 				case ARITHOPR_NEG:
-					return some(OperandConst(-1 * (*val).value()));
+					return some(OperandConst(-(*val).value()));
 				default:
 					assert(false);
 			}
@@ -526,10 +530,11 @@ Option<OperandConst> OperandArithExpr::evalConstantOperand() const
 // Warning: Option=none does not warrant that nothing has been simplified!
 Option<Operand*> OperandArithExpr::simplify()
 {
-	// before anything, test our groudness
+	// before anything, test our groundness
 	if(Option<OperandConst> val = evalConstantOperand())
 	{
-		return some((Operand*)((*val).copy()));
+		if((*val).value().isValid())
+			return some((Operand*)((*val).copy()));
 	}
 	if(isUnary())
 	{
@@ -548,7 +553,7 @@ Option<Operand*> OperandArithExpr::simplify()
 	// test neutrals
 	bool opd1_is_constant = opd1->kind() == OPERAND_CONST;
 	bool opd2_is_constant = opd2->kind() == OPERAND_CONST;
-	t::int32 opd1_val, opd2_val;
+	Constant opd1_val, opd2_val;
 	if(opd1_is_constant) opd1_val = ((OperandConst*)opd1)->value();
 	if(opd2_is_constant) opd2_val = ((OperandConst*)opd2)->value();
 	switch(_opr)
@@ -687,9 +692,11 @@ io::Output& operator<<(io::Output& out, operand_state_t state)
 		case OPERANDSTATE_UPDATED:
 			out << "(UPDATED)";
 			break;
+		/*
 		case OPERANDSTATE_INVALID:
 			out << "(INVALID)";
 			break;
+		*/
 	}
 	return out;
 }

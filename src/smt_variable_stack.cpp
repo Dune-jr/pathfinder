@@ -6,7 +6,10 @@
 
 using CVC4::Expr;
 
-VariableStack::VariableStack() { }
+VariableStack::VariableStack(CVC4::ExprManager& em)
+{
+	expr_sp = em.mkVar("SP", em.integerType());
+}
 
 Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o)
 {
@@ -25,29 +28,38 @@ Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o)
 //
 Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, const Expr& expr_addr)
 {
-	const t::int32 addr = o.getConst().value();
-	if(o.isAbsolute())
-	{	// case: absolute addr
-		if(Option<Expr> opt_expr = memmap_absolute.get(addr))
-			return *opt_expr; // already in the stack
-		else
-		{	// not in stack, create it
-			elm::String label = _ << o;
-			Expr expr = em.mkVar(label.chars(), em.integerType());
-			memmap_absolute.put(addr, expr);
-			return expr;
-		}
-	}
+	const Constant& addr = o.getConst().value();
+	assert(addr.isValid()); // TODO! fix
+	int sp_factor = 0;
+	if(o.isRelative())
+		sp_factor += 1;
+	if(addr.isRelative())
+		sp_factor += (addr.isPositive()) ? 1 : -1;
+
+	assert(sp_factor <= 1); // TODO! handle
+
+	if(Option<Expr> opt_expr = memmap.get(addr))
+		return *opt_expr; // already in the stack
 	else
-	{	// case: relative addr
-		if(Option<Expr> opt_expr = memmap_relative.get(addr))
-			return *opt_expr; // already in the stack
-		else
-		{	// not in stack, create it
-			elm::String label = _ << o;
-			Expr expr = em.mkVar(label.chars(), em.integerType());
-			memmap_relative.put(addr, expr);
-			return expr;
+	{	// not in stack, create it
+		elm::String label;
+		switch(sp_factor)
+		{
+			case -1:
+				label = _ << "[-SP+" << addr.val() << "]";
+				break;
+			case 0:
+				label = _ << "[" << addr.val() << "]";
+				break;
+			case +1:
+				label = _ << "[SP+" << addr.val() << "]";
+				break;
+			default:
+				assert(false);
 		}
+		label << "]";
+		Expr expr = em.mkVar(label.chars(), em.integerType());
+		memmap.put(addr, expr);
+		return expr;
 	}
 }

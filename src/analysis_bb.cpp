@@ -106,8 +106,8 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 					{
 						invalidateMem(*addr_mem);
 						make_pred = true;
-						opd1 = new OperandMem(*addr_mem);
-						opd2 = new OperandVar(reg);
+						opd1 = new OperandVar(reg);
+						opd2 = new OperandMem(*addr_mem);
 					}
 					else
 					{
@@ -165,7 +165,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							opd2 = new OperandConst(0);
 							make_pred = true; // d % 2 = 0
 							if(isConstant(d))
-								constants.set(d, 2*constants[d]);
+								constants.set(d, constants[d]*2);
 						}
 						else // d <- d+b
 						{	// [d-b / d]
@@ -175,7 +175,16 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 								if(isConstant(b))
 									constants.set(d, constants[d]+constants[b]);
 								else
+								{
+									// d = constants[d] + b
+									opd1 = new OperandVar(d);
+									Operand *opd21 = new OperandConst(constants[d]);
+									Operand *opd22 = new OperandVar(b);
+									opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
+									make_pred = true;
+
 									constants.invalidate(d);
+								}
 							}
 						}
 					}
@@ -189,7 +198,16 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 								if(isConstant(a))
 									constants.set(d, constants[d]+constants[a]);
 								else
+								{
+									// d = a + constants[d]
+									opd1 = new OperandVar(d);
+									Operand *opd21 = new OperandVar(a);
+									Operand *opd22 = new OperandConst(constants[d]);
+									opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
+									make_pred = true;
+
 									constants.invalidate(d);
+								}
 							}
 						}
 						else
@@ -215,8 +233,6 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 							if(d == b) // d <- d-d
 							{	// [0 / d], d is set to 0!
 								invalidateVar(d);
-								// opd1 = new OperandVar(d);
-								// opd2 = new OperandConst(0);
 								constants.set(d, 0);
 							}
 							else // d <- d-b
@@ -227,7 +243,15 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 									if(isConstant(b))
 										constants.set(d, constants[d]-constants[b]);
 									else
+									{
+										// d = constants[d] - b
+										Operand* opd21 = new OperandConst(constants[d]);
+										Operand* opd22 = new OperandVar(b);
+										opd2 = new OperandArithExpr(ARITHOPR_SUB, *opd21, *opd22);
+										make_pred = true;
+
 										constants.invalidate(d);
+									}
 								}
 							}
 						}
@@ -243,7 +267,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 									else
 									{
 										// d = a - constants[d]
-										opd1 = new OperandVar(d);
+										// opd1 = new OperandVar(d);
 										Operand *opd21 = new OperandVar(a);
 										Operand *opd22 = new OperandConst(constants[d]);
 										opd2 = new OperandArithExpr(ARITHOPR_SUB, *opd21, *opd22);
@@ -572,6 +596,36 @@ bool Analysis::invalidateVar(const OperandVar& var, bool invalidate_constant_inf
 {
 	bool rtn = false;
 
+	// try and identify a value for ?3 (look for a ?3 = X predicate)
+	for(PredIterator piter(*this); piter; piter++)
+	{
+		if(piter.pred().opr() == CONDOPR_EQ && piter.pred().involvesVariable(var) == 1)
+		{
+			// TODO!! when doing replaceVar, we should also append the labels of the predicate we just removed!
+			// this requires generated_preds to be LabelledPredicates!
+			if(piter.pred().leftOperand().involvesVariable(var) == 1) // var is in left operand
+			{
+				if(piter.pred().leftOperand() == var) // left operand is exactly var (that is, predicate is "var = ???")
+				{
+					Operand* expr = piter.pred().rightOperand().copy(); // backup the "???" expr
+					removePredicate(piter); // remove current predicate
+					replaceVar(var, *expr); // [??? / var]
+					delete expr;
+					break; // stop and move on
+				}
+			}
+			else // var is in right operand
+				if(piter.pred().rightOperand() == var) // right operand is exactly var (that is, predicate is "??? = var")
+				{
+					Operand* expr = piter.pred().leftOperand().copy(); // backup the "???" expr
+					removePredicate(piter); // remove current predicate
+					replaceVar(var, *expr); // [??? / var]
+					delete expr;
+					break; // stop and move on
+				}
+		}
+	}
+
 	for(PredIterator piter(*this); piter; )
 	{
 		if(piter.pred().involvesVariable(var))
@@ -661,11 +715,38 @@ bool Analysis::invalidateTempVars()
 	return rtn;
 }
 
+// this mindlessly replaces all occurences of var by expr
+bool Analysis::replaceVar(const OperandVar& var, const Operand& expr)
+{
+	bool rtn = false;
+	for(PredIterator piter(*this); piter; piter++)
+	{
+		if(piter.pred().involvesVariable(var))
+		{
+			Predicate p(piter.pred());
+			String prev_str = _ << piter.pred();
+
+			if(p.updateVar(var, expr) == OPERANDSTATE_UPDATED)
+			{
+				if(rtn == false) // first time
+				{
+					DBG(color::IBlu() << "[" << expr << " / " << var << "]")
+					rtn = true;
+				}
+				DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
+				DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << p)
+				setPredicate(piter, LabelledPredicate(p, piter.labels())); // TODO!! improve this to add label of current edge
+			}
+		}
+		// piter++; // TODO: make sure it's ok to do the for(;;) this way
+	}
+	return rtn;
+}
+
 bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 {
-	// if(!start) return false; // already at the end of the list				
 	bool rtn = false;
-	for(SLList<Predicate>::Iterator iter(generated_preds); iter; ) // begin one position ahead of iterator 'start'
+	for(SLList<Predicate>::Iterator iter(generated_preds); iter; )
 	{
 		if((*iter).involvesVariable(temp_var))
 		{
@@ -674,12 +755,12 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 			
 			operand_state_t state = p.updateVar(temp_var, expr);
 			assert(state != OPERANDSTATE_UNCHANGED); // otherwise means involvesVariable returned a false positive
-			if(state == OPERANDSTATE_INVALID)
+			/*if(state == OPERANDSTATE_INVALID)
 			{
 				assert(!UNTESTED_CRITICAL);
 				DBG(color::BIRed() << "Untested case of invalidation!")
 				generated_preds.remove(iter);
-			}
+			}*/
 			if(p.isIdent()) // if we just transformed t1 = X into X = X
 			{
 				iter++;
@@ -689,7 +770,7 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 			{
 				DBG(color::IBlu() << "[" << expr << " / " << temp_var << "]")
 				rtn = true;
-			}				
+			}
 			DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
 			DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << p)
 			generated_preds.set(iter, p);
@@ -719,7 +800,7 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 	DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [" << *opd_modifier_new << " / " << opd_to_update << "]")
 	bool rtn = false;
 	
-	for(PredIterator piter(*this); piter; )
+	for(PredIterator piter(*this); piter; piter++)
 	{
 		if(piter.pred().involvesVariable(opd_to_update))
 		{
@@ -728,23 +809,14 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 			// updating the predicate
 			Predicate p = piter.pred();
 			operand_state_t state = p.updateVar(opd_to_update, *opd_modifier_new);
-			assert(state != OPERANDSTATE_UNCHANGED);
-			if(state == OPERANDSTATE_UPDATED) // making sure something is updated
-			{
-				LabelledPredicate lp = LabelledPredicate(p, piter.labels()); // TODO!!! this needs to be "stamped" with the label of current BB
-				// cf issue "ANALYSIS SOUNDNESS: predicates may lack labels"
-				setPredicate(piter, lp);
-				rtn = true;
-				DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " " DBG_SEPARATOR << color::ICya() << " + " << *piter)
-			}
-			else if(state == OPERANDSTATE_INVALID)
-			{	// TODO (**) ?4 = [t1], t1 <- t1-t2, we should try to identify t2
-				DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " " DBG_SEPARATOR << color::Cya() << "(new indirection is too complex)")
-				removePredicate(piter);
-				continue;
-			}
+			assert(state == OPERANDSTATE_UPDATED); // making sure something is updated	
+
+			LabelledPredicate lp = LabelledPredicate(p, piter.labels()); // TODO!! this needs to be "stamped" with the label of current BB
+			// cf issue "ANALYSIS SOUNDNESS: predicates may lack labels"
+			setPredicate(piter, lp);
+			rtn = true;
+			DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " " DBG_SEPARATOR << color::ICya() << " + " << *piter)
 		}
-		piter++;
 	}
 	delete opd_modifier_new;
 	return rtn;
@@ -756,15 +828,15 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
  * If the variable is a tempvar (tX), does not browse predicates that have not been generated in the current BB
  * @return true if a value was found
  */
-Option<t::int32> Analysis::findConstantValueOfVar(const OperandVar& var)
+Option<Constant> Analysis::findConstantValueOfVar(const OperandVar& var)
 {
 	if(!isConstant(var))
 		return none;
 	return some(constants[var]);
 }
 
-bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
-{
+// bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
+// {
 	/* old TO*DO: things to do here... separate kinds:
 	*  OperandConst or OperandMem : nothing to do
 	*  OperandArith or OperandVar : recursive call to findConstantValueOfVar with an exclusion list to avoid infinite loops
@@ -773,6 +845,7 @@ bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
 	*  if this (simpler) first function fails, call the second one
 	*  that does not improve worst-case scenario complexity but avoids worst case scanrios a lot
 	*/
+	/*
 	for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++)
 	{
 		if((*iter).opr() == CONDOPR_EQ) // operator is =
@@ -820,7 +893,7 @@ bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
 		}
 	}
 	return false; // No matches found
-}
+}*/
 /**
  * @fn bool Analysis::findStackRelativeValueOfVar(const OperandVar& var, OperandConst& val);
  * For a variable tX or ?X, try to find a predicate tX=sp+cst or ?X=sp+cst, and return cst when successful.
@@ -874,7 +947,7 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 		// Algorithm 3 (affine): ((?var +- ...) +- ... = (...)
 		if(piter.pred().isAffine(var, sp)) // try and look for an affine case ((.. + ..)-..) = (..-..)
 		{
-			AffineEquationState state(sp.addr());
+			AffineEquationState state(sp);
 			piter.pred().leftOperand().parseAffineEquation(state);
 			state.reverseSign();
 			piter.pred().rightOperand().parseAffineEquation(state);
@@ -884,8 +957,7 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 				return some(-state.delta()); // var = sp + (-delta)
 			// else algorithm failed (for example var = -sp or var = sp+sp)
 		}
-
-			/*
+		/*
 			Operand* opd_left  = piter.pred().leftOperand().copy();
 			Operand* opd_right = piter.pred().rightOperand().copy();
 			Operand* opd_result = NULL;
@@ -1012,7 +1084,8 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 		*/
 	}
 	static int nones = 0;
-	DBG(color::BIRed() << "none #" << ++nones)
+	nones++;
+	DBG(color::BIRed() << "none #" << nones) // TODO: remove
 	return none; // no matches found
 }
 /**
@@ -1060,10 +1133,9 @@ bool Analysis::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Ope
 }
 Option<OperandMem> Analysis::getOperandMem(const OperandVar& var)
 {
-	Option<t::int32> val;
-	if(val = findConstantValueOfVar(var))
+	if(Option<Constant> val = findConstantValueOfVar(var))
 		return some(OperandMem(OperandConst(*val)));
-	if(val = findStackRelativeValueOfVar(var))
+	if(Option<t::int32> val = findStackRelativeValueOfVar(var))
 		return some(OperandMem(OperandConst(*val), true));
 	return none;
 }

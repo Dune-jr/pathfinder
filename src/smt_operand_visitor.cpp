@@ -15,8 +15,12 @@ Expr SMTOperandVisitor::result()
 
 void SMTOperandVisitor::visit(const class OperandConst& o)
 {
-	expr = em.mkConst(CVC4::Rational(o.value()));
-	visited = true;
+	assert(o.value().isValid()); // TODO!!
+	if((o.value().isAbsolute()))
+		expr = em.mkConst(CVC4::Rational(o.value().val()));
+	if((o.value().isRelative()))
+		expr = em.mkExpr(o.value().isPositive() ? PLUS : MINUS, em.mkConst(CVC4::Rational(o.value().val())), variables.getExprSP());
+	visited = true;	
 }
 
 void SMTOperandVisitor::visit(const class OperandVar& o)

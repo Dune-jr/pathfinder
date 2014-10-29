@@ -21,6 +21,9 @@ void Analysis::initializeAnalysis()
 	generated_preds.clear();
 	labelled_preds.clear();
 	labelled_preds += SLList<LabelledPredicate>::null; // add an empty list as first element
+
+	// set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+	constants.set(sp, SP, false);
 }
 
 // WARNING: atm, this function assumes we have NO LOOPS!

@@ -136,11 +136,12 @@ public:
 
 // macros for debugging
 #define DBG_INFO() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "] " << color::RCol()
-// #define DBG_INFO_STD() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__).chars() << "] " << color::RCol()
+#define DBG_INFO_STD() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__).chars() << "] " << color::RCol()
 
 #define DBG(str) {if(Debug::shouldPrint(_ << str)) \
-	/*if(!(dbg_flags&DBG_NO_DEBUG))*/ cout << Debug::dbgInfo(__FILE__, __LINE__) << str << color::RCol() << io::endl;}
-// #define DBG_STD(str) if(!(dbg_flags&DBG_NO_DEBUG)) std::cout << DBG_INFO_STD() << str << color::RCol() << io::endl;
+	cout << Debug::dbgInfo(__FILE__, __LINE__) << str << color::RCol() << io::endl;}
+#define DBG_STD(str) {if(Debug::shouldPrint(_ << str)) \
+	std::cout << Debug::dbgInfo(__FILE__, __LINE__).chars() << str << color::RCol().chars() << io::endl;}
 #define DBG_TEST(tested_cond, expected_cond) \
 	((tested_cond) == (expected_cond) ? "\033[92m" : "\033[91m") << \
 	((tested_cond) ? "true" : "false") << "\033[0m"

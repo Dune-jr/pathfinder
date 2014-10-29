@@ -6,7 +6,7 @@ void addIndents(io::Output& out, int n) { for(int i=0; i<n; i++) out << "\t"; }
 Analysis::Analysis(CFG *cfg, int sp_id, unsigned int max_tempvars, unsigned int max_registers)
 	: sp(sp_id), constants(max_tempvars, max_registers)
 {
-	DBG("Stack pointer identified to " << sp)	
+	DBG("Stack pointer identified to " << sp)
 	initializeAnalysis();
 	processCFG(cfg);
 }

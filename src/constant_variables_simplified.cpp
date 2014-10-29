@@ -3,8 +3,8 @@
 ConstantVariablesSimplified::ConstantVariablesSimplified(unsigned int max_tempvars, unsigned int max_registers)
 	: _max_tempvars(max_tempvars), _max_registers(max_registers)
 {
-	tempvars = new Option<t::int32>[max_tempvars];
-	registers = new Option<t::int32>[max_registers];
+	tempvars = new Option<Constant>[max_tempvars];
+	registers = new Option<Constant>[max_registers];
 	for(unsigned int i = 0; i < max_tempvars; i++)
 		tempvars[i] = none;
 	for(unsigned int i = 0; i < max_registers; i++)
@@ -17,7 +17,7 @@ ConstantVariablesSimplified::~ConstantVariablesSimplified()
 	delete[] registers;
 }
 
-Option<t::int32>& ConstantVariablesSimplified::getCell(t::int32 var_id) const
+Option<Constant>& ConstantVariablesSimplified::getCell(t::int32 var_id) const
 {
 	if(var_id < 0)
 		return tempvars[-var_id-1]; // tempvars id start at 1 and are negative
@@ -29,7 +29,7 @@ bool ConstantVariablesSimplified::isConstant(t::int32 var_id) const
 	return getCell(var_id).isOne();
 }
 
-t::int32 ConstantVariablesSimplified::getValue(t::int32 var_id) const
+Constant ConstantVariablesSimplified::getValue(t::int32 var_id) const
 {
 	return getCell(var_id).value();
 }

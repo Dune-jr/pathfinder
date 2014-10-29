@@ -56,7 +56,7 @@ bool ConstantVariables::isConstant(const OperandVar& opdv) const
 	return getCell(opdv).isOne();
 }
 
-t::int32 ConstantVariables::getValue(const OperandVar& opdv) const
+Constant ConstantVariables::getValue(const OperandVar& opdv) const
 {
 	Option<LabelledValue>& k = getCell(opdv);
 	assert(k.isOne());
@@ -64,17 +64,18 @@ t::int32 ConstantVariables::getValue(const OperandVar& opdv) const
 }
 
 // reset and set the value (the label list is emptied)
-void ConstantVariables::set(const OperandVar& opdv, t::int32 val, bool updated_flag)
+void ConstantVariables::set(const OperandVar& opdv, const Constant& val, bool updated_flag)
 {
+	if(!val.isValid())
+		return invalidate(opdv);
 	Option<LabelledValue>& k = getCell(opdv);
 	invalidate(opdv);
 	DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << opdv << "==" << OperandConst(val))
 	k = some(LabelledValue(val, SLList<const Edge*>::null, updated_flag));
-	// DBG(color::IRed() << "State: " << *this) // TODO remove
 }
 
 // set to a value without changing the labels
-void ConstantVariables::update(const OperandVar& opdv, t::int32 val, bool updated_flag)
+void ConstantVariables::update(const OperandVar& opdv, const Constant& val, bool updated_flag)
 {
 	Option<LabelledValue>& k = getCell(opdv);
 	if(k.isOne())

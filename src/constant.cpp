@@ -1,4 +1,5 @@
 #include "constant.h"
+#include "debug.h"
 
 using namespace elm;
 
@@ -38,7 +39,6 @@ bool Constant::operator==(const Constant& c) const
 }
 Constant Constant::operator+(const Constant& c) const
 {
-	cout << "call, *this="<<*this<<", c="<<c<<io::endl;
 	t::int32 new_val = _val + c._val;
 	switch(_kind)
 	{
@@ -79,7 +79,7 @@ Constant Constant::operator-(const Constant& c) const
 				case CONSTANT_ABSOLUTE:
 					return Constant(new_val, CONSTANT_ABSOLUTE);
 				case CONSTANT_RELATIVE:
-					return Constant(new_val, CONSTANT_RELATIVE, -c._sign);
+					return Constant(new_val, CONSTANT_RELATIVE, !c._sign);
 				default:
 					return Constant();
 			}
@@ -127,7 +127,7 @@ Constant Constant::operator/(const Constant& c) const
 	if(*this == 0)
 		return Constant(0);
 	if(c == 1)
-		return *this;
+		return *this; // id
 	if(c == -1)
 		return -*this;
 	if(isAbsolute() && c.isAbsolute())
@@ -136,15 +136,31 @@ Constant Constant::operator/(const Constant& c) const
 }
 Constant Constant::operator%(const Constant& c) const
 {
-	if(c == 0 || c.kind() != CONSTANT_ABSOLUTE)
+	if(c == 0 || !c.isAbsolute())
 		return Constant();
 	if(*this == 0)
 		return Constant(0);
 	if(c == 1)
-		return *this;
+		return *this; // id
 	if(isAbsolute())
 		return Constant(_val % c._val);
 	return Constant();
+}
+Constant Constant::operator<<(const Constant& c) const
+{
+	if(c == 0)
+		return *this; // id
+	if(!c.isAbsolute() || !isAbsolute())
+		return Constant();
+	return Constant(_val << c._val);
+}
+Constant Constant::operator>>(const Constant& c) const
+{
+	if(c == 0)
+		return *this; // id
+	if(!c.isAbsolute() || !isAbsolute())
+		return Constant();
+	return Constant(_val >> c._val);
 }
 Constant& Constant::operator+=(const Constant& c)
 {
@@ -154,18 +170,39 @@ Constant& Constant::operator-=(const Constant& c)
 {
 	return (*this = *this - c);
 }
+bool Constant::operator>(const Constant& c) const
+{
+	if(kind() != c.kind())
+		return kind() > c.kind(); // doesn't make sense, but doesn't need to
+	switch(kind())
+	{
+		case CONSTANT_RELATIVE:
+			if(sign() > c.sign())
+				return true;
+			if(sign() < c.sign())
+				return false;
+		case CONSTANT_ABSOLUTE: // or CONSTANT_RELATIVE with same sign
+			return val() > c.val();
+		default: // CONSTANT_INVALID
+			return false;
+	}
+
+	return kind() > c.kind();
+}
 io::Output& Constant::print(io::Output& out) const
 {
 	switch(_kind)
 	{
 		case CONSTANT_ABSOLUTE:
+			if(_val >= 64 || _val <= -63) // print large values in hex
+				return (out << "0x" << io::hex(_val));
 			return (out << _val);
 		case CONSTANT_RELATIVE:
-			if(_sign==SIGN_POSITIVE)
-				return (out << "sp+" << _val);
+			if(isPositive())
+				return (out << "SP+" << _val);
 			else
-				return (out << "-sp+" << _val);
+				return (out << "-SP+" << _val);
 		default:
-			return (out << "(invalid)");
+			return (out << "(invalid cst)");
 	}
 }
