@@ -209,8 +209,8 @@ bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool pri
 		Predicate pred = (*iter).pred();
 		if(Option<Expr> expr = getExpr(pred))
 		{
-			// if(print_results)
-			// 	DBG_STD(color::IRed().chars() << "Assumption: " << *expr)
+			if(print_results)
+				DBG_STD(color::IRed().chars() << "Assumption: " << *expr)
 			smt.assertFormula(*expr);
 		}
 	}

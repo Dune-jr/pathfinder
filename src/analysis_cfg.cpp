@@ -46,7 +46,7 @@ void Analysis::processCFG(CFG* cfg)
 	int infeasible_paths_count = infeasible_paths.count();
 	int ms_diff = (clock()-timestamp)*1000/CLOCKS_PER_SEC;
 	DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
-		<< "(" << ms_diff/1000 << "." << ms_diff%1000 << "s)")
+		<< "(" << (ms_diff>=1000 ? ((float)ms_diff)/(float(100)) : ms_diff) << (ms_diff>=1000 ? "s" : "ms") << ")")
 	for(SLList<Path>::Iterator iter(infeasible_paths); iter; iter++)
 	{
 		SLList<const Edge*> l = *iter; // Path is SLList<const Edge*>
