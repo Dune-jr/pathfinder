@@ -22,7 +22,6 @@ public:
 	SMT();
 	~SMT();
 	Option<SLList<Analysis::Path> > seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants);
-	Option<SLList<Analysis::Path> > seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds);
 	bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool print_result = false);
 	
 private:
@@ -30,12 +29,14 @@ private:
 	CVC4::SmtEngine smt;
 	VariableStack variables;
 
+	Option<SLList<Analysis::Path> > seekInfeasiblePaths(SLList<LabelledPredicate>& labelled_preds);
 	SLList<Analysis::Path> getAllInfeasiblePaths(const SLList<LabelledPredicate>& labelled_preds, int index = 0);
 	void removeIncompletePredicates(SLList<LabelledPredicate>& labelled_preds);
 	void genPathPointBitMaps(const SLList<Analysis::Path>& paths, AVLMap<const Edge*, unsigned int>& map_pathpoint_to_bit, Vector<const Edge*>& map_bit_to_pathpoint);
-	Vector<BitVector> genBitCodes(const SLList<Analysis::Path>& paths, const AVLMap<const Edge*, unsigned int>& map_pathpoint_to_bit, unsigned int used_bits);
-	BitVector getListOfPathsToKeep(const Vector<BitVector>& bitcode_vector);
-	SLList<Analysis::Path> filterPaths(const Vector<BitVector>& bitcode_vector, const Vector<const Edge*>& map_bit_to_pathpoint, const BitVector& paths_to_keep, bool print_results = false);
+	SLList<BitVector> genBitCodes(const SLList<Analysis::Path>& paths, const AVLMap<const Edge*, unsigned int>& map_pathpoint_to_bit, unsigned int used_bits);
+	// BitVector getListOfPathsToKeep(const Vector<BitVector>& bitcode_vector);
+	BitVector getListOfPathsToKeep(const SLList<BitVector>& bitcode_list);
+	SLList<Analysis::Path> filterPaths(const SLList<BitVector>& bitcode_list, const Vector<const Edge*>& map_bit_to_pathpoint, const BitVector& paths_to_keep, bool print_results = false);
 
 	Option<Expr> getExpr(const Predicate& p);
 	Option<Expr> getExpr(const Operand& o);

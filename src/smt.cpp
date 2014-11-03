@@ -18,6 +18,7 @@ SMT::SMT(): smt(&em), variables(em), integer(em.integerType())
 {
 	smt.setLogic("QF_LIA"); // Quantifier-Free (no forall, exists...) Linear Integer Arithmetic
 
+	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
 	// smt.setOption("dump", "assertions:pre-everything");
 	// smt.setOption("dump-to", "dump.log");
 }
@@ -26,6 +27,7 @@ SMT::~SMT()
 {
 }
 
+// getting a copy of the labelled_preds SLList	
 Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)
 {
 	// DBG(color::ICya() << "labelled_preds = " << labelled_preds)
@@ -36,20 +38,44 @@ Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicat
 	return seekInfeasiblePaths(labelled_preds);
 }
 
-Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds)
+Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>& labelled_preds)
 {
 	if(checkPredSat(labelled_preds, true))
 		return elm::none; // no inconsistency found
 
+		Analysis::Path path;
+		for(SLList<LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
+			path += (*parse_iter).labels();
+
+		elm::String str = "[";
+		bool first = true;
+		for(SLList<const Edge*>::Iterator iter(path); iter; iter++)
+		{
+			if(first)
+				first = false;
+			else
+				str = str.concat(_ << ", ");
+			str = str.concat(_ << (*iter)->source()->number() << "->" << (*iter)->target()->number());
+		}
+		str = str.concat(_ << "]");
+		DBG(color::On_IRed() << "Inf. path found: " << str)
+		SLList<Analysis::Path> paths;
+		paths += path;
+		return paths;
+
+/*
 	removeIncompletePredicates(labelled_preds); // optimization: incomplete predicates are not sent to the SMT therefore they cannot play a role in the UNSAT
 	SLList<Analysis::Path> paths = getAllInfeasiblePaths(labelled_preds); // exhaustive list of paths
+cout << labelled_preds.count() << " " << paths.count() << endl;
 	AVLMap<const Edge*, unsigned int> map_pathpoint_to_bit;
 	Vector<const Edge*> map_bit_to_pathpoint;
 	genPathPointBitMaps(paths, map_pathpoint_to_bit, map_bit_to_pathpoint); // generate maps to convert Path <-> BitVector
-	const Vector<BitVector>& bitcode_vector = genBitCodes(paths, map_pathpoint_to_bit, map_bit_to_pathpoint.length()); // generate the list of BitVectors corresponding to the list of paths
-	const BitVector& paths_to_keep = getListOfPathsToKeep(bitcode_vector); // get the list of relevant paths (removes redundant bitcode such as 101 in {101, 100})
+	// const Vector<BitVector>& bitcode_vector = genBitCodes(paths, map_pathpoint_to_bit, map_bit_to_pathpoint.length()); // generate the list of BitVectors corresponding to the list of paths
+	const SLList<BitVector>& bitcode_list = genBitCodes(paths, map_pathpoint_to_bit, map_bit_to_pathpoint.length()); // generate the list of BitVectors corresponding to the list of paths
+	const BitVector& paths_to_keep = getListOfPathsToKeep(bitcode_list); // get the list of relevant paths (removes redundant bitcode such as 101 in {101, 100})
 	
-	return elm::some(filterPaths(bitcode_vector, map_bit_to_pathpoint, paths_to_keep, true)); // generate the list of non-redundant paths and return it
+	return elm::some(filterPaths(bitcode_list, map_bit_to_pathpoint, paths_to_keep, true)); // generate the list of non-redundant paths and return it
+//*/
 }
 
 void SMT::removeIncompletePredicates(SLList<LabelledPredicate>& labelled_preds)
@@ -126,10 +152,10 @@ void SMT::genPathPointBitMaps(const SLList<Analysis::Path>& paths, AVLMap<const 
 }
 
 // map paths to bitcodes
-Vector<BitVector> SMT::genBitCodes(const SLList<Analysis::Path>& paths, const AVLMap<const Edge*, unsigned int>& map_pathpoint_to_bit, unsigned int used_bits)
+SLList<BitVector> SMT::genBitCodes(const SLList<Analysis::Path>& paths, const AVLMap<const Edge*, unsigned int>& map_pathpoint_to_bit, unsigned int used_bits)
 {
 	BitVector bitcode(used_bits);
-	Vector<BitVector> bitcode_vector;
+	SLList<BitVector> bitcode_list;
 	for(SLList<Analysis::Path>::Iterator iter(paths); iter; iter++)
 	{
 		bitcode.clear();
@@ -137,24 +163,28 @@ Vector<BitVector> SMT::genBitCodes(const SLList<Analysis::Path>& paths, const AV
 		for(SLList<const Edge*>::Iterator subiter(p); subiter; subiter++)
 			bitcode.set(*map_pathpoint_to_bit.get(*subiter));
 			// bitcode |= 1u << *map_pathpoint_to_bit.get(*subiter);
-		bitcode_vector.push(bitcode);
+		bitcode_list += bitcode;
 	}
-	return bitcode_vector;
+	return bitcode_list;
 }
 
-BitVector SMT::getListOfPathsToKeep(const Vector<BitVector>& bitcode_vector)
+BitVector SMT::getListOfPathsToKeep(const SLList<BitVector>& bitcode_list)
 {
-	const int number_of_paths = bitcode_vector.length();
+	const int number_of_paths = bitcode_list.count();
 	BitVector paths_to_keep(number_of_paths, true); // a priori, keep all paths
-	for(int i = 0; i < number_of_paths; i++)
+	int i = 0;
+	for(SLList<BitVector>::Iterator iter(bitcode_list); iter; iter++, i++)
 	{
 		if(!paths_to_keep[i])
 			continue;
-		for(int j = i+1; j < number_of_paths; j++)
+
+		SLList<BitVector>::Iterator subiter(iter);
+		subiter++; // TODO: make sure we don't have to do a if(!subiter) continue;
+		for(int j = i+1; subiter; subiter++, j++)
 		{
 			if(!paths_to_keep[j])
 				continue;
-			const BitVector &opd1 = bitcode_vector[i], &opd2 = bitcode_vector[j];
+			const BitVector &opd1 = *iter, &opd2 = *subiter;
 			if(opd1 <= opd2)
 			{	// opd2 is superfluous
 				paths_to_keep.set(j, false);
@@ -170,19 +200,18 @@ BitVector SMT::getListOfPathsToKeep(const Vector<BitVector>& bitcode_vector)
 	return paths_to_keep;
 }
 
-SLList<Analysis::Path> SMT::filterPaths(const Vector<BitVector>& bitcode_vector, const Vector<const Edge*>& map_bit_to_pathpoint, const BitVector& paths_to_keep, bool print_results)
+SLList<Analysis::Path> SMT::filterPaths(const SLList<BitVector>& bitcode_list, const Vector<const Edge*>& map_bit_to_pathpoint, const BitVector& paths_to_keep, bool print_results)
 {
 	SLList<Analysis::Path> filtered_paths;
-	int index = -1;
-	for(Vector<BitVector>::Iterator iter(bitcode_vector); iter; iter++)
+	int index = 0;
+	for(SLList<BitVector>::Iterator iter(bitcode_list); iter; iter++, index++)
 	{
-		index++;
 		if(!paths_to_keep[index])
 			continue;
 		Analysis::Path path; // this is a SLList
 		elm::String str = "[";
 		bool first = true;
-		for(BitVector::OneIterator oneiter(bitcode_vector[index]); oneiter; oneiter++)
+		for(BitVector::OneIterator oneiter(*iter); oneiter; oneiter++)
 		{
 			const Edge* e = map_bit_to_pathpoint[*oneiter];
 			if(first)
@@ -194,7 +223,7 @@ SLList<Analysis::Path> SMT::filterPaths(const Vector<BitVector>& bitcode_vector,
 		}
 		str = str.concat(_ << "]");
 		if(print_results)
-			DBG(color::On_IRed() << "Inf. path found: " << str << " (bitcode=" << bitcode_vector[index] << ")")
+			DBG(color::On_IRed() << "Inf. path found: " << str << " (bitcode=" << *iter << ")")
 		filtered_paths += path;
 	}
 	return filtered_paths;
@@ -203,20 +232,22 @@ SLList<Analysis::Path> SMT::filterPaths(const Vector<BitVector>& bitcode_vector,
 // check predicates satisfiability
 bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool print_results)
 {
-	smt.push();
+	// smt.push();
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
 	{
 		Predicate pred = (*iter).pred();
 		if(Option<Expr> expr = getExpr(pred))
 		{
-			if(print_results)
-				DBG_STD(color::IRed().chars() << "Assumption: " << *expr)
+			// if(print_results)
+			// 	DBG_STD(color::IRed().chars() << "Assumption: " << *expr)
 			smt.assertFormula(*expr);
 		}
 	}
 		
 	CVC4::Result result = smt.checkSat(em.mkConst(true)); // check satisfability
-	smt.pop();
+	// if(!result.isSat())
+	// 	smt.getProof()->toStream(std::cout);
+	// smt.pop();
 	if(print_results)
 		DBG(color::BIWhi() << "SMT call:" << (result.isSat() ? color::BGre() : color::BIRed()) << (result.isSat() ? " SAT" : " UNSAT"))
 	return result.isSat();

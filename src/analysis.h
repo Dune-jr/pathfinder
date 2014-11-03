@@ -4,23 +4,30 @@
 #include <otawa/cfg/Edge.h>
 #include <elm/genstruct/SLList.h>
 #include <otawa/sem/inst.h>
+#include <elm/avl/Set.h>
 #include "constant_variables.h"
 #include "labelled_predicate.h"
 #include "debug.h"
 
 using namespace otawa;
-using namespace elm::genstruct; 
+using namespace elm::genstruct;
+using namespace elm::avl;
 using namespace debug;
 
+// SLList
+void addIndents(io::Output& out, int n);
 template <class T> inline SLList<T>& operator+=(SLList<T> &t, const T& h) { t.addFirst(h); return t; }
 template <class T> inline SLList<T>& operator+=(SLList<T> &t, const SLList<T>& l) { t.addAll(l); return t; }
-
-void addIndents(io::Output& out, int n);
 template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l);
+
+// Set
+template <class K, class C> inline Set<K, C>& operator+=(Set<K, C> &t, const K& h) { t.add(h); return t; }
+template <class K, class C> inline Set<K, C>& operator+=(Set<K, C> &t, const Set<K, C>& s) { t.addAll(s); return t; }
 
 class Analysis {
 public:
-	typedef SLList<const Edge*> Path;
+	typedef SLList<const Edge*> Path; // TODO! change this to a set
+	// typedef Set<const Edge*> Path;
 
 	Analysis(CFG *cfg, int sp_id, unsigned int max_tempvars, unsigned int max_registers);
 	inline SLList<Path> infeasiblePaths() const { return infeasible_paths; }

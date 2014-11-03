@@ -38,7 +38,7 @@ void FFX::printInfeasiblePath(io::Output FFXFile, const Analysis::Path& ip) cons
 			ip_str = _ << ip_str << ", ";
 		ip_str = ip_str.concat(_ << (*iter)->source()->number() << "->" << (*iter)->target()->number());
 
-		FFXFile << "\t\t\t\t\t<edge src=\"0x" << (*iter)->source()->address() << "\" dst=\"0x" << (*iter)->target()->address() << "\" />" << endl;
+		FFXFile << "\t\t\t\t\t<count src=\"0x" << (*iter)->source()->address() << "\" dst=\"0x" << (*iter)->target()->address() << "\" />" << endl;
 		edge_count++;
 	}
 	ip_str = _ << ip_str << "]";
