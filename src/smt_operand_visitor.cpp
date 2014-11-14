@@ -13,39 +13,48 @@ Expr SMTOperandVisitor::result()
 	return expr;
 }
 
-void SMTOperandVisitor::visit(const class OperandConst& o)
+bool SMTOperandVisitor::visit(const class OperandConst& o)
 {
-	assert(o.value().isValid()); // TODO!!
+	if(!o.value().isValid())
+		return false; // fail
 	if((o.value().isAbsolute()))
 		expr = em.mkConst(CVC4::Rational(o.value().val()));
 	if((o.value().isRelative()))
 		expr = em.mkExpr(o.value().isPositive() ? PLUS : MINUS, em.mkConst(CVC4::Rational(o.value().val())), variables.getExprSP());
-	visited = true;	
+	visited = true;
+	return true;
 }
 
-void SMTOperandVisitor::visit(const class OperandVar& o)
+bool SMTOperandVisitor::visit(const class OperandVar& o)
 {
 	expr = variables.getExpr(em, o);
 	visited = true;
+	return true;
 }
 
-void SMTOperandVisitor::visit(const class OperandMem& o)
+bool SMTOperandVisitor::visit(const class OperandMem& o)
 {
 	//o.addr().accept(*this); // fetch expr from address of o
+	if(!o.getConst().value().isValid())
+		return false; // fail
 	expr = variables.getExpr(em, o);//, expr);
 	visited = true;
+	return true;
 }
 
-void SMTOperandVisitor::visit(const class OperandArithExpr& o)
+bool SMTOperandVisitor::visit(const class OperandArithExpr& o)
 {
-	assert(o.isComplete());
+	if(!o.isComplete())
+		return false; // fial
 	Kind_t kind = getKind(o.opr());
-	o.leftOperand().accept(*this);
+	if(!o.leftOperand().accept(*this))
+		return false;
 	Expr expr_left = expr;
 	
 	if(o.isBinary())
 	{
-		o.rightOperand().accept(*this);
+		if(!o.rightOperand().accept(*this))
+			return false;
 		Expr expr_right = expr;	
 		expr = em.mkExpr(kind, expr_left, expr_right);
 	}
@@ -53,6 +62,7 @@ void SMTOperandVisitor::visit(const class OperandArithExpr& o)
 		expr = em.mkExpr(kind, expr_left); // this is the unary version of mkExpr
 		
 	visited = true;
+	return true;
 }
 
 Kind_t SMTOperandVisitor::getKind(arithoperator_t opr)

@@ -22,6 +22,13 @@ void Analysis::initializeAnalysis()
 	labelled_preds.clear();
 	labelled_preds += SLList<LabelledPredicate>::null; // add an empty list as first element
 
+	OperandConst zero = OperandConst(0);
+	OperandConst one = OperandConst(1);
+	Predicate p(CONDOPR_EQ, zero, one);
+	LabelledPredicate* lp = new LabelledPredicate(p, Path::null);
+	DBG(*lp)
+	delete lp;
+
 	// set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
 	constants.set(sp, SP, false);
 }
@@ -47,12 +54,12 @@ void Analysis::processCFG(CFG* cfg)
 	int ms_diff = (clock()-timestamp)*1000/CLOCKS_PER_SEC;
 	DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
 		<< "(" << (ms_diff>=1000 ? ((float)ms_diff)/(float(100)) : ms_diff) << (ms_diff>=1000 ? "s" : "ms") << ")")
-	for(SLList<Path>::Iterator iter(infeasible_paths); iter; iter++)
+	for(Set<Path>::Iterator iter(infeasible_paths); iter; iter++)
 	{
-		SLList<const Edge*> l = *iter; // Path is SLList<const Edge*>
+		Path l = *iter; // Path is Set<const Edge*>
 		bool first = true;
 		elm::String str = "    - [";
-		for(SLList<const Edge*>::Iterator subiter(l); subiter; subiter++)
+		for(Path::Iterator subiter(l); subiter; subiter++)
 		{
 			if(first)
 				first = false;
@@ -87,7 +94,7 @@ void Analysis::processBB(BasicBlock* bb)
 		
 	// SMT call
 	SMT smt;
-	if(Option<SLList<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(labelled_preds.first(), constants))
+	if(Option<Set<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(labelled_preds.first(), constants))
 	{
 		infeasible_paths += *maybe_infeasible_paths;
 		DBG(color::BIYel() << "Current path identified as infeasible, stopping analysis")
@@ -177,20 +184,20 @@ void Analysis::processEdge(const Edge* edge)
 	BasicBlock* target = edge->target();
 	// DBG(color::Whi() << "Processing Edge: " << edge->source()->number() << "->" << (*subiter)->target()->number());)	
 	DBG(color::Whi() << "Processing Edge: " << edge)	
-	// DBG("State of the analysis: " << labelled_preds)	
+	DBG(color::BIRed() << "State of the analysis: " << labelled_preds)	
 	processBB(target);
 }
 
 SLList<LabelledPredicate> Analysis::labelPredicateList(const SLList<Predicate>& pred_list, const Edge* label)
 {
-	SLList<const Edge*> sll_containing_only_label;
+	Set<const Edge*> sll_containing_only_label;
 	sll_containing_only_label += label;
 
 	SLList<LabelledPredicate> LP_list;
 	for(SLList<Predicate>::Iterator preds(pred_list); preds; preds++)
 	{
 		LabelledPredicate lp(*preds, sll_containing_only_label);
-		LP_list.addFirst(lp);
+		LP_list += lp;
 	}
 	return LP_list;
 }

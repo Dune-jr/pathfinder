@@ -68,10 +68,10 @@ class AffineEquationState;
 class OperandVisitor
 {
 public:
-	virtual void visit(const OperandConst& o) = 0;
-	virtual void visit(const OperandVar& o) = 0;
-	virtual void visit(const OperandMem& o) = 0;
-	virtual void visit(const OperandArithExpr& o) = 0;
+	virtual bool visit(const OperandConst& o) = 0;
+	virtual bool visit(const OperandVar& o) = 0;
+	virtual bool visit(const OperandMem& o) = 0;
+	virtual bool visit(const OperandArithExpr& o) = 0;
 };
 
 // Abstract Operand class
@@ -93,7 +93,7 @@ public:
 	virtual Option<OperandConst> evalConstantOperand() const = 0;
 	virtual Option<Operand*> simplify() = 0; // Warning: Option=none does not warrant that nothing has been simplified!
 	virtual Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants) = 0;
-	virtual void accept(OperandVisitor& visitor) const = 0;
+	virtual bool accept(OperandVisitor& visitor) const = 0;
 	virtual operand_kind_t kind() const = 0;
 	
 	virtual bool operator==(const Operand& o) const = 0;
@@ -128,7 +128,7 @@ public:
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return true; }
-	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
+	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
 	
 	bool operator==(const Operand& o) const;
@@ -164,7 +164,7 @@ public:
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return (_addr == opdv.addr()) || (_addr == sp.addr()); }
-	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
+	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
 	
 	bool operator==(const Operand& o) const;
@@ -175,17 +175,17 @@ private:
 	io::Output& print(io::Output& out) const;
 };
 
-// TODO! rework this
 class OperandMem : public Operand
 {	
 public:
 	OperandMem(const OperandMem& opd);
-	OperandMem(const OperandConst& opdc, bool relative = false); // relative to true means the memory is relative to the stack pointer
+	OperandMem(const OperandConst& opdc); // relative to true means the memory is relative to the stack pointer
+	// OperandMem(const OperandConst& opdc, bool relative = false); // relative to true means the memory is relative to the stack pointer
 	OperandMem(); // for use in Option
 	~OperandMem();
 	
-	inline bool isAbsolute() const { return _kind == OPERANDMEM_ABSOLUTE; }
-	inline bool isRelative() const { return _kind == OPERANDMEM_RELATIVE; }
+	// inline bool isAbsolute() const { return _kind == OPERANDMEM_ABSOLUTE; }
+	// inline bool isRelative() const { return _kind == OPERANDMEM_RELATIVE; }
 	inline const OperandConst& getConst() const { assert(_opdc); return *_opdc; }
 	
 	Operand* copy() const;
@@ -202,7 +202,7 @@ public:
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return false; }
-	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
+	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_MEM; }
 	
 	bool operator==(const Operand& o) const;
@@ -210,7 +210,7 @@ public:
 	
 private:
 	OperandConst* _opdc;
-	operandmem_kind_t _kind;
+	// operandmem_kind_t _kind;
 	io::Output& print(io::Output& out) const;
 };
 
@@ -245,7 +245,7 @@ public:
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const
 		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv, sp) && opd2->isAffine(opdv, sp); }
-	inline void accept(OperandVisitor& visitor) const { visitor.visit(*this); }
+	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	
 	bool operator==(const Operand& o) const;

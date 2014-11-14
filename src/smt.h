@@ -21,7 +21,7 @@ class SMT
 public:
 	SMT();
 	~SMT();
-	Option<SLList<Analysis::Path> > seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants);
+	Option<Set<Analysis::Path> > seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants);
 	bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool print_result = false);
 	
 private:
@@ -29,7 +29,7 @@ private:
 	CVC4::SmtEngine smt;
 	VariableStack variables;
 
-	Option<SLList<Analysis::Path> > seekInfeasiblePaths(SLList<LabelledPredicate>& labelled_preds);
+	Option<Set<Analysis::Path> > seekInfeasiblePaths(SLList<LabelledPredicate>& labelled_preds);
 	SLList<Analysis::Path> getAllInfeasiblePaths(const SLList<LabelledPredicate>& labelled_preds, int index = 0);
 	void removeIncompletePredicates(SLList<LabelledPredicate>& labelled_preds);
 	void genPathPointBitMaps(const SLList<Analysis::Path>& paths, AVLMap<const Edge*, unsigned int>& map_pathpoint_to_bit, Vector<const Edge*>& map_bit_to_pathpoint);

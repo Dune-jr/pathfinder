@@ -25,18 +25,14 @@ Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o)
 	}
 }
 
-//
+// o must have valid addr
 Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, const Expr& expr_addr)
 {
 	const Constant& addr = o.getConst().value();
-	assert(addr.isValid()); // TODO! fix
+	assert(addr.isValid());
 	int sp_factor = 0;
-	if(o.isRelative())
-		sp_factor += 1;
 	if(addr.isRelative())
 		sp_factor += (addr.isPositive()) ? 1 : -1;
-
-	assert(sp_factor <= 1); // TODO! handle
 
 	if(Option<Expr> opt_expr = memmap.get(addr))
 		return *opt_expr; // already in the stack
@@ -44,7 +40,7 @@ Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, cons
 	{	// not in stack, create it
 		elm::String label;
 		switch(sp_factor)
-		{
+		{	// these must be unique labels
 			case -1:
 				label = _ << "[-SP+" << addr.val() << "]";
 				break;

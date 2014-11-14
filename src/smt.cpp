@@ -28,7 +28,7 @@ SMT::~SMT()
 }
 
 // getting a copy of the labelled_preds SLList	
-Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)
+Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)
 {
 	// DBG(color::ICya() << "labelled_preds = " << labelled_preds)
 	// DBG(color::ICya() << "constants = " << constants)
@@ -38,18 +38,20 @@ Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicat
 	return seekInfeasiblePaths(labelled_preds);
 }
 
-Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>& labelled_preds)
+// private method
+Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>& labelled_preds)
 {
 	if(checkPredSat(labelled_preds, true))
 		return elm::none; // no inconsistency found
 
 		Analysis::Path path;
 		for(SLList<LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
-			path += (*parse_iter).labels();
+			path.addAll( (*parse_iter).labels() );
+			// path += (*parse_iter).labels();
 
 		elm::String str = "[";
 		bool first = true;
-		for(SLList<const Edge*>::Iterator iter(path); iter; iter++)
+		for(Analysis::Path::Iterator iter(path); iter; iter++)
 		{
 			if(first)
 				first = false;
@@ -59,9 +61,9 @@ Option<SLList<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicat
 		}
 		str = str.concat(_ << "]");
 		DBG(color::On_IRed() << "Inf. path found: " << str)
-		SLList<Analysis::Path> paths;
+		Set<Analysis::Path> paths;
 		paths += path;
-		return paths;
+		return elm::some(paths);
 
 /*
 	removeIncompletePredicates(labelled_preds); // optimization: incomplete predicates are not sent to the SMT therefore they cannot play a role in the UNSAT
@@ -109,7 +111,7 @@ SLList<Analysis::Path> SMT::getAllInfeasiblePaths(const SLList<LabelledPredicate
 	}
 	if(!index_in_range) // we're done parsing predicates
 	{
-		SLList<const Edge*> path; // typedef SLList<const Edge*> Path;
+		Analysis::Path path; // typedef SLList<const Edge*> Path;
 		SLList<Analysis::Path> path_list;
 		for(SLList<LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
 			path += (*parse_iter).labels();
@@ -138,8 +140,8 @@ void SMT::genPathPointBitMaps(const SLList<Analysis::Path>& paths, AVLMap<const 
 	unsigned int bit_count = 0;
 	for(SLList<Analysis::Path>::Iterator iter(paths); iter; iter++)
 	{
-		SLList<const Edge*> p = *iter;
-		for(SLList<const Edge*>::Iterator subiter(p); subiter; subiter++)
+		Analysis::Path p = *iter;
+		for(Analysis::Path::Iterator subiter(p); subiter; subiter++)
 		{
 			if(!map_pathpoint_to_bit.hasKey(*subiter))
 			{
@@ -159,8 +161,8 @@ SLList<BitVector> SMT::genBitCodes(const SLList<Analysis::Path>& paths, const AV
 	for(SLList<Analysis::Path>::Iterator iter(paths); iter; iter++)
 	{
 		bitcode.clear();
-		SLList<const Edge*> p = *iter;
-		for(SLList<const Edge*>::Iterator subiter(p); subiter; subiter++)
+		Analysis::Path p = *iter;
+		for(Analysis::Path::Iterator subiter(p); subiter; subiter++)
 			bitcode.set(*map_pathpoint_to_bit.get(*subiter));
 			// bitcode |= 1u << *map_pathpoint_to_bit.get(*subiter);
 		bitcode_list += bitcode;
@@ -179,7 +181,7 @@ BitVector SMT::getListOfPathsToKeep(const SLList<BitVector>& bitcode_list)
 			continue;
 
 		SLList<BitVector>::Iterator subiter(iter);
-		subiter++; // TODO: make sure we don't have to do a if(!subiter) continue;
+		subiter++;
 		for(int j = i+1; subiter; subiter++, j++)
 		{
 			if(!paths_to_keep[j])
@@ -219,7 +221,8 @@ SLList<Analysis::Path> SMT::filterPaths(const SLList<BitVector>& bitcode_list, c
 			else
 				str = str.concat(_ << ", ");
 			str = str.concat(_ << e->source()->number() << "->" << e->target()->number());
-			path.addLast(e); // preserving order for aesthetic purposes
+			// path.addLast(e); // preserving order for aesthetic purposes
+			path += e;
 		}
 		str = str.concat(_ << "]");
 		if(print_results)
@@ -266,7 +269,8 @@ Option<Expr> SMT::getExpr(const Operand& o)
 		return elm::none;
 		
 	SMTOperandVisitor visitor(em, variables);
-	o.accept(visitor);
+	if(!o.accept(visitor))
+		return elm::none;
 	return elm::some(visitor.result());
 }
 

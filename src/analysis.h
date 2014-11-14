@@ -16,21 +16,15 @@ using namespace debug;
 
 // SLList
 void addIndents(io::Output& out, int n);
-template <class T> inline SLList<T>& operator+=(SLList<T> &t, const T& h) { t.addFirst(h); return t; }
-template <class T> inline SLList<T>& operator+=(SLList<T> &t, const SLList<T>& l) { t.addAll(l); return t; }
 template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l);
-
-// Set
-template <class K, class C> inline Set<K, C>& operator+=(Set<K, C> &t, const K& h) { t.add(h); return t; }
-template <class K, class C> inline Set<K, C>& operator+=(Set<K, C> &t, const Set<K, C>& s) { t.addAll(s); return t; }
 
 class Analysis {
 public:
-	typedef SLList<const Edge*> Path; // TODO! change this to a set
-	// typedef Set<const Edge*> Path;
+	// typedef SLList<const Edge*> Path;
+	typedef Set<const Edge*> Path;
 
 	Analysis(CFG *cfg, int sp_id, unsigned int max_tempvars, unsigned int max_registers);
-	inline SLList<Path> infeasiblePaths() const { return infeasible_paths; }
+	inline Set<Path> infeasiblePaths() const { return infeasible_paths; }
 
 	// bool invalidate_constant_info 
 	enum
@@ -49,7 +43,7 @@ private:
 	SLList<SLList<LabelledPredicate> > updated_preds; // this is reset before any BB analysis, indicates previously generated preds (in another BB)
 		// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
 
-	SLList<Path> infeasible_paths;
+	Set<Path> infeasible_paths;
 	int processed_paths;
 	int total_paths;
 	// bool solverHasBeenCalled;
@@ -74,7 +68,7 @@ private:
 		inline bool ended(void) const { return (state == DONE); }
 		LabelledPredicate item(void) const {
 			switch(state) {
-				case GENERATED_PREDS: return LabelledPredicate(gp_iter.item(), SLList<const Edge*>::null);
+				case GENERATED_PREDS: return LabelledPredicate(gp_iter.item(), Path::null);
 				case LABELLED_PREDS: return lp_iter.item();
 				default: assert(false);
 			}
@@ -86,7 +80,7 @@ private:
 		}
 
 		inline Predicate pred(void) const { return item().pred(); }
-		inline SLList<const Edge*> labels(void) const { return item().labels(); }
+		inline Path labels(void) const { return item().labels(); }
 
 	private:
 		void nextState() { if(state == GENERATED_PREDS) state = LABELLED_PREDS; else if (state == LABELLED_PREDS) state = DONE; }

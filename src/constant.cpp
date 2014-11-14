@@ -198,10 +198,12 @@ io::Output& Constant::print(io::Output& out) const
 				return (out << "0x" << io::hex(_val));
 			return (out << _val);
 		case CONSTANT_RELATIVE:
-			if(isPositive())
-				return (out << "SP+" << _val);
-			else
-				return (out << "-SP+" << _val);
+			if(isNegative())
+				out << "-";
+			out << "SP";
+			if(_val < 0)
+				return (out << "-" << -_val);
+			return (out << "+" << _val);
 		default:
 			return (out << "(invalid cst)");
 	}

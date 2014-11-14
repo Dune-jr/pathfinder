@@ -35,7 +35,6 @@ public:
 	inline bool isPositive() const { return _sign == SIGN_POSITIVE; }
 	inline bool isNegative() const { return _sign == SIGN_NEGATIVE; }
 
-	// inline operator bool() const { return isValid(); } // TODO uncomment this 
 	Constant& operator=(const Constant& c);
 	Constant& operator=(t::int32 val);
 	bool operator==(const Constant& c) const;

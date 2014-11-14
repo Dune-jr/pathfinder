@@ -1,6 +1,6 @@
 #include "ffx.h"
 
-FFX::FFX(const SLList<Analysis::Path>& ips) : infeasible_paths(ips) { }
+FFX::FFX(const Set<Analysis::Path>& ips) : infeasible_paths(ips) { }
 
 void FFX::output(const elm::String& filename) const
 {
@@ -12,7 +12,7 @@ void FFX::output(const elm::String& filename) const
 			<< "<flowfacts>" << endl
 			<< "\t<function name=\"main\">" << endl;
 
-	for(SLList<Analysis::Path>::Iterator iter(infeasible_paths); iter; iter++)
+	for(Set<Analysis::Path>::Iterator iter(infeasible_paths); iter; iter++)
 		printInfeasiblePath(FFXFile, *iter);
 
 	// footer
@@ -30,7 +30,7 @@ void FFX::printInfeasiblePath(io::Output FFXFile, const Analysis::Path& ip) cons
 	bool first = true;
 	int edge_count = 0;
 	String ip_str = "[";
-	for(SLList<const Edge*>::Iterator iter(ip); iter; iter++)
+	for(Analysis::Path::Iterator iter(ip); iter; iter++)
 	{
 		if(first)
 			first = false;

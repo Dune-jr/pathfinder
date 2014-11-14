@@ -53,7 +53,6 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 			const t::int32& cst = seminsts.cst();
 			const t::int16& reg = seminsts.reg(), addr = seminsts.addr();
 			
-			// TODO: test unsigned MUL DIV MOD CMP
 			switch(seminsts.op())
 			{
 				case NOP:
@@ -538,7 +537,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 				case MODU:
 				case MOD:
 					invalidateVar(d);
-					if(d == a || d == b) // TODO: it's okay to not handle these weird cases, right?
+					if(d == a || d == b)
 						break;
 					opd1 = new OperandVar(d);
 					{
@@ -738,7 +737,6 @@ bool Analysis::replaceVar(const OperandVar& var, const Operand& expr)
 				setPredicate(piter, LabelledPredicate(p, piter.labels())); // TODO!! improve this to add label of current edge
 			}
 		}
-		// piter++; // TODO: make sure it's ok to do the for(;;) this way
 	}
 	return rtn;
 }
@@ -1083,9 +1081,9 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var)
 		}
 		*/
 	}
-	static int nones = 0;
-	nones++;
-	DBG(color::BIRed() << "none #" << nones) // TODO: remove
+	static int nones_counter = 0;
+	nones_counter++;
+	DBG(color::BIRed() << "none #" << nones_counter) // TODO: remove
 	return none; // no matches found
 }
 /**
@@ -1136,7 +1134,8 @@ Option<OperandMem> Analysis::getOperandMem(const OperandVar& var)
 	if(Option<Constant> val = findConstantValueOfVar(var))
 		return some(OperandMem(OperandConst(*val)));
 	if(Option<t::int32> val = findStackRelativeValueOfVar(var))
-		return some(OperandMem(OperandConst(*val), true));
+		return some(OperandMem(OperandConst(SP+*val)));
+		// return some(OperandMem(OperandConst(*val), true));
 	return none;
 }
 

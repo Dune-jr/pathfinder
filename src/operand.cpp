@@ -43,7 +43,7 @@ void OperandConst::parseAffineEquation(AffineEquationState& state) const
 }
 Option<OperandConst> OperandConst::evalConstantOperand() const
 {
-	if(!_value.isValid()) // TODO! make sure this is necessary and not removable
+	if(!_value.isValid())
 		return none;
 	return some(*this);
 }
@@ -105,51 +105,33 @@ Option<Operand*> OperandVar::replaceConstants(const ConstantVariablesSimplified&
 }
 
 // Operands: Memory
-OperandMem::OperandMem(const OperandConst& opdc, bool relative)
+OperandMem::OperandMem(const OperandConst& opdc)
 {
 	_opdc = new OperandConst(opdc);
-	if(relative)
-		_kind = OPERANDMEM_RELATIVE;
-	else
-		_kind = OPERANDMEM_ABSOLUTE;
 }
-OperandMem::OperandMem(const OperandMem& opd) : _kind(opd._kind)
+OperandMem::OperandMem(const OperandMem& opd) // : _kind(opd._kind)
 {
 	_opdc = new OperandConst(opd.getConst());
 }
-OperandMem::OperandMem() : _opdc(NULL), _kind(OPERANDMEM_ABSOLUTE) { }
+OperandMem::OperandMem() : _opdc(NULL) { }
 OperandMem::~OperandMem()
 {
 	// if(_opdc) delete _opdc; // TODO: Why does this cause a crash?
 }
 Operand* OperandMem::copy() const
 {
-	if(isRelative())
-		return new OperandMem(*_opdc, true);
-	else
-		return new OperandMem(*_opdc);
+	return new OperandMem(*_opdc);
 }
 io::Output& OperandMem::print(io::Output& out) const
 {
 	out << "[";
-	if(isAbsolute())
-		return (out << *_opdc << "]");
-/*	else if((*_opdc).value() < 0)
-#ifndef NO_UFT8
-		return (out << "sp − " << -(*_opdc).value() << "]");
-#else
-		return (out << "sp - " << -(*_opdc).value() << "]");
-#endif*/
-	else
-		return (out << "sp + " << (*_opdc).value() << "]");
+	return (out << *_opdc << "]");
 }
 bool OperandMem::operator==(const Operand& o) const
 {	// untested so far	
 	if(o.kind() != kind())
 		return false; // Operand types are not matching
 	OperandMem& o_mem = (OperandMem&)o; // Force conversion
-	if(o_mem.isRelative() != isRelative())
-		return false;
 	if(!(*_opdc == o_mem.getConst()))
 		return false;
 	return true;
@@ -175,7 +157,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 			case OPERAND_CONST:
 				{
 					OperandConst& o = (OperandConst&)opd_modifier;
-					// delete _opdv; // TODO (also _opdc)
+					// delete _opdv; // TO*DO (also _opdc)
 					if(_kind == OPERANDMEM_RELATIVE)
 						_opdc = new OperandConst(_opdc->value() + o.value());
 					else // OPERANDMEM_VARIABLE
@@ -199,7 +181,6 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 				break;
 			case OPERAND_MEM:
 				// double indirection yay
-				// TODO: try and identify value of [...] and call updateVal with this new value instead of giving up
 				return OPERANDSTATE_UNCHANGED;
 			case OPERAND_ARITHEXPR: // this is a frequent case
 				{

@@ -1,6 +1,6 @@
 #include "labelled_predicate.h"
 
-LabelledPredicate::LabelledPredicate(const Predicate& pred, const SLList<const Edge*>& labels)
+LabelledPredicate::LabelledPredicate(const Predicate& pred, const Set<const Edge*>& labels)
 	: _pred(pred), _labels(labels) { }
 
 LabelledPredicate::LabelledPredicate(const LabelledPredicate& lp)
@@ -13,7 +13,7 @@ io::Output& LabelledPredicate::print(io::Output &out) const
 
 	out << "(" << _pred << " | ";
 	bool first_time = true;
-	for(SLList<const Edge*>::Iterator iter(_labels); iter; iter++)
+	for(Set<const Edge*>::Iterator iter(_labels); iter; iter++)
 	{
 		if(first_time)
 			first_time = false;

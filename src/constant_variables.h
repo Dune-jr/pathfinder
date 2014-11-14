@@ -19,18 +19,18 @@ private:
 	{
 	public:
 		LabelledValue() { }
-		LabelledValue(const Constant& val, SLList<const Edge*> labels, bool updated = false) : _val(val), _labels(labels), _updated(updated) { }
+		LabelledValue(const Constant& val, Set<const Edge*> labels, bool updated = false) : _val(val), _labels(labels), _updated(updated) { }
 		inline Constant val() const { return _val; }
-		inline const SLList<const Edge*>& labels() const { return _labels; }
+		inline const Set<const Edge*>& labels() const { return _labels; }
 		inline bool isUpdated() const { return _updated; }
-		inline void addLabel(const Edge* label) { if(!_labels.contains(label)) _labels += label; }
+		inline void addLabel(const Edge* label) { if(!_labels.contains(label)) _labels.add(label); }
 		inline void setUpdatedFlag(bool updated = true) { _updated = updated; }
 		LabelledValue& operator=(const LabelledValue& lv);
 		friend io::Output& operator<<(io::Output& out, const LabelledValue& lv) { return lv.print(out); }
 
 	private:
 		Constant _val;
-		SLList<const Edge*> _labels;
+		Set<const Edge*> _labels;
 		bool _updated;
 
 		io::Output& print(io::Output& out) const;

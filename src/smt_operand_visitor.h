@@ -10,10 +10,10 @@ class SMTOperandVisitor : public OperandVisitor
 public:
 	SMTOperandVisitor(CVC4::ExprManager &em, VariableStack &variables);
 	CVC4::Expr result();		
-	void visit(const OperandConst& o);
-	void visit(const OperandVar& o);
-	void visit(const OperandMem &o);
-	void visit(const OperandArithExpr& o);
+	bool visit(const OperandConst& o);
+	bool visit(const OperandVar& o);
+	bool visit(const OperandMem &o);
+	bool visit(const OperandArithExpr& o);
 	
 private:
 		   Kind_t getKind(arithoperator_t opr);

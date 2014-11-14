@@ -9,13 +9,13 @@ using namespace elm;
 class FFX
 {
 public:
-	FFX(const SLList<Analysis::Path>& ips);
+	FFX(const Set<Analysis::Path>& ips);
 	void output(const elm::String& filename) const;
 
 private:
 	void printInfeasiblePath(io::Output FFXFile, const Analysis::Path& ip) const;
 
-	const SLList<Analysis::Path>& infeasible_paths;
+	const Set<Analysis::Path>& infeasible_paths;
 };
 
 #endif
