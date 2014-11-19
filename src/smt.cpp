@@ -1,5 +1,7 @@
 // Interfacing with the SMT solver
 
+#include <cvc4/expr/command.h> // getUnsatCoreCommand
+#include <cvc4/util/unsat_core.h>
 #include <elm/genstruct/SLList.h>
 #include <elm/genstruct/Vector.h>
 #include <elm/util/BitVector.h>
@@ -17,17 +19,21 @@ using CVC4::Expr;
 SMT::SMT(): smt(&em), variables(em), integer(em.integerType())
 {
 	smt.setLogic("QF_LIA"); // Quantifier-Free (no forall, exists...) Linear Integer Arithmetic
-
+	smt.setOption("incremental", CVC4::SExpr("false"));
+	smt.setOption("produce-unsat-cores", CVC4::SExpr("true"));
+	// smt.setOption("dump-unsat-cores", CVC4::SExpr("true"));
 	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
 	// smt.setOption("dump", "assertions:pre-everything");
 	// smt.setOption("dump-to", "dump.log");
+	srand(time(NULL));
 }
 
 SMT::~SMT()
 {
 }
 
-// getting a copy of the labelled_preds SLList	
+// gets a copy of the labelled_preds SLList
+// actually always returns 1 infeasible path, but that may be changed in the future
 Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)
 {
 	// DBG(color::ICya() << "labelled_preds = " << labelled_preds)
@@ -41,34 +47,67 @@ Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> 
 // private method
 Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>& labelled_preds)
 {
-	if(checkPredSat(labelled_preds, true))
+	// get a SLList<Option<Expr> > out of a SLList<LabelledPredicate> in order to know which LP matches which expr
+	SLList<Option<Expr> > exprs;
+	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
+		exprs += getExpr((*iter).pred());
+
+	if(checkPredSat(exprs, true))
 		return elm::none; // no inconsistency found
 
-		Analysis::Path path;
-		for(SLList<LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
-			path.addAll( (*parse_iter).labels() );
-			// path += (*parse_iter).labels();
+	// TODO!!
+	DBG(color::IRed() << "Original predicates:")
+	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
+		if((*iter).pred().isComplete())
+			DBG("* " <<(*iter).pred())
+	DBG(color::IRed() << "UNSAT core:")
 
-		elm::String str = "[";
-		bool first = true;
-		for(Analysis::Path::Iterator iter(path); iter; iter++)
+	CVC4::UnsatCore unsat_core = smt.getUnsatCore(); // get an unsat subset of our assumptions
+	Analysis::Path path; // build our path
+	bool empty = true;
+	for(CVC4::UnsatCore::const_iterator unsat_core_iter = unsat_core.begin(); unsat_core_iter != unsat_core.end(); unsat_core_iter++)
+	{
+		empty = false;
+		DBG_STD("* " << (*unsat_core_iter).toString())
+		SLList<LabelledPredicate>::Iterator lp_iter(labelled_preds);
+		SLList<Option<Expr> >::Iterator expr_iter(exprs);
+		for(; lp_iter; lp_iter++, expr_iter++)
 		{
-			if(first)
-				first = false;
-			else
-				str = str.concat(_ << ", ");
-			str = str.concat(_ << (*iter)->source()->number() << "->" << (*iter)->target()->number());
+			if(*expr_iter && **expr_iter == *unsat_core_iter)
+			{
+				path += (*lp_iter).labels();
+				// Set<const Edge*>::Iterator label_iter((*lp_iter).labels());
+				// DBG(" => fst label: " << (*label_iter)->source()->number() << "->" << (*label_iter)->target()->number())
+			}
 		}
-		str = str.concat(_ << "]");
-		DBG(color::On_IRed() << "Inf. path found: " << str)
-		Set<Analysis::Path> paths;
-		paths += path;
-		return elm::some(paths);
+	}
+	if(empty) // TODO: fix this hack (there should be another way to figure when unsat core fails)
+		for(SLList<LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
+			path.addAll((*parse_iter).labels());
+
+	elm::String str = "[";
+	bool first = true;
+	for(Analysis::Path::Iterator iter(path); iter; iter++)
+	{
+		if(first)
+			first = false;
+		else
+			str = str.concat(_ << ", ");
+		str = str.concat(_ << (*iter)->source()->number() << "->" << (*iter)->target()->number());
+	}
+	str = str.concat(_ << "]");
+	DBG(color::On_IRed() << "Inf. path found: " << str)
+	Set<Analysis::Path> paths;
+	if(path == Analysis::Path::null)
+		return elm::none;
+	assert(path != Analysis::Path::null);
+	paths += path;
+	return elm::some(paths);
 
 /*
 	removeIncompletePredicates(labelled_preds); // optimization: incomplete predicates are not sent to the SMT therefore they cannot play a role in the UNSAT
 	SLList<Analysis::Path> paths = getAllInfeasiblePaths(labelled_preds); // exhaustive list of paths
-cout << labelled_preds.count() << " " << paths.count() << endl;
+		cout << labelled_preds.count() << " " << paths.count() << endl;
 	AVLMap<const Edge*, unsigned int> map_pathpoint_to_bit;
 	Vector<const Edge*> map_bit_to_pathpoint;
 	genPathPointBitMaps(paths, map_pathpoint_to_bit, map_bit_to_pathpoint); // generate maps to convert Path <-> BitVector
@@ -80,6 +119,72 @@ cout << labelled_preds.count() << " " << paths.count() << endl;
 //*/
 }
 
+// check predicates satisfiability
+bool SMT::checkPredSat(const SLList<Option<Expr> >& exprs, bool print_results)
+{
+	for(SLList<Option<Expr> >::Iterator iter(exprs); iter; iter++)
+		if(*iter)
+		{
+			smt.assertFormula(**iter, true); // second parameter to true for unsat cores
+			DBG_STD("ASSERT " << **iter << ";")
+		}
+
+	bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
+	if(print_results)
+		DBG(color::BIWhi() << "SMT call:" << (isSat ? color::BGre() : color::BIRed()) << (isSat ? " SAT" : " UNSAT"))
+	return isSat;
+}
+
+// check predicates satisfiability
+bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool print_results)
+{
+	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
+		if(Option<Expr> expr = getExpr((*iter).pred()))
+			smt.assertFormula(*expr); // second parameter to true for unsat cores
+		
+	bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
+	if(print_results)
+		DBG(color::BIWhi() << "SMT call:" << (isSat ? color::BGre() : color::BIRed()) << (isSat ? " SAT" : " UNSAT"))
+	return isSat;
+}
+
+Option<Expr> SMT::getExpr(const Predicate& p)
+{
+	if(!p.isComplete())
+		return elm::none;
+	return em.mkExpr(getKind(p), getExpr(p.leftOperand()), getExpr(p.rightOperand()));
+}
+
+Option<Expr> SMT::getExpr(const Operand& o)
+{
+	if(!o.isComplete())
+		return elm::none;
+		
+	SMTOperandVisitor visitor(em, variables);
+	if(!o.accept(visitor))
+		return elm::none;
+	return elm::some(visitor.result());
+}
+
+Kind_t SMT::getKind(condoperator_t opr)
+{
+	switch(opr)
+	{
+		case CONDOPR_LT:
+			return LT;
+		case CONDOPR_LE:
+			return LEQ;
+		case CONDOPR_EQ:
+			return EQUAL;
+		case CONDOPR_NE:
+			return DISTINCT;
+		default:
+			assert(false);
+	}
+}
+ 
+
+/*
 void SMT::removeIncompletePredicates(SLList<LabelledPredicate>& labelled_preds)
 {
 	SLList<LabelledPredicate>::Iterator iter(labelled_preds);
@@ -231,63 +336,4 @@ SLList<Analysis::Path> SMT::filterPaths(const SLList<BitVector>& bitcode_list, c
 	}
 	return filtered_paths;
 }
-
-// check predicates satisfiability
-bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool print_results)
-{
-	// smt.push();
-	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
-	{
-		Predicate pred = (*iter).pred();
-		if(Option<Expr> expr = getExpr(pred))
-		{
-			// if(print_results)
-			// 	DBG_STD(color::IRed().chars() << "Assumption: " << *expr)
-			smt.assertFormula(*expr);
-		}
-	}
-		
-	CVC4::Result result = smt.checkSat(em.mkConst(true)); // check satisfability
-	// if(!result.isSat())
-	// 	smt.getProof()->toStream(std::cout);
-	// smt.pop();
-	if(print_results)
-		DBG(color::BIWhi() << "SMT call:" << (result.isSat() ? color::BGre() : color::BIRed()) << (result.isSat() ? " SAT" : " UNSAT"))
-	return result.isSat();
-}
-
-Option<Expr> SMT::getExpr(const Predicate& p)
-{
-	if(!p.isComplete())
-		return elm::none;
-	return em.mkExpr(getKind(p), getExpr(p.leftOperand()), getExpr(p.rightOperand()));
-}
-
-Option<Expr> SMT::getExpr(const Operand& o)
-{
-	if(!o.isComplete())
-		return elm::none;
-		
-	SMTOperandVisitor visitor(em, variables);
-	if(!o.accept(visitor))
-		return elm::none;
-	return elm::some(visitor.result());
-}
-
-Kind_t SMT::getKind(condoperator_t opr)
-{
-	switch(opr)
-	{
-		case CONDOPR_LT:
-			return LT;
-		case CONDOPR_LE:
-			return LEQ;
-		case CONDOPR_EQ:
-			return EQUAL;
-		case CONDOPR_NE:
-			return DISTINCT;
-		default:
-			assert(false);
-	}
-}
- 
+*/

@@ -58,17 +58,20 @@ void Analysis::processCFG(CFG* cfg)
 	{
 		Path l = *iter; // Path is Set<const Edge*>
 		bool first = true;
-		elm::String str = "    - [";
+		elm::String str = "    * [";
 		for(Path::Iterator subiter(l); subiter; subiter++)
 		{
 			if(first)
 				first = false;
 			else
 				str = _ << str << ", ";
+			// str = str.concat(_ << (t::int64)(*subiter));
 			str = str.concat(_ << (*subiter)->source()->number() << "->" << (*subiter)->target()->number());
 		}
 		str = _ << str << "]";
 		DBG(color::IGre() << str)
+		if(dbg_flags&DBG_NO_DEBUG)
+			cout << str << endl;
 	}
 	if(dbg_flags&DBG_NO_DEBUG)
 		cout << infeasible_paths_count << " infeasible path(s) found. (" << ms_diff/1000 << "." << ms_diff%1000 << "s)\n";
@@ -184,7 +187,7 @@ void Analysis::processEdge(const Edge* edge)
 	BasicBlock* target = edge->target();
 	// DBG(color::Whi() << "Processing Edge: " << edge->source()->number() << "->" << (*subiter)->target()->number());)	
 	DBG(color::Whi() << "Processing Edge: " << edge)	
-	DBG(color::BIRed() << "State of the analysis: " << labelled_preds)	
+	// DBG(color::BIRed() << "State of the analysis: " << labelled_preds)	
 	processBB(target);
 }
 

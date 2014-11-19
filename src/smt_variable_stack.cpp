@@ -53,7 +53,6 @@ Expr VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, cons
 			default:
 				assert(false);
 		}
-		label << "]";
 		Expr expr = em.mkVar(label.chars(), em.integerType());
 		memmap.put(addr, expr);
 		return expr;
