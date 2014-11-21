@@ -25,7 +25,6 @@ SMT::SMT(): smt(&em), variables(em), integer(em.integerType())
 	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
 	// smt.setOption("dump", "assertions:pre-everything");
 	// smt.setOption("dump-to", "dump.log");
-	srand(time(NULL));
 }
 
 SMT::~SMT()
@@ -50,7 +49,7 @@ Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>&
 	// get a SLList<Option<Expr> > out of a SLList<LabelledPredicate> in order to know which LP matches which expr
 	SLList<Option<Expr> > exprs;
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
-		exprs += getExpr((*iter).pred());
+		exprs.addLast(getExpr((*iter).pred()));
 
 	if(checkPredSat(exprs, true))
 		return elm::none; // no inconsistency found
@@ -59,7 +58,7 @@ Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>&
 	DBG(color::IRed() << "Original predicates:")
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
 		if((*iter).pred().isComplete())
-			DBG("* " <<(*iter).pred())
+			DBG("* " <<(*iter))
 	DBG(color::IRed() << "UNSAT core:")
 
 	CVC4::UnsatCore unsat_core = smt.getUnsatCore(); // get an unsat subset of our assumptions
@@ -71,6 +70,7 @@ Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>&
 		DBG_STD("* " << (*unsat_core_iter).toString())
 		SLList<LabelledPredicate>::Iterator lp_iter(labelled_preds);
 		SLList<Option<Expr> >::Iterator expr_iter(exprs);
+
 		for(; lp_iter; lp_iter++, expr_iter++)
 		{
 			if(*expr_iter && **expr_iter == *unsat_core_iter)

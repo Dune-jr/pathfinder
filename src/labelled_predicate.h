@@ -21,6 +21,7 @@ public:
 	LabelledPredicate(const LabelledPredicate& lp);
 	inline const Predicate& pred() const { return _pred; };
 	inline const Set<const Edge*>& labels() const { return _labels; };
+	inline void addLabel(const Edge* label) { _labels += label; }
 	friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lv) { return lv.print(out); }
 };
 

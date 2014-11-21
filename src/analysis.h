@@ -38,8 +38,8 @@ private:
 	ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
 
 	SLList<SLList<LabelledPredicate> > labelled_preds; // previously generated predicates
-	SLList<Predicate> generated_preds; // predicates local to the current BB
-	SLList<Predicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
+	SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
+	SLList<LabelledPredicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
 	SLList<SLList<LabelledPredicate> > updated_preds; // this is reset before any BB analysis, indicates previously generated preds (in another BB)
 		// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
 
@@ -68,11 +68,13 @@ private:
 		inline bool ended(void) const { return (state == DONE); }
 		LabelledPredicate item(void) const {
 			switch(state) {
-				case GENERATED_PREDS: return LabelledPredicate(gp_iter.item(), Path::null);
+				// case GENERATED_PREDS: return LabelledPredicate(gp_iter.item(), Path::null);
+				case GENERATED_PREDS: return gp_iter.item();
 				case LABELLED_PREDS: return lp_iter.item();
 				default: assert(false);
 			}
 		}
+		// this behaves fine when called while state == DONE. We use this in the code as of nov.14 (for movePredicateToGenerated)
 		void next(void) {
 			if(state == GENERATED_PREDS) gp_iter++;
 			if(state == LABELLED_PREDS) lp_iter++;
@@ -82,22 +84,24 @@ private:
 		inline Predicate pred(void) const { return item().pred(); }
 		inline Path labels(void) const { return item().labels(); }
 
-	private:
-		void nextState() { if(state == GENERATED_PREDS) state = LABELLED_PREDS; else if (state == LABELLED_PREDS) state = DONE; }
 		void updateState() {
 			if(state == GENERATED_PREDS && !gp_iter) { nextState(); updateState(); }
 			if(state == LABELLED_PREDS && !lp_iter) { nextState(); updateState(); }
 		}
 
+	private:
+		void nextState() { if(state == GENERATED_PREDS) state = LABELLED_PREDS; else if (state == LABELLED_PREDS) state = DONE; }
+
 		friend class Analysis;
 		pred_iterator_state_t state;
-		SLList<Predicate>::Iterator gp_iter; // Generated predicates (local) iterator 
+		SLList<LabelledPredicate>::Iterator gp_iter; // Generated predicates (local) iterator 
 		SLList<LabelledPredicate>::Iterator lp_iter; // Labelled predicates (previous BBs) iterator
 	};
 	
 	// Private methods
 	// analysis.cpp
 	void setPredicate(PredIterator &iter, const LabelledPredicate &labelled_predicate);
+	void movePredicateToGenerated(PredIterator &iter);
 	void removePredicate(PredIterator &iter);
 	inline void dumpPredicates() { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
 	
@@ -107,7 +111,7 @@ private:
 	void processBB(BasicBlock *bb);
 	void placeboProcessBB(BasicBlock *bb);
 	void processEdge(const Edge *edge);
-	SLList<LabelledPredicate> labelPredicateList (const SLList<Predicate>& pred_list, const Edge* label);
+	SLList<LabelledPredicate> labelPredicateList (const SLList<LabelledPredicate>& pred_list, const Edge* label);
 	
 	// analysis_bb.cpp
 	void analyzeBB(const BasicBlock *bb);
@@ -120,9 +124,9 @@ private:
 	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
 	Option<Constant> findConstantValueOfVar(const OperandVar& var); // changed to a simple lookup to "constants"
 	// bool findConstantValueOfVar_old(const OperandVar& var, t::int32& val); // old version may be better?... think about a case where t1 is sp + 4 + 2 + 6
-	Option<t::int32> findStackRelativeValueOfVar(const OperandVar& var);
+	Option<t::int32> findStackRelativeValueOfVar(const OperandVar& var, Path& labels);
 	bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
-	Option<OperandMem> getOperandMem(const OperandVar& var);
+	Option<OperandMem> getOperandMem(const OperandVar& var, Path& labels);
 	bool invalidateAllMemory();
 	Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken);
 	inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }

@@ -23,7 +23,7 @@ void testOperands();
 void testSimplify();
 void testAnalysis(CFG *cfg);
 
-int dbg_flags = 0b0000;
+int dbg_flags = 0b0000; // global flags
 
 class Display: public Application {
 public:
@@ -33,6 +33,7 @@ public:
     	opt_output(option::SwitchOption::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file")),
     	opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").description("do not use colors")),
     	opt_noinfo(option::SwitchOption::Make(*this).cmd("--no-info").description("do not print file/line number info")),
+    	opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
     	opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")) { }
         
 protected:
@@ -51,6 +52,8 @@ protected:
 			dbg_flags |= DBG_NO_COLOR;
 		if(opt_noinfo)
 			dbg_flags |= DBG_NO_INFO;
+		if(opt_notime)
+			dbg_flags |= DBG_NO_TIME;
 		if(opt_nopred)
 			dbg_flags |= DBG_NO_PREDICATES;
 		Analysis analysis = Analysis(cfg, sp_id, max_tempvars, max_registers);
@@ -71,6 +74,7 @@ private:
 	option::SwitchOption opt_output;
 	option::SwitchOption opt_nocolor;
 	option::SwitchOption opt_noinfo;
+	option::SwitchOption opt_notime;
 	option::SwitchOption opt_nopred;
 };
 

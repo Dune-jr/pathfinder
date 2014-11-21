@@ -16,10 +16,27 @@ void Analysis::setPredicate(PredIterator &iter, const LabelledPredicate &labelle
 {
 	ASSERT(!iter.ended());
 	if(iter.state == PredIterator::GENERATED_PREDS)
-		generated_preds.set(iter.gp_iter, labelled_predicate.pred());
+		generated_preds.set(iter.gp_iter, labelled_predicate);
 	else if(iter.state == PredIterator::LABELLED_PREDS)
 		labelled_preds.first().set(iter.lp_iter, labelled_predicate);
-	else DBG(color::BIRed() << "Analysis::removePredicate(): unhandled iter.state!")
+	else DBG(color::BIRed() << "Analysis::setPredicate(): unhandled iter.state!")
+}
+
+/*
+ * move predicates to the local list (so that they get updated with an edge)
+ * WARNING: this may result in iter.ended()!
+**/
+void Analysis::movePredicateToGenerated(PredIterator &iter)
+{
+	if(iter.state == PredIterator::GENERATED_PREDS)
+		return; // do not do anything
+	else if(iter.state == PredIterator::LABELLED_PREDS)
+	{
+		generated_preds += *iter;
+		labelled_preds.first().remove(iter.lp_iter);
+		iter.updateState();
+	}
+	else DBG(color::BIRed() << "Analysis::movePredicateToGenerated(): unhandled iter.state!")
 }
 
 void Analysis::removePredicate(PredIterator &iter)

@@ -4,10 +4,11 @@
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 
-#define DBG_NO_DEBUG	  0b0001
-#define DBG_NO_COLOR	  0b0010
-#define DBG_NO_INFO  	  0b0100
-#define DBG_NO_PREDICATES 0b1000
+#define DBG_NO_DEBUG	  0b00001
+#define DBG_NO_COLOR	  0b00010
+#define DBG_NO_INFO  	  0b00100
+#define DBG_NO_TIME       0b01000
+#define DBG_NO_PREDICATES 0b10000
 #define UNTESTED_CRITICAL false // Do not raise exception when executing untested code
 #define DBG_SEPARATOR " "
 

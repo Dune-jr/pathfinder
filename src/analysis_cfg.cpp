@@ -50,10 +50,15 @@ void Analysis::processCFG(CFG* cfg)
 	std::time_t timestamp = clock(); // Timestamp before analysis
 	processBB(cfg->firstBB());
 	// DBG("\e[4mResult of the analysis: " << color::RCol() << labelled_preds)
-	int infeasible_paths_count = infeasible_paths.count();
-	int ms_diff = (clock()-timestamp)*1000/CLOCKS_PER_SEC;
-	DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
-		<< "(" << (ms_diff>=1000 ? ((float)ms_diff)/(float(100)) : ms_diff) << (ms_diff>=1000 ? "s" : "ms") << ")")
+	int infeasible_paths_count = infeasible_paths.count(), ms_diff;
+	if(dbg_flags&DBG_NO_TIME)
+		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: ")
+	else
+	{
+		ms_diff = (clock()-timestamp)*1000/CLOCKS_PER_SEC;
+		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
+			<< "(" << (ms_diff>=1000 ? ((float)ms_diff)/(float(100)) : ms_diff) << (ms_diff>=1000 ? "s" : "ms") << ")")
+	}
 	for(Set<Path>::Iterator iter(infeasible_paths); iter; iter++)
 	{
 		Path l = *iter; // Path is Set<const Edge*>
@@ -74,7 +79,12 @@ void Analysis::processCFG(CFG* cfg)
 			cout << str << endl;
 	}
 	if(dbg_flags&DBG_NO_DEBUG)
-		cout << infeasible_paths_count << " infeasible path(s) found. (" << ms_diff/1000 << "." << ms_diff%1000 << "s)\n";
+	{
+		if(dbg_flags&DBG_NO_TIME)
+			cout << infeasible_paths_count << " infeasible path(s) found.";
+		else
+			cout << infeasible_paths_count << " infeasible path(s) found. (" << ms_diff/1000 << "." << ms_diff%1000 << "s)\n";
+	}
 }
 
 void Analysis::processBB(BasicBlock* bb)
@@ -117,9 +127,9 @@ void Analysis::processBB(BasicBlock* bb)
 	assert(labelled_preds);
 	
 	// these will be overwritten by further analysis, so back them up
-	SLList<Predicate> generated_preds_backup	   = generated_preds;
-	SLList<Predicate> generated_preds_taken_backup = generated_preds_taken;
-	SLList<LabelledPredicate> top_list_backup	   = labelled_preds.first();
+	SLList<LabelledPredicate> generated_preds_backup	   = generated_preds;
+	SLList<LabelledPredicate> generated_preds_taken_backup = generated_preds_taken;
+	SLList<LabelledPredicate> top_list_backup			   = labelled_preds.first();
 	ConstantVariables constants_backup(constants);
 	
 	int edgeId = 0;
@@ -134,7 +144,7 @@ void Analysis::processBB(BasicBlock* bb)
 			// if(pid)
 			// 	continue;
 
-			SLList<Predicate> &relevant_preds = (outs->kind() == Edge::TAKEN) ?
+			const SLList<LabelledPredicate> &relevant_preds = (outs->kind() == Edge::TAKEN) ?
 				generated_preds_taken_backup :
 				generated_preds_backup;
 			
@@ -191,16 +201,14 @@ void Analysis::processEdge(const Edge* edge)
 	processBB(target);
 }
 
-SLList<LabelledPredicate> Analysis::labelPredicateList(const SLList<Predicate>& pred_list, const Edge* label)
+SLList<LabelledPredicate> Analysis::labelPredicateList(const SLList<LabelledPredicate>& pred_list, const Edge* label)
 {
-	Set<const Edge*> sll_containing_only_label;
-	sll_containing_only_label += label;
-
-	SLList<LabelledPredicate> LP_list;
-	for(SLList<Predicate>::Iterator preds(pred_list); preds; preds++)
+	SLList<LabelledPredicate> rtn;
+	for(SLList<LabelledPredicate>::Iterator iter(pred_list); iter; iter++)
 	{
-		LabelledPredicate lp(*preds, sll_containing_only_label);
-		LP_list += lp;
+		LabelledPredicate lp(*iter);
+		lp.addLabel(label);
+		rtn += lp;
 	}
-	return LP_list;
+	return rtn;
 }
