@@ -719,7 +719,7 @@ bool Analysis::invalidateTempVars()
 bool Analysis::replaceVar(const OperandVar& var, const Operand& expr)
 {
 	bool rtn = false;
-	for(PredIterator piter(*this); piter; piter++)
+	for(PredIterator piter(*this); piter; )
 	{
 		if(piter.pred().involvesVariable(var))
 		{
@@ -739,11 +739,13 @@ bool Analysis::replaceVar(const OperandVar& var, const Operand& expr)
 				DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
 				DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << p)
 				setPredicate(piter, LabelledPredicate(p, piter.labels()));
-				movePredicateToGenerated(piter);
+				movePredicateToGenerated(piter); // this does piter++
+				continue;
 				// if(!piter) // not needed
 				// 	break;
 			}
 		}
+		piter++;
 	}
 	return rtn;
 }

@@ -5,6 +5,7 @@
 #include <elm/genstruct/SLList.h>
 #include <otawa/sem/inst.h>
 #include <elm/avl/Set.h>
+#include <elm/util/Comparator.h>
 #include "constant_variables.h"
 #include "labelled_predicate.h"
 #include "debug.h"
@@ -18,13 +19,22 @@ using namespace debug;
 void addIndents(io::Output& out, int n);
 template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l);
 
+elm::PreComparator<int, int> c;
+
+template <class T>
+	class Comparator2: public elm::PreComparator<typename T, elm::Comparator<typename T> > {
+	};
+
 class Analysis {
 public:
 	// typedef SLList<const Edge*> Path;
 	typedef Set<const Edge*> Path;
 
 	Analysis(CFG *cfg, int sp_id, unsigned int max_tempvars, unsigned int max_registers);
-	inline Set<Path> infeasiblePaths() const { return infeasible_paths; }
+	class PathComparator : public elm::PreComparator<Path, Comparator<Path> >{
+
+	};
+	inline Set<Path, PathComparator<Path> > infeasiblePaths() const { return infeasible_paths; }
 
 	// bool invalidate_constant_info 
 	enum
