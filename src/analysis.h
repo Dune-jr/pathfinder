@@ -19,11 +19,12 @@ using namespace debug;
 void addIndents(io::Output& out, int n);
 template <class T> io::Output& operator<<(io::Output& out, const SLList<T>& l);
 
-elm::PreComparator<int, int> c;
-
-template <class T>
-	class Comparator2: public elm::PreComparator<typename T, elm::Comparator<typename T> > {
-	};
+/*
+class PathComparator: public elm::Comparator<SLList<const Edge*> > {
+	static inline int compare(const SLList<const Edge*>& v1, const SLList<const Edge*>& v2)
+		{ return 0; }
+};
+*/
 
 class Analysis {
 public:
@@ -31,10 +32,8 @@ public:
 	typedef Set<const Edge*> Path;
 
 	Analysis(CFG *cfg, int sp_id, unsigned int max_tempvars, unsigned int max_registers);
-	class PathComparator : public elm::PreComparator<Path, Comparator<Path> >{
-
-	};
-	inline Set<Path, PathComparator<Path> > infeasiblePaths() const { return infeasible_paths; }
+	inline Set<Path> infeasiblePaths() const { return infeasible_paths; }
+	// inline Set<SLList<const Edge*>, PathComparator> infeasiblePaths() const { return infeasible_paths; }
 
 	// bool invalidate_constant_info 
 	enum
@@ -53,7 +52,7 @@ private:
 	SLList<SLList<LabelledPredicate> > updated_preds; // this is reset before any BB analysis, indicates previously generated preds (in another BB)
 		// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
 
-	Set<Path> infeasible_paths;
+	Set<Path> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
 	int processed_paths;
 	int total_paths;
 	// bool solverHasBeenCalled;

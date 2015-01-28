@@ -19,7 +19,7 @@ using CVC4::Expr;
 SMT::SMT(): smt(&em), variables(em), integer(em.integerType())
 {
 	smt.setLogic("QF_LIA"); // Quantifier-Free (no forall, exists...) Linear Integer Arithmetic
-	smt.setOption("incremental", CVC4::SExpr("false"));
+	smt.setOption("incremental", CVC4::SExpr("false")); // non incremental
 	smt.setOption("produce-unsat-cores", CVC4::SExpr("true"));
 	// smt.setOption("dump-unsat-cores", CVC4::SExpr("true"));
 	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
@@ -58,7 +58,7 @@ Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>&
 	DBG(color::IRed() << "Original predicates:")
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
 		if((*iter).pred().isComplete())
-			DBG("* " <<(*iter))
+			DBG("* " <<(*citer))
 	DBG(color::IRed() << "UNSAT core:")
 
 	CVC4::UnsatCore unsat_core = smt.getUnsatCore(); // get an unsat subset of our assumptions
@@ -126,7 +126,7 @@ bool SMT::checkPredSat(const SLList<Option<Expr> >& exprs, bool print_results)
 		if(*iter)
 		{
 			smt.assertFormula(**iter, true); // second parameter to true for unsat cores
-			DBG_STD("ASSERT " << **iter << ";")
+			// DBG_STD("ASSERT " << **iter << ";")
 		}
 
 	bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
