@@ -27,7 +27,7 @@ Analysis::State::State(BasicBlock* entrybb, const OperandVar& sp, unsigned int m
 	: sp(sp), constants(max_tempvars, max_registers)
 {
 	BasicBlock::OutIterator outs(entrybb);
-	assert(outs); // TODO! turn assert into ASSERT
+	ASSERT(outs);
 	path += *outs;
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -46,14 +46,9 @@ void Analysis::State::appendEdge(Edge* e)
 
 	// label our list of predicates with the current edge then append it
 	SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(relevant_preds, e);
+	labelled_preds += labelled_analysis_result;
 	// label the constants as well
 	constants.label(e);
-	
-	// Add result to topList
-	SLList<LabelledPredicate> topList = labelled_preds.first();
-	topList += labelled_analysis_result;
-	labelled_preds.removeFirst();
-	labelled_preds.addFirst(topList);
 }
 
 // WARNING: atm, this function assumes we have NO LOOPS!
@@ -189,7 +184,6 @@ void Analysis::processCFG(CFG* cfg)
 				{
 					State s = sl_iter.item();
 					s.appendEdge(e);
-					DBG(color::IRed() << "s.appendEdge("<< e <<")")
 					new_sl += s;
 				}
 				wl.push(new_sl);
@@ -265,9 +259,12 @@ int Analysis::processBB(State& s, BasicBlock* bb)
 		
 	// SMT call
 	SMT smt;
-	if(Option<Set<Analysis::Path> > maybe_infeasible_paths = smt.seekInfeasiblePaths(s.getFirstLabelledPreds(), s.getConstants()))
+	if(Option<Path> maybe_infeasible_path = smt.seekInfeasiblePaths(s.getLabelledPreds(), s.getConstants()))
 	{
-		infeasible_paths += *maybe_infeasible_paths;
+		const Path &path = *maybe_infeasible_path;
+		DBG("Minimized path uses " << path.count() << " out of " << s.getPath().count() << " edges.")
+
+		infeasible_paths += path;
 		DBG(color::BIYel() << "Current path identified as infeasible, stopping analysis")
 		// cout << "(" << ++paths_count << "/" << total_paths << ") !" << endl;
 		infeasible_paths_count++;
@@ -303,13 +300,4 @@ void Analysis::placeboProcessBB(BasicBlock* bb)
 			placeboProcessBB((*outs)->target());
 		}
 	}
-}
-
-// TODO! find an use for that or remove
-void Analysis::processEdge(const Edge* edge)
-{
-	// BasicBlock* target = edge->target();
-	// DBG(color::Whi() << "Processing Edge: " << edge->source()->number() << "->" << (*subiter)->target()->number());)	
-	DBG(color::Whi() << "Processing Edge: " << edge << "(not doing anything atm)")	
-	// DBG(color::BIRed() << "State of the analysis: " << labelled_preds)	
 }

@@ -9,58 +9,12 @@
 
 using namespace otawa::sem;
 
-void Analysis::State::processBB(BasicBlock *bb)
-{
-	analyzeBB(bb);
-	// assert(labelled_preds);
-	
-	/*
-	// these will be overwritten by further analysis, so back them up
-	SLList<LabelledPredicate> generated_preds_backup	   = generated_preds;
-	SLList<LabelledPredicate> generated_preds_taken_backup = generated_preds_taken;
-	SLList<LabelledPredicate> top_list_backup			   = labelled_preds.first();
-	ConstantVariables constants_backup(constants);
-
-	int edgeId = 0;
-	for(BasicBlock::OutIterator outs(bb); outs; outs++)
-	{
-		if(outs->kind() == Edge::TAKEN
-		|| outs->kind() == Edge::NOT_TAKEN
-		|| outs->kind() == Edge::VIRTUAL
-		|| outs->kind() == Edge::VIRTUAL_RETURN) // Filter out irrelevant edges (calls...)
-		{
-			const SLList<LabelledPredicate> &relevant_preds = (outs->kind() == Edge::TAKEN) ?
-				generated_preds_taken_backup :
-				generated_preds_backup;
-			
-			if(edgeId++) // if this is not the first valid edge
-			{
-				labelled_preds += top_list_backup; // copy the predicates we have generated until this node into a new list
-				constants = constants_backup; // also reset the constants
-			}			
-
-			// label our list of predicates with the current edge then append it
-			SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(relevant_preds, *outs);
-			// label the constants as well
-			constants.label(*outs);
-			
-			// Add result to topList
-			SLList<LabelledPredicate> topList = labelled_preds.first();
-			topList += labelled_analysis_result;
-			labelled_preds.removeFirst();
-			labelled_preds.addFirst(topList);
-		}
-	}
-	*/
-}
-
-void Analysis::State::analyzeBB(const BasicBlock *bb)
+void Analysis::State::processBB(const BasicBlock *bb)
 {
 	SLList<LabelledPredicate> generated_preds_before_condition;
 	sem::inst condition;
 	generated_preds.clear();
 	generated_preds_taken.clear();
-	updated_preds.clear();
 	
 	// parse assembly instructions
 	for(BasicBlock::InstIterator insts(bb); insts; insts++)
@@ -1263,3 +1217,48 @@ Predicate* Analysis::State::getPredicateGeneratedByCondition(sem::inst condition
 	delete opd_right;
 	return rtn;
 }
+
+/*
+void Analysis::State::processBB(BasicBlock *bb)
+{
+	analyzeBB(bb);
+	// assert(labelled_preds);
+	
+	// these will be overwritten by further analysis, so back them up
+	SLList<LabelledPredicate> generated_preds_backup	   = generated_preds;
+	SLList<LabelledPredicate> generated_preds_taken_backup = generated_preds_taken;
+	SLList<LabelledPredicate> top_list_backup			   = labelled_preds.first();
+	ConstantVariables constants_backup(constants);
+
+	int edgeId = 0;
+	for(BasicBlock::OutIterator outs(bb); outs; outs++)
+	{
+		if(outs->kind() == Edge::TAKEN
+		|| outs->kind() == Edge::NOT_TAKEN
+		|| outs->kind() == Edge::VIRTUAL
+		|| outs->kind() == Edge::VIRTUAL_RETURN) // Filter out irrelevant edges (calls...)
+		{
+			const SLList<LabelledPredicate> &relevant_preds = (outs->kind() == Edge::TAKEN) ?
+				generated_preds_taken_backup :
+				generated_preds_backup;
+			
+			if(edgeId++) // if this is not the first valid edge
+			{
+				labelled_preds += top_list_backup; // copy the predicates we have generated until this node into a new list
+				constants = constants_backup; // also reset the constants
+			}			
+
+			// label our list of predicates with the current edge then append it
+			SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(relevant_preds, *outs);
+			// label the constants as well
+			constants.label(*outs);
+			
+			// Add result to topList
+			SLList<LabelledPredicate> topList = labelled_preds.first();
+			topList += labelled_analysis_result;
+			labelled_preds.removeFirst();
+			labelled_preds.addFirst(topList);
+		}
+	}
+}
+*/

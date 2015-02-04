@@ -63,7 +63,6 @@ private:
 	void processCFG(CFG *cfg);
 	int processBB(State& s, BasicBlock *bb);
 	void placeboProcessBB(BasicBlock *bb);
-	void processEdge(const Edge *edge);
 	
 	class State {
 	private:
@@ -73,21 +72,26 @@ private:
 		SLList<LabelledPredicate> labelled_preds; // previously generated predicates
 		SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
 		SLList<LabelledPredicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
-		SLList<SLList<LabelledPredicate> > updated_preds; // this is reset before any BB analysis, indicates previously generated preds (in another BB)
 			// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
 		class PredIterator;
 
 	public:
 		State(BasicBlock* entrybb, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers);
-		inline Edge* lastEdge() const { return path.last(); };
-		void appendEdge(Edge* e);
-		void processBB(BasicBlock *bb);
-		inline const SLList<LabelledPredicate>& getFirstLabelledPreds() const { return labelled_preds.first(); }
-
+		inline const OrderedPath& getPath() const { return path; }
+		inline Edge* lastEdge() const { return path.last(); }
+		inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
 		inline const ConstantVariables& getConstants() const { return constants; }
-		elm::String pathToString() const;
 		friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 		inline void dumpPredicates() { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
+
+		// analysis.cpp
+		elm::String pathToString() const;
+
+		// analysis_cfg.cpp
+		void appendEdge(Edge* e);
+
+		// analysis_bb.cpp
+		void processBB(const BasicBlock *bb);
 
 	private:
 		// Private methods
@@ -99,7 +103,6 @@ private:
 		io::Output& print(io::Output& out) const;
 
 		// analysis_bb.cpp
-		void analyzeBB(const BasicBlock *bb);
 		bool invalidateVar(const OperandVar& var, bool invalidate_constant_info = true);
 		bool invalidateMem(const OperandMem& addr);
 		bool invalidateMem(const OperandVar& var);
@@ -108,7 +111,6 @@ private:
 		bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);
 		bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
 		Option<Constant> findConstantValueOfVar(const OperandVar& var); // changed to a simple lookup to "constants"
-		// bool findConstantValueOfVar_old(const OperandVar& var, t::int32& val); // old version may be better?... think about a case where t1 is sp + 4 + 2 + 6
 		Option<t::int32> findStackRelativeValueOfVar(const OperandVar& var, Path& labels);
 		bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
 		Option<OperandMem> getOperandMem(const OperandVar& var, Path& labels);
@@ -128,7 +130,7 @@ private:
 		public:
 			inline PredIterator(void) { }
 			inline PredIterator(const Analysis::State& analysis_state)
-				: state(GENERATED_PREDS), gp_iter(analysis_state.generated_preds), lp_iter(analysis_state.labelled_preds.first())	{ updateState(); }
+				: state(GENERATED_PREDS), gp_iter(analysis_state.generated_preds), lp_iter(analysis_state.labelled_preds) { updateState(); }
 			inline PredIterator(const PredIterator& source): gp_iter(source.gp_iter), lp_iter(source.lp_iter) { }
 			inline PredIterator& operator=(const PredIterator& i)
 				{ state = i.state; gp_iter = i.gp_iter; lp_iter = i.lp_iter; return *this; }

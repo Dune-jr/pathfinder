@@ -17,7 +17,7 @@ void Analysis::State::setPredicate(PredIterator &iter, const LabelledPredicate &
 	if(iter.state == PredIterator::GENERATED_PREDS)
 		generated_preds.set(iter.gp_iter, labelled_predicate);
 	else if(iter.state == PredIterator::LABELLED_PREDS)
-		labelled_preds.first().set(iter.lp_iter, labelled_predicate);
+		labelled_preds.set(iter.lp_iter, labelled_predicate);
 	else DBG(color::BIRed() << "Analysis::setPredicate(): unhandled iter.state!")
 }
 
@@ -32,7 +32,7 @@ void Analysis::State::movePredicateToGenerated(PredIterator &iter)
 	else if(iter.state == PredIterator::LABELLED_PREDS)
 	{
 		generated_preds += *iter;
-		labelled_preds.first().remove(iter.lp_iter);
+		labelled_preds.remove(iter.lp_iter);
 		iter.updateState();
 	}
 	else DBG(color::BIRed() << "Analysis::movePredicateToGenerated(): unhandled iter.state!")
@@ -44,7 +44,7 @@ void Analysis::State::removePredicate(PredIterator &iter)
 	if(iter.state == PredIterator::GENERATED_PREDS)
 		generated_preds.remove(iter.gp_iter);
 	else if(iter.state == PredIterator::LABELLED_PREDS)
-		labelled_preds.first().remove(iter.lp_iter);
+		labelled_preds.remove(iter.lp_iter);
 	else DBG(color::BIRed() << "Analysis::removePredicate(): unhandled iter.state!")
 	iter.updateState();
 }

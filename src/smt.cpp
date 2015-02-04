@@ -33,7 +33,7 @@ SMT::~SMT()
 
 // gets a copy of the labelled_preds SLList
 // actually always returns 1 infeasible path, but that may be changed in the future
-Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)
+Option<Analysis::Path> SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)
 {
 	// DBG(color::ICya() << "labelled_preds = " << labelled_preds)
 	// DBG(color::ICya() << "constants = " << constants)
@@ -44,7 +44,7 @@ Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate> 
 }
 
 // private method
-Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>& labelled_preds)
+Option<Analysis::Path> SMT::seekInfeasiblePaths(SLList<LabelledPredicate>& labelled_preds)
 {
 	// get a SLList<Option<Expr> > out of a SLList<LabelledPredicate> in order to know which LP matches which expr
 	SLList<Option<Expr> > exprs;
@@ -54,20 +54,14 @@ Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>&
 	if(checkPredSat(exprs, true))
 		return elm::none; // no inconsistency found
 
-	// TODO: remove prints?
-	DBG(color::IRed() << "Original predicates:")
-	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
-		if((*iter).pred().isComplete())
-			DBG("* " <<(*iter))
-	DBG(color::IRed() << "UNSAT core:")
-
 	CVC4::UnsatCore unsat_core = smt.getUnsatCore(); // get an unsat subset of our assumptions
 	Analysis::Path path; // build our path
 	bool empty = true;
+	std::basic_string<char> unsat_core_output;
 	for(CVC4::UnsatCore::const_iterator unsat_core_iter = unsat_core.begin(); unsat_core_iter != unsat_core.end(); unsat_core_iter++)
 	{
 		empty = false;
-		DBG_STD("* " << (*unsat_core_iter).toString())
+		unsat_core_output += "\n* " + (*unsat_core_iter).toString();
 		SLList<LabelledPredicate>::Iterator lp_iter(labelled_preds);
 		SLList<Option<Expr> >::Iterator expr_iter(exprs);
 
@@ -82,8 +76,21 @@ Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>&
 		}
 	}
 	if(empty) // TODO: fix this hack (there should be another way to figure when unsat core fails)
+	{
+		DBG(color::BIWhi() << "A)" << color::RCol() << " Extracting UNSAT core... " << color::IRed() << "FAILED!");
+		DBG("Using original predicates:")
 		for(SLList<LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
-			path.addAll((*parse_iter).labels());
+			if((*parse_iter).pred().isComplete())
+			{
+				DBG("* " << (*parse_iter))
+				path.addAll((*parse_iter).labels());
+			}
+	}
+	else
+	{
+		DBG(color::BIWhi() << "A)" << color::RCol() << " Extracting UNSAT core... " << color::IGre() << "SUCCESS!");
+		DBG_STD("UNSAT core:" << unsat_core_output)
+	}
 
 	elm::String str = "[";
 	bool first = true;
@@ -97,12 +104,11 @@ Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>&
 	}
 	str = str.concat(_ << "]");
 	DBG(color::On_IRed() << "Inf. path found: " << str)
-	Set<Analysis::Path> paths;
+	// Set<Analysis::Path> paths;
 	if(path == Analysis::Path::null)
 		return elm::none;
-	assert(path != Analysis::Path::null);
-	paths += path;
-	return elm::some(paths);
+	// paths += path;
+	return elm::some(path);
 
 /*
 	removeIncompletePredicates(labelled_preds); // optimization: incomplete predicates are not sent to the SMT therefore they cannot play a role in the UNSAT
