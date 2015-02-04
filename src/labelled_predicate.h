@@ -13,15 +13,15 @@ using namespace elm::avl;
 class LabelledPredicate {
 private:
 	Predicate _pred;
-	Set<const Edge*> _labels; // Analysis::Path
+	Set<Edge*> _labels; // Analysis::Path
 	io::Output& print(io::Output& out) const;
 
 public:
-	LabelledPredicate(const Predicate& pred, const Set<const Edge*>& labels);
+	LabelledPredicate(const Predicate& pred, const Set<Edge*>& labels);
 	LabelledPredicate(const LabelledPredicate& lp);
 	inline const Predicate& pred() const { return _pred; };
-	inline const Set<const Edge*>& labels() const { return _labels; };
-	inline void addLabel(const Edge* label) { _labels += label; }
+	inline const Set<Edge*>& labels() const { return _labels; };
+	inline void addLabel(Edge* label) { _labels += label; }
 	friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lv) { return lv.print(out); }
 };
 

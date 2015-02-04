@@ -19,18 +19,18 @@ private:
 	{
 	public:
 		LabelledValue() { }
-		LabelledValue(const Constant& val, Set<const Edge*> labels, bool updated = false) : _val(val), _labels(labels), _updated(updated) { }
+		LabelledValue(const Constant& val, Set<Edge*> labels, bool updated = false) : _val(val), _labels(labels), _updated(updated) { }
 		inline Constant val() const { return _val; }
-		inline const Set<const Edge*>& labels() const { return _labels; }
+		inline const Set<Edge*>& labels() const { return _labels; }
 		inline bool isUpdated() const { return _updated; }
-		inline void addLabel(const Edge* label) { if(!_labels.contains(label)) _labels.add(label); }
+		inline void addLabel(Edge* label) { if(!_labels.contains(label)) _labels.add(label); }
 		inline void setUpdatedFlag(bool updated = true) { _updated = updated; }
 		LabelledValue& operator=(const LabelledValue& lv);
 		friend io::Output& operator<<(io::Output& out, const LabelledValue& lv) { return lv.print(out); }
 
 	private:
 		Constant _val;
-		Set<const Edge*> _labels;
+		Set<Edge*> _labels;
 		bool _updated;
 
 		io::Output& print(io::Output& out) const;
@@ -58,7 +58,7 @@ public:
 	inline void update(const OperandVar& opdv, const OperandConst& opdc, bool updated_flag = true) { update(opdv, opdc.value(), updated_flag); }
 	void invalidate(const OperandVar& opdv);
 	bool invalidateTempVars();
-	void label(const Edge* label);
+	void label(Edge* label);
 	SLList<LabelledPredicate> toPredicates() const;
 	ConstantVariablesSimplified toSimplified() const;
 	inline Constant operator[](const OperandVar& opdv) const { return getValue(opdv); }

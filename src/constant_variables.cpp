@@ -71,7 +71,7 @@ void ConstantVariables::set(const OperandVar& opdv, const Constant& val, bool up
 	Option<LabelledValue>& k = getCell(opdv);
 	invalidate(opdv);
 	DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << opdv << "==" << OperandConst(val))
-	k = some(LabelledValue(val, Set<const Edge*>::null, updated_flag));
+	k = some(LabelledValue(val, Set<Edge*>::null, updated_flag));
 }
 
 // set to a value without changing the labels
@@ -116,7 +116,7 @@ bool ConstantVariables::invalidateTempVars()
 	return true;
 }
 
-void ConstantVariables::label(const Edge* label)
+void ConstantVariables::label(Edge* label)
 {
 	for(unsigned int i = 0; i < _max_tempvars; i++)
 		if(tempvars[i] && (*tempvars[i]).isUpdated())
@@ -202,7 +202,7 @@ io::Output& ConstantVariables::LabelledValue::print(io::Output& out) const
 	{
 		out << "(";
 		bool first_time = true;
-		for(Set<const Edge*>::Iterator iter(_labels); iter; iter++)
+		for(Set<Edge*>::Iterator iter(_labels); iter; iter++)
 		{
 			if(first_time)
 				first_time = false;

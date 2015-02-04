@@ -54,11 +54,11 @@ Option<Set<Analysis::Path> > SMT::seekInfeasiblePaths(SLList<LabelledPredicate>&
 	if(checkPredSat(exprs, true))
 		return elm::none; // no inconsistency found
 
-	// TODO!!
+	// TODO: remove prints?
 	DBG(color::IRed() << "Original predicates:")
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
 		if((*iter).pred().isComplete())
-			DBG("* " <<(*citer))
+			DBG("* " <<(*iter))
 	DBG(color::IRed() << "UNSAT core:")
 
 	CVC4::UnsatCore unsat_core = smt.getUnsatCore(); // get an unsat subset of our assumptions

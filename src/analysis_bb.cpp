@@ -9,7 +9,52 @@
 
 using namespace otawa::sem;
 
-void Analysis::analyzeBB(const BasicBlock *bb)
+void Analysis::State::processBB(BasicBlock *bb)
+{
+	analyzeBB(bb);
+	// assert(labelled_preds);
+	
+	/*
+	// these will be overwritten by further analysis, so back them up
+	SLList<LabelledPredicate> generated_preds_backup	   = generated_preds;
+	SLList<LabelledPredicate> generated_preds_taken_backup = generated_preds_taken;
+	SLList<LabelledPredicate> top_list_backup			   = labelled_preds.first();
+	ConstantVariables constants_backup(constants);
+
+	int edgeId = 0;
+	for(BasicBlock::OutIterator outs(bb); outs; outs++)
+	{
+		if(outs->kind() == Edge::TAKEN
+		|| outs->kind() == Edge::NOT_TAKEN
+		|| outs->kind() == Edge::VIRTUAL
+		|| outs->kind() == Edge::VIRTUAL_RETURN) // Filter out irrelevant edges (calls...)
+		{
+			const SLList<LabelledPredicate> &relevant_preds = (outs->kind() == Edge::TAKEN) ?
+				generated_preds_taken_backup :
+				generated_preds_backup;
+			
+			if(edgeId++) // if this is not the first valid edge
+			{
+				labelled_preds += top_list_backup; // copy the predicates we have generated until this node into a new list
+				constants = constants_backup; // also reset the constants
+			}			
+
+			// label our list of predicates with the current edge then append it
+			SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(relevant_preds, *outs);
+			// label the constants as well
+			constants.label(*outs);
+			
+			// Add result to topList
+			SLList<LabelledPredicate> topList = labelled_preds.first();
+			topList += labelled_analysis_result;
+			labelled_preds.removeFirst();
+			labelled_preds.addFirst(topList);
+		}
+	}
+	*/
+}
+
+void Analysis::State::analyzeBB(const BasicBlock *bb)
 {
 	SLList<LabelledPredicate> generated_preds_before_condition;
 	sem::inst condition;
@@ -592,7 +637,7 @@ void Analysis::analyzeBB(const BasicBlock *bb)
 }
 
 // returns true if a variable has been invalidated
-bool Analysis::invalidateVar(const OperandVar& var, bool invalidate_constant_info)
+bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_constant_info)
 {
 	bool rtn = false;
 
@@ -641,7 +686,7 @@ bool Analysis::invalidateVar(const OperandVar& var, bool invalidate_constant_inf
 	return rtn;
 }
 
-bool Analysis::invalidateMem(const OperandVar& var)
+bool Analysis::State::invalidateMem(const OperandVar& var)
 {
 	Path labels_to_throw; // TODO!
 	Option<OperandMem> addr = getOperandMem(var, labels_to_throw);
@@ -654,7 +699,7 @@ bool Analysis::invalidateMem(const OperandVar& var)
 	return true;
 }
 
-bool Analysis::invalidateMem(const OperandMem& addr)
+bool Analysis::State::invalidateMem(const OperandMem& addr)
 {
 	bool rtn = false;
 	for(PredIterator piter(*this); piter; )
@@ -672,7 +717,7 @@ bool Analysis::invalidateMem(const OperandMem& addr)
 
 // This function will try to keep the information contained in the tempvars 
 // by replacing them by their values in other predicates before removing them
-bool Analysis::invalidateTempVars()
+bool Analysis::State::invalidateTempVars()
 {
 	bool loop, rtn = false;
 
@@ -716,7 +761,7 @@ bool Analysis::invalidateTempVars()
 }
 
 // this mindlessly replaces all occurences of var by expr
-bool Analysis::replaceVar(const OperandVar& var, const Operand& expr)
+bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 {
 	bool rtn = false;
 	for(PredIterator piter(*this); piter; )
@@ -750,7 +795,7 @@ bool Analysis::replaceVar(const OperandVar& var, const Operand& expr)
 	return rtn;
 }
 
-bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
+bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 {
 	bool rtn = false;
 	for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; )
@@ -790,7 +835,7 @@ bool Analysis::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 
 // returns true if a variable has been updated
 // second operand is usually an OperandArithExpr
-bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifier)
+bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd_modifier)
 {
 	Operand* opd_modifier_prenew = opd_modifier.copy();
 	Option<Operand*> maybe_opd_modifier_new = opd_modifier_prenew->replaceConstants(constants.toSimplified()); // replace constants
@@ -831,20 +876,20 @@ bool Analysis::update(const OperandVar& opd_to_update, const Operand& opd_modifi
 }
 
 /**
- * @fn bool Analysis::findConstantValueOfVar(const OperandVar& var, OperandConst& val);
+ * @fn bool Analysis::State::findConstantValueOfVar(const OperandVar& var, OperandConst& val);
  * For a variable tX or ?X, try to find a predicate tX=cst or ?X=cst, and return cst when successful.
  * If the variable is a tempvar (tX), does not browse predicates that have not been generated in the current BB
  * @return true if a value was found
  */
 // TODO! add a Path& labels parameter
-Option<Constant> Analysis::findConstantValueOfVar(const OperandVar& var)
+Option<Constant> Analysis::State::findConstantValueOfVar(const OperandVar& var)
 {
 	if(!isConstant(var))
 		return none;
 	return some(constants[var]);
 }
 
-// bool Analysis::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
+// bool Analysis::State::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
 // {
 	/* old TO*DO: things to do here... separate kinds:
 	*  OperandConst or OperandMem : nothing to do
@@ -904,12 +949,12 @@ Option<Constant> Analysis::findConstantValueOfVar(const OperandVar& var)
 	return false; // No matches found
 }*/
 /**
- * @fn bool Analysis::findStackRelativeValueOfVar(const OperandVar& var, OperandConst& val);
+ * @fn bool Analysis::State::findStackRelativeValueOfVar(const OperandVar& var, OperandConst& val);
  * For a variable tX or ?X, try to find a predicate tX=sp+cst or ?X=sp+cst, and return cst when successful.
  * @return true if a value was found
  */
 // TODO! add a Path& labels parameter
-Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var, Path &labels)
+Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& var, Path &labels)
 {
 	for(PredIterator piter(*this); piter; piter++)
 	{
@@ -1102,11 +1147,11 @@ Option<t::int32> Analysis::findStackRelativeValueOfVar(const OperandVar& var, Pa
 	return none; // no matches found
 }
 /**
- * @fn bool Analysis::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
+ * @fn bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
  * For a register variable ?X, try to find a predicate ?X = (opd_left ~ opd_right), and return false if it cannot find any
  * @return true if a value was found
  */
-bool Analysis::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right)
+bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right)
 {
 	// We only explore the local generated_preds. This seems reasonable since we should be able to find this predicate in the local BB
 	for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; iter++)
@@ -1145,7 +1190,7 @@ bool Analysis::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Ope
 	}
 	return false; // No matches found
 }
-Option<OperandMem> Analysis::getOperandMem(const OperandVar& var, Path& labels)
+Option<OperandMem> Analysis::State::getOperandMem(const OperandVar& var, Path& labels)
 {
 	if(Option<Constant> val = findConstantValueOfVar(var))
 		return some(OperandMem(OperandConst(*val)));
@@ -1155,7 +1200,7 @@ Option<OperandMem> Analysis::getOperandMem(const OperandVar& var, Path& labels)
 	return none;
 }
 
-bool Analysis::invalidateAllMemory()
+bool Analysis::State::invalidateAllMemory()
 {
 	bool rtn = false;
 	for(PredIterator piter(*this); piter; )
@@ -1172,7 +1217,7 @@ bool Analysis::invalidateAllMemory()
 	return rtn;
 }
 
-Predicate* Analysis::getPredicateGeneratedByCondition(sem::inst condition, bool taken)
+Predicate* Analysis::State::getPredicateGeneratedByCondition(sem::inst condition, bool taken)
 {
 	cond_t kind = condition.cond();
 	t::int16 sr = condition.sr();
