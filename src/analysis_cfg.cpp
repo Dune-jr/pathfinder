@@ -65,6 +65,7 @@ void Analysis::processCFG(CFG* cfg)
 		cout << total_paths << " paths found." << endl;
 #	endif
 	std::time_t timestamp = clock(); // Timestamp before analysis
+	int paths_count = 0, infeasible_paths_count = 0;
 	
 	/*	
 	begin
@@ -85,13 +86,12 @@ void Analysis::processCFG(CFG* cfg)
 			End If
 			// à ce stade, toutes les entrées ont été traitées
 
+			For s in sl
+				processBB(s, bb); // modification des prédicats dans s
+			End For
+
 			For e in bb.outs
 				wl <- sl ⊙ e; // ⊙ = une sorte de concaténation de langages
-			End For
-			wl <- new_sl::wl;
-
-			For s in sl // iterateur avec accès écriture
-				processBB(s, bb); // modification des prédicats dans i
 			End For
 		End While
 	end
@@ -103,22 +103,15 @@ void Analysis::processCFG(CFG* cfg)
 	entry_singleton += Analysis::State(cfg->entry(), sp, max_tempvars, max_registers);
 	wl.push(entry_singleton);
 	/* lock[] <- {{}}; */
-	Identifier<SLList<Analysis::State> > PROCESSED_EDGES("Analyis::IP analysis processed incoming edges", SLList<State>::null);
+	Identifier<SLList<Analysis::State> > PROCESSED_EDGES("Analyis::IP analysis processed incoming edges"); //, SLList<State>::null);
 
 	/* While wl != ∅ */
 	while(!wl.isEmpty())
 	{
-
 		DBG(color::IRed() << "wl=" << wl)
-		{
-			static int i = 0;
-			i++;
-			// if(i >= 9)
-			// 	ASSERT(false);
-		}
-
 		/* sl::wl <- wl; */
 		SLList<Analysis::State> sl(wl.pop());
+		ASSERT(sl);
 		/* bb <- sl[0].last.target(); */
 		BasicBlock *bb = sl.first().lastEdge()->target();
 
@@ -153,11 +146,21 @@ void Analysis::processCFG(CFG* cfg)
 		/* For s in sl */
 		bool sl_is_empty = true;
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
-		{			
+		{	
 			/* processBB(s, bb); */
 			DBG(color::Whi() << "Processing path " << sl_iter.item().pathToString())
 			if(processBB(sl_iter.item(), bb) > 0)
+			{
+				if((++paths_count % 100) == 0 || total_paths <= 1000)
+				{
+					cout << "(" << paths_count << "/" << total_paths << ")";
+					if(infeasible_paths_count)
+						cout << " !*" << infeasible_paths_count;
+					cout << endl;
+					infeasible_paths_count = 0;
+				}
 				sl.remove(sl_iter);
+			}
 			else
 			{
 				sl_is_empty = false;
@@ -184,9 +187,26 @@ void Analysis::processCFG(CFG* cfg)
 				{
 					State s = sl_iter.item();
 					s.appendEdge(e);
-					new_sl += s;
+					// SMT call(s)
+					DBG("Checking path " << s.pathToString() << ":")
+					SMT smt;
+					if(Option<Path> infeasible_path = smt.seekInfeasiblePaths(s.getLabelledPreds(), s.getConstants()))
+					{
+						DBG("Minimized path uses " << (*infeasible_path).count() << " out of " << s.getPath().count() << " edges.")
+						infeasible_paths += *infeasible_path;
+						infeasible_paths_count++;
+						if((++paths_count % 100) == 0 || total_paths <= 1000)
+						{
+							cout << "(" << paths_count << "/" << total_paths << ") !*" << infeasible_paths_count << endl;
+							infeasible_paths_count = 0;
+						}
+						DBG(color::BIYel() << "Current path identified as infeasible, stopping analysis")
+					}
+					else // do not add this state for future analysis if it's been identified as infeasible
+						new_sl += s;
 				}
-				wl.push(new_sl);
+				// if(new_sl) // new_sl may be empty if all its paths were infeasible, in this case we mustn't add a [] to the wl
+					wl.push(new_sl);
 			}
 		}
 		/* End For */
@@ -194,11 +214,9 @@ void Analysis::processCFG(CFG* cfg)
 	/* End While */
 	/* end */
 
-	// Old algorithm
-	// processBB(cfg->firstBB());
-
-	// DBG("\e[4mResult of the analysis: " << color::RCol() << labelled_preds)
-	int infeasible_paths_count = infeasible_paths.count(), ms_diff;
+	// analysis complete, print infeasible paths
+	infeasible_paths_count = infeasible_paths.count();
+	int ms_diff;
 	if(dbg_flags&DBG_NO_TIME)
 		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: ")
 	else
@@ -218,7 +236,6 @@ void Analysis::processCFG(CFG* cfg)
 				first = false;
 			else
 				str = _ << str << ", ";
-			// str = str.concat(_ << (t::int64)(*subiter));
 			str = str.concat(_ << (*subiter)->source()->number() << "->" << (*subiter)->target()->number());
 		}
 		str = _ << str << "]";
@@ -228,53 +245,23 @@ void Analysis::processCFG(CFG* cfg)
 	}
 	if(dbg_flags&DBG_NO_DEBUG)
 	{
-		if(dbg_flags&DBG_NO_TIME)
-			cout << infeasible_paths_count << " infeasible path(s) found.";
-		else
-			cout << infeasible_paths_count << " infeasible path(s) found. (" << ms_diff/1000 << "." << ms_diff%1000 << "s)\n";
+		cout << infeasible_paths_count << " infeasible path(s) found.";
+		if(!(dbg_flags&DBG_NO_TIME))
+			cout << " (" << ms_diff/1000 << "." << ms_diff%1000 << "s)\n";
+		cout << endl;
 	}
 }
 
 /*
 	0: continue
-	other return code: stop analysis for this path
+	1: stop analysis for this path
 */
 int Analysis::processBB(State& s, BasicBlock* bb)
-{
-	static int paths_count = 0, infeasible_paths_count = 0;
-
+{	//  TODO! reorganize to put more stuff into subfunctions
 	if(bb->isExit())
 	{
 		DBG(color::BBla() << color::On_Yel() << "EXIT block reached")
-		if((++paths_count % 100) == 0 || total_paths <= 1000)
-		{
-			cout << "(" << paths_count << "/" << total_paths << ")";
-			if(infeasible_paths_count)
-				cout << " !*" << infeasible_paths_count;
-			cout << endl;
-			infeasible_paths_count = 0;
-		}
 		return 1;
-	}
-		
-	// SMT call
-	SMT smt;
-	if(Option<Path> maybe_infeasible_path = smt.seekInfeasiblePaths(s.getLabelledPreds(), s.getConstants()))
-	{
-		const Path &path = *maybe_infeasible_path;
-		DBG("Minimized path uses " << path.count() << " out of " << s.getPath().count() << " edges.")
-
-		infeasible_paths += path;
-		DBG(color::BIYel() << "Current path identified as infeasible, stopping analysis")
-		// cout << "(" << ++paths_count << "/" << total_paths << ") !" << endl;
-		infeasible_paths_count++;
-		if((++paths_count % 100) == 0 || total_paths <= 1000)
-		{
-			cout << "(" << paths_count << "/" << total_paths << ") !*" << infeasible_paths_count;
-			cout << endl;
-			infeasible_paths_count = 0;
-		}
-		return 2; // No point to continue an infeasible path
 	}
 	
 	DBG(color::Whi() << "Processing " << bb)
