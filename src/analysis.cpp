@@ -61,7 +61,7 @@ SLList<LabelledPredicate> Analysis::State::labelPredicateList(const SLList<Label
 	return rtn;
 }
 
-elm::String Analysis::State::pathToString() const
+elm::String Analysis::State::getPathString() const
 {
 	elm::String str;
 	bool first = true;
@@ -87,7 +87,7 @@ elm::String Analysis::State::pathToString() const
 io::Output& Analysis::State::print(io::Output& out) const
 {
 	// out << ":" << labelled_preds << "/" << constants;
-	return (out << pathToString());
+	return (out << getPathString());
 }
 
 /* 

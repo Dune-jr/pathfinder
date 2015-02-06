@@ -21,16 +21,16 @@ class SMT
 public:
 	SMT();
 	~SMT();
-	Option<Analysis::Path> seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants);
-	bool checkPredSat(const SLList<Option<Expr> >& exprs, bool print_results = false);
-	bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds, bool print_result = false);
+	Option<Analysis::Path> seekInfeasiblePaths(const Analysis::State& s);
+	// Option<Analysis::Path> seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants);
+	bool checkPredSat(const SLList<Option<Expr> >& exprs);
+	bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds);
 	
 private:
 	CVC4::ExprManager em;
 	CVC4::SmtEngine smt;
 	VariableStack variables;
-
-	Option<Analysis::Path> seekInfeasiblePaths(SLList<LabelledPredicate>& labelled_preds);
+	SLList<Option<Expr> > exprs;
 	/*
 	SLList<Analysis::Path> getAllInfeasiblePaths(const SLList<LabelledPredicate>& labelled_preds, int index = 0);
 	void removeIncompletePredicates(SLList<LabelledPredicate>& labelled_preds);
@@ -44,8 +44,10 @@ private:
 	Option<Expr> getExpr(const Predicate& p);
 	Option<Expr> getExpr(const Operand& o);
 	
-	       Kind_t getKind(condoperator_t opr);
-	inline Kind_t getKind(const Predicate& p) { return getKind(p.opr()); }
+	       Kind_t getKind(condoperator_t opr) const;
+	inline Kind_t getKind(const Predicate& p) const { return getKind(p.opr()); }
+
+	void printInfeasiblePath(const Analysis::Path& path) const;
 	
 	const CVC4::Type integer; // Z
 };

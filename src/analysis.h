@@ -30,39 +30,16 @@ class PathComparator: public elm::Comparator<SLList<const Edge*> > {
 */
 
 class Analysis {
-	class State;
-	static Identifier<SLList<State> > PROCESSED_EDGES;
 
 public:
 	// TODO: merge and only keep the SLList version?
 	typedef SLList<Edge*> OrderedPath;
 	typedef Set<Edge*> Path;
+	class State;
+	static Identifier<SLList<State> > PROCESSED_EDGES;
 
 	Analysis(CFG *cfg, int sp_id, unsigned int given_max_tempvars, unsigned int given_max_registers);
 	inline Set<Path> infeasiblePaths() const { return infeasible_paths; }
-	// inline Set<SLList<const Edge*>, PathComparator> infeasiblePaths() const { return infeasible_paths; }
-
-	// bool invalidate_constant_info 
-	enum
-	{
-		KEEP_CONSTANT_INFO = false,
-		INVALIDATE_CONSTANT_INFO = true,
-	};
-	
-private:
-	Vector<SLList<State> > wl; // working list
-
-	const OperandVar sp; // the Stack Pointer register
-	int max_tempvars, max_registers;
-	Set<Path> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
-	int processed_paths, total_paths;
-	// bool solverHasBeenCalled;
-		
-	// analysis_cfg.cpp
-	// void initializeAnalysis();
-	void processCFG(CFG *cfg);
-	int processBB(State& s, BasicBlock *bb);
-	void placeboProcessBB(BasicBlock *bb);
 	
 	class State {
 	private:
@@ -85,7 +62,7 @@ private:
 		inline void dumpPredicates() { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
 
 		// analysis.cpp
-		elm::String pathToString() const;
+		elm::String getPathString() const;
 
 		// analysis_cfg.cpp
 		void appendEdge(Edge* e);
@@ -167,7 +144,36 @@ private:
 			SLList<LabelledPredicate>::Iterator gp_iter; // Generated predicates (local) iterator 
 			SLList<LabelledPredicate>::Iterator lp_iter; // Labelled predicates (previous BBs) iterator
 		}; // PredIterator class
+	}; // State class
+
+	// bool invalidate_constant_info 
+	enum
+	{
+		KEEP_CONSTANT_INFO = false,
+		INVALIDATE_CONSTANT_INFO = true,
 	};
+	
+private:
+	Vector<BasicBlock*> wl; // working list
+
+	const OperandVar sp; // the Stack Pointer register
+	Set<Path> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
+	int max_tempvars, max_registers;
+	int processed_paths, total_paths, paths_count, infeasible_paths_count;
+	
+	// analysis_cfg.cpp // TODO! add consts here and test
+	void processCFG(CFG *cfg);
+	int processBB(State& s, BasicBlock *bb);
+	void placeboProcessCFG(CFG* cfg);
+	void placeboProcessBB(BasicBlock *bb);
+	void printResults(int exec_time_ms);
+	void onPathEnd();
+	void onAnyInfeasiblePath();
+	bool isAHandledEdgeKind(Edge::kind_t kind);
+	int countAnnotations(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
+	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
+	elm::String wlToString() const;
+	elm::String pathToString(const Path& path) const;
 };
 
 template <class C> io::Output& printCollection(io::Output& out, const C& items)
