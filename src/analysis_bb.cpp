@@ -907,7 +907,6 @@ Option<Constant> Analysis::State::findConstantValueOfVar(const OperandVar& var)
  * For a variable tX or ?X, try to find a predicate tX=sp+cst or ?X=sp+cst, and return cst when successful.
  * @return true if a value was found
  */
-// TODO! add a Path& labels parameter
 Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& var, Path &labels)
 {
 	for(PredIterator piter(*this); piter; piter++)
@@ -953,6 +952,7 @@ Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& 
 		}
 */
 		// Algorithm 3 (affine): ((?var +- ...) +- ... = (...)
+		DBG("piter.pred()=" << piter.pred() << ".isAffine(var=" << var << ", sp=" << sp << ")=" << piter.pred().isAffine(var, sp))
 		if(piter.pred().isAffine(var, sp)) // try and look for an affine case ((.. + ..)-..) = (..-..)
 		{
 			AffineEquationState state(sp);
@@ -1097,7 +1097,7 @@ Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& 
 		}
 		*/
 	}
-	DBG(color::IRed() << "findStackRelativeValueOfVar failed!") // TODO: remove
+	DBG(color::IRed() << "findStackRelativeValueOfVar failed!")
 	return none; // no matches found
 }
 /**

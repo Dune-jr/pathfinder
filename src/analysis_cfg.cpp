@@ -121,7 +121,7 @@ void Analysis::processCFG(CFG* cfg)
 		// at this point of the algorithm, all incoming edges of bb have been processed
 
 		/* For s in sl */
-		bool sl_is_empty = true;
+		// bool sl_is_empty = true;
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
 		{
 			DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
@@ -130,14 +130,14 @@ void Analysis::processCFG(CFG* cfg)
 				sl.remove(sl_iter); // path ended
 			else
 			{
-				sl_is_empty = false;
+				// sl_is_empty = false;
 				sl_iter++;
 			}
 		}
 		/* End For */
 
-		if(sl_is_empty) // all paths have been terminated
-			continue;
+		// if(sl_is_empty) // all paths have been terminated
+		// 	continue;
 
 		/*	For e in bb.outs */
 		for(BasicBlock::OutIterator bb_outs(bb); bb_outs; bb_outs++)
@@ -173,22 +173,31 @@ void Analysis::processCFG(CFG* cfg)
 						const Path& infeasible_path = **sl_paths_iter;
 						DBG("Path " << s.getPathString() << "->" << e->target()->number() << " minimized to " << pathToString(infeasible_path))
 						bool valid = true;
+						elm::String counterexample;
 						Vector<Option<Path> >::Iterator sl_paths_subiter(sl_paths);
 						for(SLList<Analysis::State>::Iterator sl_subiter(sl); sl_subiter; sl_subiter++, sl_paths_subiter++)
 						{
-							if(!*sl_paths_iter && isSubPath((*sl_subiter).getPath(), e, infeasible_path)) // feasible path && contained in the minimized inf. path
+							if(!*sl_paths_subiter && isSubPath((*sl_subiter).getPath(), e, infeasible_path)) // feasible path && contained in the minimized inf. path
 							{
 								valid = false;
+								counterexample = _ << (*sl_subiter).getPathString() << "+" << e->source()->number() << "->" << e->target()->number();
 								// DBG("isSubPath(" << (*sl_subiter).getPath() << ", " << e->source()->number()<<">"<<e->target()->number() << ", " 
 								// 	<< pathToString(infeasible_path) << ") = " << isSubPath((*sl_subiter).getPath(), e, infeasible_path))
 								break;
 							}
 						}
 						DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
-						// TODO!!!
-						infeasible_paths += infeasible_path;
-						DBG(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path))
-						onAnyInfeasiblePath();
+						if(valid)
+						{
+							infeasible_paths += infeasible_path;
+							DBG(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path))
+							onAnyInfeasiblePath();
+						}
+						else
+						{
+							DBG("   counterexample: " << counterexample)
+							// TODO!!! do a C)
+						}
 					}
 				}
 				PROCESSED_EDGES(*bb_outs) = new_sl; // annotate regardless of new_sl being empty or not

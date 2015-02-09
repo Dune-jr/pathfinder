@@ -44,6 +44,7 @@ bool Predicate::involvesMemory() const
  */
 bool Predicate::isAffine(const OperandVar& opdv, const OperandVar& sp) const
 {
+	cout << "_opd2=" << *_opd2 << ", _opd2->isAffine(" << opdv << ")=" << _opd2->isAffine(opdv, sp) << endl;
 	return _opr == CONDOPR_EQ && _opd1->isAffine(opdv, sp) && _opd2->isAffine(opdv, sp);
 }
 
