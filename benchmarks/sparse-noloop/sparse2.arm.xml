@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<flowfacts>
+  <function name="main">
+        <control-constraint>
+          <le>
+            <add>
+              <count src="0x80d8" dst="0x8148"/>
+              <count src="0x8190" dst="0x81a0"/>
+            </add>
+            <const int="1"/>
+          </le>
+        </control-constraint>
+  </function>
+</flowfacts>

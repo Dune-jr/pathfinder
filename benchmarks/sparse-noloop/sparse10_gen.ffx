@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<flowfacts>
+  <function name="main">
+        <control-constraint>
+          <le>
+            <add>
+              <count src="0x80d8" dst="0x8148"/>
+              <count src="0x8198" dst="0x81a8"/>
+              <count src="0x81f8" dst="0x8208"/>
+              <count src="0x8264" dst="0x8274"/>
+              <count src="0x82bc" dst="0x82cc"/>
+              <count src="0x831c" dst="0x832c"/>
+              <count src="0x837c" dst="0x838c"/>
+              <count src="0x83e0" dst="0x83f0"/>
+              <count src="0x8438" dst="0x8448"/>
+              <count src="0x8490" dst="0x84a0"/>
+            </add>
+            <const int="1"/>
+          </le>
+        </control-constraint>
+  </function>
+</flowfacts>

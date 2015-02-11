@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<flowfacts>
+  <function name="main">
+        <control-constraint>
+          <le>
+            <add>
+              <count src="0x80d8" dst="0x8148"/>
+              <count src="0x8198" dst="0x81a8"/>
+              <count src="0x8204" dst="0x8214"/>
+              <count src="0x8264" dst="0x8274"/>
+              <count src="0x82c4" dst="0x82d4"/>
+              <count src="0x8324" dst="0x8334"/>
+              <count src="0x8384" dst="0x8394"/>
+              <count src="0x83f8" dst="0x8408"/>
+              <count src="0x8458" dst="0x8468"/>
+              <count src="0x84c0" dst="0x84d0"/>
+              <count src="0x8520" dst="0x8530"/>
+              <count src="0x858c" dst="0x859c"/>
+              <count src="0x85f0" dst="0x8600"/>
+              <count src="0x8650" dst="0x8660"/>
+              <count src="0x86b0" dst="0x86c0"/>
+              <count src="0x871c" dst="0x872c"/>
+              <count src="0x8774" dst="0x8784"/>
+              <count src="0x87d4" dst="0x87e4"/>
+              <count src="0x8834" dst="0x8844"/>
+              <count src="0x8898" dst="0x88a8"/>
+              <count src="0x88f0" dst="0x8900"/>
+              <count src="0x8948" dst="0x8958"/>
+            </add>
+            <const int="1"/>
+          </le>
+        </control-constraint>
+  </function>
+</flowfacts>
