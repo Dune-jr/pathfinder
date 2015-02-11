@@ -23,8 +23,8 @@ void Analysis::initializeAnalysis()
 }
 */
 
-Analysis::State::State(BasicBlock* entrybb, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers)
-	: sp(sp), constants(max_tempvars, max_registers)
+Analysis::State::State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers)
+	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers)
 {
 	BasicBlock::OutIterator outs(entrybb);
 	ASSERT(outs);
@@ -96,13 +96,13 @@ void Analysis::processCFG(CFG* cfg)
 	Identifier<SLList<Analysis::State> > PROCESSED_EDGES("Analyis::IP analysis processed incoming edges"); //, SLList<State>::null);
 	BasicBlock::OutIterator entry_outs(cfg->entry());
 	SLList<State> entry_annotation;
-	entry_annotation += Analysis::State(cfg->entry(), sp, max_tempvars, max_registers);
+	entry_annotation += Analysis::State(cfg->entry(), dfa_state, sp, max_tempvars, max_registers);
 	PROCESSED_EDGES(*entry_outs) = entry_annotation;
 
 	/* While wl != ∅ */
 	while(!wl.isEmpty())
 	{
-		DBG(color::IRed() << "wl=" << wlToString())
+		DBG(color::IWhi() << "wl=" << wlToString())
 		/* bb::wl <- wl; */
 		BasicBlock *bb = wl.pop();
 		SLList<Analysis::State> sl;
@@ -121,7 +121,6 @@ void Analysis::processCFG(CFG* cfg)
 		// at this point of the algorithm, all incoming edges of bb have been processed
 
 		/* For s in sl */
-		// bool sl_is_empty = true;
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
 		{
 			DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
@@ -129,15 +128,9 @@ void Analysis::processCFG(CFG* cfg)
 			if(processBB(sl_iter.item(), bb) > 0)
 				sl.remove(sl_iter); // path ended
 			else
-			{
-				// sl_is_empty = false;
 				sl_iter++;
-			}
 		}
 		/* End For */
-
-		// if(sl_is_empty) // all paths have been terminated
-		// 	continue;
 
 		/*	For e in bb.outs */
 		for(BasicBlock::OutIterator bb_outs(bb); bb_outs; bb_outs++)
@@ -155,10 +148,12 @@ void Analysis::processCFG(CFG* cfg)
 					// SMT call(s)
 					SMT smt;
 					Option<Path> infeasible_path = smt.seekInfeasiblePaths(s);
-					sl_paths.push(infeasible_path); // TODO find more appropriate struct
+					sl_paths.push(infeasible_path);
 					if(infeasible_path)
-					{	// TODO: why should i have to put brackets
-						ASSERT((*infeasible_path).contains(s.lastEdge())); // make sure the last edge was relevant in this path
+					{
+						// if(!(*infeasible_path).contains(s.lastEdge()))
+						// 	cout << s.lastEdge()->source()->number() << "->" << s.lastEdge()->target()->number();
+						ASSERT((*infeasible_path).contains(s.lastEdge())) // make sure the last edge was relevant in this path
 					}
 					else
 						new_sl += s;
@@ -191,13 +186,20 @@ void Analysis::processCFG(CFG* cfg)
 						{
 							infeasible_paths += infeasible_path;
 							DBG(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path))
-							onAnyInfeasiblePath();
 						}
 						else
 						{
 							DBG("   counterexample: " << counterexample)
-							// TODO!!! do a C)
+							OrderedPath original_full_orderedpath = (*sl_iter).getPath(); // falling back on full path (not as useful as a result, but still something)
+							Path original_full_path;
+							for(OrderedPath::Iterator original_full_orderedpath_iter(original_full_orderedpath); original_full_orderedpath_iter; original_full_orderedpath_iter++)
+								original_full_path += *original_full_orderedpath_iter;
+							original_full_path += e; // need to add e
+							infeasible_paths += original_full_path;
+							DBG(color::On_IRed() << "Inf. path found: " << pathToString(original_full_path) << color::RCol() << " (unrefined)")
+							// TODO!! do a C)
 						}
+							onAnyInfeasiblePath();
 					}
 				}
 				PROCESSED_EDGES(*bb_outs) = new_sl; // annotate regardless of new_sl being empty or not

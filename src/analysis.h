@@ -2,11 +2,12 @@
 #define _ANALYSIS_H
 
 #include <otawa/cfg/Edge.h>
-#include <elm/genstruct/SLList.h>
+#include <otawa/dfa/State.h> // dfa::State: isInitialized(addr), get(addr, _)...
+#include <otawa/prop/Identifier.h>
 #include <otawa/sem/inst.h>
 #include <elm/avl/Set.h>
+#include <elm/genstruct/SLList.h>
 #include <elm/util/Comparator.h>
-#include <otawa/prop/Identifier.h>
 #include "constant_variables.h"
 #include "labelled_predicate.h"
 #include "debug.h"
@@ -38,11 +39,12 @@ public:
 	class State;
 	static Identifier<SLList<State> > PROCESSED_EDGES;
 
-	Analysis(CFG *cfg, int sp_id, unsigned int given_max_tempvars, unsigned int given_max_registers);
+	Analysis(CFG *cfg, const dfa::State *state, int sp_id, unsigned int given_max_tempvars, unsigned int given_max_registers);
 	inline Set<Path> infeasiblePaths() const { return infeasible_paths; }
 	
 	class State {
 	private:
+		const dfa::State* dfa_state;
 		const OperandVar& sp; // the Stack Pointer register
 		OrderedPath path;
 		ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
@@ -53,7 +55,7 @@ public:
 		class PredIterator;
 
 	public:
-		State(BasicBlock* entrybb, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers);
+		State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers);
 		inline const OrderedPath& getPath() const { return path; }
 		inline Edge* lastEdge() const { return path.last(); }
 		inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
@@ -93,6 +95,7 @@ public:
 		Option<OperandMem> getOperandMem(const OperandVar& var, Path& labels);
 		bool invalidateAllMemory();
 		Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken);
+		Option<OperandConst> getConstantDataValue(const OperandMem& addr_mem, otawa::sem::type_t type);
 		inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 
 		// PredIterator class
@@ -156,6 +159,7 @@ public:
 private:
 	Vector<BasicBlock*> wl; // working list
 
+	const dfa::State* dfa_state;
 	const OperandVar sp; // the Stack Pointer register
 	Set<Path> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
 	int max_tempvars, max_registers;

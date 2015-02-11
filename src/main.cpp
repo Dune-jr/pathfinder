@@ -1,13 +1,12 @@
 // #define DBG_NO_DEBUG
 
-#include <elm/io.h>
 #include <elm/io/Output.h>
 #include <elm/types.h>
-#include <otawa/otawa.h>
+#include <elm/options.h>
 #include <otawa/app/Application.h> // main Display class
 #include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
 #include <otawa/hard/Platform.h>
-#include <elm/options.h>
+#include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
 
 #include "analysis.h"
 #include "predicate.h"
@@ -20,8 +19,7 @@ using namespace otawa;
 
 void testPredicates();
 void testOperands();
-void testSimplify();
-void testAnalysis(CFG *cfg);
+void testSimplify();	
 
 int dbg_flags = 0b0000; // global flags
 
@@ -38,9 +36,11 @@ public:
         
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
-		workspace()->require(COLLECTED_CFG_FEATURE, props); 
+		workspace()->require(COLLECTED_CFG_FEATURE, props);
+		workspace()->require(dfa::INITIAL_STATE_FEATURE, props);
         const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
-		assert(cfgs->count() > 0); // make sure we have at least one CFG
+        const dfa::State *state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
+		ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
 		CFG *cfg = cfgs->get(0); // then get the first CFG
 		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
 		int max_registers = workspace()->platform()->regCount(); // retrieve the count of registers
@@ -56,7 +56,7 @@ protected:
 			dbg_flags |= DBG_NO_TIME;
 		if(opt_nopred)
 			dbg_flags |= DBG_NO_PREDICATES;
-		Analysis analysis = Analysis(cfg, sp_id, max_tempvars, max_registers);
+		Analysis analysis = Analysis(cfg, state, sp_id, max_tempvars, max_registers);
 
 		// outputing to .ffx
 		if(opt_output)
@@ -70,32 +70,27 @@ protected:
 
 private:
 	option::Manager manager;
-	option::SwitchOption opt_silent;
-	option::SwitchOption opt_output;
-	option::SwitchOption opt_nocolor;
-	option::SwitchOption opt_noinfo;
-	option::SwitchOption opt_notime;
-	option::SwitchOption opt_nopred;
+	option::SwitchOption opt_silent, opt_output, opt_nocolor, opt_noinfo, opt_notime, opt_nopred;
 };
 
-OTAWA_RUN(Display)
+OTAWA_RUN(Display);
 
 void testSimplify()
 {
-	OperandConst zero = OperandConst(0);
-	OperandConst one = OperandConst(1);
-	OperandConst two = OperandConst(2);
+	OperandConst zero  = OperandConst(0);
+	OperandConst one   = OperandConst(1);
+	OperandConst two   = OperandConst(2);
 	OperandConst three = OperandConst(3);
 	OperandVar t1 = OperandVar(-1);
 	OperandArithExpr e11 = OperandArithExpr(ARITHOPR_NEG, t1);
 	// OperandArithExpr e12 = OperandArithExpr(ARITHOPR_SUB, two, three);
 	OperandArithExpr e1 = OperandArithExpr(ARITHOPR_ADD, t1, e11);
 
-	DBG("zero: " << zero)
-	DBG("one: " << one)
-	DBG("two: " << two)
+	DBG("zero: "  << zero)
+	DBG("one: "   << one)
+	DBG("two: "   << two)
 	DBG("three: " << three)
-	DBG("e1: " << e1)
+	DBG("e1: "    << e1)
 	if(Option<Operand*> o = e1.simplify())
 		DBG("e1 simplified: " << **o)
 }
@@ -146,14 +141,4 @@ void testOperands()
 	DBG("oae = oae2:\t" << DBG_TEST(oae == oae2, false))
 	DBG("oae = oae3:\t" << DBG_TEST(oae == oae3, false))
 	DBG("oae = oae4:\t" << DBG_TEST(oae == oae4, false))
-}
-
-void testAnalysis(CFG *cfg)
-{
-#	if 0 // Does not compile when Analysis respects encapsulation rules
-		Analysis::Path path;
-		BasicBlock::OutIterator outs(cfg->firstBB());
-		Edge* edge = *outs;
-		path += edge;
-#	endif
 }

@@ -3,8 +3,8 @@
 
 void addIndents(io::Output& out, int n) { for(int i=0; i<n; i++) out << "\t"; }
 
-Analysis::Analysis(CFG *cfg, int sp_id, unsigned int given_max_tempvars, unsigned int given_max_registers)
-	: sp(sp_id), max_tempvars(given_max_tempvars), max_registers(given_max_registers)
+Analysis::Analysis(CFG *cfg, const dfa::State *state, int sp_id, unsigned int given_max_tempvars, unsigned int given_max_registers)
+	: dfa_state(state), sp(sp_id), max_tempvars(given_max_tempvars), max_registers(given_max_registers)
 {
 	DBG("Stack pointer identified to " << sp)
 	processCFG(cfg);
@@ -68,7 +68,7 @@ elm::String Analysis::State::getPathString() const
 	int lastid = 0; // all paths must start with 0 (ENTRY)
 	for(OrderedPath::Iterator iter(path); iter; iter++)
 	{
-		ASSERT((*iter)->source()->number() == lastid); // when path is x->y and y'->z, there must be y=y'
+		ASSERTP((*iter)->source()->number() == lastid, "OrderedPath previous target and current source do not match! ex: 1->2, 2->4, 3->5"); // when path is x->y and y'->z, there must be y=y'
 		if(first)
 		{
 #			ifndef NO_UTF8

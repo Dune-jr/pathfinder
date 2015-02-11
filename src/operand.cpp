@@ -36,7 +36,7 @@ operand_state_t OperandConst::updateVar(const OperandVar& opdv, const Operand& o
 pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 void OperandConst::parseAffineEquation(AffineEquationState& state) const
 {
-	assert(_value.isValid());
+	ASSERT(_value.isValid());
 	state.addToDelta(_value.val());
 	if(_value.isRelative())
 		state.onSpFound(_value.sign());
@@ -235,13 +235,13 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 							_kind = OPERANDMEM_RELATIVE;
 							if(left_kind == OPERAND_CONST)
 							{
-								assert(right_kind == OPERAND_VAR);
+								ASSERT(right_kind == OPERAND_VAR);
 								_opdc = (OperandConst*)(o_arithexpr->leftOperand().copy());
 								_opdv = (OperandVar*  )(o_arithexpr->rightOperand().copy());
 							}
 							else
 							{
-								assert(right_kind == OPERAND_CONST);
+								ASSERT(right_kind == OPERAND_CONST);
 								_opdc = (OperandConst*)(o_arithexpr->rightOperand().copy());
 								_opdv = (OperandVar*  )(o_arithexpr->leftOperand().copy());
 							}
@@ -256,7 +256,7 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 	return OPERANDSTATE_UNCHANGED; // no match
 }*/
 pop_result_t OperandMem::doAffinePop(Operand*& opd_result, Operand*& new_opd) { return POPRESULT_FAIL; }
-void OperandMem::parseAffineEquation(AffineEquationState& state) const { assert(false); } // should never happen
+void OperandMem::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
 Option<Operand*> OperandMem::simplify() { return none; } // TODO: simplify within the [ ], makes more sense even tho it shouldn't be very useful
 Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesSimplified& constants) { return none; }
@@ -459,7 +459,7 @@ void OperandArithExpr::parseAffineEquation(AffineEquationState& state) const
 			state.reverseSign();
 			return;
 		default:
-			assert(false); // not affine!
+			ASSERTP(false, "not affine");
 	}
 }
 

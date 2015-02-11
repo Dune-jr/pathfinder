@@ -186,7 +186,7 @@ public:
 	
 	// inline bool isAbsolute() const { return _kind == OPERANDMEM_ABSOLUTE; }
 	// inline bool isRelative() const { return _kind == OPERANDMEM_RELATIVE; }
-	inline const OperandConst& getConst() const { assert(_opdc); return *_opdc; }
+	inline const OperandConst& getConst() const { ASSERT(_opdc); return *_opdc; }
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
@@ -225,7 +225,7 @@ public:
 	
 	inline arithoperator_t opr() const { return _opr; }
 	inline const Operand& leftOperand() const { return *opd1; }
-	inline const Operand& rightOperand() const { assert(isBinary()); return *opd2; }
+	inline const Operand& rightOperand() const { ASSERT(isBinary()); return *opd2; }
 	
 	inline bool isUnary()  const { return _opr <  ARITHOPR_ADD; }
 	inline bool isBinary() const { return _opr >= ARITHOPR_ADD; }

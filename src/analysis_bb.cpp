@@ -56,7 +56,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			switch(seminsts.op())
 			{
 				case NOP:
-					assert(!UNTESTED_CRITICAL);
+					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Untested operand NOP running!")
 					break;
 				case BRANCH:
@@ -90,9 +90,18 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					invalidateVar(reg);
 					if(Option<OperandMem> addr_mem = getOperandMem(addr, labels))
 					{
-						make_pred = true;
-						opd1 = new OperandVar(reg);
-						opd2 = new OperandMem(*addr_mem);
+						// if it's a constant address of some read-only data
+						if(Option<OperandConst> addr_const_value = getConstantDataValue(*addr_mem, (*seminsts).type()))
+						{
+							DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "Memory data " << *addr_mem << " simplified to " << *addr_const_value)
+							constants.set(d, (*addr_const_value).value());
+						}
+						else
+						{							
+							make_pred = true;
+							opd1 = new OperandVar(reg);
+							opd2 = new OperandMem(*addr_mem);
+						}
 					}
 					else
 					{
@@ -129,15 +138,11 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					break;
 				case SETI:
 					invalidateVar(d);
-					/* // everything should already be handled by the ConstantVariables object
-					opd1 = new OperandVar(d);
-					opd2 = new OperandConst(cst);
-					make_pred = true; // d = cst
-					//*/
+					// everything should already be handled by the ConstantVariables object
 					constants.set(d, cst); // constants[d] = cst
 					break;
 				case SETP:
-					assert(!UNTESTED_CRITICAL);
+					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Unimplemented operand SETP running!")
 					invalidateVar(d);
 					break;
@@ -312,7 +317,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(*b_val) << "]")
 						if(d == a) // d <- d << b
 						{
-							assert(!UNTESTED_CRITICAL);
+							ASSERT(!UNTESTED_CRITICAL);
 							DBG(color::BIRed() << "Untested case of operator SHL running!")
 							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << *b_val)));
 							// we also add a predicate to say that d is now a multiple of 2^b
@@ -336,7 +341,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					}
 					break;
 				case ASR: // TODO test: is this really legit?
-					assert(!UNTESTED_CRITICAL);
+					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Untested operator running!")
 				case SHR:
 					opd1 = new OperandVar(d);
@@ -363,7 +368,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					}
 					break;
 				case NEG: // TODO test
-					assert(!UNTESTED_CRITICAL);
+					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Untested operator running!")
 					{
 						if(a == d) // d <- -d
@@ -390,12 +395,12 @@ void Analysis::State::processBB(const BasicBlock *bb)
 				case AND:		// d <- a & b
 				case OR:		// d <- a | b
 				case XOR:		// d <- a ^ b
-					assert(!UNTESTED_CRITICAL);
+					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Unimplemented operator running!")
 					invalidateVar(d);
 					break;
 				case MULU:
-					assert(!UNTESTED_CRITICAL);
+					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Untested unsigned variant running!")
 				case MUL:
 					make_pred = true;
@@ -405,7 +410,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						{
 							if(d == b) // d <- d*d
 							{
-								assert(!UNTESTED_CRITICAL);
+								ASSERT(!UNTESTED_CRITICAL);
 								DBG(color::BIRed() << "Untested case of operator MUL running!")
 								invalidateVar(d, KEEP_CONSTANT_INFO); // we have no way to do [sqrt(d) / d], so just invalidate
 								opr = CONDOPR_LE; // and add a "0 <= d" predicate
@@ -418,7 +423,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							}
 							else // d <- d*b
 							{	// [d/b / d] // we will have to assume that 0/0 is scratch!
-								assert(!UNTESTED_CRITICAL);
+								ASSERT(!UNTESTED_CRITICAL);
 								DBG(color::BIRed() << "Untested case of operator MUL running!")
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)));
 								if(isConstant(d))
@@ -440,7 +445,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						{
 							if(d == b) // d <- a*d
 							{	// [d/a / d] // we will have to assume that 0/0 is scratch!
-								assert(!UNTESTED_CRITICAL);
+								ASSERT(!UNTESTED_CRITICAL);
 								DBG(color::BIRed() << "Untested case of operator MUL running!")
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)));
 								if(isConstant(d))
@@ -472,10 +477,10 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					}
 					break;
 				case DIVU:
-					assert(!UNTESTED_CRITICAL);
+					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Untested unsigned variant running!")
 				case DIV:
-					assert(!UNTESTED_CRITICAL);
+					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Untested operator running!")
 					if(d == a)
 					{
@@ -557,8 +562,8 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			}
 			if(make_pred)
 			{
-				assert(opd1);
-				assert(opd2);
+				ASSERT(opd1);
+				ASSERT(opd2);
 				// If we have predicates such as ?16 = ?4 ~ t1, make sure none of these are identified as constants in the constantVariables table!
 				if(Option<Operand*> maybe_opd1 = opd1->replaceConstants(constants.toSimplified()))
 				{
@@ -761,10 +766,10 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& 
 			String prev_str = _ << p;
 			
 			operand_state_t state = p.updateVar(temp_var, expr);
-			assert(state != OPERANDSTATE_UNCHANGED); // otherwise means involvesVariable returned a false positive
+			ASSERTP(state != OPERANDSTATE_UNCHANGED, "involvesVariable returned a false positive");
 			/*if(state == OPERANDSTATE_INVALID)
 			{
-				assert(!UNTESTED_CRITICAL);
+				ASSERT(!UNTESTED_CRITICAL);
 				DBG(color::BIRed() << "Untested case of invalidation!")
 				generated_preds.remove(iter);
 			}*/
@@ -816,7 +821,7 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd
 			// updating the predicate
 			Predicate p = piter.pred();
 			operand_state_t state = p.updateVar(opd_to_update, *opd_modifier_new);
-			assert(state == OPERANDSTATE_UPDATED); // making sure something is updated	
+			ASSERTP(state == OPERANDSTATE_UPDATED, "nothing was updated");
 
 			LabelledPredicate lp = LabelledPredicate(p, piter.labels());
 			setPredicate(piter, lp);
@@ -952,7 +957,6 @@ Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& 
 		}
 */
 		// Algorithm 3 (affine): ((?var +- ...) +- ... = (...)
-		DBG("piter.pred()=" << piter.pred() << ".isAffine(var=" << var << ", sp=" << sp << ")=" << piter.pred().isAffine(var, sp))
 		if(piter.pred().isAffine(var, sp)) // try and look for an affine case ((.. + ..)-..) = (..-..)
 		{
 			AffineEquationState state(sp);
@@ -1219,10 +1223,70 @@ Predicate* Analysis::State::getPredicateGeneratedByCondition(sem::inst condition
 }
 
 /*
+	Check if addr_mem is the constant address of some read-only data, if so returns the constant data value
+*/
+Option<OperandConst> Analysis::State::getConstantDataValue(const OperandMem& addr_mem, otawa::sem::type_t type)
+{
+	const Constant& addr = addr_mem.getConst().value();
+	if(!addr.isAbsolute())
+		return none;
+	if(!dfa_state->isInitialized(addr.val()))
+		return none;
+	switch(type) // TODO! improve?
+	{
+		case INT8:
+		case INT16:
+		case INT32:
+		case INT64:
+			return none;
+		case UINT8:
+			{
+				t::uint8 v;
+				dfa_state->get(addr.val(), v);
+				return elm::some(OperandConst(v));
+			}
+		case UINT16:
+			{
+				t::uint16 v;
+				dfa_state->get(addr.val(), v);
+				return elm::some(OperandConst(v));
+			}
+		case UINT32:
+			{
+				t::uint32 v;
+				dfa_state->get(addr.val(), v);
+				return elm::some(OperandConst(v));
+			}
+		case UINT64:
+			{
+				t::uint64 v;
+				dfa_state->get(addr.val(), v);
+				return elm::some(OperandConst(v));
+			}
+		case FLOAT32:
+			{
+				float v;
+				dfa_state->get(addr.val(), v);
+				return elm::some(OperandConst(v));
+			}
+		case FLOAT64:
+			{
+				double v;
+				dfa_state->get(addr.val(), v);
+				return elm::some(OperandConst(v));
+			}
+		case MAX_TYPE:
+		case NO_TYPE:
+			return none;
+	}
+	return none;
+}
+
+/*
 void Analysis::State::processBB(BasicBlock *bb)
 {
 	analyzeBB(bb);
-	// assert(labelled_preds);
+	// ASSERT(labelled_preds);
 	
 	// these will be overwritten by further analysis, so back them up
 	SLList<LabelledPredicate> generated_preds_backup	   = generated_preds;
