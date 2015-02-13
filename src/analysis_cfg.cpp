@@ -106,6 +106,9 @@ void Analysis::processCFG(CFG* cfg)
 		/* bb::wl <- wl; */
 		BasicBlock *bb = wl.pop();
 		SLList<Analysis::State> sl;
+		
+		if(dbg_flags&DBG_NO_DEBUG)
+			cout << "Processing " << bb << endl;
 
 		int bb_ins_count = 0;
 		for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++) { bb_ins_count++; }
@@ -145,16 +148,12 @@ void Analysis::processCFG(CFG* cfg)
 				{
 					State s = sl_iter.item();
 					s.appendEdge(e);
-					// SMT call(s)
+					// SMT call
 					SMT smt;
 					Option<Path> infeasible_path = smt.seekInfeasiblePaths(s);
 					sl_paths.push(infeasible_path);
 					if(infeasible_path)
-					{
-						// if(!(*infeasible_path).contains(s.lastEdge()))
-						// 	cout << s.lastEdge()->source()->number() << "->" << s.lastEdge()->target()->number();
 						ASSERT((*infeasible_path).contains(s.lastEdge())) // make sure the last edge was relevant in this path
-					}
 					else
 						new_sl += s;
 				}
@@ -163,7 +162,7 @@ void Analysis::processCFG(CFG* cfg)
 				{
 					const State& s = sl_iter.item();
 					// s.appendEdge(e);
-					if(*sl_paths_iter) // infeasible?
+					if(*sl_paths_iter) // is infeasible?
 					{
 						const Path& infeasible_path = **sl_paths_iter;
 						DBG("Path " << s.getPathString() << "->" << e->target()->number() << " minimized to " << pathToString(infeasible_path))
@@ -172,7 +171,8 @@ void Analysis::processCFG(CFG* cfg)
 						Vector<Option<Path> >::Iterator sl_paths_subiter(sl_paths);
 						for(SLList<Analysis::State>::Iterator sl_subiter(sl); sl_subiter; sl_subiter++, sl_paths_subiter++)
 						{
-							if(!*sl_paths_subiter && isSubPath((*sl_subiter).getPath(), e, infeasible_path)) // feasible path && contained in the minimized inf. path
+							// if feasible path && contained in the minimized inf. path
+							if(!*sl_paths_subiter && isSubPath((*sl_subiter).getPath(), e, infeasible_path))
 							{
 								valid = false;
 								counterexample = _ << (*sl_subiter).getPathString() << "+" << e->source()->number() << "->" << e->target()->number();
@@ -197,9 +197,9 @@ void Analysis::processCFG(CFG* cfg)
 							original_full_path += e; // need to add e
 							infeasible_paths += original_full_path;
 							DBG(color::On_IRed() << "Inf. path found: " << pathToString(original_full_path) << color::RCol() << " (unrefined)")
-							// TODO!! do a C)
+							// TODO: do a C)
 						}
-							onAnyInfeasiblePath();
+						onAnyInfeasiblePath();
 					}
 				}
 				PROCESSED_EDGES(*bb_outs) = new_sl; // annotate regardless of new_sl being empty or not
@@ -268,7 +268,7 @@ void Analysis::placeboProcessBB(BasicBlock* bb)
 	}
 }
 
-void Analysis::printResults(int exec_time_ms)
+void Analysis::printResults(int exec_time_ms) const
 {
 	int infeasible_paths_count = infeasible_paths.count();
 	if(dbg_flags&DBG_NO_TIME)
@@ -330,7 +330,7 @@ void Analysis::onAnyInfeasiblePath()
 	else DBG(color::BIYel() << "Stopping current path analysis")
 }
 
-bool Analysis::isAHandledEdgeKind(Edge::kind_t kind)
+bool Analysis::isAHandledEdgeKind(Edge::kind_t kind) const
 {
 	return (kind == Edge::TAKEN) || (kind == Edge::NOT_TAKEN) || (kind == Edge::VIRTUAL) || (kind == Edge::VIRTUAL_RETURN);
 }

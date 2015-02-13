@@ -299,44 +299,49 @@ void Analysis::State::processBB(const BasicBlock *bb)
 				case SHL:
 					opd1 = new OperandVar(d);
 					{
+						/*
 						if(d == b) // safety test, shouldn't happen unless assembly language allows variable bit shifting
-						{
+						{	// well actually ldr r3, [r3, r2, lsl #2] makes it happen in ARM...
 							invalidateVar(d);
 							break;
 						}
+						*/
 
-						Operand *opd21 = new OperandVar(a);
-						Option<t::int32> b_val;
 						// b is usually a tempvar that has been previously set to a constant value
-						if(!(b_val = findConstantValueOfVar(b)))
+						if(!isConstant(b))
 						{
 							DBG(color::Blu() << "  [" << OperandVar(b) << " could not be identified to a constant value]")
 							invalidateVar(d); // only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
 							break;
 						}
-						DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(*b_val) << "]")
+						t::int32 b_val = constants[b].val();
+						DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(b_val) << "]")
 						if(d == a) // d <- d << b
 						{
 							ASSERT(!UNTESTED_CRITICAL);
 							DBG(color::BIRed() << "Untested case of operator SHL running!")
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << *b_val)));
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << b_val)));
 							// we also add a predicate to say that d is now a multiple of 2^b
 							Operand *opd11 = new OperandVar(d);
-							Operand *opd12 = new OperandConst(1 << *b_val);
+							Operand *opd12 = new OperandConst(1 << b_val);
 							opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
 							opd2 = new OperandConst(0);
 							if(isConstant(d)) // we must update constant value of d
-								constants.set(d, constants[d] << *b_val);
+								constants.set(d, constants[d] << b_val);
 							else make_pred = true;
 						}
 						else // d <- a << b
 						{
 							invalidateVar(d);
-							Operand *opd22 = new OperandConst(1 << *b_val); // 2^b_val
-							opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);							
 							if(isConstant(a))
-								constants.set(d, constants[a] << *b_val);
-							else make_pred = true;
+								constants.set(d, constants[a] << b_val);
+							else
+							{
+								Operand *opd21 = new OperandVar(a);
+								Operand *opd22 = new OperandConst(1 << b_val); // 2^b_val
+								opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
+								make_pred = true;
+							}
 						}
 					}
 					break;
@@ -346,21 +351,21 @@ void Analysis::State::processBB(const BasicBlock *bb)
 				case SHR:
 					opd1 = new OperandVar(d);
 					{
-						Option<t::int32> b_val;
 						// b is usually a tempvar that has been previously set to a constant value
-						if(!(b_val = findConstantValueOfVar(b)))
+						if(!isConstant(b))
 						{
 							DBG(color::Blu() << "  [" << OperandVar(b) << " could not be identified as a constant value]")
 							invalidateVar(d);
 							break;
 						}
-						DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(*b_val) << "]")
+						t::int32 b_val = constants[b].val();
+						DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(b_val) << "]")
 						invalidateVar(d);
 						if(d == a) // d <- d >> b
 							break; // not much we can do because we lost info (cf (*))
 						// d <- a >> b
 						Operand *opd21 = new OperandVar(a);
-						Operand *opd22 = new OperandConst(1 << *b_val); // 2^b_val
+						Operand *opd22 = new OperandConst(1 << b_val); // 2^b_val
 						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
 						if(isConstant(a))
 							constants.set(d, constants[a] >> constants[b]);
@@ -396,7 +401,8 @@ void Analysis::State::processBB(const BasicBlock *bb)
 				case OR:		// d <- a | b
 				case XOR:		// d <- a ^ b
 					ASSERT(!UNTESTED_CRITICAL);
-					DBG(color::BIRed() << "Unimplemented operator running!")
+					DBG(color::BIRed() << "Unimplemented operator NOT/AND/OR/XOR running!")
+					dumpPredicates();
 					invalidateVar(d);
 					break;
 				case MULU:
@@ -647,19 +653,21 @@ bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_const
 
 bool Analysis::State::invalidateMem(const OperandVar& var)
 {
-	Path labels_to_throw; // TODO!
+	Path labels_to_throw;
 	Option<OperandMem> addr = getOperandMem(var, labels_to_throw);
 	if(!addr)
 	{
 		DBG(color::IPur() << DBG_SEPARATOR " " << color::IYel() << "Could not simplify " << var << ", invalidating whole memory")
 		return invalidateAllMemory();
 	}
-	invalidateMem(*addr);
-	return true;
+	return invalidateMem(*addr);
 }
 
 bool Analysis::State::invalidateMem(const OperandMem& addr)
 {
+	Path labels;
+	if(Option<Constant> maybe_val = findConstantValueOfMemCell(addr, labels))
+		return replaceMem(addr, OperandConst(*maybe_val), labels); // try to keep the info
 	bool rtn = false;
 	for(PredIterator piter(*this); piter; )
 	{
@@ -729,10 +737,6 @@ bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 		{
 			Predicate p(piter.pred());
 			String prev_str = _ << piter.pred();
-
-			// if(p.leftOperand() == OperandVar(16))
-			// 	DBG(color::On_IRed() << p)
-
 			if(p.updateVar(var, expr) == OPERANDSTATE_UPDATED)
 			{
 				if(rtn == false) // first time
@@ -767,17 +771,11 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& 
 			
 			operand_state_t state = p.updateVar(temp_var, expr);
 			ASSERTP(state != OPERANDSTATE_UNCHANGED, "involvesVariable returned a false positive");
-			/*if(state == OPERANDSTATE_INVALID)
-			{
-				ASSERT(!UNTESTED_CRITICAL);
-				DBG(color::BIRed() << "Untested case of invalidation!")
-				generated_preds.remove(iter);
-			}*/
 			if(p.isIdent()) // if we just transformed t1 = X into X = X
 			{
 				iter++;
 				continue;
-			}				
+			}
 			if(rtn == false) // first time
 			{
 				DBG(color::IBlu() << "[" << expr << " / " << temp_var << "]")
@@ -788,6 +786,62 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& 
 			generated_preds.set(iter, LabelledPredicate(p, l));
 		}
 		iter++;
+	}
+	return rtn;
+}
+
+bool Analysis::State::replaceMem(const OperandMem& opdm, const Operand& expr, const Path& labels)
+{
+	bool rtn = false;
+	for(SLList<LabelledPredicate>::MutableIterator iter(generated_preds); iter; )
+	{
+		const elm::String prev_str = _ << iter.item().pred();
+		if(iter.item().updatePred(opdm, expr))
+		{
+			iter.item().addLabels(labels);
+			if(rtn == false) // first time
+			{
+				DBG(color::IBlu() << "[" << expr << " / " << opdm << "]")
+				rtn = true;
+			}
+			rtn = true;
+			DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
+			if(iter.item().pred().isIdent())
+			{
+				DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "  (not adding identity)")				
+				generated_preds.remove(iter);
+			}
+			else 
+			{
+				DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << iter.item())
+				iter++;
+			}
+		}
+		else iter++;
+	}
+	for(SLList<LabelledPredicate>::MutableIterator iter(labelled_preds); iter; )
+	{
+		const elm::String prev_str = _ << iter.item();
+		if(iter.item().updatePred(opdm, expr))
+		{
+			iter.item().addLabels(labels);
+			if(rtn == false) // first time
+			{
+				DBG(color::IBlu() << "[" << expr << " / " << opdm << "]")
+				rtn = true;
+			}
+			rtn = true;
+			DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
+			if(iter.item().pred().isIdent())
+				DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "  (not adding identity)")
+			else
+			{
+				DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << iter.item())
+				generated_preds += iter.item(); // move to generated preds
+			}
+			labelled_preds.remove(iter);
+		}
+		else iter++;
 	}
 	return rtn;
 }
@@ -907,6 +961,35 @@ Option<Constant> Analysis::State::findConstantValueOfVar(const OperandVar& var)
 	}
 	return false; // No matches found
 }*/
+
+// TODO: improve to handle affine equations ("[SP-12] -1 = 0" etc...)
+Option<Constant> Analysis::State::findConstantValueOfMemCell(const OperandMem& mem, Path &labels)
+{
+	for(PredIterator piter(*this); piter; piter++)
+	{
+		const Predicate& p = piter.pred();
+		if(p.opr() != CONDOPR_EQ)
+			continue;
+		if(p.leftOperand() == mem)
+		{
+			if(Option<OperandConst> maybe_val = p.rightOperand().evalConstantOperand())
+			{
+				labels += piter.labels();
+				return (*maybe_val).value();
+			}
+		}
+		else if(p.rightOperand() == mem)
+		{
+			if(Option<OperandConst> maybe_val = p.leftOperand().evalConstantOperand())
+			{
+				labels += piter.labels();
+				return (*maybe_val).value();
+			}
+		}
+	}
+	return elm::none;
+}
+
 /**
  * @fn bool Analysis::State::findStackRelativeValueOfVar(const OperandVar& var, OperandConst& val);
  * For a variable tX or ?X, try to find a predicate tX=sp+cst or ?X=sp+cst, and return cst when successful.
@@ -959,19 +1042,19 @@ Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& 
 		// Algorithm 3 (affine): ((?var +- ...) +- ... = (...)
 		if(piter.pred().isAffine(var, sp)) // try and look for an affine case ((.. + ..)-..) = (..-..)
 		{
-			AffineEquationState state(sp);
-			piter.pred().leftOperand().parseAffineEquation(state);
-			state.reverseSign();
-			piter.pred().rightOperand().parseAffineEquation(state);
-			if(state.spCounter() == +1 && state.varCounter() == -1) // var = sp + delta
+			AffineEquationState eqstate(sp);
+			piter.pred().leftOperand().parseAffineEquation(eqstate);
+			eqstate.reverseSign();
+			piter.pred().rightOperand().parseAffineEquation(eqstate);
+			if(eqstate.spCounter() == +1 && eqstate.varCounter() == -1) // var = sp + delta
 			{
 				labels += piter.labels();
-				return some(state.delta());
+				return some(eqstate.delta());
 			}
-			else if(state.spCounter() == -1 && state.varCounter() == +1) // sp = var + delta
+			else if(eqstate.spCounter() == -1 && eqstate.varCounter() == +1) // sp = var + delta
 			{
 				labels += piter.labels();
-				return some(-state.delta()); // var = sp + (-delta)
+				return some(-eqstate.delta()); // var = sp + (-delta)
 			}
 			// else algorithm failed (for example var = -sp or var = sp+sp)
 		}
@@ -1232,12 +1315,12 @@ Option<OperandConst> Analysis::State::getConstantDataValue(const OperandMem& add
 		return none;
 	if(!dfa_state->isInitialized(addr.val()))
 		return none;
-	switch(type) // TODO! improve?
+	switch(type)
 	{
 		case INT8:
 		case INT16:
 		case INT32:
-		case INT64:
+		case INT64: // TODO: can't we just do the same as UINT and (int) convert it?
 			return none;
 		case UINT8:
 			{

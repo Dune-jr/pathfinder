@@ -4,11 +4,12 @@
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 
-#define DBG_NO_DEBUG	  0b00001
-#define DBG_NO_COLOR	  0b00010
-#define DBG_NO_INFO  	  0b00100
-#define DBG_NO_TIME       0b01000
-#define DBG_NO_PREDICATES 0b10000
+#define DBG_NO_DEBUG	  0b1 << 0
+#define DBG_NO_COLOR	  0b1 << 1
+#define DBG_NO_INFO  	  0b1 << 2
+#define DBG_LINE_NB  	  0b1 << 3
+#define DBG_NO_TIME       0b1 << 4
+#define DBG_NO_PREDICATES 0b1 << 5
 #define UNTESTED_CRITICAL false // Do not raise exception when executing untested code
 #define DBG_SEPARATOR " "
 
@@ -131,9 +132,15 @@ public:
 		return true;
 	}
 	inline static elm::String dbgInfo(const char* file, int line)
-		{ return (dbg_flags&DBG_NO_INFO) ? (elm::String)"" : color::Yel() << "[" << Debug::formattedDbgInfo(file, line) << "] " << color::RCol(); }
+	{
+		static int line_nb = 0;
+		if(dbg_flags&DBG_NO_INFO)
+			return (dbg_flags&DBG_LINE_NB) ? color::Yel() << "[" << io::align(io::RIGHT, io::width(6, ++line_nb)) << "] " << color::RCol() : (elm::String)"";
+		if(!(dbg_flags&DBG_LINE_NB)) return color::Yel() << "[" << Debug::formattedDbgInfo(file, line) << "] " << color::RCol();
+	  	return color::Yel() << "[" << Debug::formattedDbgInfo(file, line) << "|" << io::align(io::RIGHT, io::width(6, ++line_nb)) << "] " << color::RCol(); 
+	}
 };
-} // debug
+} // Debug class
 
 // macros for debugging
 #define DBG_INFO() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "] " << color::RCol()

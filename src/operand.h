@@ -50,13 +50,6 @@ enum operand_state_t
 	// OPERANDSTATE_INVALID, // assert(INVALID > UPDATED)
 };
 
-// TODO: remove this
-enum pop_result_t // doAffinePop(Operand* opd_result, Operand* new_opd)
-{
-	POPRESULT_FAIL,     // stop everything and fail: nothing is filled
-	POPRESULT_CONTINUE, // success: opd_result and new_opd are filled
-	POPRESULT_DONE,     // last element: only opd_result is filled
-};
 
 class OperandConst;
 class OperandVar;
@@ -85,12 +78,12 @@ public:
 	virtual int involvesVariable(const OperandVar& opdv) const = 0;
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
 	virtual bool involvesMemory() const = 0;
-	virtual operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0;
+	virtual operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0; // TODO: can't we use update instead?
+	virtual bool update(const Operand& opd, const Operand& opd_modifier) = 0;
 	virtual bool isComplete() const = 0;
 	virtual bool isAffine(const OperandVar& opdv, const OperandVar& sp) const = 0;
-	virtual pop_result_t doAffinePop(Operand*& opd_result, Operand*& new_opd) = 0; // TODO: remove this
 	virtual void parseAffineEquation(AffineEquationState& state) const = 0;
-	virtual Option<OperandConst> evalConstantOperand() const = 0;
+	virtual Option<OperandConst> evalConstantOperand() const = 0; // all uses commented out?
 	virtual Option<Operand*> simplify() = 0; // Warning: Option=none does not warrant that nothing has been simplified!
 	virtual Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants) = 0;
 	virtual bool accept(OperandVisitor& visitor) const = 0;
@@ -121,10 +114,10 @@ public:
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
+	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
-	pop_result_t doAffinePop(Operand*& opd_result, Operand*& new_opd);
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return true; }
@@ -157,10 +150,10 @@ public:
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
+	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
-	pop_result_t doAffinePop(Operand*& opd_result, Operand*& new_opd);
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return (_addr == opdv.addr()) || (_addr == sp.addr()); }
@@ -195,10 +188,10 @@ public:
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
+	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
-	pop_result_t doAffinePop(Operand*& opd_result, Operand*& new_opd);
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return false; }
@@ -237,10 +230,10 @@ public:
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesMemory() const;
 	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
+	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
-	pop_result_t doAffinePop(Operand*& opd_result, Operand*& new_opd);
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const
@@ -285,6 +278,5 @@ io::Output& operator<<(io::Output& out, operand_kind_t kind);
 io::Output& operator<<(io::Output& out, operandmem_kind_t kind);
 io::Output& operator<<(io::Output& out, arithoperator_t opr);
 io::Output& operator<<(io::Output& out, operand_state_t state);
-io::Output& operator<<(io::Output& out, pop_result_t res);
 
 #endif

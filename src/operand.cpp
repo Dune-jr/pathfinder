@@ -33,7 +33,8 @@ int OperandConst::involvesVariable(const OperandVar& opdv) const { return 0; }
 bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 bool OperandConst::involvesMemory() const { return false; }
 operand_state_t OperandConst::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
-pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
+bool OperandConst::update(const Operand& opd, const Operand& opd_modifier) { return false; }
+// pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 void OperandConst::parseAffineEquation(AffineEquationState& state) const
 {
 	ASSERT(_value.isValid());
@@ -93,7 +94,8 @@ bool OperandVar::involvesMemoryCell(const OperandMem& opdm) const { return false
 bool OperandVar::involvesMemory() const { return false; }
 // since the parent has to do the modification, and var has no child, return false
 operand_state_t OperandVar::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
-pop_result_t OperandVar::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
+bool OperandVar::update(const Operand& opd, const Operand& opd_modifier) { return false; }
+// pop_result_t OperandVar::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 void OperandVar::parseAffineEquation(AffineEquationState& state) const { state.onVarFound(this->_addr); }
 Option<OperandConst> OperandVar::evalConstantOperand() const { return none; }
 Option<Operand*> OperandVar::simplify() { return none; }
@@ -255,7 +257,8 @@ operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd
 	}
 	return OPERANDSTATE_UNCHANGED; // no match
 }*/
-pop_result_t OperandMem::doAffinePop(Operand*& opd_result, Operand*& new_opd) { return POPRESULT_FAIL; }
+bool OperandMem::update(const Operand& opd, const Operand& opd_modifier) { return false; }
+// pop_result_t OperandMem::doAffinePop(Operand*& opd_result, Operand*& new_opd) { return POPRESULT_FAIL; }
 void OperandMem::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
 Option<Operand*> OperandMem::simplify() { return none; } // TODO: simplify within the [ ], makes more sense even tho it shouldn't be very useful
@@ -386,6 +389,28 @@ operand_state_t OperandArithExpr::updateVar(const OperandVar& opdv, const Operan
 	
 	return rtn;
 }
+bool OperandArithExpr::update(const Operand& opd, const Operand& opd_modifier)
+{
+	bool rtn = false;
+	if(*opd1 == opd)
+	{
+		opd1 = opd_modifier.copy();
+		rtn = true;
+	}
+	else if(opd1->update(opd, opd_modifier))
+		rtn = true;
+	if(isUnary())
+		return rtn; // stop here
+	if(*opd2 == opd)
+	{
+		opd2 = opd_modifier.copy();
+		rtn = true;
+	}
+	else if(opd2->update(opd, opd_modifier))
+		rtn = true;
+	return rtn;
+}
+/*
 // TO*DO handle ARITHOPR_NEG _and_ replace in isAffine() the (_opr == +) || (_opr == -) statements by adding the NEG case! Handle unary everywhere!
 pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_opd)
 {
@@ -438,6 +463,7 @@ pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_o
 	}
 	return POPRESULT_FAIL; // TO*DO! why do i have to write this?
 }
+*/
 
 void OperandArithExpr::parseAffineEquation(AffineEquationState& state) const
 {
@@ -678,22 +704,6 @@ io::Output& operator<<(io::Output& out, operand_state_t state)
 			out << "(INVALID)";
 			break;
 		*/
-	}
-	return out;
-}
-io::Output& operator<<(io::Output& out, pop_result_t res)
-{
-	switch(res)
-	{
-		case POPRESULT_FAIL:
-			out << "(FAIL)";
-			break;
-		case POPRESULT_CONTINUE:
-			out << "(CONTINUE)";
-			break;
-		case POPRESULT_DONE:
-			out << "(DONE)";
-			break;
 	}
 	return out;
 }

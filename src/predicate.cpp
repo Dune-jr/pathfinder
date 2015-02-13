@@ -89,7 +89,6 @@ operand_state_t Predicate::updateVar(const OperandVar& opdv, const Operand& opd_
 		if(r > rtn)
 			rtn = r;	
 	}
-		
 	if(*_opd2 == opdv)
 	{
 		_opd2 = opd_modifier.copy();
@@ -102,6 +101,28 @@ operand_state_t Predicate::updateVar(const OperandVar& opdv, const Operand& opd_
 			rtn = r;
 	}
 	
+	return rtn;
+}
+
+// returns true if something was updated
+bool Predicate::update(const Operand& opd, const Operand& opd_modifier)
+{
+	// we need to replace the matching children as they can't do it themselves since the parent has to do the modification
+	bool rtn = false;
+	if(*_opd1 == opd)
+	{
+		_opd1 = opd_modifier.copy();
+		rtn = true;
+	}
+	else if(_opd1->update(opd, opd_modifier))
+		rtn = true;
+	if(*_opd2 == opd)
+	{
+		_opd2 = opd_modifier.copy();
+		rtn = true;
+	}
+	else if(_opd2->update(opd, opd_modifier))
+		rtn = true;
 	return rtn;
 }
 

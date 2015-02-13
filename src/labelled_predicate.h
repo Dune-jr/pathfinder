@@ -2,12 +2,11 @@
 #define _LABELLED_PREDICATE_H
 
 #include <otawa/cfg/Edge.h>
-// #include <elm/genstruct/SLList.h>
 #include "predicate.h"
 
 using namespace otawa;
-using namespace elm::genstruct;
 using namespace elm::avl;
+// using namespace elm::genstruct;
 
 // LabelledPredicate class
 class LabelledPredicate {
@@ -19,9 +18,11 @@ private:
 public:
 	LabelledPredicate(const Predicate& pred, const Set<Edge*>& labels);
 	LabelledPredicate(const LabelledPredicate& lp);
-	inline const Predicate& pred() const { return _pred; };
-	inline const Set<Edge*>& labels() const { return _labels; };
+	inline const Predicate& pred() const { return _pred; }
+	inline const Set<Edge*>& labels() const { return _labels; }
+	inline bool updatePred(const Operand& opd, const Operand& expr) { return _pred.update(opd, expr); }
 	inline void addLabel(Edge* label) { _labels += label; }
+	inline void addLabels(const Set<Edge*>& labels) { _labels.addAll(labels); }
 	friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lv) { return lv.print(out); }
 };
 

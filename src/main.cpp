@@ -31,6 +31,7 @@ public:
     	opt_output(option::SwitchOption::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file")),
     	opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").description("do not use colors")),
     	opt_noinfo(option::SwitchOption::Make(*this).cmd("--no-info").description("do not print file/line number info")),
+    	opt_linenumbers(option::SwitchOption::Make(*this).cmd("--line-nb").cmd("--line-numbers").description("number lines of the output")),
     	opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
     	opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")) { }
         
@@ -52,6 +53,8 @@ protected:
 			dbg_flags |= DBG_NO_COLOR;
 		if(opt_noinfo)
 			dbg_flags |= DBG_NO_INFO;
+		if(opt_linenumbers)
+			dbg_flags |= DBG_LINE_NB;
 		if(opt_notime)
 			dbg_flags |= DBG_NO_TIME;
 		if(opt_nopred)
@@ -70,7 +73,7 @@ protected:
 
 private:
 	option::Manager manager;
-	option::SwitchOption opt_silent, opt_output, opt_nocolor, opt_noinfo, opt_notime, opt_nopred;
+	option::SwitchOption opt_silent, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred;
 };
 
 OTAWA_RUN(Display);

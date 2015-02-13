@@ -33,7 +33,6 @@ class PathComparator: public elm::Comparator<SLList<const Edge*> > {
 class Analysis {
 
 public:
-	// TODO: merge and only keep the SLList version?
 	typedef SLList<Edge*> OrderedPath;
 	typedef Set<Edge*> Path;
 	class State;
@@ -87,9 +86,12 @@ public:
 		bool invalidateMem(const OperandVar& var);
 		bool invalidateTempVars();
 		bool replaceVar(const OperandVar& var, const Operand& expr);
+		bool replaceMem(const OperandMem& opd, const Operand& expr, const Path& labels);
 		bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);
+		bool replaceTempVar(const OperandMem& mem, const Operand& expr);
 		bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
 		Option<Constant> findConstantValueOfVar(const OperandVar& var); // changed to a simple lookup to "constants"
+		Option<Constant> findConstantValueOfMemCell(const OperandMem& mem, Path &labels);
 		Option<t::int32> findStackRelativeValueOfVar(const OperandVar& var, Path& labels);
 		bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
 		Option<OperandMem> getOperandMem(const OperandVar& var, Path& labels);
@@ -165,15 +167,15 @@ private:
 	int max_tempvars, max_registers;
 	int processed_paths, total_paths, paths_count, infeasible_paths_count;
 	
-	// analysis_cfg.cpp // TODO! add consts here and test
+	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
 	int processBB(State& s, BasicBlock *bb);
 	void placeboProcessCFG(CFG* cfg);
 	void placeboProcessBB(BasicBlock *bb);
-	void printResults(int exec_time_ms);
+	void printResults(int exec_time_ms) const;
 	void onPathEnd();
 	void onAnyInfeasiblePath();
-	bool isAHandledEdgeKind(Edge::kind_t kind);
+	bool isAHandledEdgeKind(Edge::kind_t kind) const;
 	int countAnnotations(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
 	elm::String wlToString() const;
