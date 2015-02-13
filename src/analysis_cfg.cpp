@@ -51,7 +51,11 @@ void Analysis::State::appendEdge(Edge* e)
 	constants.label(e);
 }
 
-// WARNING: atm, this function assumes we have NO LOOPS!
+/**
+ * @fn void Analysis::processCFG(CFG* cfg);
+ * Runs the analysis on the CFG cfg
+ * *WARNING*: atm, this function assumes we have NO LOOPS!
+*/
 void Analysis::processCFG(CFG* cfg)
 {
 	DBG(color::Whi() << "Processing CFG " << cfg)
@@ -84,6 +88,7 @@ void Analysis::processCFG(CFG* cfg)
 
 			For e in bb.outs
 				wl <- sl ⊙ e; // ⊙ = une sorte de concaténation de langages
+				// smt check here
 			End For
 		End While
 	end
@@ -130,8 +135,7 @@ void Analysis::processCFG(CFG* cfg)
 			/* processBB(s, bb); */
 			if(processBB(sl_iter.item(), bb) > 0)
 				sl.remove(sl_iter); // path ended
-			else
-				sl_iter++;
+			else sl_iter++;
 		}
 		/* End For */
 
@@ -140,69 +144,7 @@ void Analysis::processCFG(CFG* cfg)
 		{
 			if(isAHandledEdgeKind(bb_outs->kind())) // filter out calls etc
 			{
-				Edge* e = *bb_outs;
-				/* wl <- sl ⊙ e; */
-				SLList<Analysis::State> new_sl;
-				Vector<Option<Path> > sl_paths;
-				for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
-				{
-					State s = sl_iter.item();
-					s.appendEdge(e);
-					// SMT call
-					SMT smt;
-					Option<Path> infeasible_path = smt.seekInfeasiblePaths(s);
-					sl_paths.push(infeasible_path);
-					if(infeasible_path)
-						ASSERT((*infeasible_path).contains(s.lastEdge())) // make sure the last edge was relevant in this path
-					else
-						new_sl += s;
-				}
-				Vector<Option<Path> >::Iterator sl_paths_iter(sl_paths);
-				for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++, sl_paths_iter++)
-				{
-					const State& s = sl_iter.item();
-					// s.appendEdge(e);
-					if(*sl_paths_iter) // is infeasible?
-					{
-						const Path& infeasible_path = **sl_paths_iter;
-						DBG("Path " << s.getPathString() << "->" << e->target()->number() << " minimized to " << pathToString(infeasible_path))
-						bool valid = true;
-						elm::String counterexample;
-						Vector<Option<Path> >::Iterator sl_paths_subiter(sl_paths);
-						for(SLList<Analysis::State>::Iterator sl_subiter(sl); sl_subiter; sl_subiter++, sl_paths_subiter++)
-						{
-							// if feasible path && contained in the minimized inf. path
-							if(!*sl_paths_subiter && isSubPath((*sl_subiter).getPath(), e, infeasible_path))
-							{
-								valid = false;
-								counterexample = _ << (*sl_subiter).getPathString() << "+" << e->source()->number() << "->" << e->target()->number();
-								// DBG("isSubPath(" << (*sl_subiter).getPath() << ", " << e->source()->number()<<">"<<e->target()->number() << ", " 
-								// 	<< pathToString(infeasible_path) << ") = " << isSubPath((*sl_subiter).getPath(), e, infeasible_path))
-								break;
-							}
-						}
-						DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
-						if(valid)
-						{
-							infeasible_paths += infeasible_path;
-							DBG(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path))
-						}
-						else
-						{
-							DBG("   counterexample: " << counterexample)
-							OrderedPath original_full_orderedpath = (*sl_iter).getPath(); // falling back on full path (not as useful as a result, but still something)
-							Path original_full_path;
-							for(OrderedPath::Iterator original_full_orderedpath_iter(original_full_orderedpath); original_full_orderedpath_iter; original_full_orderedpath_iter++)
-								original_full_path += *original_full_orderedpath_iter;
-							original_full_path += e; // need to add e
-							infeasible_paths += original_full_path;
-							DBG(color::On_IRed() << "Inf. path found: " << pathToString(original_full_path) << color::RCol() << " (unrefined)")
-							// TODO: do a C)
-						}
-						onAnyInfeasiblePath();
-					}
-				}
-				PROCESSED_EDGES(*bb_outs) = new_sl; // annotate regardless of new_sl being empty or not
+				PROCESSED_EDGES(*bb_outs) = processOutEdge(*bb_outs, sl); // annotate regardless of returned new_sl being empty or not
 				if(!wl.contains(bb_outs->target()))
 					wl.push(bb_outs->target());
 			}
@@ -221,7 +163,7 @@ void Analysis::processCFG(CFG* cfg)
 	1: stop analysis for this path
 */
 int Analysis::processBB(State& s, BasicBlock* bb)
-{	//  TODO! reorganize to put more stuff into subfunctions
+{
 	if(bb->isExit())
 	{
 		onPathEnd();
@@ -233,19 +175,106 @@ int Analysis::processBB(State& s, BasicBlock* bb)
 	return 0;
 }
 
+/**
+ * @fn SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl);
+ * Processes outgoing Edge e from a BasicBlock for each element of sl
+*/
+SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl)
+{
+	/* wl <- sl ⊙ e; */
+	SLList<Analysis::State> new_sl; // this is what we return
+	Vector<Option<Path> > sl_paths;
+	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
+	{
+		State s = sl_iter.item();
+		s.appendEdge(e);
+		// SMT call
+		SMT smt;
+		Option<Path> infeasible_path = smt.seekInfeasiblePaths(s);
+		sl_paths.push(infeasible_path);
+		if(infeasible_path)
+			ASSERT((*infeasible_path).contains(s.lastEdge())) // make sure the last edge was relevant in this path
+		else
+			new_sl += s;
+	}
+	Vector<Option<Path> >::Iterator sl_paths_iter(sl_paths);
+	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++, sl_paths_iter++)
+	{
+		const State& s = sl_iter.item();
+		// s.appendEdge(e);
+		if(*sl_paths_iter) // is infeasible?
+		{
+			const Path& infeasible_path = **sl_paths_iter;
+			DBG("Path " << s.getPathString() << "->" << e->target()->number() << " minimized to " << pathToString(infeasible_path))
+			elm::String counterexample;
+			bool valid = checkInfeasiblePathValidity(sl, sl_paths, e, infeasible_path, counterexample);
+			DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
+			if(valid)
+			{
+				infeasible_paths += infeasible_path;
+				DBG(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path))
+			}
+			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
+			{
+				DBG("   counterexample: " << counterexample)
+				 // falling back on full path (not as useful as a result, but still something)
+				OrderedPath original_full_orderedpath = (*sl_iter).getPath();
+				Path original_full_path;
+				for(OrderedPath::Iterator original_full_orderedpath_iter(original_full_orderedpath); original_full_orderedpath_iter; original_full_orderedpath_iter++)
+					original_full_path += *original_full_orderedpath_iter;
+				original_full_path += e; // need to add e
+				infeasible_paths += original_full_path;
+				DBG(color::On_IRed() << "Inf. path found: " << pathToString(original_full_path) << color::RCol() << " (unrefined)")
+				// TODO: do a C) where we still try to refine this infeasible path
+			}
+			onAnyInfeasiblePath();
+		}
+	}
+	return new_sl;
+}
+
+/**
+ * @fn bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const Vector<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample);
+ * Checks if the minimized list of edges we found 'infeasible_path' is valid,
+ * that is if all the paths it represents (all the 'sl[i]->e') are infeasible ('sl_paths[i]' is not 'elm::option::none')
+ * If invalid, returns a counter-example in counterexample.
+ * @return true if valid
+*/
+bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const Vector<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample)
+{
+	bool valid = true;
+	// check that all the paths going to the current BB are sound with the minimized inf. path we just found
+	Vector<Option<Path> >::Iterator sl_paths_subiter(sl_paths);
+	for(SLList<Analysis::State>::Iterator sl_subiter(sl); sl_subiter; sl_subiter++, sl_paths_subiter++)
+	{
+		// if feasible path && contained in the minimized inf. path
+		if(!*sl_paths_subiter && isSubPath((*sl_subiter).getPath(), e, infeasible_path))
+		{
+			valid = false;
+			counterexample = _ << (*sl_subiter).getPathString() << "+" << e->source()->number() << "->" << e->target()->number();
+			// DBG("isSubPath(" << (*sl_subiter).getPath() << ", " << e->source()->number()<<">"<<e->target()->number() << ", " 
+			// 	<< pathToString(infeasible_path) << ") = " << isSubPath((*sl_subiter).getPath(), e, infeasible_path))
+			break;
+		}
+	}
+	return valid;
+}
+
+// figures properties on the CFG without doing any actual analysis
 void Analysis::placeboProcessCFG(CFG* cfg)
 {
 	if(dbg_flags&DBG_NO_DEBUG)
+	{
 		cout << "Running pre-analysis... ";
-	else
-		DBG(color::Whi() << "Running pre-analysis... ")
-
-	placeboProcessBB(cfg->firstBB());
-
-	if(dbg_flags&DBG_NO_DEBUG)
+		placeboProcessBB(cfg->firstBB());
 		cout << total_paths << " paths found." << endl;
+	}
 	else
+	{
+		DBG(color::Whi() << "Running pre-analysis... ")
+		placeboProcessBB(cfg->firstBB());
 		DBG(color::Whi() << total_paths << " paths found.")
+	}
 }
 
 void Analysis::placeboProcessBB(BasicBlock* bb)
@@ -255,19 +284,12 @@ void Analysis::placeboProcessBB(BasicBlock* bb)
 		total_paths++;
 		return;
 	}
-
 	for(BasicBlock::OutIterator outs(bb); outs; outs++)
-	{
-		if(outs->kind() == Edge::TAKEN
-		|| outs->kind() == Edge::NOT_TAKEN
-		|| outs->kind() == Edge::VIRTUAL
-		|| outs->kind() == Edge::VIRTUAL_RETURN) // Filter out irrelevant edges (calls...)
-		{	
+		if(isAHandledEdgeKind(outs->kind())) // Filter out irrelevant edges (calls...)
 			placeboProcessBB((*outs)->target());
-		}
-	}
 }
 
+// print result of a whole CFG analysis
 void Analysis::printResults(int exec_time_ms) const
 {
 	int infeasible_paths_count = infeasible_paths.count();
@@ -300,6 +322,7 @@ void Analysis::printResults(int exec_time_ms) const
 	}
 }
 
+// debugs to do on path end
 void Analysis::onPathEnd()
 {
 	if(dbg_flags&DBG_NO_DEBUG)
@@ -316,6 +339,7 @@ void Analysis::onPathEnd()
 	else DBG(color::BBla() << color::On_Yel() << "EXIT block reached")
 }
 
+// debugs to do when we find an infeasible path
 void Analysis::onAnyInfeasiblePath()
 {
 	if(dbg_flags&DBG_NO_DEBUG)
@@ -335,6 +359,11 @@ bool Analysis::isAHandledEdgeKind(Edge::kind_t kind) const
 	return (kind == Edge::TAKEN) || (kind == Edge::NOT_TAKEN) || (kind == Edge::VIRTUAL) || (kind == Edge::VIRTUAL_RETURN);
 }
 
+/*
+	@fn int Analysis::countAnnotations(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
+	Count non-void annotations of BasicBlock bb
+	@return annotation count
+*/
 int Analysis::countAnnotations(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const
 {
 	int processed_edges_count = 0;
@@ -344,6 +373,12 @@ int Analysis::countAnnotations(BasicBlock* bb, const Identifier<SLList<Analysis:
 	return processed_edges_count;
 }
 
+/**
+ * @fn bool Analysis::isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
+ * Checks if 'included_path->e' is a part of the set of paths "path_set",
+ * that is if 'included_path' includes all the edges in the Edge set of path_set, except for e
+ * @return true if it is a subpath
+*/
 bool Analysis::isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const
 {
 	for(Path::Iterator iter(path_set); iter; iter++)

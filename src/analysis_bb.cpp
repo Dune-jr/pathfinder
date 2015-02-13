@@ -651,6 +651,9 @@ bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_const
 	return rtn;
 }
 
+/*
+	This tries to find a matching OperandMem for the provided OperandVar, then calls invalidateMem(OperandMem)
+*/
 bool Analysis::State::invalidateMem(const OperandVar& var)
 {
 	Path labels_to_throw;
@@ -663,6 +666,9 @@ bool Analysis::State::invalidateMem(const OperandVar& var)
 	return invalidateMem(*addr);
 }
 
+/*
+	Replace every occurence of the OperandMem parameter by a constant value if possible, removes the occurences from the predicate lists otherwise
+*/
 bool Analysis::State::invalidateMem(const OperandMem& addr)
 {
 	Path labels;
@@ -894,7 +900,7 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd
  * If the variable is a tempvar (tX), does not browse predicates that have not been generated in the current BB
  * @return true if a value was found
  */
-// TODO! add a Path& labels parameter
+// TODO: add a Path& labels parameter
 Option<Constant> Analysis::State::findConstantValueOfVar(const OperandVar& var)
 {
 	if(!isConstant(var))
@@ -904,7 +910,7 @@ Option<Constant> Analysis::State::findConstantValueOfVar(const OperandVar& var)
 
 // bool Analysis::State::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
 // {
-	/* old TO*DO: things to do here... separate kinds:
+	/* we should separate kinds:
 	*  OperandConst or OperandMem : nothing to do
 	*  OperandArith or OperandVar : recursive call to findConstantValueOfVar with an exclusion list to avoid infinite loops
 	*  complexity issues! :(
@@ -1001,44 +1007,6 @@ Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& 
 	{
 		if(piter.pred().opr() != CONDOPR_EQ)
 			continue;
-/*
-		Operand *opd_expr = NULL;
-		if(piter.pred().leftOperand() == var) // ?x = ...
-			opd_expr = piter.pred().rightOperand().copy();
-		if(piter.pred().rightOperand() == var) // ... = ?x
-			opd_expr = piter.pred().leftOperand().copy();
-		// Algorithm 1: ?var = sp
-		if(opd_expr && *opd_expr == sp) // easy: ?var = sp
-			return some(0);
-
-		// Algorithm 2: ?var = (...)
-		else if(opd_expr && (*opd_expr).kind() == OPERAND_ARITHEXPR) // We found ?var to be equal to something
-		{
-			// TO*DO: throw a opd_expr.simplify() in here
-			OperandArithExpr opda_expr(*(OperandArithExpr*)opd_expr);
-			if(opda_expr.isBinary()) // make sure it's not -(something)
-			{
-				// /limited\ we only handle (SP # x) or (x # SP) atm
-				if(opda_expr.leftOperand() == sp)
-				{
-					// only + and - are interesting
-					if(opda_expr.opr() == ARITHOPR_ADD)
-						if(Option<OperandConst> maybe_opdc_offset = opda_expr.rightOperand().evalConstantOperand())
-							return (*maybe_opdc_offset).value();
-					if(opda_expr.opr() == ARITHOPR_SUB)
-						if(Option<OperandConst> maybe_opdc_offset = opda_expr.rightOperand().evalConstantOperand())
-							return -(*maybe_opdc_offset).value(); // OPPOSITE of this value since it's SP - ...
-				}
-				else if(opda_expr.rightOperand() == sp) // reverse way! this is ... # SP!
-				{
-					// only + is interesting, 8-sp is bad! (and weird...)
-					if(opda_expr.opr() != ARITHOPR_ADD)
-						if(Option<OperandConst> maybe_opdc_offset = opda_expr.leftOperand().evalConstantOperand())
-							return (*maybe_opdc_offset).value();
-				}
-			}
-		}
-*/
 		// Algorithm 3 (affine): ((?var +- ...) +- ... = (...)
 		if(piter.pred().isAffine(var, sp)) // try and look for an affine case ((.. + ..)-..) = (..-..)
 		{
@@ -1213,7 +1181,6 @@ bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_le
 					}
 				}
 			}
-				
 			if(p.rightOperand() == var) // right operand matches our register
 			{
 				if(p.leftOperand().kind() == OPERAND_ARITHEXPR)
@@ -1231,6 +1198,7 @@ bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_le
 	}
 	return false; // No matches found
 }
+
 Option<OperandMem> Analysis::State::getOperandMem(const OperandVar& var, Path& labels)
 {
 	if(Option<Constant> val = findConstantValueOfVar(var))

@@ -120,7 +120,6 @@ public:
 			inline bool ended(void) const { return (state == DONE); }
 			LabelledPredicate item(void) const {
 				switch(state) {
-					// case GENERATED_PREDS: return LabelledPredicate(gp_iter.item(), Path::null);
 					case GENERATED_PREDS: return gp_iter.item();
 					case LABELLED_PREDS: return lp_iter.item();
 					default: assert(false);
@@ -170,6 +169,8 @@ private:
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
 	int processBB(State& s, BasicBlock *bb);
+	SLList<Analysis::State> processOutEdge(Edge* e, const SLList<Analysis::State>& sl);
+	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const Vector<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample);
 	void placeboProcessCFG(CFG* cfg);
 	void placeboProcessBB(BasicBlock *bb);
 	void printResults(int exec_time_ms) const;
