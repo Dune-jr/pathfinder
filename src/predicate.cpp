@@ -72,6 +72,7 @@ bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 	return true;
 }
 
+/*
 // returns true if something was updated
 operand_state_t Predicate::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {
@@ -103,6 +104,7 @@ operand_state_t Predicate::updateVar(const OperandVar& opdv, const Operand& opd_
 	
 	return rtn;
 }
+*/
 
 // returns true if something was updated
 bool Predicate::update(const Operand& opd, const Operand& opd_modifier)

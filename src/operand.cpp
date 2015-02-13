@@ -32,7 +32,6 @@ bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) cons
 int OperandConst::involvesVariable(const OperandVar& opdv) const { return 0; }
 bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 bool OperandConst::involvesMemory() const { return false; }
-operand_state_t OperandConst::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
 bool OperandConst::update(const Operand& opd, const Operand& opd_modifier) { return false; }
 // pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 void OperandConst::parseAffineEquation(AffineEquationState& state) const
@@ -93,7 +92,6 @@ int OperandVar::involvesVariable(const OperandVar& opdv) const
 bool OperandVar::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 bool OperandVar::involvesMemory() const { return false; }
 // since the parent has to do the modification, and var has no child, return false
-operand_state_t OperandVar::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
 bool OperandVar::update(const Operand& opd, const Operand& opd_modifier) { return false; }
 // pop_result_t OperandVar::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 void OperandVar::parseAffineEquation(AffineEquationState& state) const { state.onVarFound(this->_addr); }
@@ -147,7 +145,6 @@ bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 int OperandMem::involvesVariable(const OperandVar& opdv) const { return 0; }
 bool OperandMem::involvesMemoryCell(const OperandMem& opdm) const {	return *this == opdm; }
 bool OperandMem::involvesMemory() const { return true; }
-operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd_modifier) { return OPERANDSTATE_UNCHANGED; }
 /*operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {
 	// if: this OperandMem involves a variable, and it matches the variable we have to update
@@ -356,38 +353,6 @@ bool OperandArithExpr::involvesMemory() const
 	if(isUnary())
 		return opd1->involvesMemory();
 	return opd1->involvesMemory() || opd2->involvesMemory();	
-}
-
-operand_state_t OperandArithExpr::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
-{
-	operand_state_t rtn = OPERANDSTATE_UNCHANGED;
-	if(*opd1 == opdv)
-	{
-		opd1 = opd_modifier.copy();
-		rtn = OPERANDSTATE_UPDATED;
-	}
-	else
-	{
-		operand_state_t r = opd1->updateVar(opdv, opd_modifier);
-		if(r > rtn)
-			rtn = r;
-	}
-	if(isUnary())
-		return rtn; // stop here
-
-	if(*opd2 == opdv)
-	{
-		opd2 = opd_modifier.copy();
-		rtn = OPERANDSTATE_UPDATED;
-	}
-	else
-	{
-		operand_state_t r = opd2->updateVar(opdv, opd_modifier);
-		if(r > rtn)
-			rtn = r;
-	}
-	
-	return rtn;
 }
 bool OperandArithExpr::update(const Operand& opd, const Operand& opd_modifier)
 {
@@ -686,24 +651,6 @@ io::Output& operator<<(io::Output& out, arithoperator_t opr)
 			break;
 		case ARITHOPR_CMP:
 			out << "~";
-	}
-	return out;
-}
-io::Output& operator<<(io::Output& out, operand_state_t state)
-{
-	switch(state)
-	{
-		case OPERANDSTATE_UNCHANGED:
-			out << "(UNCHANGED)";
-			break;
-		case OPERANDSTATE_UPDATED:
-			out << "(UPDATED)";
-			break;
-		/*
-		case OPERANDSTATE_INVALID:
-			out << "(INVALID)";
-			break;
-		*/
 	}
 	return out;
 }

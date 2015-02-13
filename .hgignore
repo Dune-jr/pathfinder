@@ -1,5 +1,6 @@
 doc
 objs
+./*.ffx
 benchmarks/if_then_else_2seq/colored examples
 benchmarks/if_then_else_2seq/slideshow
 report/*.aux
@@ -13,9 +14,26 @@ presentation/*.toc
 presentation/*.out
 presentation/*.nav
 presentation/presentation.tex.backup
-presentation/presentation.tex~
 
 .bam
 .depend
 config.lua
 pathfinder
+
+#doxygen
+doxygen.err
+Doxyfile
+
+# meh, hackish
+benchmarks/allButOne/allButOne15.png
+benchmarks/allButOne/allButOne2.png
+benchmarks/allButOne/allButOne4.png
+benchmarks/atMostOneThen/atMostOneThen.dis
+benchmarks/atMostOneThen/atMostOneThen20.png
+benchmarks/atMostOneThen/atMostOneThen3.dis
+benchmarks/atMostOneThen/atMostOneThen3.elf
+benchmarks/atMostOneThen/atMostOneThen3.png
+benchmarks/sparse-noloop/Makefile
+benchmarks/sparse-noloop/sparse2.png
+benchmarks/sparse-noloop/sparse2_jordy*
+benchmarks/sparse2.arm

@@ -43,14 +43,6 @@ enum operandmem_kind_t
 	OPERANDMEM_RELATIVE, // sp+Const
 };
 
-enum operand_state_t
-{
-	OPERANDSTATE_UNCHANGED=0,
-	OPERANDSTATE_UPDATED,
-	// OPERANDSTATE_INVALID, // assert(INVALID > UPDATED)
-};
-
-
 class OperandConst;
 class OperandVar;
 class OperandArithExpr;
@@ -78,7 +70,6 @@ public:
 	virtual int involvesVariable(const OperandVar& opdv) const = 0;
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
 	virtual bool involvesMemory() const = 0;
-	virtual operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier) = 0; // TODO: can't we use update instead?
 	virtual bool update(const Operand& opd, const Operand& opd_modifier) = 0;
 	virtual bool isComplete() const = 0;
 	virtual bool isAffine(const OperandVar& opdv, const OperandVar& sp) const = 0;
@@ -113,7 +104,6 @@ public:
 	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
-	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
@@ -149,7 +139,6 @@ public:
 	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
-	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
@@ -187,7 +176,6 @@ public:
 	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
-	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
@@ -229,7 +217,6 @@ public:
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesMemory() const;
-	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
@@ -277,6 +264,5 @@ private:
 io::Output& operator<<(io::Output& out, operand_kind_t kind);
 io::Output& operator<<(io::Output& out, operandmem_kind_t kind);
 io::Output& operator<<(io::Output& out, arithoperator_t opr);
-io::Output& operator<<(io::Output& out, operand_state_t state);
 
 #endif

@@ -38,7 +38,7 @@ public:
 	bool isAffine(const OperandVar& opdv, const OperandVar& sp) const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
-	operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
+	// operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	
 	CVC4::Expr toExpr();

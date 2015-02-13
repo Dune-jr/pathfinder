@@ -743,7 +743,7 @@ bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 		{
 			Predicate p(piter.pred());
 			String prev_str = _ << piter.pred();
-			if(p.updateVar(var, expr) == OPERANDSTATE_UPDATED)
+			if(p.update(var, expr)) // something updated
 			{
 				if(rtn == false) // first time
 				{
@@ -755,8 +755,6 @@ bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 				setPredicate(piter, LabelledPredicate(p, piter.labels()));
 				movePredicateToGenerated(piter); // this does piter++
 				continue;
-				// if(!piter) // not needed
-				// 	break;
 			}
 		}
 		piter++;
@@ -775,8 +773,7 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& 
 			Path l = (*iter).labels(); // just keep the labels
 			String prev_str = _ << p;
 			
-			operand_state_t state = p.updateVar(temp_var, expr);
-			ASSERTP(state != OPERANDSTATE_UNCHANGED, "involvesVariable returned a false positive");
+			p.update(temp_var, expr);
 			if(p.isIdent()) // if we just transformed t1 = X into X = X
 			{
 				iter++;
@@ -880,8 +877,8 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd
 			
 			// updating the predicate
 			Predicate p = piter.pred();
-			operand_state_t state = p.updateVar(opd_to_update, *opd_modifier_new);
-			ASSERTP(state == OPERANDSTATE_UPDATED, "nothing was updated");
+			bool update_state = p.update(opd_to_update, *opd_modifier_new);
+			ASSERTP(update_state, "nothing was updated");
 
 			LabelledPredicate lp = LabelledPredicate(p, piter.labels());
 			setPredicate(piter, lp);
