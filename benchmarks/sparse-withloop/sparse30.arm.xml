@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<flowfacts>
+  <function name="main">
+    <loop loopId="1" line="9" source="sparse30.c" exact="true" maxcount="101" totalcount="101">
+      <iteration number="*">
+        <control-constraint>
+          <le>
+            <add>
+              <count src="0x80f8" dst="0x8154"/>
+              <count src="0x81b0" dst="0x81c0"/>
+              <count src="0x8224" dst="0x8234"/>
+              <count src="0x8298" dst="0x82a8"/>
+              <count src="0x830c" dst="0x831c"/>
+              <count src="0x8380" dst="0x8390"/>
+              <count src="0x83ec" dst="0x83fc"/>
+              <count src="0x8454" dst="0x8464"/>
+              <count src="0x84bc" dst="0x84cc"/>
+              <count src="0x851c" dst="0x852c"/>
+              <count src="0x8588" dst="0x8598"/>
+              <count src="0x85e8" dst="0x85f8"/>
+              <count src="0x8648" dst="0x8658"/>
+              <count src="0x86a8" dst="0x86b8"/>
+              <count src="0x8708" dst="0x8718"/>
+              <count src="0x877c" dst="0x878c"/>
+              <count src="0x87dc" dst="0x87ec"/>
+              <count src="0x8844" dst="0x8854"/>
+              <count src="0x88a4" dst="0x88b4"/>
+              <count src="0x8910" dst="0x8920"/>
+              <count src="0x8974" dst="0x8984"/>
+              <count src="0x89d4" dst="0x89e4"/>
+              <count src="0x8a34" dst="0x8a44"/>
+              <count src="0x8aa0" dst="0x8ab0"/>
+              <count src="0x8af8" dst="0x8b08"/>
+              <count src="0x8b58" dst="0x8b68"/>
+              <count src="0x8bb8" dst="0x8bc8"/>
+              <count src="0x8c1c" dst="0x8c2c"/>
+              <count src="0x8c74" dst="0x8c84"/>
+              <count src="0x8ccc" dst="0x8cdc"/>
+            </add>
+            <const int="1"/>
+          </le>
+        </control-constraint>
+      </iteration>
+    </loop>
+  </function>
+</flowfacts>

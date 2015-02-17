@@ -1,0 +1,31 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [label="call", style=dashed, weight=2];
+	"1" [label="{BB 1 (000080d8) | main:\lsparse2.c:7\l000080d8    str fp, [sp, #-4]!\l000080dc    add fp, sp, #0\l000080e0    sub sp, sp, #20\l000080e4    str r0, [fp, #-16]\l000080e8    str r1, [fp, #-20]\lsparse2.c:9\l000080ec    mov r3, #1\l000080f0    str r3, [fp, #-12]\l000080f4    b 81e8    # 000081e8\l }"]
+	"1" -> "2" [label="taken", weight=3];
+	"2" [label="{BB 2 (000081e8) | sparse2.c:9\l000081e8    ldr r3, [fp, #-12]\l000081ec    cmp r3, #101\l000081f0    ble 80f8    # 000080f8\l }"]
+	"2" -> "3" [weight=4];
+	"2" -> "4" [label="taken", weight=3];
+	"3" [label="{BB 3 (000081f4) | sparse2.c:15\l000081f4    ldr r3, [fp, #-16]\l000081f8    and r2, r3, #1\l000081fc    ldr r3, [pc, #24]\l00008200    ldr r3, [r3, r2, lsl #2]\lsparse2.c:16\l00008204    mov r0, r3\l00008208    add sp, fp, #0\l0000820c    ldmia sp!, \{fp\}\l00008210    bx lr\l }"]
+	"3" -> "11" [label="return", style=dashed, weight=2];
+	"4" [label="{BB 4 (000080f8) | sparse2.c:10\l000080f8    ldr r2, [fp, #-16]\l000080fc    mov r3, r2\l00008100    mov r3, r3, lsl #6\l00008104    add r3, r3, r2\l00008108    mov r3, r3, lsl #6\l0000810c    add r3, r3, r2\l00008110    mov r3, r3, lsl #2\l00008114    add r3, r3, r2\l00008118    mov r3, r3, lsl #2\l0000811c    add r3, r3, r2\l00008120    mov r2, r3, lsl #2\l00008124    add r3, r3, r2\l00008128    mov r2, r3, lsl #2\l0000812c    add r2, r3, r2\l00008130    ldr r3, [pc, #220]\l00008134    add r3, r2, r3\l00008138    str r3, [fp, #-16]\lsparse2.c:11\l0000813c    mov r3, #0\l00008140    str r3, [fp, #-8]\lsparse2.c:12\l00008144    ldr r2, [fp, #-8]\l00008148    ldr r3, [fp, #-20]\l0000814c    cmp r2, r3\l00008150    bge 819c    # 0000819c\l }"]
+	"4" -> "5" [weight=4];
+	"4" -> "6" [label="taken", weight=3];
+	"5" [label="{BB 5 (00008154) | sparse2.c:12\l00008154    ldr r1, [fp, #-16]\l00008158    ldr r3, [pc, #184]\l0000815c    umull r2,r3,r1,r3\l00008160    mov r2, r3, lsr #1\l00008164    mov r3, r2\l00008168    mov r3, r3, lsl #1\l0000816c    add r3, r3, r2\l00008170    rsb r2, r3, r1\l00008174    cmp r2, #0\l00008178    bne 819c    # 0000819c\l }"]
+	"5" -> "7" [weight=4];
+	"5" -> "6" [label="taken", weight=3];
+	"6" [label="{BB 6 (0000819c) | sparse2.c:13\l0000819c    ldr r2, [fp, #-8]\l000081a0    ldr r3, [fp, #-20]\l000081a4    cmp r2, r3\l000081a8    bge 81dc    # 000081dc\l }"]
+	"6" -> "8" [weight=4];
+	"6" -> "9" [label="taken", weight=3];
+	"7" [label="{BB 7 (0000817c) | sparse2.c:12\l0000817c    ldr r3, [pc, #152]\l00008180    ldr r3, [r3, #0]\l00008184    add r2, r3, #1\l00008188    ldr r3, [pc, #140]\l0000818c    str r2, [r3, #0]\l00008190    ldr r3, [fp, #-8]\l00008194    add r3, r3, #1\l00008198    str r3, [fp, #-8]\l }"]
+	"7" -> "6" [weight=4];
+	"8" [label="{BB 8 (000081ac) | sparse2.c:13\l000081ac    ldr r3, [fp, #-16]\l000081b0    and r3, r3, #1\l000081b4    cmp r3, #0\l000081b8    bne 81dc    # 000081dc\l }"]
+	"8" -> "10" [weight=4];
+	"8" -> "9" [label="taken", weight=3];
+	"9" [label="{BB 9 (000081dc) | sparse2.c:9\l000081dc    ldr r3, [fp, #-12]\l000081e0    add r3, r3, #1\l000081e4    str r3, [fp, #-12]\l }"]
+	"9" -> "2" [weight=4];
+	"10" [label="{BB 10 (000081bc) | sparse2.c:13\l000081bc    ldr r3, [pc, #88]\l000081c0    ldr r3, [r3, #4]\l000081c4    add r2, r3, #1\l000081c8    ldr r3, [pc, #76]\l000081cc    str r2, [r3, #4]\l000081d0    ldr r3, [fp, #-8]\l000081d4    add r3, r3, #1\l000081d8    str r3, [fp, #-8]\l }"]
+	"10" -> "9" [weight=4];
+	"11" [label="EXIT"]
+}

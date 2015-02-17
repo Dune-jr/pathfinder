@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<flowfacts>
+  <function name="main">
+    <loop loopId="1" line="9" source="sparse8.c" exact="true" maxcount="101" totalcount="101">
+      <iteration number="*">
+        <control-constraint>
+          <le>
+            <add>
+              <count src="0x80f8" dst="0x8154"/>
+              <count src="0x81b0" dst="0x81c0"/>
+              <count src="0x8208" dst="0x8218"/>
+              <count src="0x8268" dst="0x8278"/>
+              <count src="0x82c8" dst="0x82d8"/>
+              <count src="0x832c" dst="0x833c"/>
+              <count src="0x8384" dst="0x8394"/>
+              <count src="0x83dc" dst="0x83ec"/>
+            </add>
+            <const int="1"/>
+          </le>
+        </control-constraint>
+      </iteration>
+    </loop>
+  </function>
+</flowfacts>
