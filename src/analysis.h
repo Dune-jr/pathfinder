@@ -31,7 +31,6 @@ class PathComparator: public elm::Comparator<SLList<const Edge*> > {
 */
 
 class Analysis {
-
 public:
 	typedef SLList<Edge*> OrderedPath;
 	typedef Set<Edge*> Path;
@@ -60,7 +59,7 @@ public:
 		inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
 		inline const ConstantVariables& getConstants() const { return constants; }
 		friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
-		inline void dumpPredicates() { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
+		inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
 
 		// analysis.cpp
 		elm::String getPathString() const;
@@ -70,6 +69,7 @@ public:
 
 		// analysis_bb.cpp
 		void processBB(const BasicBlock *bb);
+		void throwInfo();
 
 	private:
 		// Private methods
@@ -158,13 +158,14 @@ public:
 	};
 	
 private:
+	// TODO! try using a Set or something more appropriate (we check if(contains) everytime we add an element...)
 	Vector<BasicBlock*> wl; // working list
 
 	const dfa::State* dfa_state;
 	const OperandVar sp; // the Stack Pointer register
 	Set<Path> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
 	int max_tempvars, max_registers;
-	int processed_paths, total_paths, paths_count, infeasible_paths_count;
+	int processed_paths, total_paths, paths_count, infeasible_paths_count, loop_header_count;
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
@@ -174,14 +175,15 @@ private:
 	void placeboProcessCFG(CFG* cfg);
 	void placeboProcessBB(BasicBlock *bb);
 	void printResults(int exec_time_ms) const;
-	void onPathEnd();
+	void onPathEnd(bool isExitBlock = true, int nb_of_paths = 1);
 	void onAnyInfeasiblePath();
 	bool isAHandledEdgeKind(Edge::kind_t kind) const;
-	int countAnnotations(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
+	bool allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
+	// int countAnnotations(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
 	elm::String wlToString() const;
-	elm::String pathToString(const Path& path) const;
-};
+	static elm::String pathToString(const Path& path);
+}; // Analysis class
 
 template <class C> io::Output& printCollection(io::Output& out, const C& items)
 {

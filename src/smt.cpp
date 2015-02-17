@@ -73,7 +73,7 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 			}
 		}
 	}
-	if(empty) // TODO: fix this hack (there should be another way to figure when unsat core fails)
+	if(empty)
 	{
 		DBG(color::BIWhi() << "A)" << color::RCol() << " Extracting UNSAT core... " << color::IRed() << "FAILED!");
 		DBG("   Using original predicates:")

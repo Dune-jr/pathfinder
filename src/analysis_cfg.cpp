@@ -59,7 +59,7 @@ void Analysis::State::appendEdge(Edge* e)
 void Analysis::processCFG(CFG* cfg)
 {
 	DBG(color::Whi() << "Processing CFG " << cfg)
-	paths_count = infeasible_paths_count = total_paths = 0;
+	paths_count = infeasible_paths_count = total_paths = loop_header_count = 0;
 	placeboProcessCFG(cfg);
 	std::time_t timestamp = clock(); // Timestamp before analysis
 	
@@ -80,10 +80,9 @@ void Analysis::processCFG(CFG* cfg)
 				End If
 				sl <- mergeIntoOneList(lock[bb]); // for instance {{1,2},{3},{4}} becomes {1,2,3,4}
 			End If
-			// à ce stade, toutes les entrées ont été traitées
 
 			For s in sl
-				processBB(s, bb); // modification des prédicats dans s
+				processBB(s, bb); // update s predicates
 			End For
 
 			For e in bb.outs
@@ -111,17 +110,16 @@ void Analysis::processCFG(CFG* cfg)
 		/* bb::wl <- wl; */
 		BasicBlock *bb = wl.pop();
 		SLList<Analysis::State> sl;
+		bool is_loop_header = LOOP_HEADER(bb);
 		
 		if(dbg_flags&DBG_NO_DEBUG)
-			cout << "Processing " << bb << endl;
+			cout << "Processing " << bb << (is_loop_header?" (loop header)":"") << endl;
 
-		int bb_ins_count = 0;
-		for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++) { bb_ins_count++; }
 		/*  If lock[bb].count() < bb.ins.count
 				continue;
 			End If
 		*/
-		if(countAnnotations(bb, PROCESSED_EDGES) < bb_ins_count)
+		if(!allIncomingNonBackEdgesAreAnnotated(bb, PROCESSED_EDGES))
 			continue;
 		/* sl <- mergeIntoOneList(lock[bb]); */
 		for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
@@ -131,6 +129,8 @@ void Analysis::processCFG(CFG* cfg)
 		/* For s in sl */
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
 		{
+			if(is_loop_header) // TODO: unless we join something, we need to 'merge' stuff into ONE path here and not a useless list of reset paths 
+				sl_iter.item().throwInfo();
 			DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
 			/* processBB(s, bb); */
 			if(processBB(sl_iter.item(), bb) > 0)
@@ -144,8 +144,11 @@ void Analysis::processCFG(CFG* cfg)
 		{
 			if(isAHandledEdgeKind(bb_outs->kind())) // filter out calls etc
 			{
+				// TODO! should we stll do this if it's a back edge??
 				PROCESSED_EDGES(*bb_outs) = processOutEdge(*bb_outs, sl); // annotate regardless of returned new_sl being empty or not
-				if(!wl.contains(bb_outs->target()))
+				if(BACK_EDGE(*bb_outs))
+					onPathEnd(false, sl.count());
+				else if(!wl.contains(bb_outs->target()))
 					wl.push(bb_outs->target());
 			}
 		}
@@ -159,8 +162,10 @@ void Analysis::processCFG(CFG* cfg)
 }
 
 /*
-	0: continue
-	1: stop analysis for this path
+	@fn int Analysis::processBB(State& s, BasicBlock* bb);
+	@param s Analysis state to update
+	@param bb BasicBlock to process
+	@return 0: continue, 1: stop analysis for this path
 */
 int Analysis::processBB(State& s, BasicBlock* bb)
 {
@@ -274,6 +279,8 @@ void Analysis::placeboProcessCFG(CFG* cfg)
 		DBG(color::Whi() << "Running pre-analysis... ")
 		placeboProcessBB(cfg->firstBB());
 		DBG(color::Whi() << total_paths << " paths found.")
+		if(loop_header_count)
+			DBG(color::Whi() << loop_header_count << " loop headers found.")
 	}
 }
 
@@ -284,8 +291,12 @@ void Analysis::placeboProcessBB(BasicBlock* bb)
 		total_paths++;
 		return;
 	}
+	if(LOOP_HEADER(bb)) // TODO: fix to merge paths into 1 at loop headers (?)
+		loop_header_count++;
 	for(BasicBlock::OutIterator outs(bb); outs; outs++)
-		if(isAHandledEdgeKind(outs->kind())) // Filter out irrelevant edges (calls...)
+		if(BACK_EDGE(outs))
+			total_paths++;
+		else if(isAHandledEdgeKind(outs->kind())) // Filter out irrelevant edges (calls...)
 			placeboProcessBB((*outs)->target());
 }
 
@@ -318,16 +329,23 @@ void Analysis::printResults(int exec_time_ms) const
 	{
 		cout << infeasible_paths_count << " infeasible path(s) found.";
 		if(!(dbg_flags&DBG_NO_TIME))
-			cout << " (" << exec_time_ms/1000 << "." << exec_time_ms%1000 << "s)\n";
+		{
+		    std::ios_base::fmtflags oldflags = std::cout.flags();
+		    std::streamsize oldprecision = std::cout.precision();
+			std::cout << std::fixed << std::setprecision(3) << " (" << ((float)exec_time_ms)/1000.f << "s)" << std::endl;
+		    std::cout.flags(oldflags);
+		    std::cout.precision (oldprecision);
+		}
 	}
 }
 
 // debugs to do on path end
-void Analysis::onPathEnd()
+void Analysis::onPathEnd(bool isExitBlock, int nb_of_paths)
 {
 	if(dbg_flags&DBG_NO_DEBUG)
-	{		
-		if((++paths_count % 100) == 0 || total_paths <= 1000)
+	{
+		paths_count += nb_of_paths;
+		if((paths_count % 100) == 0 || total_paths <= 1000)
 		{
 			cout << "(" << paths_count << "/" << total_paths << ")";
 			if(infeasible_paths_count)
@@ -336,7 +354,10 @@ void Analysis::onPathEnd()
 			infeasible_paths_count = 0;
 		}
 	}
-	else DBG(color::BBla() << color::On_Yel() << "EXIT block reached")
+	else if(isExitBlock)
+		DBG(color::BBla() << color::On_Yel() << "EXIT block reached")
+	else
+		DBG(color::BBla() << color::On_Yel() << "End of loop reached" << color::RCol() << " (" << paths_count << " paths terminated)")
 }
 
 // debugs to do when we find an infeasible path
@@ -359,18 +380,19 @@ bool Analysis::isAHandledEdgeKind(Edge::kind_t kind) const
 	return (kind == Edge::TAKEN) || (kind == Edge::NOT_TAKEN) || (kind == Edge::VIRTUAL) || (kind == Edge::VIRTUAL_RETURN);
 }
 
-/*
-	@fn int Analysis::countAnnotations(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
-	Count non-void annotations of BasicBlock bb
-	@return annotation count
+/**
+	@fn int Analysis::allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
+	returns true when all incoming non-back edges (look edges) are annotated with the given annotation
+	@param bb BasicBlock to check
+	@param annotation_identifier the annotation id we test on the incoming edges
 */
-int Analysis::countAnnotations(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const
+bool Analysis::allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const
 {
-	int processed_edges_count = 0;
 	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
-		if(annotation_identifier.get(*bb_ins))
-			processed_edges_count++;
-	return processed_edges_count;
+		if(!BACK_EDGE(*bb_ins))
+			if(!annotation_identifier.get(*bb_ins))
+				return false;
+	return true;
 }
 
 /**
@@ -401,7 +423,7 @@ elm::String Analysis::wlToString() const
 	return rtn;
 }
 
-elm::String Analysis::pathToString(const Path& path) const
+elm::String Analysis::pathToString(const Path& path)
 {
 	elm::String str = "[";
 	bool first = true;

@@ -24,6 +24,14 @@ ConstantVariables::~ConstantVariables()
 	delete[] registers;
 }
 
+void ConstantVariables::clear()
+{
+	for(unsigned int i = 0; i < _max_tempvars; i++)
+		tempvars[i] = none;
+	for(unsigned int i = 0; i < _max_registers; i++)
+		registers[i] = none;
+}
+
 ConstantVariables::LabelledValue& ConstantVariables::LabelledValue::operator=(const LabelledValue& lv)
 {
 	_val = lv._val;

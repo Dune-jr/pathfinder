@@ -39,8 +39,9 @@ protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
 		workspace()->require(COLLECTED_CFG_FEATURE, props);
 		workspace()->require(dfa::INITIAL_STATE_FEATURE, props);
+		workspace()->require(LOOP_HEADERS_FEATURE);
         const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
-        const dfa::State *state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
+        const dfa::State *inital_state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
 		ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
 		CFG *cfg = cfgs->get(0); // then get the first CFG
 		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
@@ -59,7 +60,7 @@ protected:
 			dbg_flags |= DBG_NO_TIME;
 		if(opt_nopred)
 			dbg_flags |= DBG_NO_PREDICATES;
-		Analysis analysis = Analysis(cfg, state, sp_id, max_tempvars, max_registers);
+		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers);
 
 		// outputing to .ffx
 		if(opt_output)

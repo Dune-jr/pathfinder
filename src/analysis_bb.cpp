@@ -9,6 +9,20 @@
 
 using namespace otawa::sem;
 
+/**
+ * @fn void Analysis::State::throw();
+ * throw all gathered info on current state
+ */
+void Analysis::State::throwInfo()
+{
+	DBG(color::IRed() << "throwing info from path " << path)
+	path.clear();
+	constants.clear();
+	labelled_preds.clear();
+	generated_preds.clear();
+	generated_preds_taken.clear();
+}
+
 void Analysis::State::processBB(const BasicBlock *bb)
 {
 	SLList<LabelledPredicate> generated_preds_before_condition;
