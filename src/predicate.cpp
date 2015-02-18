@@ -16,9 +16,8 @@ Predicate::Predicate(const Predicate& p) : _opr(p._opr)
 } 
 Predicate::~Predicate()
 {
-	// if(_opd1) delete _opd1;
-	// if(_opd2) delete _opd2;
-	// TODO: why does this crash
+	if(_opd1) delete _opd1;
+	if(_opd2) delete _opd2;
 }
 
 /**
@@ -40,7 +39,6 @@ bool Predicate::involvesMemory() const
 {
 	return _opd1->involvesMemory() || _opd2->involvesMemory();
 }
-
 
 /**
  * @fn inline bool Predicate::isAffine(const OperandVar& opdv, const OperandVar& sp);
@@ -77,40 +75,6 @@ bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 	return true;
 }
 
-/*
-// returns true if something was updated
-operand_state_t Predicate::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
-{
-	// we need to replace the OperandVar children
-	// (they can't do it on their own since the parent has to do the modification)
-	operand_state_t rtn = OPERANDSTATE_UNCHANGED;
-	if(*_opd1 == opdv)
-	{
-		_opd1 = opd_modifier.copy();
-		rtn = OPERANDSTATE_UPDATED;
-	}
-	else
-	{
-		operand_state_t r = _opd1->updateVar(opdv, opd_modifier);
-		if(r > rtn)
-			rtn = r;	
-	}
-	if(*_opd2 == opdv)
-	{
-		_opd2 = opd_modifier.copy();
-		rtn = OPERANDSTATE_UPDATED;
-	}
-	else
-	{
-		operand_state_t r = _opd2->updateVar(opdv, opd_modifier);
-		if(r > rtn)
-			rtn = r;
-	}
-	
-	return rtn;
-}
-*/
-
 // returns true if something was updated
 bool Predicate::update(const Operand& opd, const Operand& opd_modifier)
 {
@@ -131,6 +95,14 @@ bool Predicate::update(const Operand& opd, const Operand& opd_modifier)
 	else if(_opd2->update(opd, opd_modifier))
 		rtn = true;
 	return rtn;
+}
+
+Predicate& Predicate::operator=(const Predicate& p)
+{
+	_opr = p._opr;
+	_opd1 = p._opd1->copy();
+	_opd2 = p._opd2->copy();
+	return *this;
 }
 
 bool Predicate::operator==(const Predicate& p) const

@@ -755,7 +755,7 @@ bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 	{
 		if(piter.pred().involvesVariable(var))
 		{
-			Predicate p(piter.pred());
+			Predicate p = piter.pred();
 			String prev_str = _ << piter.pred();
 			if(p.update(var, expr)) // something updated
 			{
@@ -784,7 +784,6 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& 
 		if((*iter).pred().involvesVariable(temp_var))
 		{
 			Predicate p = (*iter).pred();
-			Path l = (*iter).labels(); // just keep the labels
 			String prev_str = _ << p;
 			
 			p.update(temp_var, expr);
@@ -800,7 +799,7 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& 
 			}
 			DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
 			DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << p)
-			generated_preds.set(iter, LabelledPredicate(p, l));
+			generated_preds.set(iter, LabelledPredicate(p, (*iter).labels()));
 		}
 		iter++;
 	}

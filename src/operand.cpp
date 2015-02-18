@@ -16,6 +16,7 @@ io::Output& OperandConst::print(io::Output& out) const
 	// 	return (out << "0x" << io::hex(_value));
 	return (out << _value);
 }
+OperandConst& OperandConst::operator=(const OperandConst& opd) { _value = opd._value; return *this; }
 bool OperandConst::operator==(const Operand& o) const
 {
 	if(o.kind() == kind())
@@ -53,7 +54,7 @@ Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesSimplifie
 // Operands: Variables
 OperandVar::OperandVar(const OperandVar& opd) : _addr(opd._addr) { }
 OperandVar::OperandVar(t::int32 addr) : _addr(addr) { }
-OperandVar::~OperandVar() { }
+// OperandVar::~OperandVar() { }
 Operand* OperandVar::copy() const { return new OperandVar(_addr); }
 io::Output& OperandVar::print(io::Output& out) const
 {
@@ -63,7 +64,7 @@ io::Output& OperandVar::print(io::Output& out) const
 		out << "t" << -_addr; // temporary
 	return out; 
 }
-
+OperandVar& OperandVar::operator=(const OperandVar& opd){ _addr = opd._addr; return *this; }
 bool OperandVar::operator==(const Operand& o) const
 {	
 	if(o.kind() == kind())
@@ -116,7 +117,7 @@ OperandMem::OperandMem(const OperandMem& opd) // : _kind(opd._kind)
 OperandMem::OperandMem() : _opdc(NULL) { }
 OperandMem::~OperandMem()
 {
-	// if(_opdc) delete _opdc; // TODO: Why does this cause a crash?
+	if(_opdc) delete _opdc;
 }
 Operand* OperandMem::copy() const
 {
@@ -127,6 +128,7 @@ io::Output& OperandMem::print(io::Output& out) const
 	out << "[";
 	return (out << *_opdc << "]");
 }
+OperandMem& OperandMem::operator=(const OperandMem& opd) { _opdc = new OperandConst(*(opd._opdc)); return *this; }
 bool OperandMem::operator==(const Operand& o) const
 {	// untested so far	
 	if(o.kind() != kind())
@@ -315,6 +317,14 @@ io::Output& OperandArithExpr::print(io::Output& out) const
 			out << *opd2;
 	}
 	return out;
+}
+OperandArithExpr& OperandArithExpr::operator=(const OperandArithExpr& opd)
+{
+	_opr = opd._opr;
+	opd1 = opd.opd1->copy();
+	if(isBinary())
+		opd2 = opd.opd2->copy();
+	return *this;
 }
 bool OperandArithExpr::operator==(const Operand& o) const
 {

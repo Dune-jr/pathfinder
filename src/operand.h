@@ -113,7 +113,8 @@ public:
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return true; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
-	
+
+	OperandConst& operator=(const OperandConst& opd);
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 	
@@ -128,7 +129,7 @@ class OperandVar : public Operand
 public:
 	OperandVar(const OperandVar& opd);
 	OperandVar(t::int32 addr);
-	~OperandVar();
+	// ~OperandVar();
 	
 	inline t::int32 addr() const { return _addr; }
 	inline bool isTempVar() const { return _addr < 0; }
@@ -149,6 +150,7 @@ public:
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
 	
+	OperandVar& operator=(const OperandVar& opd);
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
 	
@@ -186,12 +188,12 @@ public:
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_MEM; }
 	
+	OperandMem& operator=(const OperandMem& opd);
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandMem& o) { return o.print(out); }
 	
 private:
 	OperandConst* _opdc;
-	// operandmem_kind_t _kind;
 	io::Output& print(io::Output& out) const;
 };
 
@@ -228,9 +230,10 @@ public:
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	
+	OperandArithExpr& operator=(const OperandArithExpr& opd);
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
-	
+
 private:
 	arithoperator_t _opr;
 	Operand* opd1;

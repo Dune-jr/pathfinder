@@ -39,12 +39,12 @@ public:
 	bool isAffine(const OperandVar& opdv, const OperandVar& sp) const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
-	// operand_state_t updateVar(const OperandVar& opdv, const Operand& opd_modifier);
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	
 	CVC4::Expr toExpr();
 	
-	bool operator== (const Predicate& p) const;
+	Predicate& operator=(const Predicate& p);
+	bool operator==(const Predicate& p) const;
 	friend io::Output& operator<<(io::Output& out, const Predicate& p);
 	
 private:
