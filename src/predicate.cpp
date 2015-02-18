@@ -8,6 +8,11 @@ Predicate::Predicate(condoperator_t opr, Operand& opd1, Operand& opd2) : _opr(op
 {
 	_opd1 = opd1.copy();
 	_opd2 = opd2.copy();
+}
+Predicate::Predicate(const Predicate& p) : _opr(p._opr)
+{
+	_opd1 = p._opd1->copy();
+	_opd2 = p._opd2->copy();
 } 
 Predicate::~Predicate()
 {

@@ -147,7 +147,7 @@ void Analysis::processCFG(CFG* cfg)
 				// TODO! should we stll do this if it's a back edge??
 				PROCESSED_EDGES(*bb_outs) = processOutEdge(*bb_outs, sl); // annotate regardless of returned new_sl being empty or not
 				if(BACK_EDGE(*bb_outs))
-					onPathEnd(false, sl.count());
+					DBG(color::Whi() << "End of loop reached.")
 				else if(!wl.contains(bb_outs->target()))
 					wl.push(bb_outs->target());
 			}
@@ -340,12 +340,11 @@ void Analysis::printResults(int exec_time_ms) const
 }
 
 // debugs to do on path end
-void Analysis::onPathEnd(bool isExitBlock, int nb_of_paths)
+void Analysis::onPathEnd()
 {
 	if(dbg_flags&DBG_NO_DEBUG)
 	{
-		paths_count += nb_of_paths;
-		if((paths_count % 100) == 0 || total_paths <= 1000)
+		if((++paths_count % 100) == 0 || total_paths <= 1000)
 		{
 			cout << "(" << paths_count << "/" << total_paths << ")";
 			if(infeasible_paths_count)
@@ -354,10 +353,7 @@ void Analysis::onPathEnd(bool isExitBlock, int nb_of_paths)
 			infeasible_paths_count = 0;
 		}
 	}
-	else if(isExitBlock)
-		DBG(color::BBla() << color::On_Yel() << "EXIT block reached")
-	else
-		DBG(color::BBla() << color::On_Yel() << "End of loop reached" << color::RCol() << " (" << paths_count << " paths terminated)")
+	else DBG(color::BBla() << color::On_Yel() << "EXIT block reached")
 }
 
 // debugs to do when we find an infeasible path

@@ -15,7 +15,7 @@ using namespace otawa::sem;
  */
 void Analysis::State::throwInfo()
 {
-	DBG(color::IRed() << "throwing info from path " << path)
+	DBG(color::IRed() << "throwing info from path " << getPathString())
 	path.clear();
 	constants.clear();
 	labelled_preds.clear();
@@ -848,11 +848,9 @@ bool Analysis::State::replaceMem(const OperandMem& opdm, const Operand& expr, co
 				rtn = true;
 			}
 			rtn = true;
-			DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
-			if(iter.item().pred().isIdent())
-				DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "  (not adding identity)")
-			else
+			if(!iter.item().pred().isIdent())
 			{
+				DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
 				DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << iter.item())
 				generated_preds += iter.item(); // move to generated preds
 			}

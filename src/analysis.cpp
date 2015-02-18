@@ -83,6 +83,8 @@ elm::String Analysis::State::getPathString() const
 		str = _ << str << "->" << (*iter)->target()->number();
 		lastid = (*iter)->target()->number();
 	}
+	if(str.isEmpty())
+		return "(empty)";
 	return str;
 }
 

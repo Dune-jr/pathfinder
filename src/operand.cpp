@@ -273,11 +273,12 @@ OperandArithExpr::OperandArithExpr(arithoperator_t opr, const Operand& opd1_, co
 	opd1 = opd1_.copy();
 	opd2 = opd2_.copy();
 }
-OperandArithExpr::OperandArithExpr(const OperandArithExpr& opd)
-	: _opr(opd._opr)
+OperandArithExpr::OperandArithExpr(const OperandArithExpr& x)
+	: _opr(x._opr)
 {
-	opd1 = opd.opd1->copy();
-	opd2 = opd.opd2->copy();
+	opd1 = x.opd1->copy();
+	if(x.isBinary())
+		opd2 = x.opd2->copy();
 }
 OperandArithExpr::~OperandArithExpr()
 {

@@ -1,8 +1,0 @@
-digraph main{
-node [shape=Mrecord, labeljust=l, fontsize=10];
-	"0" [label="ENTRY"]
-	"0" -> "1" [style=dashed, weight=1];
-	"1" [label="{BB 1 (00008278) | main:\l00008278    add r0, r0, r0, lsl #2\l0000827c    add r2, r0, r0, lsl #4\l00008280    add r2, r2, r2, lsl #8\l00008284    mov r2, r2, lsl #1\l00008288    ldr r3, [pc, #40]\l0000828c    smull r1,r3,r2,r3\l00008290    mov r1, r2, asr #31\l00008294    rsb r3, r1, r3, asr #1\l00008298    add r1, r3, r3, lsl #2\l0000829c    add r3, r3, r1, lsl #1\l000082a0    rsb r3, r3, r2\l000082a4    add r3, r3, #1\l000082a8    add r3, r3, r3, lsl #1\l000082ac    mov r0, r3, lsl #1\l000082b0    sub r0, r0, #7\l000082b4    bx lr\l }"]
-	"1" -> "2" [style=dashed, weight=1];
-	"2" [label="EXIT"]
-}

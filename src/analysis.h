@@ -175,14 +175,14 @@ private:
 	void placeboProcessCFG(CFG* cfg);
 	void placeboProcessBB(BasicBlock *bb);
 	void printResults(int exec_time_ms) const;
-	void onPathEnd(bool isExitBlock = true, int nb_of_paths = 1);
+	void onPathEnd();
 	void onAnyInfeasiblePath();
 	bool isAHandledEdgeKind(Edge::kind_t kind) const;
 	bool allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	// int countAnnotations(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
 	elm::String wlToString() const;
-	static elm::String pathToString(const Path& path);
+	elm::String pathToString(const Path& path);
 }; // Analysis class
 
 template <class C> io::Output& printCollection(io::Output& out, const C& items)
