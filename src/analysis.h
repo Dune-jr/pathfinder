@@ -6,6 +6,7 @@
 #include <otawa/prop/Identifier.h>
 #include <otawa/sem/inst.h>
 #include <elm/avl/Set.h>
+#include <elm/imm/list.h>
 #include <elm/genstruct/SLList.h>
 #include <elm/util/Comparator.h>
 #include "constant_variables.h"
@@ -54,18 +55,21 @@ public:
 
 	public:
 		State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers);
+		State(const State& s);
 		inline const OrderedPath& getPath() const { return path; }
 		inline Edge* lastEdge() const { return path.last(); }
 		inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
 		inline const ConstantVariables& getConstants() const { return constants; }
 		friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 		inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
+		void dumpEverything() const;
 
 		// analysis.cpp
 		elm::String getPathString() const;
 
 		// analysis_cfg.cpp
 		void appendEdge(Edge* e);
+		void merge(const SLList<State>& sl);
 
 		// analysis_bb.cpp
 		void processBB(const BasicBlock *bb);

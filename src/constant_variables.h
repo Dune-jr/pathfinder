@@ -1,8 +1,8 @@
 #ifndef _CONSTANT_VARIABLES_H
 #define _CONSTANT_VARIABLES_H
 
-#include <otawa/cfg/Edge.h>
 #include <elm/genstruct/SLList.h>
+#include <otawa/cfg/Edge.h>
 #include <otawa/sem/inst.h>
 #include "constant_variables_simplified.h"
 #include "labelled_predicate.h"
@@ -26,6 +26,8 @@ private:
 		inline void addLabel(Edge* label) { if(!_labels.contains(label)) _labels.add(label); }
 		inline void setUpdatedFlag(bool updated = true) { _updated = updated; }
 		LabelledValue& operator=(const LabelledValue& lv);
+		bool operator==(const LabelledValue& lv) const;
+		inline bool operator!=(const LabelledValue& lv) const { return !(lv == *this); }
 		friend io::Output& operator<<(io::Output& out, const LabelledValue& lv) { return lv.print(out); }
 
 	private:
@@ -60,10 +62,13 @@ public:
 	void invalidate(const OperandVar& opdv);
 	bool invalidateTempVars();
 	void label(Edge* label);
+	void merge(const SLList<ConstantVariables>& cvl);
 	SLList<LabelledPredicate> toPredicates() const;
 	ConstantVariablesSimplified toSimplified() const;
 	inline Constant operator[](const OperandVar& opdv) const { return getValue(opdv); }
 	ConstantVariables& operator=(const ConstantVariables& cv);
+	bool operator==(const ConstantVariables& cv) const;
+	inline bool operator!=(const ConstantVariables& cv) const { return !(*this == cv); }
 	friend io::Output& operator<<(io::Output& out, const ConstantVariables& cv) { return cv.print(out); }
 };
 

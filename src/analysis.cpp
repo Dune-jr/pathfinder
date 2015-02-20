@@ -94,6 +94,43 @@ io::Output& Analysis::State::print(io::Output& out) const
 	return (out << getPathString());
 }
 
-/* 
-	inline SLList<Path> infeasiblePaths(void)
-*/
+// TODO! make it so that all predicates or constants take as only edge the current BB -> ...
+void Analysis::State::merge(const SLList<State>& sl)
+{
+	path.clear();
+	generated_preds_taken.clear(); // TODO: is that good?
+	SLList<ConstantVariables> cvl;
+	for(SLList<State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
+	{
+		const State& s = *sl_iter;
+		// build intersection of SLLists // TODO: isn't a better way to do this? implement a SLList method or something?
+		for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; )
+		{
+			if(s.generated_preds.contains(*iter))
+				iter++;
+			else generated_preds.remove(iter);
+		}
+		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; )
+		{
+			if(s.labelled_preds.contains(*iter))
+				iter++;
+			else {
+				// DBG(s.labelled_preds << ".notContains(" << *iter << ")")
+				labelled_preds.remove(iter);
+			}
+		}
+		cvl += s.constants;
+	}
+	constants.merge(cvl);
+}
+
+void Analysis::State::dumpEverything() const
+{
+	DBG("--- DUMPING WHOLE STATE---")
+	DBG("OrderedPath path=" << getPathString())
+	DBG("ConstantVariables constants=" << constants)
+	DBG("SLList<LabelledPredicate> labelled_preds=" << labelled_preds)
+	DBG("SLList<LabelledPredicate> generated_preds=" << generated_preds)
+	DBG("SLList<LabelledPredicate> generated_preds_taken=" << generated_preds_taken)
+	DBG("--- END OF DUMP OF WHOLE STATE---")
+}

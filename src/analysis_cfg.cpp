@@ -35,6 +35,10 @@ Analysis::State::State(BasicBlock* entrybb, const dfa::State* state, const Opera
 	constants.set(sp, SP, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
 }
 
+Analysis::State::State(const State& s)
+	: dfa_state(s.dfa_state), sp(s.sp), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)
+	{ }
+
 void Analysis::State::appendEdge(Edge* e)
 {
 	// add edge to the end of the path
@@ -99,7 +103,7 @@ void Analysis::processCFG(CFG* cfg)
 	/* lock[] <- {{}}; */
 	Identifier<SLList<Analysis::State> > PROCESSED_EDGES("Analyis::IP analysis processed incoming edges"); //, SLList<State>::null);
 	BasicBlock::OutIterator entry_outs(cfg->entry());
-	SLList<State> entry_annotation;
+	SLList<Analysis::State> entry_annotation;
 	entry_annotation += Analysis::State(cfg->entry(), dfa_state, sp, max_tempvars, max_registers);
 	PROCESSED_EDGES(*entry_outs) = entry_annotation;
 
@@ -129,7 +133,20 @@ void Analysis::processCFG(CFG* cfg)
 		/* For s in sl */
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
 		{
-			if(is_loop_header) // TODO: unless we join something, we need to 'merge' stuff into ONE path here and not a useless list of reset paths 
+/*if(bb->number() == 5) // TODO!! remove (for bench ./pathfinder benchmarks/simple_loop/simple_loop.elf)
+{
+	DBG("sl="<<sl)
+	for (SLList<State>::Iterator iter(sl); iter; ++iter)
+	{
+		(*iter).dumpEverything();
+	}
+	State s(sl_iter.item());
+	// sl.remove(sl_iter);
+	s.merge(sl);
+	s.dumpEverything();
+	assert(false);
+}*/
+		if(is_loop_header) // TODO: unless we join something, we need to 'merge' stuff into ONE path here and not a useless list of reset paths 
 				sl_iter.item().throwInfo();
 			DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
 			/* processBB(s, bb); */

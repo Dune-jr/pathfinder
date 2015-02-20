@@ -14,6 +14,7 @@ settings.link.flags:Add("`/home/jruiz/Documents/casse/linux-x86_64/otawa-core/bi
 -- CVC4
 --settings.cc.includes:Add("/home/ruiz/.local/include/")
 settings.cc.flags:Add("-Wno-deprecated")
+settings.cc.flags:Add("-O0")
 --settings.link.libpath:Add("/home/ruiz/.local/lib")
 settings.link.flags:Add("-lcvc4")
 -- -lcvc4 -L/home/jruiz/.local/lib -I/home/jruiz/.local/include/ -Wno-deprecated

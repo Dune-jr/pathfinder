@@ -23,3 +23,15 @@ io::Output& LabelledPredicate::print(io::Output &out) const
 	}
 	return (out << ")");
 }
+
+LabelledPredicate& LabelledPredicate::operator=(const LabelledPredicate& lp)
+{
+	_pred = lp._pred;
+	_labels = lp._labels; // should do proper copy
+	return *this;
+}
+
+bool LabelledPredicate::operator==(const LabelledPredicate& lp) const
+{
+	return _pred == lp._pred && _labels == lp._labels; // strict equality: also testing labels
+}

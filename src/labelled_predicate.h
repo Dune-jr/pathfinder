@@ -10,11 +10,6 @@ using namespace elm::avl;
 
 // LabelledPredicate class
 class LabelledPredicate {
-private:
-	Predicate _pred;
-	Set<Edge*> _labels; // Analysis::Path
-	io::Output& print(io::Output& out) const;
-
 public:
 	LabelledPredicate(const Predicate& pred, const Set<Edge*>& labels);
 	LabelledPredicate(const LabelledPredicate& lp);
@@ -23,7 +18,15 @@ public:
 	inline bool updatePred(const Operand& opd, const Operand& expr) { return _pred.update(opd, expr); }
 	inline void addLabel(Edge* label) { _labels += label; }
 	inline void addLabels(const Set<Edge*>& labels) { _labels.addAll(labels); }
+
+	LabelledPredicate& operator=(const LabelledPredicate& lp);
+	bool operator==(const LabelledPredicate& lp) const;
 	friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lv) { return lv.print(out); }
+
+private:
+	Predicate _pred;
+	Set<Edge*> _labels; // Analysis::Path
+	io::Output& print(io::Output& out) const;
 };
 
 #endif

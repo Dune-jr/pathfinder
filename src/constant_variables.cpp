@@ -40,16 +40,33 @@ ConstantVariables::LabelledValue& ConstantVariables::LabelledValue::operator=(co
 	return *this;
 }
 
+bool ConstantVariables::LabelledValue::operator==(const LabelledValue& lv) const
+{
+	return _val == lv._val && _updated == lv._updated && _labels == lv._labels; // Set<> has functional operator== and operator!=
+}
+
 ConstantVariables& ConstantVariables::operator=(const ConstantVariables& cv)
 {
 	// the two ConstantVariables must have the same size!
-	assert(_max_tempvars == cv.maxTempVars());
-	assert(_max_registers == cv.maxRegisters());
+	assert(_max_tempvars == cv.maxTempVars() && _max_registers == cv.maxRegisters());
 	for(unsigned int i = 0; i < _max_tempvars; i++)
 		tempvars[i] = cv.tempvars[i];
 	for(unsigned int i = 0; i < _max_registers; i++)
 		registers[i] = cv.registers[i];
 	return *this;
+}
+
+bool ConstantVariables::operator==(const ConstantVariables& cv) const
+{
+	if(_max_tempvars != cv._max_tempvars || _max_registers != cv._max_registers)
+		return false; // sizes do not match
+	for(unsigned int i = 0; i < _max_tempvars; i++)
+		if(tempvars[i] != cv.tempvars[i])
+			return false;
+	for(unsigned int i = 0; i < _max_registers; i++)
+		if(registers[i] != cv.registers[i])
+			return false;
+	return true;
 }
 
 Option<ConstantVariables::LabelledValue>& ConstantVariables::getCell(const OperandVar& opdv) const
@@ -142,6 +159,22 @@ void ConstantVariables::label(Edge* label)
 			lv.setUpdatedFlag(false);
 			registers[i] = some(lv);
 		}
+}
+
+// TODO!! we can improve this a lot
+void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
+{
+	for(SLList<ConstantVariables>::Iterator iter(cvl); iter; iter++)
+	{
+		const ConstantVariables& cv = *iter;
+		ASSERTP(_max_tempvars == cv._max_tempvars && _max_registers == cv._max_registers, "ConstantVariables::merge: format does not match")
+		for(unsigned int i = 0; i < _max_tempvars; i++)
+			if(tempvars[i] && tempvars[i] != cv.tempvars[i])
+				tempvars[i] = none;
+		for(unsigned int i = 0; i < _max_registers; i++)
+			if(registers[i] && registers[i] != cv.registers[i])
+				registers[i] = none;
+	}
 }
 
 SLList<LabelledPredicate> ConstantVariables::toPredicates() const
