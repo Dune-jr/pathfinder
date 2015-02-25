@@ -69,7 +69,7 @@ public:
 		elm::String getPathString() const;
 
 		// analysis_cfg.cpp
-		void appendEdge(Edge* e);
+		void appendEdge(Edge* e, bool is_conditional);
 		void merge(const SLList<State>& sl, Edge* e);
 
 		// analysis_bb.cpp
@@ -165,7 +165,7 @@ public:
 	};
 	
 private:
-	// TODO! try using a Set or something more appropriate (we check if(contains) everytime we add an element...)
+	// TODO: try using a Set or something more appropriate (we check if(contains) everytime we add an element...)
 	Vector<BasicBlock*> wl; // working list
 
 	const dfa::State* dfa_state;
@@ -177,7 +177,7 @@ private:
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
 	int processBB(State& s, BasicBlock *bb);
-	SLList<Analysis::State> processOutEdge(Edge* e, const SLList<Analysis::State>& sl);
+	SLList<Analysis::State> processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional);
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const Vector<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample);
 	void placeboProcessCFG(CFG* cfg);
 	void placeboProcessBB(BasicBlock *bb);
@@ -185,6 +185,7 @@ private:
 	void onPathEnd();
 	void onAnyInfeasiblePath();
 	bool isAHandledEdgeKind(Edge::kind_t kind) const;
+	bool isConditional(BasicBlock* bb) const;
 	bool allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	// int countAnnotations(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;

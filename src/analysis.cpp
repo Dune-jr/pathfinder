@@ -120,7 +120,6 @@ void Analysis::State::merge(const SLList<State>& sl, Edge* e)
 	bool first = true;
 	for(SLList<State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
-		sl_iter->dumpEverything(); // TODO remove
 		if(first) // the first element is s itself, it's useless to merge s with s
 		{
 			first = false;
@@ -133,7 +132,7 @@ void Analysis::State::merge(const SLList<State>& sl, Edge* e)
 			bool contains = false;
 			for(SLList<LabelledPredicate>::Iterator subiter((*sl_iter).labelled_preds); subiter; subiter++)
 			{
-				if((*subiter).pred() == iter->pred()) // TODO: should I write if(... && (contains = true)) break; ?
+				if((*subiter).pred() == iter->pred())
 				{
 					contains = true;
 					break;
@@ -148,7 +147,7 @@ void Analysis::State::merge(const SLList<State>& sl, Edge* e)
 	}
 	constants.merge(cvl);
 	DBG("Merged predicates: " << generated_preds << ", " << constants)
-	appendEdge(e);
+	appendEdge(e, false); // "is_conditional" to false because we want to label generated_preds, not generated_preds_taken
 	path.clear();
 }
 

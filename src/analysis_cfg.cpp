@@ -52,14 +52,14 @@ Analysis::State::State(const State& s)
 	: dfa_state(s.dfa_state), sp(s.sp), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)
 	{ }
 
-void Analysis::State::appendEdge(Edge* e)
+void Analysis::State::appendEdge(Edge* e, bool is_conditional)
 {
 	// add edge to the end of the path
 	this->path.addLast(e);
 	// we now need to label the correct list of predicates
-	const SLList<LabelledPredicate> &relevant_preds = (e->kind() == Edge::TAKEN) ?
-		generated_preds_taken : // TAKEN
-		generated_preds;  // NOT TAKEN, VIRTUAL, VIRTUAL RETURN
+	const SLList<LabelledPredicate> &relevant_preds = (is_conditional && e->kind() == Edge::TAKEN) ?
+		generated_preds_taken : // conditional TAKEN
+		generated_preds;  // NOT TAKEN, VIRTUAL, VIRTUAL RETURN, non-conditional TAKEN
 
 	// label our list of predicates with the current edge then append it
 	SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(relevant_preds, e);
@@ -143,15 +143,19 @@ void Analysis::processCFG(CFG* cfg)
 			sl.addAll(*PROCESSED_EDGES(*bb_ins));
 		// at this point of the algorithm, all incoming edges of bb have been processed
 
-		// TODO! clean up below
+		const bool is_conditional = isConditional(bb);
+		// in case of loop, merge the state list into a single state
 		if(is_loop_header)
 		{
 			State s((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
-			// sl.remove(sl_iter);
 			BasicBlock::OutIterator bb_outs(bb);
+			// TODO!!! FIX: We need to take the exit: look at sparse2.png, we need 2->3, not 2->4.
+			// This is not good, we need to test if the edge is going into the loop or exiting it somehow!
+			// testing the back edge is not always relevant at all...
 			while(BACK_EDGE(*bb_outs))
 				bb_outs++;
-			s.merge(sl, *bb_outs); // TODO!! is the back edge always the taken one? NO!!!
+			s.merge(sl, *bb_outs);
+			s.dumpEverything();
 			sl.clear();
 			sl += s; // sl <- {s}
 		}
@@ -177,7 +181,7 @@ void Analysis::processCFG(CFG* cfg)
 					DBG(color::Whi() << "End of loop reached.")
 				else 
 				{
-					PROCESSED_EDGES(*bb_outs) = processOutEdge(*bb_outs, sl); // annotate regardless of returned new_sl being empty or not
+					PROCESSED_EDGES(*bb_outs) = processOutEdge(*bb_outs, sl, is_conditional); // annotate regardless of returned new_sl being empty or not
 					if(!wl.contains(bb_outs->target()))
 						wl.push(bb_outs->target());
 				}
@@ -215,7 +219,7 @@ int Analysis::processBB(State& s, BasicBlock* bb)
  * @fn SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl);
  * Processes outgoing Edge e from a BasicBlock for each element of sl
 */
-SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl)
+SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional)
 {
 	/* wl <- sl ⊙ e; */
 	SLList<Analysis::State> new_sl; // this is what we return
@@ -223,7 +227,7 @@ SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis:
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
 		State s = *sl_iter;
-		s.appendEdge(e);
+		s.appendEdge(e, is_conditional);
 
 		// SMT call
 		SMT smt;
@@ -238,7 +242,6 @@ SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis:
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++, sl_paths_iter++)
 	{
 		const State& s = *sl_iter;
-		// s.appendEdge(e);
 		if(*sl_paths_iter) // is infeasible?
 		{
 			const Path& infeasible_path = **sl_paths_iter;
@@ -404,6 +407,21 @@ void Analysis::onAnyInfeasiblePath()
 bool Analysis::isAHandledEdgeKind(Edge::kind_t kind) const
 {
 	return (kind == Edge::TAKEN) || (kind == Edge::NOT_TAKEN) || (kind == Edge::VIRTUAL) || (kind == Edge::VIRTUAL_RETURN);
+}
+
+bool Analysis::isConditional(BasicBlock* bb) const
+{
+	int count = 0;
+	bool atLeastOneTaken = false;
+	for(BasicBlock::OutIterator outs(bb); outs; outs++)
+	{
+		if(isAHandledEdgeKind(outs->kind()))
+		{
+			count++;
+			atLeastOneTaken |= (outs->kind() == Edge::TAKEN);
+		}
+	}
+	return atLeastOneTaken && (count > 1);
 }
 
 /**

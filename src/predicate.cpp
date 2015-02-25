@@ -108,7 +108,6 @@ Predicate& Predicate::operator=(const Predicate& p)
 /**
   * @fn bool Predicate::operator==(const Predicate& p) const;
   * Not a Leibnitz equality: (x == y) is considered to be the same as (y == x)
-  * TODO: maybe extend this semantic equality to operands? Do we ever need a Leibnitz equality?
   */
 bool Predicate::operator==(const Predicate& p) const
 {
