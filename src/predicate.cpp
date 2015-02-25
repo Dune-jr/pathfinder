@@ -105,9 +105,18 @@ Predicate& Predicate::operator=(const Predicate& p)
 	return *this;
 }
 
+/**
+  * @fn bool Predicate::operator==(const Predicate& p) const;
+  * Not a Leibnitz equality: (x == y) is considered to be the same as (y == x)
+  * TODO: maybe extend this semantic equality to operands? Do we ever need a Leibnitz equality?
+  */
 bool Predicate::operator==(const Predicate& p) const
 {
-	return (_opr == p._opr) && (*_opd1 == *p._opd1) && (*_opd2 == *p._opd2);
+	return (_opr == p._opr) &&
+		(
+			(*_opd1 == *p._opd1 && *_opd2 == *p._opd2) || // operands match respectively
+			((_opr == CONDOPR_EQ || _opr == CONDOPR_NE) && (*_opd1 == *p._opd2 && *_opd2 == *p._opd1)) // operator is syemtric, and first operands match second operands
+		);
 }
 
 io::Output& operator<<(io::Output& out, const condoperator_t& opr)

@@ -161,6 +161,10 @@ void ConstantVariables::label(Edge* label)
 		}
 }
 
+/**
+ * @fn void ConstantVariables::merge(const SLList<ConstantVariables>& cvl);
+ * This uses the current ConstantVariables and change it to the result of the merge of it with the cvl list parameter
+ */
 // TODO!! we can improve this a lot
 void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
 {
@@ -169,12 +173,19 @@ void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
 		const ConstantVariables& cv = *iter;
 		ASSERTP(_max_tempvars == cv._max_tempvars && _max_registers == cv._max_registers, "ConstantVariables::merge: format does not match")
 		for(unsigned int i = 0; i < _max_tempvars; i++)
-			if(tempvars[i] && tempvars[i] != cv.tempvars[i])
+			if(tempvars[i] && (*tempvars[i]).val() != (*cv.tempvars[i]).val()) // do not compare labels!
 				tempvars[i] = none;
 		for(unsigned int i = 0; i < _max_registers; i++)
-			if(registers[i] && registers[i] != cv.registers[i])
+			if(registers[i] && (*registers[i]).val() != (*cv.registers[i]).val()) // do not compare labels!
 				registers[i] = none;
 	}
+	// manage labels
+	for(unsigned int i = 0; i < _max_tempvars; i++)
+		if(tempvars[i])
+			tempvars[i] = some(LabelledValue((*tempvars[i]).val(), Set<Edge*>::null, true));
+	for(unsigned int i = 0; i < _max_registers; i++)
+		if(registers[i])
+			registers[i] = some(LabelledValue((*registers[i]).val(), Set<Edge*>::null, true));
 }
 
 SLList<LabelledPredicate> ConstantVariables::toPredicates() const

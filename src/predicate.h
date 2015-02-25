@@ -45,6 +45,7 @@ public:
 	
 	Predicate& operator=(const Predicate& p);
 	bool operator==(const Predicate& p) const;
+	inline bool operator!=(const Predicate& p) const { return !(*this == p); }
 	friend io::Output& operator<<(io::Output& out, const Predicate& p);
 	
 private:

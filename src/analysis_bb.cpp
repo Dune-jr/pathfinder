@@ -54,7 +54,6 @@ void Analysis::State::processBB(const BasicBlock *bb)
 				DBG(color::IBlu() << "(Parsing not taken path)")
 				generated_preds_taken = generated_preds;
 				generated_preds = generated_preds_before_condition;
-				//previous_paths_preds += generated_preds;
 			}
 			
 			Operand *opd1 = NULL, *opd2 = NULL;
@@ -715,16 +714,16 @@ bool Analysis::State::invalidateTempVars()
 		loop = false;
 		for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; iter++)
 		{
-			if((*iter).pred().countTempVars())
+			if(iter->pred().countTempVars())
 			{
 				OperandVar temp_var(0);
 				Operand* expr = NULL;
-				if((*iter).pred().getIsolatedTempVar(temp_var, expr)) // returns false if several tempvars
+				if(iter->pred().getIsolatedTempVar(temp_var, expr)) // returns false if several tempvars
 				{
 					// try to keep the info
 					rtn |= replaceTempVar(temp_var, *expr);
 					// then remove the predicate
-					DBG(color::IYel() << "- " << (*iter).pred())
+					DBG(color::IYel() << "- " << iter->pred())
 					generated_preds.remove(iter);
 					loop = true;
 					break;
@@ -736,9 +735,9 @@ bool Analysis::State::invalidateTempVars()
 	// Second step: remove everything that is left and still contains a tempvar
 	for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; )
 	{
-		if((*iter).pred().countTempVars())
+		if(iter->pred().countTempVars())
 		{	// remove the predicate
-			DBG(color::IYel() << "- " << (*iter).pred())
+			DBG(color::IYel() << "- " << iter->pred())
 			generated_preds.remove(iter);
 			continue;
 		}
@@ -781,9 +780,9 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& 
 	bool rtn = false;
 	for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; )
 	{
-		if((*iter).pred().involvesVariable(temp_var))
+		if(iter->pred().involvesVariable(temp_var))
 		{
-			Predicate p = (*iter).pred();
+			Predicate p = iter->pred();
 			String prev_str = _ << p;
 			
 			p.update(temp_var, expr);
@@ -799,7 +798,7 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& 
 			}
 			DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
 			DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << p)
-			generated_preds.set(iter, LabelledPredicate(p, (*iter).labels()));
+			generated_preds.set(iter, LabelledPredicate(p, iter->labels()));
 		}
 		iter++;
 	}
@@ -929,20 +928,20 @@ Option<Constant> Analysis::State::findConstantValueOfVar(const OperandVar& var)
 	/*
 	for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++)
 	{
-		if((*iter).opr() == CONDOPR_EQ) // operator is =
+		if(iter->opr() == CONDOPR_EQ) // operator is =
 		{
-			if((*iter).leftOperand() == var) // left operand matches our var
-				if(Option<OperandConst> maybe_val = (*iter).rightOperand().evalConstantOperand()) // other operand can be evald to const
+			if(iter->leftOperand() == var) // left operand matches our var
+				if(Option<OperandConst> maybe_val = iter->rightOperand().evalConstantOperand()) // other operand can be evald to const
 				{
-					// val = ((OperandConst&)(*iter).rightOperand()).value();
+					// val = ((OperandConst&)iter->rightOperand()).value();
 					val = (*maybe_val).value();
 					return true;
 				}
 				
-			if((*iter).rightOperand() == var) // right operand matches our var
-				if(Option<OperandConst> maybe_val = (*iter).leftOperand().evalConstantOperand()) // other operand can be evald to const
+			if(iter->rightOperand() == var) // right operand matches our var
+				if(Option<OperandConst> maybe_val = iter->leftOperand().evalConstantOperand()) // other operand can be evald to const
 				{
-					// val = ((OperandConst&)(*iter).leftOperand()).value();
+					// val = ((OperandConst&)iter->leftOperand()).value();
 					val = (*maybe_val).value();
 					return true;
 				}
@@ -953,20 +952,20 @@ Option<Constant> Analysis::State::findConstantValueOfVar(const OperandVar& var)
 		SLList<LabelledPredicate> top_list = labelled_preds.first(); // getTopList();
 		for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; iter++)
 		{
-			if((*iter).pred().opr() == CONDOPR_EQ) // operator is =
+			if(iter->pred().opr() == CONDOPR_EQ) // operator is =
 			{
-				if((*iter).pred().leftOperand() == var) // left operand matches our var
-					if(Option<OperandConst> maybe_val = (*iter).pred().rightOperand().evalConstantOperand()) // other operand can be evald to const
+				if(iter->pred().leftOperand() == var) // left operand matches our var
+					if(Option<OperandConst> maybe_val = iter->pred().rightOperand().evalConstantOperand()) // other operand can be evald to const
 					{
-						// val = ((OperandConst&)(*iter).rightOperand()).value();
+						// val = ((OperandConst&)iter->rightOperand()).value();
 						val = (*maybe_val).value();
 						return true;
 					}
 					
-				if((*iter).pred().rightOperand() == var) // right operand matches our var
-					if(Option<OperandConst> maybe_val = (*iter).pred().leftOperand().evalConstantOperand()) // other operand can be evald to const
+				if(iter->pred().rightOperand() == var) // right operand matches our var
+					if(Option<OperandConst> maybe_val = iter->pred().leftOperand().evalConstantOperand()) // other operand can be evald to const
 					{
-						// val = ((OperandConst&)(*iter).leftOperand()).value();
+						// val = ((OperandConst&)iter->leftOperand()).value();
 						val = (*maybe_val).value();
 						return true;
 					}
@@ -1173,7 +1172,7 @@ bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_le
 	// We only explore the local generated_preds. This seems reasonable since we should be able to find this predicate in the local BB
 	for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; iter++)
 	{
-		const Predicate& p = (*iter).pred();
+		const Predicate& p = iter->pred();
 		if(p.opr() == CONDOPR_EQ) // operator is =
 		{
 			if(p.leftOperand() == var) // left operand matches our register

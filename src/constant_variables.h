@@ -24,6 +24,7 @@ private:
 		inline const Set<Edge*>& labels() const { return _labels; }
 		inline bool isUpdated() const { return _updated; }
 		inline void addLabel(Edge* label) { if(!_labels.contains(label)) _labels.add(label); }
+		// inline void clearLabels() { _labels.clear(); }
 		inline void setUpdatedFlag(bool updated = true) { _updated = updated; }
 		LabelledValue& operator=(const LabelledValue& lv);
 		bool operator==(const LabelledValue& lv) const;

@@ -54,7 +54,8 @@ public:
 		class PredIterator;
 
 	public:
-		State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers);
+		State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = true);
+		State(Edge* entry_edge, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = false);
 		State(const State& s);
 		inline const OrderedPath& getPath() const { return path; }
 		inline Edge* lastEdge() const { return path.last(); }
@@ -69,11 +70,13 @@ public:
 
 		// analysis_cfg.cpp
 		void appendEdge(Edge* e);
-		void merge(const SLList<State>& sl);
+		void merge(const SLList<State>& sl, Edge* e);
 
 		// analysis_bb.cpp
 		void processBB(const BasicBlock *bb);
 		void throwInfo();
+
+		inline const State* operator->(void) const { return this; }
 
 	private:
 		// Private methods

@@ -69,6 +69,11 @@ elm::String Analysis::State::getPathString() const
 	int lastid;
 	for(OrderedPath::Iterator iter(path); iter; iter++)
 	{
+		if(!first && (*iter)->source()->number() != lastid)
+		{
+			DBG("str=" << str)
+			DBG("lastid=" << lastid << ", (*iter)->source->number()=" << (*iter))
+		}
 		ASSERTP(first || (*iter)->source()->number() == lastid, "OrderedPath previous target and current source do not match! ex: 1->2, 2->4, 3->5"); // when path is x->y and y'->z, there must be y=y'
 		if(first)
 		{
@@ -94,34 +99,57 @@ io::Output& Analysis::State::print(io::Output& out) const
 	return (out << getPathString());
 }
 
-// TODO! make it so that all predicates or constants take as only edge the current BB -> ...
-void Analysis::State::merge(const SLList<State>& sl)
+/**
+ * @fn void Analysis::State::merge(const SLList<State>& sl, Edge* e);
+ * Modifies the current state to be the result of the merge of a (SL)list of states 
+ */
+void Analysis::State::merge(const SLList<State>& sl, Edge* e)
 {
-	path.clear();
-	generated_preds_taken.clear(); // TODO: is that good?
+	DBG(color::Whi() << "Merging " << sl.count() << " paths at BB " << e->source()->number())
+	// resetting stuff
+	generated_preds.clear();
+	generated_preds_taken.clear();
+	labelled_preds.clear();
 	SLList<ConstantVariables> cvl;
+	// intialize to first element
+	ASSERTP(!sl.isEmpty(), "call to Analysis::State::merge with empty sl parameter"); // TODO maybe just leave the state empty
+	constants = sl.first().constants;
+	// copy firstElement.labelled_preds into labelled_preds with new labels = {}
+	for(SLList<LabelledPredicate>::Iterator iter(sl.first().labelled_preds); iter; iter++)
+		generated_preds += LabelledPredicate(iter->pred(), Path::null);
+	bool first = true;
 	for(SLList<State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
-		const State& s = *sl_iter;
-		// build intersection of SLLists // TODO: isn't a better way to do this? implement a SLList method or something?
+		sl_iter->dumpEverything(); // TODO remove
+		if(first) // the first element is s itself, it's useless to merge s with s
+		{
+			first = false;
+			continue;
+		}
+		// for each element of labelled_preds, we make sure it is in *sl_iter
 		for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; )
 		{
-			if(s.generated_preds.contains(*iter))
-				iter++;
-			else generated_preds.remove(iter);
-		}
-		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; )
-		{
-			if(s.labelled_preds.contains(*iter))
-				iter++;
-			else {
-				// DBG(s.labelled_preds << ".notContains(" << *iter << ")")
-				labelled_preds.remove(iter);
+			// do not use 'if(s.labelled_preds.contains(*iter))' as we want to use Predicate::operator== and not LabelledPredicate::operator==
+			bool contains = false;
+			for(SLList<LabelledPredicate>::Iterator subiter((*sl_iter).labelled_preds); subiter; subiter++)
+			{
+				if((*subiter).pred() == iter->pred()) // TODO: should I write if(... && (contains = true)) break; ?
+				{
+					contains = true;
+					break;
+				}
 			}
+			if(contains)
+				iter++;
+			else
+				generated_preds.remove(iter);
 		}
-		cvl += s.constants;
+		cvl += (*sl_iter).constants;
 	}
 	constants.merge(cvl);
+	DBG("Merged predicates: " << generated_preds << ", " << constants)
+	appendEdge(e);
+	path.clear();
 }
 
 void Analysis::State::dumpEverything() const

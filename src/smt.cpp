@@ -41,7 +41,7 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	labelled_preds += s.getConstants().toPredicates();
 	// get a SLList<Option<Expr> > out of a SLList<LabelledPredicate> in order to know which LP matches which expr
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
-		exprs.addLast(getExpr((*iter).pred()));
+		exprs.addLast(getExpr(iter->pred()));
 	
 	if(checkPredSat(exprs))
 	{
@@ -125,7 +125,7 @@ bool SMT::checkPredSat(const SLList<Option<Expr> >& exprs)
 bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds)
 {
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
-		if(Option<Expr> expr = getExpr((*iter).pred()))
+		if(Option<Expr> expr = getExpr(iter->pred()))
 			smt.assertFormula(*expr); // second parameter to true for unsat cores
 		
 	bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
@@ -189,7 +189,7 @@ void SMT::removeIncompletePredicates(SLList<LabelledPredicate>& labelled_preds)
 	SLList<LabelledPredicate>::Iterator iter(labelled_preds);
 	while(iter)
 	{
-		if(!(*iter).pred().isComplete())
+		if(!iter->pred().isComplete())
 		{
 			SLList<LabelledPredicate>::Iterator prev_iter(iter);
 			iter++;

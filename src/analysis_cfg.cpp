@@ -22,17 +22,30 @@ void Analysis::initializeAnalysis()
 	wl.add(Analysis::State(cfg->entry(), sp)); // wl <- {ɛ}
 }
 */
-
-Analysis::State::State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers)
+Analysis::State::State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init)
 	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers)
 {
-	BasicBlock::OutIterator outs(entrybb);
-	ASSERT(outs);
-	path += *outs;
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
-	labelled_preds += SLList<LabelledPredicate>::null; // add an empty list as first element
-	constants.set(sp, SP, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+	if(init)
+	{
+		BasicBlock::OutIterator outs(entrybb);
+		ASSERT(outs);
+		path += *outs;
+		constants.set(sp, SP, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+	}
+}
+
+Analysis::State::State(Edge* entry_edge, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init)
+	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers)
+{
+	generated_preds.clear(); // generated_preds := [[]]
+	labelled_preds.clear(); // labelled_preds := [[]]
+	if(init)
+	{
+		path += entry_edge;
+		constants.set(sp, SP, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+	}
 }
 
 Analysis::State::State(const State& s)
@@ -130,24 +143,23 @@ void Analysis::processCFG(CFG* cfg)
 			sl.addAll(*PROCESSED_EDGES(*bb_ins));
 		// at this point of the algorithm, all incoming edges of bb have been processed
 
+		// TODO! clean up below
+		if(is_loop_header)
+		{
+			State s((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
+			// sl.remove(sl_iter);
+			BasicBlock::OutIterator bb_outs(bb);
+			while(BACK_EDGE(*bb_outs))
+				bb_outs++;
+			s.merge(sl, *bb_outs); // TODO!! is the back edge always the taken one? NO!!!
+			sl.clear();
+			sl += s; // sl <- {s}
+		}
+
 		/* For s in sl */
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
 		{
-/*if(bb->number() == 5) // TODO!! remove (for bench ./pathfinder benchmarks/simple_loop/simple_loop.elf)
-{
-	DBG("sl="<<sl)
-	for (SLList<State>::Iterator iter(sl); iter; ++iter)
-	{
-		(*iter).dumpEverything();
-	}
-	State s(sl_iter.item());
-	// sl.remove(sl_iter);
-	s.merge(sl);
-	s.dumpEverything();
-	assert(false);
-}*/
-		if(is_loop_header) // TODO: unless we join something, we need to 'merge' stuff into ONE path here and not a useless list of reset paths 
-				sl_iter.item().throwInfo();
+			// if(is_loop_header) sl_iter.item().throwInfo();
 			DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
 			/* processBB(s, bb); */
 			if(processBB(sl_iter.item(), bb) > 0)
@@ -161,12 +173,14 @@ void Analysis::processCFG(CFG* cfg)
 		{
 			if(isAHandledEdgeKind(bb_outs->kind())) // filter out calls etc
 			{
-				// TODO! should we stll do this if it's a back edge??
-				PROCESSED_EDGES(*bb_outs) = processOutEdge(*bb_outs, sl); // annotate regardless of returned new_sl being empty or not
 				if(BACK_EDGE(*bb_outs))
 					DBG(color::Whi() << "End of loop reached.")
-				else if(!wl.contains(bb_outs->target()))
-					wl.push(bb_outs->target());
+				else 
+				{
+					PROCESSED_EDGES(*bb_outs) = processOutEdge(*bb_outs, sl); // annotate regardless of returned new_sl being empty or not
+					if(!wl.contains(bb_outs->target()))
+						wl.push(bb_outs->target());
+				}
 			}
 		}
 		/* End For */
@@ -208,8 +222,9 @@ SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis:
 	Vector<Option<Path> > sl_paths;
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
-		State s = sl_iter.item();
+		State s = *sl_iter;
 		s.appendEdge(e);
+
 		// SMT call
 		SMT smt;
 		Option<Path> infeasible_path = smt.seekInfeasiblePaths(s);
@@ -222,7 +237,7 @@ SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis:
 	Vector<Option<Path> >::Iterator sl_paths_iter(sl_paths);
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++, sl_paths_iter++)
 	{
-		const State& s = sl_iter.item();
+		const State& s = *sl_iter;
 		// s.appendEdge(e);
 		if(*sl_paths_iter) // is infeasible?
 		{
@@ -311,9 +326,7 @@ void Analysis::placeboProcessBB(BasicBlock* bb)
 	if(LOOP_HEADER(bb)) // TODO: fix to merge paths into 1 at loop headers (?)
 		loop_header_count++;
 	for(BasicBlock::OutIterator outs(bb); outs; outs++)
-		if(BACK_EDGE(outs))
-			total_paths++;
-		else if(isAHandledEdgeKind(outs->kind())) // Filter out irrelevant edges (calls...)
+		if(!BACK_EDGE(outs) && isAHandledEdgeKind(outs->kind())) // Filter out irrelevant edges (calls...)
 			placeboProcessBB((*outs)->target());
 }
 

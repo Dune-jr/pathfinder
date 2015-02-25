@@ -1,20 +1,17 @@
 int main(int argc)
 {
-	int x = 1; // 1
+	int x = 1; // [SP-12]
 	if(argc)
 	{
 		if(argc == 1)
-		{
-			x++; // 2
-		}
-		// 3
+			x++;
 		do
 		{
-			x--; // 3
+			x--;
 		}
 		while(x);
 	}
-	else x = 666;
-	// 4
+	else
+		x = 666;
 	return 0;
 }

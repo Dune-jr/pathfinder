@@ -22,6 +22,7 @@ public:
 	LabelledPredicate& operator=(const LabelledPredicate& lp);
 	bool operator==(const LabelledPredicate& lp) const;
 	friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lv) { return lv.print(out); }
+	inline const LabelledPredicate* operator->(void) const { return this; }
 
 private:
 	Predicate _pred;
