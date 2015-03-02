@@ -3,8 +3,8 @@
 
 void addIndents(io::Output& out, int n) { for(int i=0; i<n; i++) out << "\t"; }
 
-Analysis::Analysis(CFG *cfg, const dfa::State *state, int sp_id, unsigned int given_max_tempvars, unsigned int given_max_registers)
-	: dfa_state(state), sp(sp_id), max_tempvars(given_max_tempvars), max_registers(given_max_registers)
+Analysis::Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int flags)
+	: dfa_state(dfa_state), sp(sp), max_tempvars(max_tempvars), max_registers(max_registers), flags(flags)
 {
 	DBG("Stack pointer identified to " << sp)
 	processCFG(cfg);

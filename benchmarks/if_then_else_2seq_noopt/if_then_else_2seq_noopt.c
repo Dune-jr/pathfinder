@@ -2,19 +2,15 @@
 
 int f1()
 {
-	printf("abcbcb");
 }
 int f2()
 {
-	printf("bccdd");
 }
 int f3()
 {
-	printf("efefe");
 }
 int f4()
 {
-	printf("ghghg");
 }
 
 int main(int argc, char** argv)

@@ -38,7 +38,7 @@ public:
 	class State;
 	static Identifier<SLList<State> > PROCESSED_EDGES;
 
-	Analysis(CFG *cfg, const dfa::State *state, int sp_id, unsigned int given_max_tempvars, unsigned int given_max_registers);
+	Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int flags);
 	inline Set<Path> infeasiblePaths() const { return infeasible_paths; }
 	
 	class State {
@@ -163,6 +163,13 @@ public:
 		KEEP_CONSTANT_INFO = false,
 		INVALIDATE_CONSTANT_INFO = true,
 	};
+
+	// flags 
+	enum
+	{
+		FOLLOW_CALLS	= 0b1 << 1,
+		SUPERSILENT		= 0b1 << 2,
+	};
 	
 private:
 	// TODO: try using a Set or something more appropriate (we check if(contains) everytime we add an element...)
@@ -171,7 +178,7 @@ private:
 	const dfa::State* dfa_state;
 	const OperandVar sp; // the Stack Pointer register
 	Set<Path> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
-	int max_tempvars, max_registers;
+	int max_tempvars, max_registers, flags;
 	int processed_paths, total_paths, paths_count, infeasible_paths_count, loop_header_count;
 	
 	// analysis_cfg.cpp

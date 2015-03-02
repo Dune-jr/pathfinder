@@ -127,9 +127,9 @@ void Analysis::processCFG(CFG* cfg)
 		/* bb::wl <- wl; */
 		BasicBlock *bb = wl.pop();
 		SLList<Analysis::State> sl;
-		bool is_loop_header = LOOP_HEADER(bb);
+		const bool is_loop_header = LOOP_HEADER(bb);
 		
-		if(dbg_flags&DBG_NO_DEBUG)
+		if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
 			cout << "Processing " << bb << (is_loop_header?" (loop header)":"") << endl;
 
 		/*  If lock[bb].count() < bb.ins.count
@@ -142,20 +142,16 @@ void Analysis::processCFG(CFG* cfg)
 		for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
 			sl.addAll(*PROCESSED_EDGES(*bb_ins));
 		// at this point of the algorithm, all incoming edges of bb have been processed
-
-		const bool is_conditional = isConditional(bb);
+			
 		// in case of loop, merge the state list into a single state
 		if(is_loop_header)
 		{
 			State s((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
 			BasicBlock::OutIterator bb_outs(bb);
-			// TODO!!! FIX: We need to take the exit: look at sparse2.png, we need 2->3, not 2->4.
-			// This is not good, we need to test if the edge is going into the loop or exiting it somehow!
-			// testing the back edge is not always relevant at all...
-			while(BACK_EDGE(*bb_outs))
+			// look for the loop exit edge
+			while(LOOP_EXIT_EDGE(*bb_outs) != bb)
 				bb_outs++;
 			s.merge(sl, *bb_outs);
-			s.dumpEverything();
 			sl.clear();
 			sl += s; // sl <- {s}
 		}
@@ -181,7 +177,7 @@ void Analysis::processCFG(CFG* cfg)
 					DBG(color::Whi() << "End of loop reached.")
 				else 
 				{
-					PROCESSED_EDGES(*bb_outs) = processOutEdge(*bb_outs, sl, is_conditional); // annotate regardless of returned new_sl being empty or not
+					PROCESSED_EDGES(*bb_outs) = processOutEdge(*bb_outs, sl, isConditional(bb)); // annotate regardless of returned new_sl being empty or not
 					if(!wl.contains(bb_outs->target()))
 						wl.push(bb_outs->target());
 				}
@@ -303,7 +299,7 @@ bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, co
 // figures properties on the CFG without doing any actual analysis
 void Analysis::placeboProcessCFG(CFG* cfg)
 {
-	if(dbg_flags&DBG_NO_DEBUG)
+	if(dbg_flags&DBG_NO_DEBUG && ! (flags&SUPERSILENT))
 	{
 		cout << "Running pre-analysis... ";
 		placeboProcessBB(cfg->firstBB());
@@ -321,6 +317,7 @@ void Analysis::placeboProcessCFG(CFG* cfg)
 
 void Analysis::placeboProcessBB(BasicBlock* bb)
 {
+	DBG("processing " << bb)
 	if(bb->isExit())
 	{
 		total_paths++;
@@ -329,13 +326,18 @@ void Analysis::placeboProcessBB(BasicBlock* bb)
 	if(LOOP_HEADER(bb)) // TODO: fix to merge paths into 1 at loop headers (?)
 		loop_header_count++;
 	for(BasicBlock::OutIterator outs(bb); outs; outs++)
-		if(!BACK_EDGE(outs) && isAHandledEdgeKind(outs->kind())) // Filter out irrelevant edges (calls...)
+		if(!BACK_EDGE(*outs) && isAHandledEdgeKind(outs->kind())) // Filter out irrelevant edges (calls...)
+		{
+			DBG("following edge " << *outs << ", isBackEdge = " << DBG_TEST(BACK_EDGE(*outs), true))
 			placeboProcessBB((*outs)->target());
+		}
 }
 
 // print result of a whole CFG analysis
 void Analysis::printResults(int exec_time_ms) const
 {
+	if(flags&SUPERSILENT)
+		return;
 	int infeasible_paths_count = infeasible_paths.count();
 	if(dbg_flags&DBG_NO_TIME)
 		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: ")
@@ -375,6 +377,8 @@ void Analysis::printResults(int exec_time_ms) const
 // debugs to do on path end
 void Analysis::onPathEnd()
 {
+	if(flags&SUPERSILENT)
+		return;
 	if(dbg_flags&DBG_NO_DEBUG)
 	{
 		if((++paths_count % 100) == 0 || total_paths <= 1000)
@@ -392,6 +396,8 @@ void Analysis::onPathEnd()
 // debugs to do when we find an infeasible path
 void Analysis::onAnyInfeasiblePath()
 {
+	if(flags&SUPERSILENT)
+		return;
 	if(dbg_flags&DBG_NO_DEBUG)
 	{
 		infeasible_paths_count++;
@@ -406,7 +412,23 @@ void Analysis::onAnyInfeasiblePath()
 
 bool Analysis::isAHandledEdgeKind(Edge::kind_t kind) const
 {
-	return (kind == Edge::TAKEN) || (kind == Edge::NOT_TAKEN) || (kind == Edge::VIRTUAL) || (kind == Edge::VIRTUAL_RETURN);
+	// return (kind == Edge::TAKEN) || (kind == Edge::NOT_TAKEN) || (kind == Edge::VIRTUAL) || (kind == Edge::VIRTUAL_RETURN);
+	switch(kind)
+	{
+		case Edge::VIRTUAL_CALL:
+			return flags&FOLLOW_CALLS;
+		case Edge::TAKEN:
+		case Edge::NOT_TAKEN:
+		case Edge::VIRTUAL:
+		case Edge::VIRTUAL_RETURN:
+			return true;
+		case Edge::NONE:
+		case Edge::CALL:
+		case Edge::EXN_CALL:
+		case Edge::EXN_RETURN:
+		default:
+			return false;
+	}
 }
 
 bool Analysis::isConditional(BasicBlock* bb) const

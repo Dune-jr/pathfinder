@@ -28,18 +28,24 @@ public:
     Display(void): Application("display", Version(1, 0, 0)),
     	// opt1(option::SwitchOption::Make(manager).cmd("-o").cmd("--com").description("option 1")) { }
     	opt_silent(option::SwitchOption::Make(*this).cmd("-s").cmd("--silent").description("run with minimal output")),
+    	opt_supersilent(option::SwitchOption::Make(*this).cmd("--ss").cmd("--supersilent").description("run with no output")),
     	opt_output(option::SwitchOption::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file")),
     	opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").description("do not use colors")),
     	opt_noinfo(option::SwitchOption::Make(*this).cmd("--no-info").description("do not print file/line number info")),
     	opt_linenumbers(option::SwitchOption::Make(*this).cmd("--line-nb").cmd("--line-numbers").description("number lines of the output")),
     	opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
-    	opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")) { }
+    	opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")),
+    	opt_virtualize(option::SwitchOption::Make(*this).cmd("--virtualize").description("virtualize the CFG")) { }
         
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
-		workspace()->require(COLLECTED_CFG_FEATURE, props);
-		workspace()->require(dfa::INITIAL_STATE_FEATURE, props);
-		workspace()->require(LOOP_HEADERS_FEATURE);
+		workspace()->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
+		workspace()->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
+		if(opt_virtualize)
+			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
+		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
+		workspace()->require(LOOP_INFO_FEATURE, props); // TODO! LOOP_EXIT_EDGE
+
         const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
         const dfa::State *inital_state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
 		ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
@@ -47,8 +53,9 @@ protected:
 		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
 		int max_registers = workspace()->platform()->regCount(); // retrieve the count of registers
 		int max_tempvars = workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
+		int analysis_flags = 0;
 
-		if(opt_silent)
+		if(opt_silent || opt_supersilent)
 			dbg_flags |= DBG_NO_DEBUG;
 		if(opt_nocolor)
 			dbg_flags |= DBG_NO_COLOR;
@@ -60,7 +67,11 @@ protected:
 			dbg_flags |= DBG_NO_TIME;
 		if(opt_nopred)
 			dbg_flags |= DBG_NO_PREDICATES;
-		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers);
+		if(opt_virtualize)
+			analysis_flags |= Analysis::FOLLOW_CALLS;
+		if(opt_supersilent)
+			analysis_flags |= Analysis::SUPERSILENT;
+		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, analysis_flags);
 
 		// outputing to .ffx
 		if(opt_output)
@@ -74,7 +85,7 @@ protected:
 
 private:
 	option::Manager manager;
-	option::SwitchOption opt_silent, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred;
+	option::SwitchOption opt_silent, opt_supersilent, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred, opt_virtualize;
 };
 
 OTAWA_RUN(Display);
