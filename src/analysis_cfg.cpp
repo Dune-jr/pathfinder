@@ -160,7 +160,7 @@ void Analysis::processCFG(CFG* cfg)
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
 		{
 			// if(is_loop_header) sl_iter.item().throwInfo();
-			DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
+			DBG(color::Whi() << "Processing path " << (*sl_iter).getPathString())
 			/* processBB(s, bb); */
 			if(processBB(sl_iter.item(), bb) > 0)
 				sl.remove(sl_iter); // path ended
@@ -299,7 +299,7 @@ bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, co
 // figures properties on the CFG without doing any actual analysis
 void Analysis::placeboProcessCFG(CFG* cfg)
 {
-	if(dbg_flags&DBG_NO_DEBUG && ! (flags&SUPERSILENT))
+	if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
 	{
 		cout << "Running pre-analysis... ";
 		placeboProcessBB(cfg->firstBB());
@@ -317,7 +317,6 @@ void Analysis::placeboProcessCFG(CFG* cfg)
 
 void Analysis::placeboProcessBB(BasicBlock* bb)
 {
-	DBG("processing " << bb)
 	if(bb->isExit())
 	{
 		total_paths++;
@@ -327,10 +326,7 @@ void Analysis::placeboProcessBB(BasicBlock* bb)
 		loop_header_count++;
 	for(BasicBlock::OutIterator outs(bb); outs; outs++)
 		if(!BACK_EDGE(*outs) && isAHandledEdgeKind(outs->kind())) // Filter out irrelevant edges (calls...)
-		{
-			DBG("following edge " << *outs << ", isBackEdge = " << DBG_TEST(BACK_EDGE(*outs), true))
 			placeboProcessBB((*outs)->target());
-		}
 }
 
 // print result of a whole CFG analysis

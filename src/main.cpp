@@ -79,7 +79,8 @@ protected:
 			const Set<Analysis::Path>& infeasible_paths = analysis.infeasiblePaths();
 			FFX ffx_output(infeasible_paths);
 			ffx_output.output(entry+".ffx");
-			cout << "output to " + entry + ".ffx" << endl;
+			if(!opt_supersilent)
+				cout << "output to " + entry + ".ffx" << endl;
 		}
 	}
 
