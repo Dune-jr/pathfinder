@@ -40,9 +40,7 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
-	
-	CVC4::Expr toExpr();
-	
+		
 	Predicate& operator=(const Predicate& p);
 	bool operator==(const Predicate& p) const;
 	inline bool operator!=(const Predicate& p) const { return !(*this == p); }

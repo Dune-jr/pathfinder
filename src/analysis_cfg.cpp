@@ -128,9 +128,6 @@ void Analysis::processCFG(CFG* cfg)
 		BasicBlock *bb = wl.pop();
 		SLList<Analysis::State> sl;
 		const bool is_loop_header = LOOP_HEADER(bb);
-		
-		if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
-			cout << "Processing " << bb << (is_loop_header?" (loop header)":"") << endl;
 
 		/*  If lock[bb].count() < bb.ins.count
 				continue;
@@ -138,6 +135,9 @@ void Analysis::processCFG(CFG* cfg)
 		*/
 		if(!allIncomingNonBackEdgesAreAnnotated(bb, PROCESSED_EDGES))
 			continue;
+		
+		if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
+			cout << "Processing " << bb << (is_loop_header?" (loop header)":"") << endl;
 		/* sl <- mergeIntoOneList(lock[bb]); */
 		for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
 			sl.addAll(*PROCESSED_EDGES(*bb_ins));

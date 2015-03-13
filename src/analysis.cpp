@@ -65,7 +65,6 @@ elm::String Analysis::State::getPathString() const
 {
 	elm::String str;
 	bool first = true;
-	// int lastid = 0; // all paths must start with 0 (ENTRY) // no longer
 	int lastid;
 	for(OrderedPath::Iterator iter(path); iter; iter++)
 	{

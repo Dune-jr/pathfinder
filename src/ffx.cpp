@@ -22,7 +22,7 @@ void FFX::output(const elm::String& filename) const
 
 void FFX::printInfeasiblePath(io::Output& FFXFile, const Analysis::Path& ip) const
 {
-	FFXFile	<< "\t\t<not_all>" << endl;
+	FFXFile	<< "\t\t<not-all>" << endl;
 	String ip_str;
 	bool first = true;
 	for(Analysis::Path::Iterator iter(ip); iter; iter++)
@@ -34,7 +34,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const Analysis::Path& ip) con
 		ip_str = _ << (*iter)->source()->number() << "->" << (*iter)->target()->number() << ip_str;
 		FFXFile << "\t\t\t<edge src=\"0x" << (*iter)->source()->address() << "\" dst=\"0x" << (*iter)->target()->address() << "\" />" << endl;
 	}
-	FFXFile << "\t\t</not_all> <!-- [" << ip_str << "] infeasible path -->" << endl;
+	FFXFile << "\t\t</not-all> <!-- [" << ip_str << "] infeasible path -->" << endl;
 }
 
 void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const Analysis::Path& ip) const

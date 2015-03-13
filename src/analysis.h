@@ -125,7 +125,7 @@ public:
 				{ state = i.state; gp_iter = i.gp_iter; lp_iter = i.lp_iter; return *this; }
 			
 			inline bool ended(void) const { return (state == DONE); }
-			LabelledPredicate item(void) const {
+			const LabelledPredicate& item(void) const {
 				switch(state) {
 					case GENERATED_PREDS: return gp_iter.item();
 					case LABELLED_PREDS: return lp_iter.item();
@@ -139,8 +139,8 @@ public:
 				updateState();
 			}
 
-			inline Predicate pred(void) const { return item().pred(); }
-			inline Path labels(void) const { return item().labels(); }
+			inline const Predicate& pred(void) const { return item().pred(); }
+			inline const Path& labels(void) const { return item().labels(); }
 
 			void updateState() {
 				if(state == GENERATED_PREDS && !gp_iter) { nextState(); updateState(); }

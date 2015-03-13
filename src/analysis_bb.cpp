@@ -360,7 +360,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					break;
 				case ASR: // TODO test: is this really legit?
 					ASSERT(!UNTESTED_CRITICAL);
-					DBG(color::BIRed() << "Untested operator running!")
+					DBG(color::BIRed() << "Untested ASR operator running!")
 				case SHR:
 					opd1 = new OperandVar(d);
 					{
@@ -622,29 +622,33 @@ bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_const
 	// try and identify a value for ?3 (look for a ?3 = X predicate)
 	for(PredIterator piter(*this); piter; piter++)
 	{
-		if(piter.pred().opr() == CONDOPR_EQ && piter.pred().involvesVariable(var) == 1)
+		const Predicate &p = piter.pred();
+		if(p.opr() == CONDOPR_EQ)
 		{
-			// this requires generated_preds to be LabelledPredicates!
-			if(piter.pred().leftOperand().involvesVariable(var) == 1) // var is in left operand
+			const int left_involves_var = p.leftOperand().involvesVariable(var);
+			const int right_involves_var = p.rightOperand().involvesVariable(var);
+			if(left_involves_var == 1 && right_involves_var == 0) // var is in left operand
 			{
-				if(piter.pred().leftOperand() == var) // left operand is exactly var (that is, predicate is "var = ???")
+				if(p.leftOperand() == var) // left operand is exactly var (that is, predicate is "var = ???")
 				{
-					Operand* expr = piter.pred().rightOperand().copy(); // backup the "???" expr
+					Operand* expr = p.rightOperand().copy(); // backup the "???" expr
 					removePredicate(piter); // remove current predicate
 					replaceVar(var, *expr); // [??? / var]
 					delete expr;
 					break; // stop and move on
 				}
 			}
-			else // var is in right operand
-				if(piter.pred().rightOperand() == var) // right operand is exactly var (that is, predicate is "??? = var")
+			else if(left_involves_var == 0 && right_involves_var == 1) // var is in right operand
+			{
+				if(p.rightOperand() == var) // right operand is exactly var (that is, predicate is "??? = var")
 				{
-					Operand* expr = piter.pred().leftOperand().copy(); // backup the "???" expr
+					Operand* expr = p.leftOperand().copy(); // backup the "???" expr
 					removePredicate(piter); // remove current predicate
 					replaceVar(var, *expr); // [??? / var]
 					delete expr;
 					break; // stop and move on
 				}
+			}
 		}
 	}
 
