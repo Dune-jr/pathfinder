@@ -33,6 +33,7 @@ public:
 	
 	inline bool isIdent() const { return (*_opd1 == *_opd2) && _opr == CONDOPR_EQ; }
 	inline bool isComplete() const { return _opd1->isComplete() && _opd2->isComplete(); }
+	Predicate* copy() const;
 	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;

@@ -37,7 +37,6 @@ private:
 	void genPathPointBitMaps(const SLList<Analysis::Path>& paths, AVLMap<const Edge*, unsigned int>& map_pathpoint_to_bit, Vector<const Edge*>& map_bit_to_pathpoint);
 	SLList<BitVector> genBitCodes(const SLList<Analysis::Path>& paths, const AVLMap<const Edge*, unsigned int>& map_pathpoint_to_bit, unsigned int used_bits);
 	*/
-	// BitVector getListOfPathsToKeep(const Vector<BitVector>& bitcode_vector);
 	BitVector getListOfPathsToKeep(const SLList<BitVector>& bitcode_list);
 	SLList<Analysis::Path> filterPaths(const SLList<BitVector>& bitcode_list, const Vector<const Edge*>& map_bit_to_pathpoint, const BitVector& paths_to_keep, bool print_results = false);
 

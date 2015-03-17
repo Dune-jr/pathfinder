@@ -27,6 +27,7 @@ bool OperandConst::operator==(const Operand& o) const
 unsigned int OperandConst::countTempVars() const { return 0; }
 bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 {
+	if(expr) delete expr;
 	expr = this->copy(); // Assume we are the expr
 	return false; // We haven't found an isolated tempvar
 }
@@ -82,6 +83,7 @@ bool OperandVar::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 	}
 	else // register
 	{
+		if(expr) delete expr;
 		expr = this->copy();
 		return false;
 	}
@@ -128,7 +130,7 @@ io::Output& OperandMem::print(io::Output& out) const
 	out << "[";
 	return (out << *_opdc << "]");
 }
-OperandMem& OperandMem::operator=(const OperandMem& opd) { _opdc = new OperandConst(*(opd._opdc)); return *this; }
+OperandMem& OperandMem::operator=(const OperandMem& opd) { delete _opdc; _opdc = new OperandConst(*(opd._opdc)); return *this; }
 bool OperandMem::operator==(const Operand& o) const
 {	// untested so far	
 	if(o.kind() != kind())
@@ -141,6 +143,7 @@ bool OperandMem::operator==(const Operand& o) const
 unsigned int OperandMem::countTempVars() const { return 0; }
 bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 {
+	if(expr) delete expr;
 	expr = this->copy(); // Assume we are the expr
 	return false; // We haven't found an isolated tempvar
 }
@@ -321,9 +324,13 @@ io::Output& OperandArithExpr::print(io::Output& out) const
 OperandArithExpr& OperandArithExpr::operator=(const OperandArithExpr& opd)
 {
 	_opr = opd._opr;
+	delete opd1;
 	opd1 = opd.opd1->copy();
 	if(isBinary())
+	{
+		delete opd2;
 		opd2 = opd.opd2->copy();
+	}
 	return *this;
 }
 bool OperandArithExpr::operator==(const Operand& o) const
@@ -344,6 +351,7 @@ unsigned int OperandArithExpr::countTempVars() const
 }
 bool OperandArithExpr::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 {
+	if(expr) delete expr;
 	expr = this->copy();
 	return false;
 }
@@ -370,6 +378,7 @@ bool OperandArithExpr::update(const Operand& opd, const Operand& opd_modifier)
 	bool rtn = false;
 	if(*opd1 == opd)
 	{
+		delete opd1;
 		opd1 = opd_modifier.copy();
 		rtn = true;
 	}
@@ -379,6 +388,7 @@ bool OperandArithExpr::update(const Operand& opd, const Operand& opd_modifier)
 		return rtn; // stop here
 	if(*opd2 == opd)
 	{
+		delete opd2;
 		opd2 = opd_modifier.copy();
 		rtn = true;
 	}
@@ -595,10 +605,15 @@ Option<Operand*> OperandArithExpr::simplify()
 Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesSimplified& constants)
 {
 	if(Option<Operand*> o = opd1->replaceConstants(constants))
+	{
+		delete opd1;
 		opd1 = *o;
+	}
 	if(Option<Operand*> o = opd2->replaceConstants(constants))
+	{
+		delete opd2;
 		opd2 = *o;
-	// else DBG("constants_simplified=" << constants)
+	}
 	return none;
 }
 

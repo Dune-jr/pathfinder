@@ -18,10 +18,7 @@ public:
 	inline Expr getExprSP() const { return expr_sp; }
 
 private:
-	// outdated: lonely vars such as [?13] are identified as [?13+0] (makes sense that the SMT doesn't differentiate these two)
 	AVLMap<t::int32, Expr> varmap; // registers, tempvars (these should be invalidated prior to SMT call though)
-	// AVLMap<t::int32, Expr> memmap_absolute; // absolute addresses in memory
-	// AVLMap<t::int32, Expr> memmap_relative; // relative addresses in memory
 	AVLMap<Constant, Expr> memmap; // relative addresses in memory
 	Expr expr_sp;
 

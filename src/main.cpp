@@ -39,6 +39,22 @@ public:
         
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
+		/*SLList<LabelledPredicate> lps;
+		OperandConst oprconst = OperandConst(2);
+		OperandVar oprvar = OperandVar(0x4000);
+		OperandArithExpr e1 = OperandArithExpr(ARITHOPR_MUL, oprconst, oprvar); // e1 := 2 * @0x4000
+		Predicate p1 = Predicate(CONDOPR_EQ, oprvar, e1); // p1 := @0x4000 = e1
+		Predicate p2 = Predicate(CONDOPR_LE, oprconst, oprvar); // p2 := 2 <= @0x4000
+		for (int i = 0; i < 1000; ++i)
+		{
+			lps += LabelledPredicate(p1, Analysis::Path::null);
+			lps += LabelledPredicate(p2, Analysis::Path::null);
+			lps.clear();
+		}
+		return;
+		*/
+
+
 		workspace()->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
 		workspace()->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
 		if(opt_virtualize)
@@ -116,7 +132,6 @@ void testPredicates()
 	OperandConst oprconst = OperandConst(2);
 	OperandVar oprvar = OperandVar(0x4000);
 	OperandArithExpr e1 = OperandArithExpr(ARITHOPR_MUL, oprconst, oprvar); // e1 := 2 * @0x4000
-	// OperandArithExpr e1bis = OperandArithExpr(ARITHOPR_MUL, oprvar, oprconst);
 	Predicate p1 = Predicate(CONDOPR_EQ, oprvar, e1); // p1 := @0x4000 = e1
 	Predicate p2 = Predicate(CONDOPR_LE, oprconst, oprvar); // p2 := 2 <= @0x4000
 	

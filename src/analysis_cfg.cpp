@@ -241,8 +241,8 @@ SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis:
 		if(*sl_paths_iter) // is infeasible?
 		{
 			const Path& infeasible_path = **sl_paths_iter;
-			DBG("Path " << s.getPathString() << "->" << e->target()->number() << " minimized to " << pathToString(infeasible_path))
 			elm::String counterexample;
+			DBG("Path " << s.getPathString() << "->" << e->target()->number() << " minimized to " << pathToString(infeasible_path))
 			bool valid = checkInfeasiblePathValidity(sl, sl_paths, e, infeasible_path, counterexample);
 			DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
 			if(valid)
@@ -303,7 +303,7 @@ void Analysis::placeboProcessCFG(CFG* cfg)
 	{
 		cout << "Running pre-analysis... ";
 		placeboProcessBB(cfg->firstBB());
-		cout << total_paths << " paths found." << endl;
+		cout << total_paths << " paths and " << cfg->countBB() << " BBs found." << endl;
 	}
 	else
 	{

@@ -25,6 +25,10 @@ Predicate::~Predicate()
  * Test if the predicate is identity (X = X)
  */
 
+Predicate* Predicate::copy() const
+{
+	return new Predicate(*this);
+}
 // Test if the predicate contains (recursively) the variable represented by opdv
 int Predicate::involvesVariable(const OperandVar& opdv) const
 {
@@ -70,8 +74,10 @@ bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 		return false;
 	
 	if(rtn1 && rtn2) // both are isolated tempvars, therefore temp_var <- _opd2 and expr <- [???]
+	{
+		delete expr;
 		expr = _opd1->copy();
-	
+	}
 	return true;
 }
 
@@ -82,6 +88,7 @@ bool Predicate::update(const Operand& opd, const Operand& opd_modifier)
 	bool rtn = false;
 	if(*_opd1 == opd)
 	{
+		delete _opd1;
 		_opd1 = opd_modifier.copy();
 		rtn = true;
 	}
@@ -89,6 +96,7 @@ bool Predicate::update(const Operand& opd, const Operand& opd_modifier)
 		rtn = true;
 	if(*_opd2 == opd)
 	{
+		delete _opd2;
 		_opd2 = opd_modifier.copy();
 		rtn = true;
 	}
@@ -100,6 +108,8 @@ bool Predicate::update(const Operand& opd, const Operand& opd_modifier)
 Predicate& Predicate::operator=(const Predicate& p)
 {
 	_opr = p._opr;
+	delete _opd1;
+	delete _opd2;
 	_opd1 = p._opd1->copy();
 	_opd2 = p._opd2->copy();
 	return *this;
