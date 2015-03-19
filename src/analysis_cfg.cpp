@@ -177,7 +177,8 @@ void Analysis::processCFG(CFG* cfg)
 					DBG(color::Whi() << "End of loop reached.")
 				else 
 				{
-					PROCESSED_EDGES(*bb_outs) = processOutEdge(*bb_outs, sl, isConditional(bb)); // annotate regardless of returned new_sl being empty or not
+					// adds to PROCESSED_EDGE
+					processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb)); // annotate regardless of returned new_sl being empty or not
 					if(!wl.contains(bb_outs->target()))
 						wl.push(bb_outs->target());
 				}
@@ -215,11 +216,12 @@ int Analysis::processBB(State& s, BasicBlock* bb)
  * @fn SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl);
  * Processes outgoing Edge e from a BasicBlock for each element of sl
 */
-SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional)
+// SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional)
+void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, const SLList<Analysis::State>& sl, bool is_conditional)
 {
 	/* wl <- sl ⊙ e; */
-	SLList<Analysis::State> new_sl; // this is what we return
-	Vector<Option<Path> > sl_paths;
+	processed_edges_id.remove(e); // clearing: useless?
+	SLList<Option<Path> > sl_paths;
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
 		State s = *sl_iter;
@@ -227,14 +229,14 @@ SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis:
 
 		// SMT call
 		SMT smt;
-		Option<Path> infeasible_path = smt.seekInfeasiblePaths(s);
-		sl_paths.push(infeasible_path);
+		const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
+		sl_paths.addLast(infeasible_path);
 		if(infeasible_path)
 			ASSERT((*infeasible_path).contains(s.lastEdge())) // make sure the last edge was relevant in this path
 		else
-			new_sl += s;
+			processed_edges_id.ref(e).addFirst(s);
 	}
-	Vector<Option<Path> >::Iterator sl_paths_iter(sl_paths);
+	SLList<Option<Path> >::Iterator sl_paths_iter(sl_paths);
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++, sl_paths_iter++)
 	{
 		const State& s = *sl_iter;
@@ -266,21 +268,20 @@ SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis:
 			onAnyInfeasiblePath();
 		}
 	}
-	return new_sl;
 }
 
 /**
- * @fn bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const Vector<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample);
+ * @fn bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample);
  * Checks if the minimized list of edges we found 'infeasible_path' is valid,
  * that is if all the paths it represents (all the 'sl[i]->e') are infeasible ('sl_paths[i]' is not 'elm::option::none')
  * If invalid, returns a counter-example in counterexample.
  * @return true if valid
 */
-bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const Vector<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample)
+bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample)
 {
 	bool valid = true;
 	// check that all the paths going to the current BB are sound with the minimized inf. path we just found
-	Vector<Option<Path> >::Iterator sl_paths_subiter(sl_paths);
+	SLList<Option<Path> >::Iterator sl_paths_subiter(sl_paths);
 	for(SLList<Analysis::State>::Iterator sl_subiter(sl); sl_subiter; sl_subiter++, sl_paths_subiter++)
 	{
 		// if feasible path && contained in the minimized inf. path
