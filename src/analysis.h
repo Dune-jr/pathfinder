@@ -54,6 +54,7 @@ public:
 		class PredIterator;
 
 	public:
+		State(); // create an invalid (bottom) state
 		State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = true);
 		State(Edge* entry_edge, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = false);
 		State(const State& s);
@@ -61,6 +62,7 @@ public:
 		inline Edge* lastEdge() const { return path.last(); }
 		inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
 		inline const ConstantVariables& getConstants() const { return constants; }
+		inline bool isValid() const { return dfa_state != 0; }
 		friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 		inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
 		void dumpEverything() const;
@@ -185,7 +187,8 @@ private:
 	void processCFG(CFG *cfg);
 	int processBB(State& s, BasicBlock *bb);
 	void processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, const SLList<Analysis::State>& sl, bool is_conditional);
-	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample);
+	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
+	void purgeStateList(SLList<Analysis::State>& sl) const;
 	void placeboProcessCFG(CFG* cfg);
 	void placeboProcessBB(BasicBlock *bb);
 	void printResults(int exec_time_ms) const;

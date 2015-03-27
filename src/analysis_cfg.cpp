@@ -16,12 +16,8 @@
 using namespace elm::genstruct;
 using namespace elm::io;
 
-/*
-void Analysis::initializeAnalysis()
-{
-	wl.add(Analysis::State(cfg->entry(), sp)); // wl <- {ɛ}
-}
-*/
+Analysis::State::State() : dfa_state(NULL), sp(0), constants(0, 0) { }
+
 Analysis::State::State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init)
 	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers)
 {
@@ -79,36 +75,6 @@ void Analysis::processCFG(CFG* cfg)
 	paths_count = infeasible_paths_count = total_paths = loop_header_count = 0;
 	placeboProcessCFG(cfg);
 	std::time_t timestamp = clock(); // Timestamp before analysis
-	
-	/* *Algorithm*
-	begin
-		wl <- {ɛ}; // init to root
-		lock[] <- {{}}; // not exactly an array struct
-
-		While wl != ∅
-			sl::wl <- wl; // pop
-			bb <- sl[0].last.target(); // whichever element of il will do
-
-			If bb.ins.count() > 1 // if we have to join several paths
-				lock[bb] += sl; // adds new element sl
-
-				If lock[bb].count() < bb.ins.count // we haven't explored all the incoming paths
-		 			continue;
-				End If
-				sl <- mergeIntoOneList(lock[bb]); // for instance {{1,2},{3},{4}} becomes {1,2,3,4}
-			End If
-
-			For s in sl
-				processBB(s, bb); // update s predicates
-			End For
-
-			For e in bb.outs
-				wl <- sl ⊙ e; // ⊙ = une sorte de concaténation de langages
-				// smt check here
-			End For
-		End While
-	end
-	*/
 
 	/* begin */
 	/* wl <- {ɛ} */
@@ -134,7 +100,15 @@ void Analysis::processCFG(CFG* cfg)
 			End If
 		*/
 		if(!allIncomingNonBackEdgesAreAnnotated(bb, PROCESSED_EDGES))
+		{
+			// TODO!!! remove
+			// DBG(color::IRed() << "-----------------")
+			// for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
+			// 	if(!BACK_EDGE(*bb_ins))
+			// 		if(PROCESSED_EDGES.get(*bb_ins))
+			// 			DBG(*PROCESSED_EDGES(*bb_ins));
 			continue;
+		}
 		
 		if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
 			cout << "Processing " << bb << (is_loop_header?" (loop header)":"") << endl;
@@ -142,7 +116,8 @@ void Analysis::processCFG(CFG* cfg)
 		for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
 			sl.addAll(*PROCESSED_EDGES(*bb_ins));
 		// at this point of the algorithm, all incoming edges of bb have been processed
-			
+		purgeStateList(sl);
+
 		// in case of loop, merge the state list into a single state
 		if(is_loop_header)
 		{
@@ -221,6 +196,12 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 {
 	/* wl <- sl ⊙ e; */
 	processed_edges_id.remove(e); // clearing: useless?
+	if(sl.isEmpty())
+	{	// just propagate the {bottom}
+		State invalid_state;
+		processed_edges_id.ref(e).addFirst(invalid_state);
+		return;
+	}
 	SLList<Option<Path> > sl_paths;
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
@@ -232,7 +213,12 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 		const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
 		sl_paths.addLast(infeasible_path);
 		if(infeasible_path)
+		{
+			// we need to add some sort of {} to say this is an infeasible path
+			State invalid_state;
+			processed_edges_id.ref(e).addFirst(invalid_state);
 			ASSERT((*infeasible_path).contains(s.lastEdge())) // make sure the last edge was relevant in this path
+		}
 		else
 			processed_edges_id.ref(e).addFirst(s);
 	}
@@ -277,7 +263,7 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
  * If invalid, returns a counter-example in counterexample.
  * @return true if valid
 */
-bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample)
+bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const
 {
 	bool valid = true;
 	// check that all the paths going to the current BB are sound with the minimized inf. path we just found
@@ -295,6 +281,18 @@ bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, co
 		}
 	}
 	return valid;
+}
+
+// remove all invalid states
+void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
+{
+	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; )
+	{
+		if(sl_iter->isValid())
+			sl_iter++;
+		else
+			sl.remove(sl_iter);
+	}
 }
 
 // figures properties on the CFG without doing any actual analysis

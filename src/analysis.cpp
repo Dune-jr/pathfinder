@@ -95,7 +95,14 @@ elm::String Analysis::State::getPathString() const
 io::Output& Analysis::State::print(io::Output& out) const
 {
 	// out << ":" << labelled_preds << "/" << constants;
-	return (out << getPathString());
+	if(isValid())
+		return (out << getPathString());
+	else
+#		ifndef NO_UTF8
+			return (out << "⊥");
+#		else
+			return (out << "(bottom)");
+#		endif
 }
 
 /**
