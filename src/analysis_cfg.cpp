@@ -89,7 +89,7 @@ void Analysis::processCFG(CFG* cfg)
 	/* While wl != ∅ */
 	while(!wl.isEmpty())
 	{
-		DBG(color::IWhi() << "wl=" << wlToString())
+		DBG("wl=" << wlToString())
 		/* bb::wl <- wl; */
 		BasicBlock *bb = wl.pop();
 		SLList<Analysis::State> sl;
@@ -100,18 +100,10 @@ void Analysis::processCFG(CFG* cfg)
 			End If
 		*/
 		if(!allIncomingNonBackEdgesAreAnnotated(bb, PROCESSED_EDGES))
-		{
-			// TODO!!! remove
-			// DBG(color::IRed() << "-----------------")
-			// for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
-			// 	if(!BACK_EDGE(*bb_ins))
-			// 		if(PROCESSED_EDGES.get(*bb_ins))
-			// 			DBG(*PROCESSED_EDGES(*bb_ins));
 			continue;
-		}
 		
 		if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
-			cout << "Processing " << bb << (is_loop_header?" (loop header)":"") << endl;
+			cout << "Processing BB #" << bb->number() << " of " << bb_count << " " << (is_loop_header?" (loop header)":"") << endl;
 		/* sl <- mergeIntoOneList(lock[bb]); */
 		for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
 			sl.addAll(*PROCESSED_EDGES(*bb_ins));
@@ -301,8 +293,9 @@ void Analysis::placeboProcessCFG(CFG* cfg)
 	if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
 	{
 		cout << "Running pre-analysis... ";
+		cout << bb_count << " BBs found." << endl;
 		placeboProcessBB(cfg->firstBB());
-		cout << total_paths << " paths and " << cfg->countBB() << " BBs found." << endl;
+		cout << total_paths << " paths found." << endl;
 	}
 	else
 	{
@@ -357,6 +350,7 @@ void Analysis::printResults(int exec_time_ms) const
 	}
 	if(dbg_flags&DBG_NO_DEBUG)
 	{
+		cout << total_paths-feasible_paths_count << "/" << total_paths << " infeasible paths (" << (total_paths-feasible_paths_count)*100/total_paths << "%)." << endl;
 		cout << infeasible_paths_count << " infeasible path(s) found.";
 		if(!(dbg_flags&DBG_NO_TIME))
 		{
@@ -372,6 +366,7 @@ void Analysis::printResults(int exec_time_ms) const
 // debugs to do on path end
 void Analysis::onPathEnd()
 {
+	feasible_paths_count++;
 	if(flags&SUPERSILENT)
 		return;
 	if(dbg_flags&DBG_NO_DEBUG)

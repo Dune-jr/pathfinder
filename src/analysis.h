@@ -181,7 +181,7 @@ private:
 	const OperandVar sp; // the Stack Pointer register
 	Set<Path> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
 	int max_tempvars, max_registers, flags;
-	int processed_paths, total_paths, paths_count, infeasible_paths_count, loop_header_count;
+	int processed_paths, total_paths, paths_count, feasible_paths_count, infeasible_paths_count, loop_header_count, bb_count;
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);

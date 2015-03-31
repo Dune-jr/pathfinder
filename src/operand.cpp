@@ -263,7 +263,7 @@ bool OperandMem::update(const Operand& opd, const Operand& opd_modifier) { retur
 // pop_result_t OperandMem::doAffinePop(Operand*& opd_result, Operand*& new_opd) { return POPRESULT_FAIL; }
 void OperandMem::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
-Option<Operand*> OperandMem::simplify() { return none; } // TODO: simplify within the [ ], makes more sense even tho it shouldn't be very useful
+Option<Operand*> OperandMem::simplify() { return none; }
 Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesSimplified& constants) { return none; }
  
 // Operands: Arithmetic Expressions
