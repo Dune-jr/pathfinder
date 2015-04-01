@@ -4,7 +4,7 @@
 
 using namespace elm;
 
-Predicate::Predicate(condoperator_t opr, Operand& opd1, Operand& opd2) : _opr(opr)
+Predicate::Predicate(condoperator_t opr, const Operand& opd1, const Operand& opd2) : _opr(opr)
 {
 	_opd1 = opd1.copy();
 	_opd2 = opd2.copy();

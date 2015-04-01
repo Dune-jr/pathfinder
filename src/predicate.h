@@ -23,7 +23,7 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr);
 class Predicate
 {
 public:
-	Predicate(condoperator_t opr, Operand& opd1, Operand& opd2);
+	Predicate(condoperator_t opr, const Operand& opd1, const Operand& opd2);
 	Predicate(const Predicate& p);
 	~Predicate();
 	
