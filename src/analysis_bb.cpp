@@ -635,7 +635,9 @@ bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_const
 					Operand* expr = p.rightOperand().copy(); // backup the "???" expr
 					removePredicate(piter); // remove current predicate
 					replaceVar(var, *expr); // [??? / var]
+					DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << Predicate(CONDOPR_EQ, var, *expr))
 					delete expr;
+					rtn = true;
 					break; // stop and move on
 				}
 			}
@@ -646,22 +648,27 @@ bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_const
 					Operand* expr = p.leftOperand().copy(); // backup the "???" expr
 					removePredicate(piter); // remove current predicate
 					replaceVar(var, *expr); // [??? / var]
+					DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << Predicate(CONDOPR_EQ, *expr, var))
 					delete expr;
+					rtn = true;
 					break; // stop and move on
 				}
 			}
 		}
 	}
 
-	for(PredIterator piter(*this); piter; )
+	if(!rtn) // no X expression has been found to match ?3 = X, thus we have to remove every occurence of ?3
 	{
-		if(piter.pred().involvesVariable(var))
+		for(PredIterator piter(*this); piter; )
 		{
-			DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << *piter)
-			removePredicate(piter);
-			rtn = true;
+			if(piter.pred().involvesVariable(var))
+			{
+				DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << *piter)
+				removePredicate(piter);
+				rtn = true;
+			}
+			else piter++;
 		}
-		else piter++;
 	}
 
 	if(invalidate_constant_info)
