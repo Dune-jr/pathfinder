@@ -377,7 +377,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						opd22 = new OperandConst(1 << b_val); // 2^b_val
 						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
 						if(isConstant(a))
-							constants.set(d, constants[a] >> constants[b]);
+							constants.set(d, constants[a] >> b_val);
 						else make_pred = true;
 					}
 					break;

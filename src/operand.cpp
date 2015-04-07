@@ -609,10 +609,13 @@ Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesSimpl
 		delete opd1;
 		opd1 = *o;
 	}
-	if(Option<Operand*> o = opd2->replaceConstants(constants))
+	if(isBinary())
 	{
-		delete opd2;
-		opd2 = *o;
+		if(Option<Operand*> o = opd2->replaceConstants(constants))
+		{
+			delete opd2;
+			opd2 = *o;
+		}
 	}
 	return none;
 }

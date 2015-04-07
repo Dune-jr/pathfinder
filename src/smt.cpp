@@ -21,6 +21,7 @@ SMT::SMT(): smt(&em), variables(em), integer(em.integerType())
 	smt.setLogic("QF_LIA"); // Quantifier-Free (no forall, exists...) Linear Integer Arithmetic
 	smt.setOption("incremental", CVC4::SExpr("false")); // non incremental
 	smt.setOption("produce-unsat-cores", CVC4::SExpr("true"));
+	smt.setOption("rewrite-divk", CVC4::SExpr("true"));
 	// smt.setOption("dump-unsat-cores", CVC4::SExpr("true"));
 	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
 	// smt.setOption("dump", "assertions:pre-everything");
@@ -78,11 +79,13 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 		DBG(color::BIWhi() << "A)" << color::RCol() << " Extracting UNSAT core... " << color::IRed() << "FAILED!");
 		DBG("   Using original predicates:")
 		for(SLList<LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
+		{
 			if((*parse_iter).pred().isComplete())
 			{
 				DBG("   * " << (*parse_iter))
 				path.addAll((*parse_iter).labels());
 			}
+		}
 	}
 	else
 	{

@@ -73,6 +73,7 @@ void Analysis::processCFG(CFG* cfg)
 {
 	DBG(color::Whi() << "Processing CFG " << cfg)
 	paths_count = infeasible_paths_count = total_paths = loop_header_count = 0;
+	int processed_bbs = 0;
 	placeboProcessCFG(cfg);
 	std::time_t timestamp = clock(); // Timestamp before analysis
 
@@ -103,7 +104,7 @@ void Analysis::processCFG(CFG* cfg)
 			continue;
 		
 		if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
-			cout << "Processing BB #" << bb->number() << " of " << bb_count << " " << (is_loop_header?" (loop header)":"") << endl;
+			cout << "[" << ++processed_bbs*100/bb_count << "%] Processing BB #" << bb->number() << " of " << bb_count << " " << (is_loop_header?" (loop header)":"") << endl;
 		/* sl <- mergeIntoOneList(lock[bb]); */
 		for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
 			sl.addAll(*PROCESSED_EDGES(*bb_ins));
@@ -122,6 +123,15 @@ void Analysis::processCFG(CFG* cfg)
 			sl.clear();
 			sl += s; // sl <- {s}
 		}*/
+
+		// merge into a single empty state
+		if(is_loop_header && sl)
+		{
+			State s(sl.first());
+			sl.clear();
+			s.throwInfo();
+			sl += s;
+		}
 
 		/* For s in sl */
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
@@ -290,6 +300,11 @@ void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
 // figures properties on the CFG without doing any actual analysis
 void Analysis::placeboProcessCFG(CFG* cfg)
 {
+	if(dbg_flags&DBG_NO_PREANALYSIS)
+	{
+		total_paths = 777;
+		return;
+	}
 	if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
 	{
 		cout << "Running pre-analysis... ";
@@ -369,15 +384,14 @@ void Analysis::onPathEnd()
 	feasible_paths_count++;
 	if(flags&SUPERSILENT)
 		return;
-	if(dbg_flags&DBG_NO_DEBUG)
+	if(dbg_flags&DBG_NO_DEBUG && !(dbg_flags&DBG_NO_PREANALYSIS))
 	{
-		if((++paths_count % 100) == 0 || total_paths <= 1000)
+		if((++paths_count % 100) == 0 || (total_paths <= 1000 && paths_count <= 1000))
 		{
-			cout << "(" << paths_count << "/" << total_paths << ")";
-			if(infeasible_paths_count)
-				cout << " !*" << infeasible_paths_count;
-			cout << endl;
-			infeasible_paths_count = 0;
+			// cout << "(" << paths_count << "/" << total_paths << ")";
+			// if(infeasible_paths_count)
+			// 	cout << " !*" << infeasible_paths_count % 100;
+			// cout << endl;
 		}
 	}
 	else DBG(color::BBla() << color::On_Yel() << "EXIT block reached")
@@ -388,13 +402,12 @@ void Analysis::onAnyInfeasiblePath()
 {
 	if(flags&SUPERSILENT)
 		return;
-	if(dbg_flags&DBG_NO_DEBUG)
+	if(dbg_flags&DBG_NO_DEBUG && !(dbg_flags&DBG_NO_PREANALYSIS))
 	{
 		infeasible_paths_count++;
-		if((++paths_count % 100) == 0 || total_paths <= 1000)
+		if((++paths_count % 100) == 0 || (total_paths <= 1000 && paths_count <= 1000))
 		{
-			cout << "(" << paths_count << "/" << total_paths << ") !*" << infeasible_paths_count << endl;
-			infeasible_paths_count = 0;
+			// cout << "(" << paths_count << "/" << total_paths << ") !*" << infeasible_paths_count%100 << endl;
 		}
 	}
 	else DBG(color::BIYel() << "Stopping current path analysis")
