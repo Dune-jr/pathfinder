@@ -112,7 +112,7 @@ void Analysis::processCFG(CFG* cfg)
 		purgeStateList(sl);
 
 		// in case of loop, merge the state list into a single state
-		/*if(is_loop_header)
+		if(is_loop_header)
 		{
 			State s((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
 			BasicBlock::OutIterator bb_outs(bb);
@@ -122,21 +122,21 @@ void Analysis::processCFG(CFG* cfg)
 			s.merge(sl, *bb_outs);
 			sl.clear();
 			sl += s; // sl <- {s}
-		}*/
+		}
 
 		// merge into a single empty state
-		if(is_loop_header && sl)
+		/*if(is_loop_header && sl)
 		{
 			State s(sl.first());
 			sl.clear();
 			s.throwInfo();
 			sl += s;
-		}
+		}*/
 
 		/* For s in sl */
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
 		{
-			if(is_loop_header) sl_iter.item().throwInfo(); // dump predicates info
+			// if(is_loop_header) sl_iter.item().throwInfo(); // dump predicates info
 			DBG(color::Whi() << "Processing path " << (*sl_iter).getPathString())
 			/* processBB(s, bb); */
 			if(processBB(sl_iter.item(), bb) > 0)
@@ -152,7 +152,7 @@ void Analysis::processCFG(CFG* cfg)
 			{
 				if(BACK_EDGE(*bb_outs))
 					DBG(color::Whi() << "End of loop reached.")
-				else 
+				// else 
 				{
 					// adds to PROCESSED_EDGE
 					processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb)); // annotate regardless of returned new_sl being empty or not

@@ -32,4 +32,4 @@ settings.cc.Output = Intermediate_Output
 
 source = Collect("src/*.cpp")
 objects = Compile(settings, source)
-exe = Link(settings, "pathfinder", objects)
+exe = Link(settings, "pathfinder-unstable", objects)

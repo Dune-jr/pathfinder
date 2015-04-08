@@ -168,15 +168,17 @@ void ConstantVariables::label(Edge* label)
 // TODO! we can improve this a lot
 void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
 {
+	cout << "merge(cvl=" << endl;
 	for(SLList<ConstantVariables>::Iterator iter(cvl); iter; iter++)
 	{
 		const ConstantVariables& cv = *iter;
+		cout << "\t* " << cv << endl;
 		ASSERTP(_max_tempvars == cv._max_tempvars && _max_registers == cv._max_registers, "ConstantVariables::merge: format does not match")
 		for(unsigned int i = 0; i < _max_tempvars; i++)
-			if(tempvars[i] && (*tempvars[i]).val() != (*cv.tempvars[i]).val()) // do not compare labels!
+			if(tempvars[i] && (!(cv.tempvars[i]) || (*tempvars[i]).val() != (*cv.tempvars[i]).val())) // do not compare labels!
 				tempvars[i] = none;
 		for(unsigned int i = 0; i < _max_registers; i++)
-			if(registers[i] && (*registers[i]).val() != (*cv.registers[i]).val()) // do not compare labels!
+			if(registers[i] && (!(cv.registers[i]) || (*registers[i]).val() != (*cv.registers[i]).val())) // do not compare labels!
 				registers[i] = none;
 	}
 	// manage labels
