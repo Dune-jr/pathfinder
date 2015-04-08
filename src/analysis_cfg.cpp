@@ -237,20 +237,20 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 			DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
 			if(valid)
 			{
-				infeasible_paths += infeasible_path;
+				addDisorderedPath(infeasible_path, (*sl_iter).getPath(), e); // infeasible_paths += order(infeasible_path); to output proprer ffx!
 				DBG(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path))
 			}
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
 			{
 				DBG("   counterexample: " << counterexample)
 				 // falling back on full path (not as useful as a result, but still something)
-				OrderedPath original_full_orderedpath = (*sl_iter).getPath();
-				Path original_full_path;
-				for(OrderedPath::Iterator original_full_orderedpath_iter(original_full_orderedpath); original_full_orderedpath_iter; original_full_orderedpath_iter++)
-					original_full_path += *original_full_orderedpath_iter;
-				original_full_path += e; // need to add e
-				infeasible_paths += original_full_path;
-				DBG(color::On_IRed() << "Inf. path found: " << pathToString(original_full_path) << color::RCol() << " (unrefined)")
+				OrderedPath original_full_path = (*sl_iter).getPath();
+				original_full_path.addLast(e); // need to add e
+Path ofp;
+for(OrderedPath::Iterator original_full_orderedpath_iter(original_full_path); original_full_orderedpath_iter; original_full_orderedpath_iter++)
+	ofp += *original_full_orderedpath_iter;
+				infeasible_paths.add(original_full_path);
+				DBG(color::On_IRed() << "Inf. path found: " << pathToString(ofp) << color::RCol() << " (unrefined)")
 				// TODO: do a C) where we still try to refine this infeasible path
 			}
 			onAnyInfeasiblePath();
@@ -285,6 +285,20 @@ bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, co
 	return valid;
 }
 
+// reorder the path then add it
+void Analysis::addDisorderedPath(const Path& infeasible_path, const OrderedPath& full_path, Edge* last_edge)
+{
+	OrderedPath ordered_ip;
+	for(OrderedPath::Iterator full_path_iter(full_path); full_path_iter; full_path_iter++)
+	{
+		if(infeasible_path.contains(*full_path_iter))
+			ordered_ip.addLast(*full_path_iter);
+	}
+	if(infeasible_path.contains(last_edge))
+		ordered_ip.addLast(last_edge);
+	infeasible_paths.add(ordered_ip);
+}
+
 // remove all invalid states
 void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
 {
@@ -300,15 +314,19 @@ void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
 // figures properties on the CFG without doing any actual analysis
 void Analysis::placeboProcessCFG(CFG* cfg)
 {
+	if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
+		cout << bb_count << " BBs found." << endl;
+	else
+		DBG(color::Whi() << total_paths << " paths found.")
 	if(dbg_flags&DBG_NO_PREANALYSIS)
 	{
 		total_paths = 777;
+		cout << bb_count << " BBs found." << endl;
 		return;
 	}
 	if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
 	{
 		cout << "Running pre-analysis... ";
-		cout << bb_count << " BBs found." << endl;
 		placeboProcessBB(cfg->firstBB());
 		cout << total_paths << " paths found." << endl;
 	}
@@ -316,7 +334,6 @@ void Analysis::placeboProcessCFG(CFG* cfg)
 	{
 		DBG(color::Whi() << "Running pre-analysis... ")
 		placeboProcessBB(cfg->firstBB());
-		DBG(color::Whi() << total_paths << " paths found.")
 		if(loop_header_count)
 			DBG(color::Whi() << loop_header_count << " loop headers found.")
 	}
@@ -347,12 +364,12 @@ void Analysis::printResults(int exec_time_ms) const
 	else
 		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
 			<< "(" << (exec_time_ms>=1000 ? ((float)exec_time_ms)/(float(100)) : exec_time_ms) << (exec_time_ms>=1000 ? "s" : "ms") << ")")
-	for(Set<Path>::Iterator iter(infeasible_paths); iter; iter++)
+	for(Vector<OrderedPath>::Iterator iter(infeasible_paths); iter; iter++)
 	{
-		Path l = *iter;
+		const OrderedPath& l = *iter;
 		bool first = true;
 		elm::String str = "    * [";
-		for(Path::Iterator subiter(l); subiter; subiter++)
+		for(OrderedPath::Iterator subiter(l); subiter; subiter++)
 		{
 			if(first) first = false; else // do nothing at first iteration
 				str = _ << str << ", ";

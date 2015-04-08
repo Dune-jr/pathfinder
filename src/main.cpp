@@ -95,7 +95,7 @@ protected:
 		// outputing to .ffx
 		if(opt_output)
 		{
-			const Set<Analysis::Path>& infeasible_paths = analysis.infeasiblePaths();
+			const Vector<Analysis::OrderedPath>& infeasible_paths = analysis.infeasiblePaths();
 			FFX ffx_output(infeasible_paths);
 			ffx_output.output(entry+".ffx");
 			if(!opt_supersilent)

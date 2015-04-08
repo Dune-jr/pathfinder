@@ -1,6 +1,6 @@
 #include "ffx.h"
 
-FFX::FFX(const Set<Analysis::Path>& ips) : infeasible_paths(ips) { }
+FFX::FFX(const Vector<Analysis::OrderedPath>& ips) : infeasible_paths(ips) { }
 
 void FFX::output(const elm::String& filename) const
 {
@@ -12,7 +12,7 @@ void FFX::output(const elm::String& filename) const
 			<< "<flowfacts>" << endl
 			<< "\t<function name=\"main\">" << endl;
 
-	for(Set<Analysis::Path>::Iterator iter(infeasible_paths); iter; iter++)
+	for(Vector<Analysis::OrderedPath>::Iterator iter(infeasible_paths); iter; iter++)
 		printInfeasiblePath(FFXFile, *iter);
 
 	// footer
@@ -20,24 +20,18 @@ void FFX::output(const elm::String& filename) const
 			<< "</flowfacts>" << endl;
 }
 
-void FFX::printInfeasiblePath(io::Output& FFXFile, const Analysis::Path& ip) const
+void FFX::printInfeasiblePath(io::Output& FFXFile, const Analysis::OrderedPath& ip) const
 {
-	FFXFile	<< "\t\t<not-all>" << endl;
-	String ip_str;
-	bool first = true;
-	for(Analysis::Path::Iterator iter(ip); iter; iter++)
+	FFXFile	<< "\t\t<not-all seq=\"true\">" << endl;
+	for(Analysis::OrderedPath::Iterator iter(ip); iter; iter++)
 	{
-		if(first)
-			first = false;
-		else
-			ip_str = _ << ", " << ip_str;
-		ip_str = _ << (*iter)->source()->number() << "->" << (*iter)->target()->number() << ip_str;
-		FFXFile << "\t\t\t<edge src=\"0x" << (*iter)->source()->address() << "\" dst=\"0x" << (*iter)->target()->address() << "\" />" << endl;
+		FFXFile << "\t\t\t<edge src=\"0x" << (*iter)->source()->address() << "\" dst=\"0x" << (*iter)->target()->address() << "\" />" 
+			<< " <!-- " << (*iter)->source()->number() << "->" << (*iter)->target()->number() << " -->" << endl;
 	}
-	FFXFile << "\t\t</not-all> <!-- [" << ip_str << "] infeasible path -->" << endl;
+	FFXFile << "\t\t</not-all>" << endl;
 }
 
-void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const Analysis::Path& ip) const
+void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const Analysis::OrderedPath& ip) const
 {
 	// control-constraint header
 	FFXFile	<< "\t\t<control-constraint>" << endl
@@ -47,7 +41,7 @@ void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const Analysis
 	bool first = true;
 	int edge_count = 0;
 	String ip_str = "[";
-	for(Analysis::Path::Iterator iter(ip); iter; iter++)
+	for(Analysis::OrderedPath::Iterator iter(ip); iter; iter++)
 	{
 		if(first)
 			first = false;

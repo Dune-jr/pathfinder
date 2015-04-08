@@ -39,7 +39,7 @@ public:
 	static Identifier<SLList<State> > PROCESSED_EDGES;
 
 	Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int flags);
-	inline Set<Path> infeasiblePaths() const { return infeasible_paths; }
+	inline Vector<OrderedPath> infeasiblePaths() const { return infeasible_paths; }
 	
 	class State {
 	private:
@@ -179,7 +179,7 @@ private:
 
 	const dfa::State* dfa_state;
 	const OperandVar sp; // the Stack Pointer register
-	Set<Path> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
+	Vector<OrderedPath> infeasible_paths; // TODO! Set<Path, PathComparator<Path> > path; to make Set useful
 	int max_tempvars, max_registers, flags;
 	int processed_paths, total_paths, paths_count, feasible_paths_count, infeasible_paths_count, loop_header_count, bb_count;
 	
@@ -188,6 +188,7 @@ private:
 	int processBB(State& s, BasicBlock *bb);
 	void processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, const SLList<Analysis::State>& sl, bool is_conditional);
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
+	void addDisorderedPath(const Path& infeasible_path, const OrderedPath& full_path, Edge* last_edge);
 	void purgeStateList(SLList<Analysis::State>& sl) const;
 	void placeboProcessCFG(CFG* cfg);
 	void placeboProcessBB(BasicBlock *bb);
