@@ -193,6 +193,7 @@ private:
 	void placeboProcessCFG(CFG* cfg);
 	void placeboProcessBB(BasicBlock *bb);
 	void printResults(int exec_time_ms) const;
+	void removeDuplicateInfeasiblePaths();
 	void onPathEnd();
 	void onAnyInfeasiblePath();
 	bool isAHandledEdgeKind(Edge::kind_t kind) const;

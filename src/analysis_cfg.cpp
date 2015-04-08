@@ -167,6 +167,7 @@ void Analysis::processCFG(CFG* cfg)
 	/* end */
 
 	// analysis complete, print infeasible paths
+	removeDuplicateInfeasiblePaths();
 	printResults((clock()-timestamp)*1000/CLOCKS_PER_SEC);
 }
 
@@ -246,12 +247,15 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 				 // falling back on full path (not as useful as a result, but still something)
 				OrderedPath original_full_path = (*sl_iter).getPath();
 				original_full_path.addLast(e); // need to add e
-Path ofp;
-for(OrderedPath::Iterator original_full_orderedpath_iter(original_full_path); original_full_orderedpath_iter; original_full_orderedpath_iter++)
-	ofp += *original_full_orderedpath_iter;
 				infeasible_paths.add(original_full_path);
-				DBG(color::On_IRed() << "Inf. path found: " << pathToString(ofp) << color::RCol() << " (unrefined)")
-				// TODO: do a C) where we still try to refine this infeasible path
+				// TODO! clean that mess below...
+				{
+					Path ofp;
+					for(OrderedPath::Iterator original_full_orderedpath_iter(original_full_path); original_full_orderedpath_iter; original_full_orderedpath_iter++)
+						ofp += *original_full_orderedpath_iter;
+					DBG(color::On_IRed() << "Inf. path found: " << pathToString(ofp) << color::RCol() << " (unrefined)")
+				}
+				// TODO: do a C) where we still try to refine this infeasible path?
 			}
 			onAnyInfeasiblePath();
 		}
@@ -393,6 +397,50 @@ void Analysis::printResults(int exec_time_ms) const
 		    std::cout.precision (oldprecision);
 		}
 	}
+}
+
+// TODO: do something prettier here, maybe with a operator== on OrderedPath to use contains.... or just use Sets with a Comparator...
+void Analysis::removeDuplicateInfeasiblePaths()
+{
+	Vector<OrderedPath> new_ips;
+	for(Vector<OrderedPath>::Iterator ips_iter(infeasible_paths); ips_iter; )
+	{
+		OrderedPath op = *ips_iter;
+		infeasible_paths.remove(ips_iter);
+		bool contains = false;
+		{
+			for(Vector<OrderedPath>::Iterator ip_iter(infeasible_paths); ip_iter; ip_iter++)
+			{
+				bool equals = true;
+				// check *ip_iter == op
+				if(ip_iter.item().count() == op.count())
+				{
+					OrderedPath::Iterator iter1(ip_iter.item());
+					for(OrderedPath::Iterator iter2(op); iter2; iter1++, iter2++)
+					{
+						if(!(iter1.item() == iter2.item()))
+						{
+							equals = false;
+							break;
+						}
+					}
+				}
+				else
+					equals = false;
+				//if(*ip_iter == op)
+				if(equals)
+				{
+					contains = true;
+					break;
+				}
+			}
+		}
+		//if(!infeasible_paths.contains(op))
+		if(!contains)
+			new_ips.add(op);
+	}
+	infeasible_paths.clear();
+	infeasible_paths = new_ips;
 }
 
 // debugs to do on path end
