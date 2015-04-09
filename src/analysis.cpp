@@ -110,9 +110,8 @@ io::Output& Analysis::State::print(io::Output& out) const
  * @fn void Analysis::State::merge(const SLList<State>& sl, Edge* e);
  * Modifies the current state to be the result of the merge of a (SL)list of states 
  */
-void Analysis::State::merge(const SLList<State>& sl, Edge* e)
+void Analysis::State::merge(const SLList<State>& sl)
 {
-	DBG(color::Whi() << "Merging " << sl.count() << " paths at BB " << e->source()->number())
 	// resetting stuff
 	generated_preds.clear();
 	generated_preds_taken.clear();
@@ -121,9 +120,9 @@ void Analysis::State::merge(const SLList<State>& sl, Edge* e)
 	// intialize to first element
 	ASSERTP(!sl.isEmpty(), "call to Analysis::State::merge with empty sl parameter"); // TODO maybe just leave the state empty
 	constants = sl.first().constants;
-	// copy firstElement.labelled_preds into labelled_preds with new labels = {}
+	// copy firstElement.labelled_preds into labelled_preds with empty labels
 	for(SLList<LabelledPredicate>::Iterator iter(sl.first().labelled_preds); iter; iter++)
-		generated_preds += LabelledPredicate(iter->pred(), Path::null);
+		labelled_preds += LabelledPredicate(iter->pred(), Path::null);
 	bool first = true;
 	for(SLList<State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
@@ -133,7 +132,7 @@ void Analysis::State::merge(const SLList<State>& sl, Edge* e)
 			continue;
 		}
 		// for each element of labelled_preds, we make sure it is in *sl_iter
-		for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; )
+		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; )
 		{
 			// do not use 'if(s.labelled_preds.contains(*iter))' as we want to use Predicate::operator== and not LabelledPredicate::operator==
 			bool contains = false;
@@ -148,23 +147,68 @@ void Analysis::State::merge(const SLList<State>& sl, Edge* e)
 			if(contains)
 				iter++;
 			else
-				generated_preds.remove(iter);
+				labelled_preds.remove(iter);
 		}
 		cvl += (*sl_iter).constants;
 	}
 	constants.merge(cvl);
-	DBG("Merged predicates: " << generated_preds << ", " << constants)
-	appendEdge(e, false); // "is_conditional" to false because we want to label generated_preds, not generated_preds_taken
-	path.clear();
 }
 
-void Analysis::State::dumpEverything() const
+/**
+ * @fn void Analysis::State::merge(const SLList<State>& sl, Edge* e);
+ * Modifies the current state to be the result of the merge of a (SL)list of states 
+ */
+void Analysis::State::merge(const SLList<State>& sl, Edge* e)
 {
-	DBG("--- DUMPING WHOLE STATE---")
-	DBG("OrderedPath path=" << getPathString())
-	DBG("ConstantVariables constants=" << constants)
-	DBG("SLList<LabelledPredicate> labelled_preds=" << labelled_preds)
-	DBG("SLList<LabelledPredicate> generated_preds=" << generated_preds)
-	DBG("SLList<LabelledPredicate> generated_preds_taken=" << generated_preds_taken)
-	DBG("--- END OF DUMP OF WHOLE STATE---")
+	DBG(color::Whi() << "Merging " << sl.count() << " paths at BB " << e->source()->number())
+	merge(sl);
+	labelled_preds = labelPredicateList(labelled_preds, e);
+	constants.label(e);
+	path.clear();
+	DBG("Merged predicates: " << generated_preds << ", " << constants)
+}
+
+elm::String Analysis::State::dumpEverything() const
+{
+	return _
+		<< "--- DUMPING WHOLE STATE ---" << endl
+		<< "  * OrderedPath path=" << getPathString() << endl
+		<< "  * ConstantVariables constants=" << constants << endl
+		<< "  * SLList<LabelledPredicate> labelled_preds=" << labelled_preds << endl
+		<< "  * SLList<LabelledPredicate> generated_preds=" << generated_preds << endl
+		<< "  * SLList<LabelledPredicate> generated_preds_taken=" << generated_preds_taken << endl
+		<< "--- END OF DUMP OF WHOLE STATE ---" << endl;
+}
+
+// this is not Leibniz equality, but a test to check for a fixpoint!
+// <!> this compares labelled_preds only <!>
+bool Analysis::State::isFixPoint(const Analysis::State& s) const
+{
+	assert(this->sp == s.sp);
+	// do not check the path or any of the edges!
+	/*if(generated_preds != generated_preds)
+		return false;
+	if(generated_preds_taken != generated_preds_taken)
+		return false;
+	*/
+	if(!this->constants.sameValuesAs(s.constants))
+		return false;
+	// checking for this->labelled_preds.sameValuesAs(s.labelled_preds)
+	if(this->labelled_preds.count() != s.labelled_preds.count())
+		return false;
+	for(SLList<LabelledPredicate>::Iterator self_iter(this->labelled_preds); self_iter; self_iter++)
+	{
+		bool contains = false;
+		for(SLList<LabelledPredicate>::Iterator s_iter(s.labelled_preds); s_iter; s_iter++)
+		{
+			if(self_iter->pred() == s_iter->pred())
+			{
+				contains = true;
+				break;
+			}
+		}
+		if(!contains)
+			return false;
+	}
+	return true;
 }

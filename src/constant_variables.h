@@ -68,7 +68,8 @@ public:
 	ConstantVariablesSimplified toSimplified() const;
 	inline Constant operator[](const OperandVar& opdv) const { return getValue(opdv); }
 	ConstantVariables& operator=(const ConstantVariables& cv);
-	bool operator==(const ConstantVariables& cv) const;
+	bool operator==(const ConstantVariables& cv) const; // strict
+	bool sameValuesAs(const ConstantVariables& cv) const; // less strict (only values)
 	inline bool operator!=(const ConstantVariables& cv) const { return !(*this == cv); }
 	friend io::Output& operator<<(io::Output& out, const ConstantVariables& cv) { return cv.print(out); }
 };

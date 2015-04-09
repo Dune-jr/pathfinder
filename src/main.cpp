@@ -55,7 +55,6 @@ protected:
 		return;
 		*/
 
-
 		workspace()->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
 		workspace()->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
 		if(opt_virtualize)

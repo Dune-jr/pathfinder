@@ -69,6 +69,27 @@ bool ConstantVariables::operator==(const ConstantVariables& cv) const
 	return true;
 }
 
+bool ConstantVariables::sameValuesAs(const ConstantVariables& cv) const
+{
+	if(_max_tempvars != cv._max_tempvars || _max_registers != cv._max_registers)
+		return false; // sizes do not match
+	for(unsigned int i = 0; i < _max_tempvars; i++)
+	{
+		if(tempvars[i].isOne() != cv.tempvars[i].isOne())
+			return false;
+		if(tempvars[i].isOne() && (*tempvars[i]).val() != (*cv.tempvars[i]).val())
+			return false;
+	}
+	for(unsigned int i = 0; i < _max_registers; i++)
+	{
+		if(registers[i].isOne() != cv.registers[i].isOne())
+			return false;
+		if(registers[i].isOne() && (*registers[i]).val() != (*cv.registers[i]).val())
+			return false;
+	}
+	return true;
+}
+
 Option<ConstantVariables::LabelledValue>& ConstantVariables::getCell(const OperandVar& opdv) const
 {
 	if(opdv.isTempVar())
@@ -168,11 +189,9 @@ void ConstantVariables::label(Edge* label)
 // TODO! we can improve this a lot
 void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
 {
-	cout << "merge(cvl=" << endl;
 	for(SLList<ConstantVariables>::Iterator iter(cvl); iter; iter++)
 	{
 		const ConstantVariables& cv = *iter;
-		cout << "\t* " << cv << endl;
 		ASSERTP(_max_tempvars == cv._max_tempvars && _max_registers == cv._max_registers, "ConstantVariables::merge: format does not match")
 		for(unsigned int i = 0; i < _max_tempvars; i++)
 			if(tempvars[i] && (!(cv.tempvars[i]) || (*tempvars[i]).val() != (*cv.tempvars[i]).val())) // do not compare labels!
@@ -184,7 +203,7 @@ void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
 	// manage labels
 	for(unsigned int i = 0; i < _max_tempvars; i++)
 		if(tempvars[i])
-			tempvars[i] = some(LabelledValue((*tempvars[i]).val(), Set<Edge*>::null, true));
+			tempvars[i] = some(LabelledValue((*tempvars[i]).val(), Set<Edge*>::null, true)); // it is important to mark them as updated so they can be labelled
 	for(unsigned int i = 0; i < _max_registers; i++)
 		if(registers[i])
 			registers[i] = some(LabelledValue((*registers[i]).val(), Set<Edge*>::null, true));

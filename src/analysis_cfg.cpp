@@ -58,8 +58,7 @@ void Analysis::State::appendEdge(Edge* e, bool is_conditional)
 		generated_preds;  // NOT TAKEN, VIRTUAL, VIRTUAL RETURN, non-conditional TAKEN
 
 	// label our list of predicates with the current edge then append it
-	SLList<LabelledPredicate> labelled_analysis_result = labelPredicateList(relevant_preds, e);
-	labelled_preds += labelled_analysis_result;
+	labelled_preds += labelPredicateList(relevant_preds, e);
 	// label the constants as well
 	constants.label(e);
 }
@@ -82,10 +81,12 @@ void Analysis::processCFG(CFG* cfg)
 	wl.push(cfg->firstBB());
 	/* lock[] <- {{}}; */
 	Identifier<SLList<Analysis::State> > PROCESSED_EDGES("Analyis::IP analysis processed incoming edges"); //, SLList<State>::null);
+	Identifier<Analysis::State*> 		 PROCESSED_LOOPHEADER_BB("Analyis::IP analysis processed loop header basic blocks");
 	BasicBlock::OutIterator entry_outs(cfg->entry());
 	SLList<Analysis::State> entry_annotation;
 	entry_annotation += Analysis::State(cfg->entry(), dfa_state, sp, max_tempvars, max_registers);
 	PROCESSED_EDGES(*entry_outs) = entry_annotation;
+	bool fixpoint = false; // TODO!!! remove
 
 	/* While wl != ∅ */
 	while(!wl.isEmpty())
@@ -94,7 +95,6 @@ void Analysis::processCFG(CFG* cfg)
 		/* bb::wl <- wl; */
 		BasicBlock *bb = wl.pop();
 		SLList<Analysis::State> sl;
-		const bool is_loop_header = LOOP_HEADER(bb);
 
 		/*  If lock[bb].count() < bb.ins.count
 				continue;
@@ -104,27 +104,39 @@ void Analysis::processCFG(CFG* cfg)
 			continue;
 		
 		if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
-			cout << "[" << ++processed_bbs*100/bb_count << "%] Processing BB #" << bb->number() << " of " << bb_count << " " << (is_loop_header?" (loop header)":"") << endl;
+			cout << "[" << ++processed_bbs*100/bb_count << "%] Processing BB #" << bb->number() << " of " << bb_count << " " << (LOOP_HEADER(bb)?" (loop header)":"") << endl;
 		/* sl <- mergeIntoOneList(lock[bb]); */
 		for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
 			sl.addAll(*PROCESSED_EDGES(*bb_ins));
 		// at this point of the algorithm, all incoming edges of bb have been processed
-		purgeStateList(sl);
+		purgeStateList(sl); // remove all invalidate states
 
 		// in case of loop, merge the state list into a single state
-		if(is_loop_header)
+		if(LOOP_HEADER(bb))
 		{
-			State s((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
-			BasicBlock::OutIterator bb_outs(bb);
-			// look for the loop exit edge
-			while(LOOP_EXIT_EDGE(*bb_outs) != bb)
-				bb_outs++;
-			s.merge(sl, *bb_outs);
+			// #0: JOIN entering edges
+			State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
+			s->merge(sl);//, *bb_outs);
 			sl.clear();
-			sl += s; // sl <- {s}
+			sl += *s; // sl <- {s}
+
+			cout << "merged:" << s->dumpEverything();
+			// remember this state for later to detect a fixpoint
+			if(PROCESSED_LOOPHEADER_BB.exists(bb))
+			{
+				State* prev_s = PROCESSED_LOOPHEADER_BB(bb);
+				assert(prev_s != NULL);
+				if(s->isFixPoint(*prev_s))
+				{
+					cout << color::IRed() << "FIXPOINT" << color::RCol() << endl;
+					fixpoint = true;
+				}
+				delete prev_s;
+			}
+			PROCESSED_LOOPHEADER_BB.ref(bb) = s;
 		}
 
-		// merge into a single empty state
+		// merge into a single empty state (throw)
 		/*if(is_loop_header && sl)
 		{
 			State s(sl.first());
@@ -152,7 +164,9 @@ void Analysis::processCFG(CFG* cfg)
 			{
 				if(BACK_EDGE(*bb_outs))
 					DBG(color::Whi() << "End of loop reached.")
-				// else 
+				// else // #5: do not take the back edge of THIS loop
+				if((!fixpoint && !LOOP_EXIT_EDGE(*bb_outs))  // #2: do not take loop exits
+					|| (fixpoint && LOOP_EXIT_EDGE(*bb_outs))) // #4: take loop exits
 				{
 					// adds to PROCESSED_EDGE
 					processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb)); // annotate regardless of returned new_sl being empty or not
@@ -386,7 +400,7 @@ void Analysis::printResults(int exec_time_ms) const
 	}
 	if(dbg_flags&DBG_NO_DEBUG)
 	{
-		cout << total_paths-feasible_paths_count << "/" << total_paths << " infeasible paths (" << (total_paths-feasible_paths_count)*100/total_paths << "%)." << endl;
+		// cout << total_paths-feasible_paths_count << "/" << total_paths << " infeasible paths (" << (total_paths-feasible_paths_count)*100/total_paths << "%)." << endl;
 		cout << infeasible_paths_count << " infeasible path(s) found.";
 		if(!(dbg_flags&DBG_NO_TIME))
 		{
@@ -526,6 +540,14 @@ bool Analysis::allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identif
 		if(!BACK_EDGE(*bb_ins))
 			if(!annotation_identifier.get(*bb_ins))
 				return false;
+	return true;
+}
+
+bool Analysis::allIncomingEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const
+{
+	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
+		if(!annotation_identifier.get(*bb_ins))
+			return false;
 	return true;
 }
 

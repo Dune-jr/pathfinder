@@ -36,7 +36,8 @@ public:
 	typedef SLList<Edge*> OrderedPath;
 	typedef Set<Edge*> Path;
 	class State;
-	static Identifier<SLList<State> > PROCESSED_EDGES;
+	// static Identifier<SLList<State> > PROCESSED_EDGES;
+	// static Identifier<State*> PROCESSED_LOOPHEADER_BB;
 
 	Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int flags);
 	inline Vector<OrderedPath> infeasiblePaths() const { return infeasible_paths; }
@@ -63,16 +64,18 @@ public:
 		inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
 		inline const ConstantVariables& getConstants() const { return constants; }
 		inline bool isValid() const { return dfa_state != 0; }
-		friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 		inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
-		void dumpEverything() const;
+		friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 
 		// analysis.cpp
 		elm::String getPathString() const;
+		elm::String dumpEverything() const;
+		void merge(const SLList<State>& sl);
+		void merge(const SLList<State>& sl, Edge* e);
+		bool isFixPoint(const Analysis::State& s) const;
 
 		// analysis_cfg.cpp
 		void appendEdge(Edge* e, bool is_conditional);
-		void merge(const SLList<State>& sl, Edge* e);
 
 		// analysis_bb.cpp
 		void processBB(const BasicBlock *bb);
@@ -199,6 +202,7 @@ private:
 	bool isAHandledEdgeKind(Edge::kind_t kind) const;
 	bool isConditional(BasicBlock* bb) const;
 	bool allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
+	bool allIncomingEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
 	elm::String wlToString() const;
 	elm::String pathToString(const Path& path);
