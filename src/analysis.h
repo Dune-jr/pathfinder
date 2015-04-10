@@ -36,13 +36,17 @@ public:
 	typedef SLList<Edge*> OrderedPath;
 	typedef Set<Edge*> Path;
 	class State;
+
 	// static Identifier<SLList<State> > PROCESSED_EDGES;
 	// static Identifier<State*> PROCESSED_LOOPHEADER_BB;
 
 	Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int flags);
 	inline Vector<OrderedPath> infeasiblePaths() const { return infeasible_paths; }
+	static bool listOfFixpoints(const SLList<Analysis::State>& sl);
 	
 	class State {
+	public:
+		bool fixpoint; // TODO!!!
 	private:
 		const dfa::State* dfa_state;
 		const OperandVar& sp; // the Stack Pointer register
@@ -189,7 +193,7 @@ private:
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
 	int processBB(State& s, BasicBlock *bb);
-	void processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, const SLList<Analysis::State>& sl, bool is_conditional);
+	void processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt);
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
 	void addDisorderedPath(const Path& infeasible_path, const OrderedPath& full_path, Edge* last_edge);
 	void purgeStateList(SLList<Analysis::State>& sl) const;
@@ -201,6 +205,8 @@ private:
 	void onAnyInfeasiblePath();
 	bool isAHandledEdgeKind(Edge::kind_t kind) const;
 	bool isConditional(BasicBlock* bb) const;
+	void cleanIncomingEdges(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const;
+	void cleanIncomingBackEdges(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const;
 	bool allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool allIncomingEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;

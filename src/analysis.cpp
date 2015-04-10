@@ -175,9 +175,9 @@ elm::String Analysis::State::dumpEverything() const
 		<< "  * OrderedPath path=" << getPathString() << endl
 		<< "  * ConstantVariables constants=" << constants << endl
 		<< "  * SLList<LabelledPredicate> labelled_preds=" << labelled_preds << endl
-		<< "  * SLList<LabelledPredicate> generated_preds=" << generated_preds << endl
-		<< "  * SLList<LabelledPredicate> generated_preds_taken=" << generated_preds_taken << endl
-		<< "--- END OF DUMP OF WHOLE STATE ---" << endl;
+		// << "  * SLList<LabelledPredicate> generated_preds=" << generated_preds << endl
+		// << "  * SLList<LabelledPredicate> generated_preds_taken=" << generated_preds_taken << endl
+		<< "--- END OF DUMP ---" << endl;
 }
 
 // this is not Leibniz equality, but a test to check for a fixpoint!
@@ -208,6 +208,16 @@ bool Analysis::State::isFixPoint(const Analysis::State& s) const
 			}
 		}
 		if(!contains)
+			return false;
+	}
+	return true;
+}
+
+bool Analysis::listOfFixpoints(const SLList<Analysis::State>& sl)
+{
+	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
+	{
+		if(!(sl_iter->fixpoint))
 			return false;
 	}
 	return true;

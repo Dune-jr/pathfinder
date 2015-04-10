@@ -19,7 +19,7 @@ using namespace elm::io;
 Analysis::State::State() : dfa_state(NULL), sp(0), constants(0, 0) { }
 
 Analysis::State::State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init)
-	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers)
+	: fixpoint(false), dfa_state(state), sp(sp), constants(max_tempvars, max_registers)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -33,7 +33,7 @@ Analysis::State::State(BasicBlock* entrybb, const dfa::State* state, const Opera
 }
 
 Analysis::State::State(Edge* entry_edge, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init)
-	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers)
+	: fixpoint(false), dfa_state(state), sp(sp), constants(max_tempvars, max_registers)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -45,7 +45,7 @@ Analysis::State::State(Edge* entry_edge, const dfa::State* state, const OperandV
 }
 
 Analysis::State::State(const State& s)
-	: dfa_state(s.dfa_state), sp(s.sp), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)
+	: fixpoint(s.fixpoint), dfa_state(s.dfa_state), sp(s.sp), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)
 	{ }
 
 void Analysis::State::appendEdge(Edge* e, bool is_conditional)
@@ -80,21 +80,23 @@ void Analysis::processCFG(CFG* cfg)
 	/* wl <- {ɛ} */
 	wl.push(cfg->firstBB());
 	/* lock[] <- {{}}; */
-	Identifier<SLList<Analysis::State> > PROCESSED_EDGES("Analyis::IP analysis processed incoming edges"); //, SLList<State>::null);
-	Identifier<Analysis::State*> 		 PROCESSED_LOOPHEADER_BB("Analyis::IP analysis processed loop header basic blocks");
+	Identifier<SLList<Analysis::State> > PROCESSED_EDGES("IP analysis processed incoming edges"); //, SLList<State>::null);
+	Identifier<Analysis::State*> 		 PROCESSED_LOOPHEADER_BB("IP analysis processed loop header basic blocks");
+	Identifier<bool>			 		 MOTHERLOOP_FIXPOINT_STATE("IP analysis fixpoint state info on loop exit edges");
 	BasicBlock::OutIterator entry_outs(cfg->entry());
 	SLList<Analysis::State> entry_annotation;
 	entry_annotation += Analysis::State(cfg->entry(), dfa_state, sp, max_tempvars, max_registers);
 	PROCESSED_EDGES(*entry_outs) = entry_annotation;
-	bool fixpoint = false; // TODO!!! remove
 
 	/* While wl != ∅ */
 	while(!wl.isEmpty())
 	{
 		DBG("wl=" << wlToString())
 		/* bb::wl <- wl; */
+		cout << color::Blu() << "wl=" << wlToString() << color::RCol() << endl;
 		BasicBlock *bb = wl.pop();
 		SLList<Analysis::State> sl;
+		const bool loop_header = LOOP_HEADER(bb);
 
 		/*  If lock[bb].count() < bb.ins.count
 				continue;
@@ -104,53 +106,76 @@ void Analysis::processCFG(CFG* cfg)
 			continue;
 		
 		if(dbg_flags&DBG_NO_DEBUG && !(flags&SUPERSILENT))
-			cout << "[" << ++processed_bbs*100/bb_count << "%] Processing BB #" << bb->number() << " of " << bb_count << " " << (LOOP_HEADER(bb)?" (loop header)":"") << endl;
+			cout << "[" << ++processed_bbs*100/bb_count << "%] Processing BB #" << bb->number() << " of " << bb_count << " " << (loop_header?" (loop header)":"") << endl;
 		/* sl <- mergeIntoOneList(lock[bb]); */
 		for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
 			sl.addAll(*PROCESSED_EDGES(*bb_ins));
 		// at this point of the algorithm, all incoming edges of bb have been processed
 		purgeStateList(sl); // remove all invalidate states
+		cleanIncomingBackEdges(bb, PROCESSED_EDGES);
 
 		// in case of loop, merge the state list into a single state
-		if(LOOP_HEADER(bb))
+		if(loop_header)
 		{
-			// #0: JOIN entering edges
-			State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
+			ASSERT(!sl.isEmpty()); // TODO!!! we need to handle this weird case (inf. path)
+			State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway // TODO! delete s;
 			s->merge(sl);//, *bb_outs);
-			sl.clear();
-			sl += *s; // sl <- {s}
+			s->fixpoint = Analysis::listOfFixpoints(sl);
+			// s->fixpoint = false;
 
 			cout << "merged:" << s->dumpEverything();
 			// remember this state for later to detect a fixpoint
 			if(PROCESSED_LOOPHEADER_BB.exists(bb))
 			{
-				State* prev_s = PROCESSED_LOOPHEADER_BB(bb);
-				assert(prev_s != NULL);
-				if(s->isFixPoint(*prev_s))
+				if(s->fixpoint)
 				{
-					cout << color::IRed() << "FIXPOINT" << color::RCol() << endl;
-					fixpoint = true;
+					// don't compute anything, just extract the fixpoint we already know
+					delete s;
+					s = PROCESSED_LOOPHEADER_BB(bb);
+					s->fixpoint = true; // ensure we keep this property
 				}
-				delete prev_s;
+				else
+				{
+					State* prev_s = PROCESSED_LOOPHEADER_BB(bb);
+					assert(prev_s != NULL);
+					if(s->isFixPoint(*prev_s))
+					{
+						cout << color::BIRed() << "FIXPOINT on BB#" << bb->number() << color::RCol() << endl;
+						s->fixpoint = true;
+						// Important: we need to clear the annotation for future fixpoints on this loop
+						// PROCESSED_LOOPHEADER_BB.remove(bb); // nope. TODO! is that fine
+					}
+					else
+					{
+						PROCESSED_LOOPHEADER_BB.ref(bb) = s;
+						delete prev_s;
+					}
+				}
 			}
-			PROCESSED_LOOPHEADER_BB.ref(bb) = s;
-		}
+			else
+				PROCESSED_LOOPHEADER_BB.ref(bb) = s;
 
-		// merge into a single empty state (throw)
-		/*if(is_loop_header && sl)
-		{
-			State s(sl.first());
+			bool fixpoint = sl.first().fixpoint; // temp var, bit hacky :-/
+			for(Vector<Edge*>::Iterator exits_iter(*EXIT_LIST.use(bb)); exits_iter; exits_iter++)
+			{
+				// annotate all the loop exit edges
+				MOTHERLOOP_FIXPOINT_STATE.ref(*exits_iter) = fixpoint;
+			}	
 			sl.clear();
-			s.throwInfo();
-			sl += s;
-		}*/
+			sl += *s; // sl <- {s}
+		}
+		else 
+			cleanIncomingEdges(bb, PROCESSED_EDGES);
 
+		bool fixpoint; // TODO: what if infeasible path and sl empty?
 		/* For s in sl */
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
 		{
 			// if(is_loop_header) sl_iter.item().throwInfo(); // dump predicates info
 			DBG(color::Whi() << "Processing path " << (*sl_iter).getPathString())
 			/* processBB(s, bb); */
+			cout << "BB #" << bb->number() << ", fixpoint=" << DBG_TEST(sl_iter.item().fixpoint, true) << endl;
+			fixpoint = sl_iter.item().fixpoint;
 			if(processBB(sl_iter.item(), bb) > 0)
 				sl.remove(sl_iter); // path ended
 			else sl_iter++;
@@ -164,14 +189,30 @@ void Analysis::processCFG(CFG* cfg)
 			{
 				if(BACK_EDGE(*bb_outs))
 					DBG(color::Whi() << "End of loop reached.")
-				// else // #5: do not take the back edge of THIS loop
-				if((!fixpoint && !LOOP_EXIT_EDGE(*bb_outs))  // #2: do not take loop exits
-					|| (fixpoint && LOOP_EXIT_EDGE(*bb_outs))) // #4: take loop exits
+				if(!fixpoint) // #2: fixpoint not found
 				{
-					// adds to PROCESSED_EDGE
-					processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb)); // annotate regardless of returned new_sl being empty or not
-					if(!wl.contains(bb_outs->target()))
-						wl.push(bb_outs->target());
+					if(!LOOP_EXIT_EDGE(*bb_outs)) // take everything but loop exit edges
+					{	// adds to PROCESSED_EDGE
+						processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb), false); // annotate regardless of returned new_sl being empty or not
+						if(!wl.contains(bb_outs->target()))
+							wl.push(bb_outs->target());
+					}
+				}
+				else // #4: fixpoint found
+				{
+					if(!BACK_EDGE(*bb_outs)) // take everything but back edges
+					{	// adds to PROCESSED_EDGE
+						if(LOOP_EXIT_EDGE(*bb_outs))
+						{
+							ASSERT(MOTHERLOOP_FIXPOINT_STATE.exists(*bb_outs));
+							bool new_fixpoint_state = MOTHERLOOP_FIXPOINT_STATE(*bb_outs);
+							for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; sl_iter++)
+								sl_iter.item().fixpoint = new_fixpoint_state; // put the right flag on all states
+						}
+						processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb), true); // annotate regardless of returned new_sl being empty or not
+						if(!wl.contains(bb_outs->target()))
+							wl.push(bb_outs->target());
+					}
 				}
 			}
 		}
@@ -208,8 +249,7 @@ int Analysis::processBB(State& s, BasicBlock* bb)
  * @fn SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl);
  * Processes outgoing Edge e from a BasicBlock for each element of sl
 */
-// SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional)
-void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, const SLList<Analysis::State>& sl, bool is_conditional)
+void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt)
 {
 	/* wl <- sl ⊙ e; */
 	processed_edges_id.remove(e); // clearing: useless?
@@ -225,20 +265,27 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 		State s = *sl_iter;
 		s.appendEdge(e, is_conditional);
 
-		// SMT call
-		SMT smt;
-		const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
-		sl_paths.addLast(infeasible_path);
-		if(infeasible_path)
+		if(enable_smt)
 		{
-			// we need to add some sort of {} to say this is an infeasible path
-			State invalid_state;
-			processed_edges_id.ref(e).addFirst(invalid_state);
-			ASSERT((*infeasible_path).contains(s.lastEdge())) // make sure the last edge was relevant in this path
+			// SMT call
+			SMT smt;
+			const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
+			sl_paths.addLast(infeasible_path);
+			if(infeasible_path)
+			{
+				// we need to add some sort of {} to say this is an infeasible path
+				State invalid_state;
+				processed_edges_id.ref(e).addFirst(invalid_state);
+				ASSERT((*infeasible_path).contains(s.lastEdge())) // make sure the last edge was relevant in this path
+			}
+			else
+				processed_edges_id.ref(e).addFirst(s);
 		}
 		else
-			processed_edges_id.ref(e).addFirst(s);
+			processed_edges_id.ref(e).addFirst(s);			
 	}
+	if(!enable_smt) 
+		return;
 	SLList<Option<Path> >::Iterator sl_paths_iter(sl_paths);
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++, sl_paths_iter++)
 	{
@@ -329,6 +376,19 @@ void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
 	}
 }
 
+void Analysis::cleanIncomingBackEdges(BasicBlock *bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const
+{
+	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
+		if(BACK_EDGE(*bb_ins))
+			processed_edges_id.ref(*bb_ins).clear();
+}
+
+void Analysis::cleanIncomingEdges(BasicBlock *bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const
+{
+	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
+		processed_edges_id.ref(*bb_ins).clear();
+}
+
 // figures properties on the CFG without doing any actual analysis
 void Analysis::placeboProcessCFG(CFG* cfg)
 {
@@ -336,7 +396,7 @@ void Analysis::placeboProcessCFG(CFG* cfg)
 		cout << bb_count << " BBs found." << endl;
 	else
 		DBG(color::Whi() << total_paths << " paths found.")
-	if(dbg_flags&DBG_NO_PREANALYSIS)
+	if(!(dbg_flags&DBG_PREANALYSIS))
 	{
 		total_paths = 777;
 		cout << bb_count << " BBs found." << endl;
@@ -463,7 +523,7 @@ void Analysis::onPathEnd()
 	feasible_paths_count++;
 	if(flags&SUPERSILENT)
 		return;
-	if(dbg_flags&DBG_NO_DEBUG && !(dbg_flags&DBG_NO_PREANALYSIS))
+	if(dbg_flags&DBG_NO_DEBUG && dbg_flags&DBG_PREANALYSIS)
 	{
 		if((++paths_count % 100) == 0 || (total_paths <= 1000 && paths_count <= 1000))
 		{
@@ -481,7 +541,7 @@ void Analysis::onAnyInfeasiblePath()
 {
 	if(flags&SUPERSILENT)
 		return;
-	if(dbg_flags&DBG_NO_DEBUG && !(dbg_flags&DBG_NO_PREANALYSIS))
+	if(dbg_flags&DBG_NO_DEBUG && dbg_flags&DBG_PREANALYSIS)
 	{
 		infeasible_paths_count++;
 		if((++paths_count % 100) == 0 || (total_paths <= 1000 && paths_count <= 1000))

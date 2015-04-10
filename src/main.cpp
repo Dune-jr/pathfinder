@@ -35,7 +35,7 @@ public:
     	opt_linenumbers(option::SwitchOption::Make(*this).cmd("--line-nb").cmd("--line-numbers").description("number lines of the output")),
     	opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
     	opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")),
-    	opt_nopreanalysis(option::SwitchOption::Make(*this).cmd("--no-preanalysis").description("do not run pre-analysis")),
+    	opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis")),
     	opt_virtualize(option::SwitchOption::Make(*this).cmd("--virtualize").description("virtualize the CFG")) { }
         
 protected:
@@ -83,8 +83,8 @@ protected:
 			dbg_flags |= DBG_NO_TIME;
 		if(opt_nopred)
 			dbg_flags |= DBG_NO_PREDICATES;
-		if(opt_nopreanalysis)
-			dbg_flags |= DBG_NO_PREANALYSIS;
+		if(opt_preanalysis)
+			dbg_flags |= DBG_PREANALYSIS;
 		if(opt_virtualize)
 			analysis_flags |= Analysis::FOLLOW_CALLS;
 		if(opt_supersilent)
@@ -104,7 +104,7 @@ protected:
 
 private:
 	option::Manager manager;
-	option::SwitchOption opt_silent, opt_supersilent, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred, opt_nopreanalysis, opt_virtualize;
+	option::SwitchOption opt_silent, opt_supersilent, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred, opt_preanalysis, opt_virtualize;
 };
 
 OTAWA_RUN(Display);
