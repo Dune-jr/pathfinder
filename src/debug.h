@@ -4,6 +4,7 @@
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 
+#define DBGG
 #define DBG_NO_DEBUG	   0b1 << 0
 #define DBG_NO_COLOR	   0b1 << 1
 #define DBG_NO_INFO		   0b1 << 2

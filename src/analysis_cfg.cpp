@@ -93,7 +93,9 @@ void Analysis::processCFG(CFG* cfg)
 	{
 		DBG("wl=" << wlToString())
 		/* bb::wl <- wl; */
+#ifdef DBGG
 		cout << color::Blu() << "wl=" << wlToString() << color::RCol() << endl;
+#endif
 		BasicBlock *bb = wl.pop();
 		SLList<Analysis::State> sl;
 		const bool loop_header = LOOP_HEADER(bb);
@@ -123,7 +125,9 @@ void Analysis::processCFG(CFG* cfg)
 			s->fixpoint = Analysis::listOfFixpoints(sl);
 			// s->fixpoint = false;
 
+#ifdef DBGG
 			cout << "merged:" << s->dumpEverything();
+#endif
 			// remember this state for later to detect a fixpoint
 			if(PROCESSED_LOOPHEADER_BB.exists(bb))
 			{
@@ -155,11 +159,10 @@ void Analysis::processCFG(CFG* cfg)
 			else
 				PROCESSED_LOOPHEADER_BB.ref(bb) = s;
 
-			bool fixpoint = sl.first().fixpoint; // temp var, bit hacky :-/
 			for(Vector<Edge*>::Iterator exits_iter(*EXIT_LIST.use(bb)); exits_iter; exits_iter++)
 			{
 				// annotate all the loop exit edges
-				MOTHERLOOP_FIXPOINT_STATE.ref(*exits_iter) = fixpoint;
+				MOTHERLOOP_FIXPOINT_STATE.ref(*exits_iter) = sl.first().fixpoint; // bit hacky :-/
 			}	
 			sl.clear();
 			sl += *s; // sl <- {s}
@@ -173,9 +176,11 @@ void Analysis::processCFG(CFG* cfg)
 		{
 			// if(is_loop_header) sl_iter.item().throwInfo(); // dump predicates info
 			DBG(color::Whi() << "Processing path " << (*sl_iter).getPathString())
-			/* processBB(s, bb); */
-			cout << "BB #" << bb->number() << ", fixpoint=" << DBG_TEST(sl_iter.item().fixpoint, true) << endl;
 			fixpoint = sl_iter.item().fixpoint;
+#ifdef DBGG
+			cout << "BB #" << bb->number() << ", fixpoint=" << DBG_TEST(fixpoint, true) << endl;
+#endif
+			/* processBB(s, bb); */
 			if(processBB(sl_iter.item(), bb) > 0)
 				sl.remove(sl_iter); // path ended
 			else sl_iter++;
@@ -202,14 +207,19 @@ void Analysis::processCFG(CFG* cfg)
 				{
 					if(!BACK_EDGE(*bb_outs)) // take everything but back edges
 					{	// adds to PROCESSED_EDGE
+						bool enable_smt = true;
 						if(LOOP_EXIT_EDGE(*bb_outs))
 						{
 							ASSERT(MOTHERLOOP_FIXPOINT_STATE.exists(*bb_outs));
 							bool new_fixpoint_state = MOTHERLOOP_FIXPOINT_STATE(*bb_outs);
 							for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; sl_iter++)
-								sl_iter.item().fixpoint = new_fixpoint_state; // put the right flag on all states
+								sl_iter.item().fixpoint = new_fixpoint_state; // put the fixpoint flag on all states
+							enable_smt = false;	// TODO! call with enable_smt=true even when we're coming back to the motherloop? doesn't sound right
 						}
-						processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb), true); // annotate regardless of returned new_sl being empty or not
+						else // this is dirty, but it comes from the above code altering sl for all iterations of bb_outs when really it shouldn't... but copying is costly
+							for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; sl_iter++)
+								sl_iter.item().fixpoint = true; // ensure this
+						processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not 
 						if(!wl.contains(bb_outs->target()))
 							wl.push(bb_outs->target());
 					}
@@ -380,13 +390,15 @@ void Analysis::cleanIncomingBackEdges(BasicBlock *bb, const Identifier<SLList<An
 {
 	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
 		if(BACK_EDGE(*bb_ins))
-			processed_edges_id.ref(*bb_ins).clear();
+			processed_edges_id.remove(*bb_ins);
+			// processed_edges_id.ref(*bb_ins).clear();
 }
 
 void Analysis::cleanIncomingEdges(BasicBlock *bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const
 {
 	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
-		processed_edges_id.ref(*bb_ins).clear();
+		processed_edges_id.remove(*bb_ins);
+		//processed_edges_id.ref(*bb_ins).clear();
 }
 
 // figures properties on the CFG without doing any actual analysis
