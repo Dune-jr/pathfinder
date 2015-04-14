@@ -45,8 +45,6 @@ public:
 	static bool listOfFixpoints(const SLList<Analysis::State>& sl);
 	
 	class State {
-	public:
-		bool fixpoint; // TODO!!!
 	private:
 		const dfa::State* dfa_state;
 		const OperandVar& sp; // the Stack Pointer register
@@ -56,6 +54,7 @@ public:
 		SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
 		SLList<LabelledPredicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
 			// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
+		bool fixpoint;
 		class PredIterator;
 
 	public:
@@ -68,6 +67,8 @@ public:
 		inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
 		inline const ConstantVariables& getConstants() const { return constants; }
 		inline bool isValid() const { return dfa_state != 0; }
+		inline bool fixpointState() const { return fixpoint; }
+		inline void setFixpointState(bool new_fixpoint) { fixpoint = new_fixpoint; }
 		inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
 		friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 

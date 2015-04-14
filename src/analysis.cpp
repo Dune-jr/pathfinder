@@ -217,7 +217,7 @@ bool Analysis::listOfFixpoints(const SLList<Analysis::State>& sl)
 {
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
-		if(!(sl_iter->fixpoint))
+		if(!(sl_iter->fixpointState()))
 			return false;
 	}
 	return true;

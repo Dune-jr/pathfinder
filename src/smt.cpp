@@ -91,6 +91,15 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	{
 		DBG(color::BIWhi() << "A)" << color::RCol() << " Extracting UNSAT core... " << color::IGre() << "SUCCESS!");
 		DBG_STD("   UNSAT core: " << unsat_core_output << "]")
+#ifdef DBGG
+		cout << "   Original predicates:" << endl;
+		for(SLList<LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
+		{
+			if((*parse_iter).pred().isComplete())
+				cout << "   * " << (*parse_iter) << endl;
+		}
+		std::cout << "   UNSAT core: " << unsat_core_output << "]" << endl;
+#endif
 	}
 
 	// printInfeasiblePath(path);
@@ -120,8 +129,16 @@ bool SMT::checkPredSat(const SLList<Option<Expr> >& exprs)
 		if(*iter)
 			smt.assertFormula(**iter, true); // second parameter to true for unsat cores
 
-	bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
-	return isSat;
+	try
+	{
+		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
+		return isSat;
+	}
+	catch(CVC4::LogicException e)
+	{
+		cout << "WARNING: non-linear call to CVC4, defaulted to SAT." << endl;
+		return true;
+	}
 }
 
 // check predicates satisfiability
@@ -131,8 +148,16 @@ bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds)
 		if(Option<Expr> expr = getExpr(iter->pred()))
 			smt.assertFormula(*expr); // second parameter to true for unsat cores
 		
-	bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
-	return isSat;
+	try
+	{
+		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
+		return isSat;
+	}
+	catch(CVC4::LogicException e)
+	{
+		cout << "WARNING: non-linear call to CVC4, defaulted to SAT." << endl;
+		return true;
+	}
 }
 
 Option<Expr> SMT::getExpr(const Predicate& p)
