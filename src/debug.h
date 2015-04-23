@@ -5,7 +5,8 @@
 #include <elm/string/AutoString.h>
 
 // #define DBGG
-#define DBG_NO_DEBUG	   0b1 << 0
+// #define DBG_WARNINGS
+// #define DBG_NO_DEBUG	   0b1 << 0
 #define DBG_NO_COLOR	   0b1 << 1
 #define DBG_NO_INFO		   0b1 << 2
 #define DBG_LINE_NB		   0b1 << 3
@@ -15,7 +16,13 @@
 #define UNTESTED_CRITICAL false // Do not raise exception when executing untested code
 #define DBG_SEPARATOR " "
 
+#define DBG_VERBOSE_ALL			 0
+#define DBG_VERBOSE_MINIMAL		 1
+#define DBG_VERBOSE_RESULTS_ONLY 2
+#define DBG_VERBOSE_NONE 		 3
+
 extern int dbg_flags;
+extern int dbg_verbose;
 
 namespace debug {
 namespace color
@@ -116,7 +123,7 @@ public:
 	}
 	static bool shouldPrint(const elm::String& str)
 	{
-		if(dbg_flags&DBG_NO_DEBUG)
+		if(dbg_verbose > DBG_VERBOSE_ALL)
 			return false;
 		if(dbg_flags&DBG_NO_PREDICATES)
 		{	

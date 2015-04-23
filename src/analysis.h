@@ -178,7 +178,8 @@ public:
 	enum
 	{
 		FOLLOW_CALLS	= 0b1 << 1,
-		SUPERSILENT		= 0b1 << 2,
+		// SUPERSILENT		= 0b1 << 2,
+		MERGE			= 0b1 << 3,
 	};
 	
 private:

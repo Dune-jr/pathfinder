@@ -22,39 +22,27 @@ void testOperands();
 void testSimplify();	
 
 int dbg_flags = 0b0000; // global flags
+int dbg_verbose = 0; // global verbose level (higher = less verbose)
 
 class Display: public Application {
 public:
     Display(void): Application("display", Version(1, 0, 0)),
-    	// opt1(option::SwitchOption::Make(manager).cmd("-o").cmd("--com").description("option 1")) { }
-    	opt_silent(option::SwitchOption::Make(*this).cmd("-s").cmd("--silent").description("run with minimal output")),
-    	opt_supersilent(option::SwitchOption::Make(*this).cmd("--ss").cmd("--supersilent").description("run with no output")),
-    	opt_output(option::SwitchOption::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file")),
-    	opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").description("do not use colors")),
-    	opt_noinfo(option::SwitchOption::Make(*this).cmd("--no-info").description("do not print file/line number info")),
-    	opt_linenumbers(option::SwitchOption::Make(*this).cmd("--line-nb").cmd("--line-numbers").description("number lines of the output")),
-    	opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
-    	opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")),
-    	opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis")),
-    	opt_virtualize(option::SwitchOption::Make(*this).cmd("--virtualize").description("virtualize the CFG")) { }
-        
+		// opt1(option::SwitchOption::Make(manager).cmd("-o").cmd("--com").description("option 1")) { }
+		opt_s1(option::SwitchOption::Make(*this).cmd("-s").cmd("--s1").cmd("--silent").description("run with minimal output")),
+		opt_s2(option::SwitchOption::Make(*this).cmd("--s2").description("only display results")),
+		opt_s3(option::SwitchOption::Make(*this).cmd("--s3").cmd("--fullsilent").description("run with zero output")),
+		opt_output(option::SwitchOption::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file")),
+		opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").description("do not use colors")),
+		opt_noinfo(option::SwitchOption::Make(*this).cmd("--no-info").description("do not print file/line number info")),
+		opt_linenumbers(option::SwitchOption::Make(*this).cmd("--line-nb").cmd("--line-numbers").description("number lines of the output")),
+		opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
+		opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")),
+		opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis")),
+		opt_merge(option::SwitchOption::Make(*this).cmd("--merge").description("merge when exceeding 200 states at a control point")),
+		opt_virtualize(option::SwitchOption::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG")) { }
+
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
-		/*SLList<LabelledPredicate> lps;
-		OperandConst oprconst = OperandConst(2);
-		OperandVar oprvar = OperandVar(0x4000);
-		OperandArithExpr e1 = OperandArithExpr(ARITHOPR_MUL, oprconst, oprvar); // e1 := 2 * @0x4000
-		Predicate p1 = Predicate(CONDOPR_EQ, oprvar, e1); // p1 := @0x4000 = e1
-		Predicate p2 = Predicate(CONDOPR_LE, oprconst, oprvar); // p2 := 2 <= @0x4000
-		for (int i = 0; i < 1000; ++i)
-		{
-			lps += LabelledPredicate(p1, Analysis::Path::null);
-			lps += LabelledPredicate(p2, Analysis::Path::null);
-			lps.clear();
-		}
-		return;
-		*/
-
 		workspace()->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
 		workspace()->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
 		if(opt_virtualize)
@@ -71,8 +59,12 @@ protected:
 		int max_tempvars = workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
 		int analysis_flags = 0;
 
-		if(opt_silent || opt_supersilent)
-			dbg_flags |= DBG_NO_DEBUG;
+		if(opt_s1)
+			dbg_verbose = 1;
+		if(opt_s2)
+			dbg_verbose = 2;
+		if(opt_s3)
+			dbg_verbose = 3;
 		if(opt_nocolor)
 			dbg_flags |= DBG_NO_COLOR;
 		if(opt_noinfo)
@@ -85,10 +77,10 @@ protected:
 			dbg_flags |= DBG_NO_PREDICATES;
 		if(opt_preanalysis)
 			dbg_flags |= DBG_PREANALYSIS;
+		if(opt_merge)
+			analysis_flags |= Analysis::MERGE;
 		if(opt_virtualize)
 			analysis_flags |= Analysis::FOLLOW_CALLS;
-		if(opt_supersilent)
-			analysis_flags |= Analysis::SUPERSILENT;
 		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, analysis_flags);
 
 		// outputing to .ffx
@@ -97,14 +89,15 @@ protected:
 			const Vector<Analysis::OrderedPath>& infeasible_paths = analysis.infeasiblePaths();
 			FFX ffx_output(infeasible_paths);
 			ffx_output.output(entry+".ffx");
-			if(!opt_supersilent)
+			if(dbg_verbose < DBG_VERBOSE_NONE)
 				cout << "output to " + entry + ".ffx" << endl;
 		}
 	}
 
 private:
 	option::Manager manager;
-	option::SwitchOption opt_silent, opt_supersilent, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred, opt_preanalysis, opt_virtualize;
+	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred, opt_preanalysis, opt_merge, opt_virtualize;
+	// option::IntOption opt_merge;
 };
 
 OTAWA_RUN(Display);
