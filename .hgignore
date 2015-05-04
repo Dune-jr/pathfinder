@@ -37,3 +37,5 @@ benchmarks/sparse-noloop/Makefile
 benchmarks/sparse-noloop/sparse2.png
 benchmarks/sparse-noloop/sparse2_jordy*
 benchmarks/sparse2.arm
+benchmarks/owcet_test
+benchmarks/sparse-noloop/sparse8v2.*

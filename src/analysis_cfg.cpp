@@ -117,68 +117,24 @@ void Analysis::processCFG(CFG* cfg)
 		purgeStateList(sl); // remove all invalidate states
 		cleanIncomingBackEdges(bb, PROCESSED_EDGES);
 
-		// in case of loop, merge the state list into a single state
+		// in case of a loop, merge the state list into a single state, and do lot of annotation stuff
 		if(loop_header && !sl.isEmpty())
-		{
-			State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
-			s->merge(sl);//, *bb_outs);
-			s->setFixpointState(Analysis::listOfFixpoints(sl));
-#ifdef DBGG
-			cout << "merged:" << s->dumpEverything();
-#endif
-			if(PROCESSED_LOOPHEADER_BB.exists(bb))
-			{
-				if(s->fixpointState())
-				{
-					// don't compute anything, just extract the fixpoint we already know
-					delete s;
-					s = PROCESSED_LOOPHEADER_BB(bb);
-					s->setFixpointState(true); // ensure we keep this property
-				}
-				else
-				{
-					const State* prev_s = PROCESSED_LOOPHEADER_BB(bb);
-					ASSERT(prev_s != NULL);
-					if(s->isFixPoint(*prev_s))
-					{
-						if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
-							cout << color::Bold() << "FIXPOINT on BB#" << bb->number() << color::RCol() << endl;
-						s->setFixpointState(true);
-						// we need to clear the annotation for future fixpoints on this loop 
-						// // huh,not really the reason why. If this was a fixpoint in a previous analysis it'll be one in future ones
-						// PROCESSED_LOOPHEADER_BB.remove(bb); //  this makes absurd results...
-					}
-					else
-					{
-						PROCESSED_LOOPHEADER_BB.ref(bb) = s;
-						delete prev_s;
-					}
-				}
-			}
-			else
-				PROCESSED_LOOPHEADER_BB.ref(bb) = s;
-
-			for(Vector<Edge*>::Iterator exits_iter(*EXIT_LIST.use(bb)); exits_iter; exits_iter++)
-				MOTHERLOOP_FIXPOINT_STATE.ref(*exits_iter) = sl.first().fixpointState();  // annotate all the loop exit edges (bit hacky :-/)
-			sl.clear();
-			sl += *s; // sl <- {s}
-			FIXPOINT_REACHED.set(bb, s->fixpointState());
-		}
+			processLoopHeader(bb, sl, PROCESSED_LOOPHEADER_BB, MOTHERLOOP_FIXPOINT_STATE, FIXPOINT_REACHED);
 		else
 			cleanIncomingEdges(bb, PROCESSED_EDGES);
 
-		bool fixpoint = true; // TODO: what if infeasible path and sl empty? fixpoint by default
-		/* For s in sl */
+		bool fixpoint = true;
 		int state_count = 0;
+		/* For s in sl */
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
 		{
 			state_count++;
 			if(dbg_flags&DBG_VERBOSE_ALL)
 				DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
 			fixpoint = sl_iter.item().fixpointState();
-#ifdef DBGG
-			cout << "BB #" << bb->number() << ", fixpoint=" << DBG_TEST(fixpoint, true) << endl;
-#endif
+			#ifdef DBGG
+				cout << "BB #" << bb->number() << ", fixpoint=" << DBG_TEST(fixpoint, true) << endl;
+			#endif
 			/* processBB(s, bb); */
 			if(processBB(sl_iter.item(), bb) > 0)
 				sl.remove(sl_iter); // path ended
@@ -187,23 +143,11 @@ void Analysis::processCFG(CFG* cfg)
 
 		/* End For */
 		// merging state lists that got too large
-		if(state_count >= 250)
-		{
-			if(flags&MERGE)
-			{
-				State s((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway // TODO! delete s;
-				s.merge(sl);
-				s.setFixpointState(Analysis::listOfFixpoints(sl));
-				sl.clear();
-				sl += s;
-				if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
-					cout << " " << state_count << " states updated then merged into 1." << endl;
-			}
-		}
+		mergeOversizedStateList(sl, 250);
 		if(state_count >= 50 && dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
 			cout << " " << state_count << " states updated." << endl;
 
-		/*	For e in bb.outs */
+		/* For e in bb.outs */
 		for(BasicBlock::OutIterator bb_outs(bb); bb_outs; bb_outs++)
 		{
 			if(isAHandledEdgeKind(bb_outs->kind())) // filter out calls etc
@@ -218,9 +162,9 @@ void Analysis::processCFG(CFG* cfg)
 						processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not
 						if(!wl.contains(bb_outs->target()))
 							wl.push(bb_outs->target());
-					#ifdef DBGG
-						cout << "e=" << bb_outs->source()->number() << "->" << bb_outs->target()->number() << ", enable_smt=" << DBG_TEST(enable_smt, true) << endl;
-					#endif
+						#ifdef DBGG
+							cout << "e=" << bb_outs->source()->number() << "->" << bb_outs->target()->number() << ", enable_smt=" << DBG_TEST(enable_smt, true) << endl;
+						#endif
 					}
 				}
 				else // fixpoint found
@@ -306,9 +250,8 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 		if(enable_smt)
 		{
 			// SMT call
-			// SMT smt;
-			// const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
-			const Option<Path>& infeasible_path = elm::none;
+			SMT smt;
+			const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
 			sl_paths.addLast(infeasible_path);
 			if(infeasible_path)
 			{
@@ -368,6 +311,54 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 	}
 }
 
+void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, const Identifier<Analysis::State*>& processed_loopheader_bb_id,
+	const Identifier<bool>& motherloop_fixpoint_state_id, const Identifier<bool>& fixpoint_reached_id)
+{
+	State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
+	s->merge(sl);//, *bb_outs);
+	s->setFixpointState(Analysis::listOfFixpoints(sl));
+	#ifdef DBGG
+		cout << "merged:" << s->dumpEverything();
+	#endif
+	if(processed_loopheader_bb_id.exists(bb))
+	{
+		if(s->fixpointState())
+		{
+			// don't compute anything, just extract the fixpoint we already know
+			delete s;
+			s = processed_loopheader_bb_id(bb);
+			s->setFixpointState(true); // ensure we keep this property
+		}
+		else
+		{
+			const State* prev_s = processed_loopheader_bb_id(bb);
+			ASSERT(prev_s != NULL);
+			if(s->isFixPoint(*prev_s))
+			{
+				if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
+					cout << color::Bold() << "FIXPOINT on BB#" << bb->number() << color::RCol() << endl;
+				s->setFixpointState(true);
+				// we need to clear the annotation for future fixpoints on this loop 
+				// // huh,not really the reason why. If this was a fixpoint in a previous analysis it'll be one in future ones
+				// processed_loopheader_bb_id.remove(bb); //  this makes absurd results...
+			}
+			else
+			{
+				processed_loopheader_bb_id.ref(bb) = s;
+				delete prev_s;
+			}
+		}
+	}
+	else
+		processed_loopheader_bb_id.ref(bb) = s;
+
+	for(Vector<Edge*>::Iterator exits_iter(*EXIT_LIST.use(bb)); exits_iter; exits_iter++)
+		motherloop_fixpoint_state_id.ref(*exits_iter) = sl.first().fixpointState();  // annotate all the loop exit edges (bit hacky :-/)
+	sl.clear();
+	sl += *s; // sl <- {s}
+	fixpoint_reached_id.set(bb, s->fixpointState());
+}
+
 /**
  * @fn bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample);
  * Checks if the minimized list of edges we found 'infeasible_path' is valid,
@@ -418,6 +409,23 @@ void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
 			sl_iter++;
 		else
 			sl.remove(sl_iter);
+	}
+}
+
+void Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl, int thresold) const
+{
+	if(!(flags&MERGE))
+		return;
+	int count = sl.count();
+	if(count >= thresold)
+	{
+		State s((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
+		s.merge(sl);
+		s.setFixpointState(Analysis::listOfFixpoints(sl));
+		sl.clear();
+		sl += s;
+		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
+			cout << " " << count << " states updated then merged into 1." << endl;
 	}
 }
 
