@@ -37,9 +37,6 @@ public:
 	typedef Set<Edge*> Path;
 	class State;
 
-	// static Identifier<SLList<State> > PROCESSED_EDGES;
-	// static Identifier<State*> PROCESSED_LOOPHEADER_BB;
-
 	Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int flags);
 	inline Vector<OrderedPath> infeasiblePaths() const { return infeasible_paths; }
 	static bool listOfFixpoints(const SLList<Analysis::State>& sl);
@@ -187,10 +184,11 @@ private:
 	Vector<BasicBlock*> wl; // working list
 
 	const dfa::State* dfa_state;
-	const OperandVar sp; // the Stack Pointer register
+	const OperandVar sp; // Stack Pointer
 	Vector<OrderedPath> infeasible_paths; // TODO! Set<Path, PathComparator<Path> > path; to make Set useful
 	int max_tempvars, max_registers, flags;
-	int processed_paths, total_paths, paths_count, feasible_paths_count, infeasible_paths_count, loop_header_count, bb_count;
+	int total_paths, loop_header_count, bb_count;
+	int ip_count, unminimized_ip_count;
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
@@ -209,6 +207,7 @@ private:
 	bool isConditional(BasicBlock* bb) const;
 	void cleanIncomingEdges(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const;
 	void cleanIncomingBackEdges(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const;
+	bool fixpointFoundOnAllMotherLoops(BasicBlock *bb, const Identifier<bool>& fixpoint_found_id) const;
 	bool allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool allIncomingEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;

@@ -71,7 +71,7 @@ void Analysis::State::appendEdge(Edge* e, bool is_conditional)
 void Analysis::processCFG(CFG* cfg)
 {
 	DBG(color::Whi() << "Processing CFG " << cfg)
-	paths_count = infeasible_paths_count = total_paths = loop_header_count = 0;
+	total_paths = loop_header_count = 0;
 	int processed_bbs = 0;
 	placeboProcessCFG(cfg);
 	std::time_t timestamp = clock(); // Timestamp before analysis
@@ -83,6 +83,7 @@ void Analysis::processCFG(CFG* cfg)
 	Identifier<SLList<Analysis::State> > PROCESSED_EDGES("IP analysis processed incoming edges"); //, SLList<State>::null);
 	Identifier<Analysis::State*> 		 PROCESSED_LOOPHEADER_BB("IP analysis processed loop headers (for fixpoints)");
 	Identifier<bool>			 		 MOTHERLOOP_FIXPOINT_STATE("IP analysis fixpoint state info on loop exit edges");
+	Identifier<bool>			 		 FIXPOINT_REACHED("IP analysis fixpoint state info on loop headers"); // for enable_smt
 	BasicBlock::OutIterator entry_outs(cfg->entry());
 	SLList<Analysis::State> entry_annotation;
 	entry_annotation += Analysis::State(cfg->entry(), dfa_state, sp, max_tempvars, max_registers);
@@ -119,7 +120,7 @@ void Analysis::processCFG(CFG* cfg)
 		// in case of loop, merge the state list into a single state
 		if(loop_header && !sl.isEmpty())
 		{
-			State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway // TODO! delete s;
+			State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
 			s->merge(sl);//, *bb_outs);
 			s->setFixpointState(Analysis::listOfFixpoints(sl));
 #ifdef DBGG
@@ -144,8 +145,8 @@ void Analysis::processCFG(CFG* cfg)
 							cout << color::Bold() << "FIXPOINT on BB#" << bb->number() << color::RCol() << endl;
 						s->setFixpointState(true);
 						// we need to clear the annotation for future fixpoints on this loop 
-						// TODO: huh,not really the reason why. If this was a fixpoint in a previous analysis it'll be one in future ones
-						// PROCESSED_LOOPHEADER_BB.remove(bb); // TODO! nope this makes absurd results...
+						// // huh,not really the reason why. If this was a fixpoint in a previous analysis it'll be one in future ones
+						// PROCESSED_LOOPHEADER_BB.remove(bb); //  this makes absurd results...
 					}
 					else
 					{
@@ -161,6 +162,7 @@ void Analysis::processCFG(CFG* cfg)
 				MOTHERLOOP_FIXPOINT_STATE.ref(*exits_iter) = sl.first().fixpointState();  // annotate all the loop exit edges (bit hacky :-/)
 			sl.clear();
 			sl += *s; // sl <- {s}
+			FIXPOINT_REACHED.set(bb, s->fixpointState());
 		}
 		else
 			cleanIncomingEdges(bb, PROCESSED_EDGES);
@@ -172,7 +174,7 @@ void Analysis::processCFG(CFG* cfg)
 		{
 			state_count++;
 			if(dbg_flags&DBG_VERBOSE_ALL)
-				DBG(color::Whi() << "Processing path " << (*sl_iter).getPathString())
+				DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
 			fixpoint = sl_iter.item().fixpointState();
 #ifdef DBGG
 			cout << "BB #" << bb->number() << ", fixpoint=" << DBG_TEST(fixpoint, true) << endl;
@@ -182,6 +184,7 @@ void Analysis::processCFG(CFG* cfg)
 				sl.remove(sl_iter); // path ended
 			else sl_iter++;
 		}
+
 		/* End For */
 		// merging state lists that got too large
 		if(state_count >= 250)
@@ -197,7 +200,7 @@ void Analysis::processCFG(CFG* cfg)
 					cout << " " << state_count << " states updated then merged into 1." << endl;
 			}
 		}
-		else if(state_count >= 50 && dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
+		if(state_count >= 50 && dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
 			cout << " " << state_count << " states updated." << endl;
 
 		/*	For e in bb.outs */
@@ -215,9 +218,9 @@ void Analysis::processCFG(CFG* cfg)
 						processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not
 						if(!wl.contains(bb_outs->target()))
 							wl.push(bb_outs->target());
-#ifdef DBGG
-					cout << "e=" << bb_outs->source()->number() << "->" << bb_outs->target()->number() << ", enable_smt=" << DBG_TEST(enable_smt, true) << endl;
-#endif
+					#ifdef DBGG
+						cout << "e=" << bb_outs->source()->number() << "->" << bb_outs->target()->number() << ", enable_smt=" << DBG_TEST(enable_smt, true) << endl;
+					#endif
 					}
 				}
 				else // fixpoint found
@@ -240,10 +243,10 @@ void Analysis::processCFG(CFG* cfg)
 						else // this is dirty, but it comes from the above code altering sl for all iterations of bb_outs when really it shouldn't... but copying is costly
 							for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; sl_iter++)
 								sl_iter.item().setFixpointState(true); // ensure this
-						// enable_smt = enable_smt &&
-#ifdef DBGG
-						cout << "enable_smt=" << DBG_TEST(enable_smt, true) << endl;
-#endif
+						enable_smt = enable_smt && fixpointFoundOnAllMotherLoops(bb, FIXPOINT_REACHED);
+						#ifdef DBGG
+							cout << "enable_smt=" << DBG_TEST(enable_smt, true) << endl;
+						#endif
 						processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not 
 						if(!wl.contains(bb_outs->target()))
 							wl.push(bb_outs->target());
@@ -303,8 +306,9 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 		if(enable_smt)
 		{
 			// SMT call
-			SMT smt;
-			const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
+			// SMT smt;
+			// const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
+			const Option<Path>& infeasible_path = elm::none;
 			sl_paths.addLast(infeasible_path);
 			if(infeasible_path)
 			{
@@ -333,8 +337,9 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 			const Path& infeasible_path = **sl_paths_iter;
 			elm::String counterexample;
 			DBG("Path " << s.getPathString() << "->" << e->target()->number() << " minimized to " << pathToString(infeasible_path))
-			bool valid = checkInfeasiblePathValidity(sl, sl_paths, e, infeasible_path, counterexample);
+			bool valid = /*false&&*/checkInfeasiblePathValidity(sl, sl_paths, e, infeasible_path, counterexample);
 			DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
+			ip_count++;
 			if(valid)
 			{
 				addDisorderedPath(infeasible_path, (*sl_iter).getPath(), e); // infeasible_paths += order(infeasible_path); to output proprer ffx!
@@ -342,6 +347,7 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 			}
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
 			{
+				unminimized_ip_count++;
 				DBG("   counterexample: " << counterexample)
 				 // falling back on full path (not as useful as a result, but still something)
 				OrderedPath original_full_path = (*sl_iter).getPath();
@@ -415,6 +421,13 @@ void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
 	}
 }
 
+void Analysis::cleanIncomingEdges(BasicBlock *bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const
+{
+	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
+		processed_edges_id.remove(*bb_ins);
+		//processed_edges_id.ref(*bb_ins).clear();
+}
+
 void Analysis::cleanIncomingBackEdges(BasicBlock *bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const
 {
 	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
@@ -423,11 +436,15 @@ void Analysis::cleanIncomingBackEdges(BasicBlock *bb, const Identifier<SLList<An
 			// processed_edges_id.ref(*bb_ins).clear();
 }
 
-void Analysis::cleanIncomingEdges(BasicBlock *bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const
+bool Analysis::fixpointFoundOnAllMotherLoops(BasicBlock *bb, const Identifier<bool>& fixpoint_found_id) const
 {
-	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
-		processed_edges_id.remove(*bb_ins);
-		//processed_edges_id.ref(*bb_ins).clear();
+	while(ENCLOSING_LOOP_HEADER.exists(bb))
+	{
+		bb = ENCLOSING_LOOP_HEADER(bb);
+		if(!fixpoint_found_id.exists(bb) || fixpoint_found_id(bb) != true)
+			return false;
+	}
+	return true;
 }
 
 // figures properties on the CFG without doing any actual analysis
@@ -512,6 +529,7 @@ void Analysis::printResults(int exec_time_ms) const
 		else
 			cout << endl;
 	}
+	cout << "Total IP count: " << ip_count << ", Unminimized IP count:" << unminimized_ip_count << endl;
 }
 
 // TODO: do something prettier here, maybe with a operator== on OrderedPath to use contains.... or just use Sets with a Comparator...
@@ -542,7 +560,6 @@ void Analysis::removeDuplicateInfeasiblePaths()
 				}
 				else
 					equals = false;
-				//if(*ip_iter == op)
 				if(equals)
 				{
 					contains = true;
@@ -550,7 +567,6 @@ void Analysis::removeDuplicateInfeasiblePaths()
 				}
 			}
 		}
-		//if(!infeasible_paths.contains(op))
 		if(!contains)
 			new_ips.add(op);
 	}
@@ -561,38 +577,12 @@ void Analysis::removeDuplicateInfeasiblePaths()
 // debugs to do on path end
 void Analysis::onPathEnd()
 {
-	feasible_paths_count++;
-	/*if(flags&SUPERSILENT)
-		return;
-	if(dbg_flags&DBG_NO_DEBUG && dbg_flags&DBG_PREANALYSIS)
-	{
-		if((++paths_count % 100) == 0 || (total_paths <= 1000 && paths_count <= 1000))
-		{
-			cout << "(" << paths_count << "/" << total_paths << ")";
-			if(infeasible_paths_count)
-				cout << " !*" << infeasible_paths_count % 100;
-			cout << endl;
-		}
-	}
-	else */
 	DBG(color::BBla() << color::On_Yel() << "EXIT block reached")
 }
 
 // debugs to do when we find an infeasible path
 void Analysis::onAnyInfeasiblePath()
 {
-	/*if(flags&SUPERSILENT)
-		return;*/
-	infeasible_paths_count++;
-	/*if(dbg_flags&DBG_NO_DEBUG && dbg_flags&DBG_PREANALYSIS)
-	{
-		infeasible_paths_count++;
-		if((++paths_count % 100) == 0 || (total_paths <= 1000 && paths_count <= 1000))
-		{
-			cout << "(" << paths_count << "/" << total_paths << ") !*" << infeasible_paths_count%100 << endl;
-		}
-	}
-	else*/
 	DBG(color::BIYel() << "Stopping current path analysis")
 }
 

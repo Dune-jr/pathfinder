@@ -1,0 +1,23 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [label="call", style=dashed, weight=2];
+	"1" [label="{BB 1 (000080d8) | main:\lsparse1.c:7\l000080d8    str fp, [sp, #-4]!\l000080dc    add fp, sp, #0\l000080e0    sub sp, sp, #20\l000080e4    str r0, [fp, #-16]\l000080e8    str r1, [fp, #-20]\lsparse1.c:9\l000080ec    mov r3, #1\l000080f0    str r3, [fp, #-12]\l000080f4    b 8190    # 00008190\l }"]
+	"1" -> "2" [label="taken", weight=3];
+	"2" [label="{BB 2 (00008190) | sparse1.c:9\l00008190    ldr r3, [fp, #-12]\l00008194    cmp r3, #101\l00008198    ble 80f8    # 000080f8\l }"]
+	"2" -> "3" [weight=4];
+	"2" -> "4" [label="taken", weight=3];
+	"3" [label="{BB 3 (0000819c) | sparse1.c:14\l0000819c    ldr r3, [pc, #20]\l000081a0    ldr r3, [r3, #0]\lsparse1.c:15\l000081a4    mov r0, r3\l000081a8    add sp, fp, #0\l000081ac    ldmia sp!, \{fp\}\l000081b0    bx lr\l }"]
+	"3" -> "8" [label="return", style=dashed, weight=2];
+	"4" [label="{BB 4 (000080f8) | sparse1.c:10\l000080f8    ldr r2, [fp, #-16]\l000080fc    mov r3, r2\l00008100    mov r3, r3, lsl #6\l00008104    add r3, r3, r2\l00008108    mov r3, r3, lsl #6\l0000810c    add r3, r3, r2\l00008110    mov r3, r3, lsl #2\l00008114    add r3, r3, r2\l00008118    mov r3, r3, lsl #2\l0000811c    add r3, r3, r2\l00008120    mov r2, r3, lsl #2\l00008124    add r3, r3, r2\l00008128    mov r2, r3, lsl #2\l0000812c    add r2, r3, r2\l00008130    ldr r3, [pc, #124]\l00008134    add r3, r2, r3\l00008138    str r3, [fp, #-16]\lsparse1.c:11\l0000813c    mov r3, #0\l00008140    str r3, [fp, #-8]\lsparse1.c:12\l00008144    ldr r2, [fp, #-8]\l00008148    ldr r3, [fp, #-20]\l0000814c    cmp r2, r3\l00008150    bge 8184    # 00008184\l }"]
+	"4" -> "5" [weight=4];
+	"4" -> "6" [label="taken", weight=3];
+	"5" [label="{BB 5 (00008154) | sparse1.c:12\l00008154    ldr r3, [fp, #-16]\l00008158    and r3, r3, #1\l0000815c    cmp r3, #0\l00008160    bne 8184    # 00008184\l }"]
+	"5" -> "7" [weight=4];
+	"5" -> "6" [label="taken", weight=3];
+	"6" [label="{BB 6 (00008184) | sparse1.c:9\l00008184    ldr r3, [fp, #-12]\l00008188    add r3, r3, #1\l0000818c    str r3, [fp, #-12]\l }"]
+	"6" -> "2" [weight=4];
+	"7" [label="{BB 7 (00008164) | sparse1.c:12\l00008164    ldr r3, [pc, #76]\l00008168    ldr r3, [r3, #0]\l0000816c    add r2, r3, #1\l00008170    ldr r3, [pc, #64]\l00008174    str r2, [r3, #0]\l00008178    ldr r3, [fp, #-8]\l0000817c    add r3, r3, #1\l00008180    str r3, [fp, #-8]\l }"]
+	"7" -> "6" [weight=4];
+	"8" [label="EXIT"]
+}

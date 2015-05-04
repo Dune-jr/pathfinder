@@ -1,0 +1,39 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [label="call", style=dashed, weight=2];
+	"1" [label="{BB 1 (000080b8) | main:\l000080b8    str fp, [sp, #-4]!\l000080bc    add fp, sp, #0\l000080c0    sub sp, sp, #28\l000080c4    str r0, [fp, #-24]\l000080c8    str r1, [fp, #-28]\l000080cc    ldr r3, [fp, #-24]\l000080d0    str r3, [fp, #-8]\l000080d4    mov r3, #0\l000080d8    str r3, [fp, #-12]\l000080dc    mov r3, #0\l000080e0    str r3, [fp, #-20]\l000080e4    b 8150    # 00008150\l }"]
+	"1" -> "2" [label="taken", weight=3];
+	"2" [label="{BB 2 (00008150) | 00008150    ldr r3, [fp, #-20]\l00008154    cmp r3, #4\l00008158    ble 80e8    # 000080e8\l }"]
+	"2" -> "3" [weight=4];
+	"2" -> "4" [label="taken", weight=3];
+	"3" [label="{BB 3 (0000815c) | 0000815c    ldr r3, [fp, #-12]\l00008160    cmp r3, #5\l00008164    bne 8170    # 00008170\l }"]
+	"3" -> "5" [weight=4];
+	"3" -> "6" [label="taken", weight=3];
+	"4" [label="{BB 4 (000080e8) | 000080e8    mov r3, #0\l000080ec    str r3, [fp, #-16]\l000080f0    b 8124    # 00008124\l }"]
+	"4" -> "7" [label="taken", weight=3];
+	"5" [label="{BB 5 (00008168) | 00008168    mov r3, #6\l0000816c    str r3, [fp, #-12]\l }"]
+	"5" -> "6" [weight=4];
+	"6" [label="{BB 6 (00008170) | 00008170    mov r3, #0\l00008174    mov r0, r3\l00008178    add sp, fp, #0\l0000817c    ldmia sp!, \{fp\}\l00008180    bx lr\l }"]
+	"6" -> "15" [label="return", style=dashed, weight=2];
+	"7" [label="{BB 7 (00008124) | 00008124    ldr r3, [fp, #-16]\l00008128    cmp r3, #9\l0000812c    ble 80f4    # 000080f4\l }"]
+	"7" -> "8" [weight=4];
+	"7" -> "9" [label="taken", weight=3];
+	"8" [label="{BB 8 (00008130) | 00008130    ldr r3, [fp, #-12]\l00008134    cmp r3, #3\l00008138    bne 8144    # 00008144\l }"]
+	"8" -> "10" [weight=4];
+	"8" -> "11" [label="taken", weight=3];
+	"9" [label="{BB 9 (000080f4) | 000080f4    ldr r3, [fp, #-8]\l000080f8    cmp r3, #0\l000080fc    bne 8110    # 00008110\l }"]
+	"9" -> "12" [weight=4];
+	"9" -> "13" [label="taken", weight=3];
+	"10" [label="{BB 10 (0000813c) | 0000813c    mov r3, #4\l00008140    str r3, [fp, #-12]\l }"]
+	"10" -> "11" [weight=4];
+	"11" [label="{BB 11 (00008144) | 00008144    ldr r3, [fp, #-20]\l00008148    add r3, r3, #1\l0000814c    str r3, [fp, #-20]\l }"]
+	"11" -> "2" [weight=4];
+	"12" [label="{BB 12 (00008100) | 00008100    ldr r3, [fp, #-12]\l00008104    add r3, r3, #1\l00008108    str r3, [fp, #-12]\l0000810c    b 8118    # 00008118\l }"]
+	"12" -> "14" [label="taken", weight=3];
+	"13" [label="{BB 13 (00008110) | 00008110    mov r3, #1\l00008114    str r3, [fp, #-12]\l }"]
+	"13" -> "14" [weight=4];
+	"14" [label="{BB 14 (00008118) | 00008118    ldr r3, [fp, #-16]\l0000811c    add r3, r3, #1\l00008120    str r3, [fp, #-16]\l }"]
+	"14" -> "7" [weight=4];
+	"15" [label="EXIT"]
+}

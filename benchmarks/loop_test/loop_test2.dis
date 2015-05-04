@@ -1,0 +1,58 @@
+
+loop_test2.elf:     format de fichier elf32-littlearm
+
+
+Déassemblage de la section .text:
+
+000080b8 <main>:
+    80b8:	e52db004 	push	{fp}		; (str fp, [sp, #-4]!)
+    80bc:	e28db000 	add	fp, sp, #0
+    80c0:	e24dd01c 	sub	sp, sp, #28
+    80c4:	e50b0018 	str	r0, [fp, #-24]
+    80c8:	e50b101c 	str	r1, [fp, #-28]
+    80cc:	e51b3018 	ldr	r3, [fp, #-24]
+    80d0:	e50b3008 	str	r3, [fp, #-8]
+    80d4:	e3a03000 	mov	r3, #0
+    80d8:	e50b300c 	str	r3, [fp, #-12]
+    80dc:	e3a03000 	mov	r3, #0
+    80e0:	e50b3014 	str	r3, [fp, #-20]
+    80e4:	ea000019 	b	8150 <main+0x98>
+    80e8:	e3a03000 	mov	r3, #0
+    80ec:	e50b3010 	str	r3, [fp, #-16]
+    80f0:	ea00000b 	b	8124 <main+0x6c>
+    80f4:	e51b3008 	ldr	r3, [fp, #-8]
+    80f8:	e3530000 	cmp	r3, #0
+    80fc:	1a000003 	bne	8110 <main+0x58>
+    8100:	e51b300c 	ldr	r3, [fp, #-12]
+    8104:	e2833001 	add	r3, r3, #1
+    8108:	e50b300c 	str	r3, [fp, #-12]
+    810c:	ea000001 	b	8118 <main+0x60>
+    8110:	e3a03001 	mov	r3, #1
+    8114:	e50b300c 	str	r3, [fp, #-12]
+    8118:	e51b3010 	ldr	r3, [fp, #-16]
+    811c:	e2833001 	add	r3, r3, #1
+    8120:	e50b3010 	str	r3, [fp, #-16]
+    8124:	e51b3010 	ldr	r3, [fp, #-16]
+    8128:	e3530009 	cmp	r3, #9
+    812c:	dafffff0 	ble	80f4 <main+0x3c>
+    8130:	e51b300c 	ldr	r3, [fp, #-12]
+    8134:	e3530003 	cmp	r3, #3
+    8138:	1a000001 	bne	8144 <main+0x8c>
+    813c:	e3a03004 	mov	r3, #4
+    8140:	e50b300c 	str	r3, [fp, #-12]
+    8144:	e51b3014 	ldr	r3, [fp, #-20]
+    8148:	e2833001 	add	r3, r3, #1
+    814c:	e50b3014 	str	r3, [fp, #-20]
+    8150:	e51b3014 	ldr	r3, [fp, #-20]
+    8154:	e3530004 	cmp	r3, #4
+    8158:	daffffe2 	ble	80e8 <main+0x30>
+    815c:	e51b300c 	ldr	r3, [fp, #-12]
+    8160:	e3530005 	cmp	r3, #5
+    8164:	1a000001 	bne	8170 <main+0xb8>
+    8168:	e3a03006 	mov	r3, #6
+    816c:	e50b300c 	str	r3, [fp, #-12]
+    8170:	e3a03000 	mov	r3, #0
+    8174:	e1a00003 	mov	r0, r3
+    8178:	e28bd000 	add	sp, fp, #0
+    817c:	e8bd0800 	ldmfd	sp!, {fp}
+    8180:	e12fff1e 	bx	lr

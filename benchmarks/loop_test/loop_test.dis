@@ -1,0 +1,59 @@
+
+loop_test.elf:     format de fichier elf32-littlearm
+
+
+Déassemblage de la section .text:
+
+000080b8 <main>:
+    80b8:	e52db004 	push	{fp}		; (str fp, [sp, #-4]!)
+    80bc:	e28db000 	add	fp, sp, #0
+    80c0:	e24dd01c 	sub	sp, sp, #28
+    80c4:	e50b0018 	str	r0, [fp, #-24]
+    80c8:	e50b101c 	str	r1, [fp, #-28]
+    80cc:	e51b3018 	ldr	r3, [fp, #-24]
+    80d0:	e50b3008 	str	r3, [fp, #-8]
+    80d4:	e3a03000 	mov	r3, #0
+    80d8:	e50b300c 	str	r3, [fp, #-12]
+    80dc:	e3a03000 	mov	r3, #0
+    80e0:	e50b3014 	str	r3, [fp, #-20]
+    80e4:	ea00001a 	b	8154 <main+0x9c>
+    80e8:	e3a03000 	mov	r3, #0
+    80ec:	e50b3010 	str	r3, [fp, #-16]
+    80f0:	ea00000c 	b	8128 <main+0x70>
+    80f4:	e51b3008 	ldr	r3, [fp, #-8]
+    80f8:	e3530000 	cmp	r3, #0
+    80fc:	1a000001 	bne	8108 <main+0x50>
+    8100:	e3a03001 	mov	r3, #1
+    8104:	e50b300c 	str	r3, [fp, #-12]
+    8108:	e51b3008 	ldr	r3, [fp, #-8]
+    810c:	e3530001 	cmp	r3, #1
+    8110:	1a000001 	bne	811c <main+0x64>
+    8114:	e3a03002 	mov	r3, #2
+    8118:	e50b300c 	str	r3, [fp, #-12]
+    811c:	e51b3010 	ldr	r3, [fp, #-16]
+    8120:	e2833001 	add	r3, r3, #1
+    8124:	e50b3010 	str	r3, [fp, #-16]
+    8128:	e51b3010 	ldr	r3, [fp, #-16]
+    812c:	e3530009 	cmp	r3, #9
+    8130:	daffffef 	ble	80f4 <main+0x3c>
+    8134:	e51b300c 	ldr	r3, [fp, #-12]
+    8138:	e3530003 	cmp	r3, #3
+    813c:	1a000001 	bne	8148 <main+0x90>
+    8140:	e3a03004 	mov	r3, #4
+    8144:	e50b300c 	str	r3, [fp, #-12]
+    8148:	e51b3014 	ldr	r3, [fp, #-20]
+    814c:	e2833001 	add	r3, r3, #1
+    8150:	e50b3014 	str	r3, [fp, #-20]
+    8154:	e51b3014 	ldr	r3, [fp, #-20]
+    8158:	e3530004 	cmp	r3, #4
+    815c:	daffffe1 	ble	80e8 <main+0x30>
+    8160:	e51b300c 	ldr	r3, [fp, #-12]
+    8164:	e3530005 	cmp	r3, #5
+    8168:	1a000001 	bne	8174 <main+0xbc>
+    816c:	e3a03006 	mov	r3, #6
+    8170:	e50b300c 	str	r3, [fp, #-12]
+    8174:	e3a03000 	mov	r3, #0
+    8178:	e1a00003 	mov	r0, r3
+    817c:	e28bd000 	add	sp, fp, #0
+    8180:	e8bd0800 	ldmfd	sp!, {fp}
+    8184:	e12fff1e 	bx	lr

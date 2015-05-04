@@ -28,10 +28,6 @@ SMT::SMT(): smt(&em), variables(em), integer(em.integerType())
 	// smt.setOption("dump-to", "dump.log");
 }
 
-SMT::~SMT()
-{
-}
-
 // gets a copy of the labelled_preds SLList
 // actually always returns 1 infeasible path, but that may be changed in the future
 // Option<Analysis::Path> SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)

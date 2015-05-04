@@ -1,0 +1,61 @@
+
+loop_test3.elf:     format de fichier elf32-littlearm
+
+
+Déassemblage de la section .text:
+
+000080b8 <main>:
+    80b8:	e52db004 	push	{fp}		; (str fp, [sp, #-4]!)
+    80bc:	e28db000 	add	fp, sp, #0
+    80c0:	e24dd01c 	sub	sp, sp, #28
+    80c4:	e50b0018 	str	r0, [fp, #-24]
+    80c8:	e50b101c 	str	r1, [fp, #-28]
+    80cc:	e51b3018 	ldr	r3, [fp, #-24]
+    80d0:	e50b3008 	str	r3, [fp, #-8]
+    80d4:	e3a03006 	mov	r3, #6
+    80d8:	e50b300c 	str	r3, [fp, #-12]
+    80dc:	e3a03000 	mov	r3, #0
+    80e0:	e50b3014 	str	r3, [fp, #-20]
+    80e4:	ea00001c 	b	815c <main+0xa4>
+    80e8:	e3a0300d 	mov	r3, #13
+    80ec:	e50b300c 	str	r3, [fp, #-12]
+    80f0:	e3a03000 	mov	r3, #0
+    80f4:	e50b3010 	str	r3, [fp, #-16]
+    80f8:	ea00000a 	b	8128 <main+0x70>
+    80fc:	e51b3008 	ldr	r3, [fp, #-8]
+    8100:	e3530000 	cmp	r3, #0
+    8104:	1a000002 	bne	8114 <main+0x5c>
+    8108:	e3a0300d 	mov	r3, #13
+    810c:	e50b300c 	str	r3, [fp, #-12]
+    8110:	ea000001 	b	811c <main+0x64>
+    8114:	e3a0300d 	mov	r3, #13
+    8118:	e50b300c 	str	r3, [fp, #-12]
+    811c:	e51b3010 	ldr	r3, [fp, #-16]
+    8120:	e2833001 	add	r3, r3, #1
+    8124:	e50b3010 	str	r3, [fp, #-16]
+    8128:	e51b3010 	ldr	r3, [fp, #-16]
+    812c:	e3530009 	cmp	r3, #9
+    8130:	dafffff1 	ble	80fc <main+0x44>
+    8134:	e3a03007 	mov	r3, #7
+    8138:	e50b300c 	str	r3, [fp, #-12]
+    813c:	e51b300c 	ldr	r3, [fp, #-12]
+    8140:	e3530003 	cmp	r3, #3
+    8144:	1a000001 	bne	8150 <main+0x98>
+    8148:	e3a03006 	mov	r3, #6
+    814c:	e50b300c 	str	r3, [fp, #-12]
+    8150:	e51b3014 	ldr	r3, [fp, #-20]
+    8154:	e2833001 	add	r3, r3, #1
+    8158:	e50b3014 	str	r3, [fp, #-20]
+    815c:	e51b3014 	ldr	r3, [fp, #-20]
+    8160:	e3530004 	cmp	r3, #4
+    8164:	daffffdf 	ble	80e8 <main+0x30>
+    8168:	e51b300c 	ldr	r3, [fp, #-12]
+    816c:	e3530006 	cmp	r3, #6
+    8170:	1a000001 	bne	817c <main+0xc4>
+    8174:	e3a03009 	mov	r3, #9
+    8178:	e50b300c 	str	r3, [fp, #-12]
+    817c:	e3a03000 	mov	r3, #0
+    8180:	e1a00003 	mov	r0, r3
+    8184:	e28bd000 	add	sp, fp, #0
+    8188:	e8bd0800 	ldmfd	sp!, {fp}
+    818c:	e12fff1e 	bx	lr

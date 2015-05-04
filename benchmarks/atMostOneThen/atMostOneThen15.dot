@@ -1,0 +1,128 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [label="call", style=dashed, weight=2];
+	"1" [label="{BB 1 (000080b8) | main:\l000080b8    str fp, [sp, #-4]!\l000080bc    add fp, sp, #0\l000080c0    sub sp, sp, #84\l000080c4    str r0, [fp, #-80]\l000080c8    str r1, [fp, #-84]\l000080cc    mov r3, #0\l000080d0    str r3, [fp, #-72]\l000080d4    mov r3, #0\l000080d8    str r3, [fp, #-68]\l000080dc    ldr r3, [fp, #-64]\l000080e0    cmp r3, #0\l000080e4    beq 8104    # 00008104\l }"]
+	"1" -> "2" [weight=4];
+	"1" -> "3" [label="taken", weight=3];
+	"2" [label="{BB 2 (000080e8) | 000080e8    ldr r3, [fp, #-68]\l000080ec    cmp r3, #0\l000080f0    bne 8104    # 00008104\l }"]
+	"2" -> "4" [weight=4];
+	"2" -> "3" [label="taken", weight=3];
+	"3" [label="{BB 3 (00008104) | 00008104    ldr r3, [fp, #-60]\l00008108    cmp r3, #0\l0000810c    beq 812c    # 0000812c\l }"]
+	"3" -> "5" [weight=4];
+	"3" -> "6" [label="taken", weight=3];
+	"4" [label="{BB 4 (000080f4) | 000080f4    mov r3, #1\l000080f8    str r3, [fp, #-72]\l000080fc    mov r3, #1\l00008100    str r3, [fp, #-68]\l }"]
+	"4" -> "3" [weight=4];
+	"5" [label="{BB 5 (00008110) | 00008110    ldr r3, [fp, #-68]\l00008114    cmp r3, #0\l00008118    bne 812c    # 0000812c\l }"]
+	"5" -> "7" [weight=4];
+	"5" -> "6" [label="taken", weight=3];
+	"6" [label="{BB 6 (0000812c) | 0000812c    ldr r3, [fp, #-56]\l00008130    cmp r3, #0\l00008134    beq 8154    # 00008154\l }"]
+	"6" -> "8" [weight=4];
+	"6" -> "9" [label="taken", weight=3];
+	"7" [label="{BB 7 (0000811c) | 0000811c    mov r3, #2\l00008120    str r3, [fp, #-72]\l00008124    mov r3, #1\l00008128    str r3, [fp, #-68]\l }"]
+	"7" -> "6" [weight=4];
+	"8" [label="{BB 8 (00008138) | 00008138    ldr r3, [fp, #-68]\l0000813c    cmp r3, #0\l00008140    bne 8154    # 00008154\l }"]
+	"8" -> "10" [weight=4];
+	"8" -> "9" [label="taken", weight=3];
+	"9" [label="{BB 9 (00008154) | 00008154    ldr r3, [fp, #-52]\l00008158    cmp r3, #0\l0000815c    beq 817c    # 0000817c\l }"]
+	"9" -> "11" [weight=4];
+	"9" -> "12" [label="taken", weight=3];
+	"10" [label="{BB 10 (00008144) | 00008144    mov r3, #3\l00008148    str r3, [fp, #-72]\l0000814c    mov r3, #1\l00008150    str r3, [fp, #-68]\l }"]
+	"10" -> "9" [weight=4];
+	"11" [label="{BB 11 (00008160) | 00008160    ldr r3, [fp, #-68]\l00008164    cmp r3, #0\l00008168    bne 817c    # 0000817c\l }"]
+	"11" -> "13" [weight=4];
+	"11" -> "12" [label="taken", weight=3];
+	"12" [label="{BB 12 (0000817c) | 0000817c    ldr r3, [fp, #-48]\l00008180    cmp r3, #0\l00008184    beq 81a4    # 000081a4\l }"]
+	"12" -> "14" [weight=4];
+	"12" -> "15" [label="taken", weight=3];
+	"13" [label="{BB 13 (0000816c) | 0000816c    mov r3, #4\l00008170    str r3, [fp, #-72]\l00008174    mov r3, #1\l00008178    str r3, [fp, #-68]\l }"]
+	"13" -> "12" [weight=4];
+	"14" [label="{BB 14 (00008188) | 00008188    ldr r3, [fp, #-68]\l0000818c    cmp r3, #0\l00008190    bne 81a4    # 000081a4\l }"]
+	"14" -> "16" [weight=4];
+	"14" -> "15" [label="taken", weight=3];
+	"15" [label="{BB 15 (000081a4) | 000081a4    ldr r3, [fp, #-44]\l000081a8    cmp r3, #0\l000081ac    beq 81cc    # 000081cc\l }"]
+	"15" -> "17" [weight=4];
+	"15" -> "18" [label="taken", weight=3];
+	"16" [label="{BB 16 (00008194) | 00008194    mov r3, #5\l00008198    str r3, [fp, #-72]\l0000819c    mov r3, #1\l000081a0    str r3, [fp, #-68]\l }"]
+	"16" -> "15" [weight=4];
+	"17" [label="{BB 17 (000081b0) | 000081b0    ldr r3, [fp, #-68]\l000081b4    cmp r3, #0\l000081b8    bne 81cc    # 000081cc\l }"]
+	"17" -> "19" [weight=4];
+	"17" -> "18" [label="taken", weight=3];
+	"18" [label="{BB 18 (000081cc) | 000081cc    ldr r3, [fp, #-40]\l000081d0    cmp r3, #0\l000081d4    beq 81f4    # 000081f4\l }"]
+	"18" -> "20" [weight=4];
+	"18" -> "21" [label="taken", weight=3];
+	"19" [label="{BB 19 (000081bc) | 000081bc    mov r3, #6\l000081c0    str r3, [fp, #-72]\l000081c4    mov r3, #1\l000081c8    str r3, [fp, #-68]\l }"]
+	"19" -> "18" [weight=4];
+	"20" [label="{BB 20 (000081d8) | 000081d8    ldr r3, [fp, #-68]\l000081dc    cmp r3, #0\l000081e0    bne 81f4    # 000081f4\l }"]
+	"20" -> "22" [weight=4];
+	"20" -> "21" [label="taken", weight=3];
+	"21" [label="{BB 21 (000081f4) | 000081f4    ldr r3, [fp, #-36]\l000081f8    cmp r3, #0\l000081fc    beq 821c    # 0000821c\l }"]
+	"21" -> "23" [weight=4];
+	"21" -> "24" [label="taken", weight=3];
+	"22" [label="{BB 22 (000081e4) | 000081e4    mov r3, #7\l000081e8    str r3, [fp, #-72]\l000081ec    mov r3, #1\l000081f0    str r3, [fp, #-68]\l }"]
+	"22" -> "21" [weight=4];
+	"23" [label="{BB 23 (00008200) | 00008200    ldr r3, [fp, #-68]\l00008204    cmp r3, #0\l00008208    bne 821c    # 0000821c\l }"]
+	"23" -> "25" [weight=4];
+	"23" -> "24" [label="taken", weight=3];
+	"24" [label="{BB 24 (0000821c) | 0000821c    ldr r3, [fp, #-32]\l00008220    cmp r3, #0\l00008224    beq 8244    # 00008244\l }"]
+	"24" -> "26" [weight=4];
+	"24" -> "27" [label="taken", weight=3];
+	"25" [label="{BB 25 (0000820c) | 0000820c    mov r3, #8\l00008210    str r3, [fp, #-72]\l00008214    mov r3, #1\l00008218    str r3, [fp, #-68]\l }"]
+	"25" -> "24" [weight=4];
+	"26" [label="{BB 26 (00008228) | 00008228    ldr r3, [fp, #-68]\l0000822c    cmp r3, #0\l00008230    bne 8244    # 00008244\l }"]
+	"26" -> "28" [weight=4];
+	"26" -> "27" [label="taken", weight=3];
+	"27" [label="{BB 27 (00008244) | 00008244    ldr r3, [fp, #-28]\l00008248    cmp r3, #0\l0000824c    beq 826c    # 0000826c\l }"]
+	"27" -> "29" [weight=4];
+	"27" -> "30" [label="taken", weight=3];
+	"28" [label="{BB 28 (00008234) | 00008234    mov r3, #9\l00008238    str r3, [fp, #-72]\l0000823c    mov r3, #1\l00008240    str r3, [fp, #-68]\l }"]
+	"28" -> "27" [weight=4];
+	"29" [label="{BB 29 (00008250) | 00008250    ldr r3, [fp, #-68]\l00008254    cmp r3, #0\l00008258    bne 826c    # 0000826c\l }"]
+	"29" -> "31" [weight=4];
+	"29" -> "30" [label="taken", weight=3];
+	"30" [label="{BB 30 (0000826c) | 0000826c    ldr r3, [fp, #-24]\l00008270    cmp r3, #0\l00008274    beq 8294    # 00008294\l }"]
+	"30" -> "32" [weight=4];
+	"30" -> "33" [label="taken", weight=3];
+	"31" [label="{BB 31 (0000825c) | 0000825c    mov r3, #10\l00008260    str r3, [fp, #-72]\l00008264    mov r3, #1\l00008268    str r3, [fp, #-68]\l }"]
+	"31" -> "30" [weight=4];
+	"32" [label="{BB 32 (00008278) | 00008278    ldr r3, [fp, #-68]\l0000827c    cmp r3, #0\l00008280    bne 8294    # 00008294\l }"]
+	"32" -> "34" [weight=4];
+	"32" -> "33" [label="taken", weight=3];
+	"33" [label="{BB 33 (00008294) | 00008294    ldr r3, [fp, #-20]\l00008298    cmp r3, #0\l0000829c    beq 82bc    # 000082bc\l }"]
+	"33" -> "35" [weight=4];
+	"33" -> "36" [label="taken", weight=3];
+	"34" [label="{BB 34 (00008284) | 00008284    mov r3, #11\l00008288    str r3, [fp, #-72]\l0000828c    mov r3, #1\l00008290    str r3, [fp, #-68]\l }"]
+	"34" -> "33" [weight=4];
+	"35" [label="{BB 35 (000082a0) | 000082a0    ldr r3, [fp, #-68]\l000082a4    cmp r3, #0\l000082a8    bne 82bc    # 000082bc\l }"]
+	"35" -> "37" [weight=4];
+	"35" -> "36" [label="taken", weight=3];
+	"36" [label="{BB 36 (000082bc) | 000082bc    ldr r3, [fp, #-16]\l000082c0    cmp r3, #0\l000082c4    beq 82e4    # 000082e4\l }"]
+	"36" -> "38" [weight=4];
+	"36" -> "39" [label="taken", weight=3];
+	"37" [label="{BB 37 (000082ac) | 000082ac    mov r3, #12\l000082b0    str r3, [fp, #-72]\l000082b4    mov r3, #1\l000082b8    str r3, [fp, #-68]\l }"]
+	"37" -> "36" [weight=4];
+	"38" [label="{BB 38 (000082c8) | 000082c8    ldr r3, [fp, #-68]\l000082cc    cmp r3, #0\l000082d0    bne 82e4    # 000082e4\l }"]
+	"38" -> "40" [weight=4];
+	"38" -> "39" [label="taken", weight=3];
+	"39" [label="{BB 39 (000082e4) | 000082e4    ldr r3, [fp, #-12]\l000082e8    cmp r3, #0\l000082ec    beq 830c    # 0000830c\l }"]
+	"39" -> "41" [weight=4];
+	"39" -> "42" [label="taken", weight=3];
+	"40" [label="{BB 40 (000082d4) | 000082d4    mov r3, #13\l000082d8    str r3, [fp, #-72]\l000082dc    mov r3, #1\l000082e0    str r3, [fp, #-68]\l }"]
+	"40" -> "39" [weight=4];
+	"41" [label="{BB 41 (000082f0) | 000082f0    ldr r3, [fp, #-68]\l000082f4    cmp r3, #0\l000082f8    bne 830c    # 0000830c\l }"]
+	"41" -> "43" [weight=4];
+	"41" -> "42" [label="taken", weight=3];
+	"42" [label="{BB 42 (0000830c) | 0000830c    ldr r3, [fp, #-8]\l00008310    cmp r3, #0\l00008314    beq 8334    # 00008334\l }"]
+	"42" -> "44" [weight=4];
+	"42" -> "45" [label="taken", weight=3];
+	"43" [label="{BB 43 (000082fc) | 000082fc    mov r3, #14\l00008300    str r3, [fp, #-72]\l00008304    mov r3, #1\l00008308    str r3, [fp, #-68]\l }"]
+	"43" -> "42" [weight=4];
+	"44" [label="{BB 44 (00008318) | 00008318    ldr r3, [fp, #-68]\l0000831c    cmp r3, #0\l00008320    bne 8334    # 00008334\l }"]
+	"44" -> "46" [weight=4];
+	"44" -> "45" [label="taken", weight=3];
+	"45" [label="{BB 45 (00008334) | 00008334    ldr r3, [fp, #-72]\l00008338    mov r0, r3\l0000833c    add sp, fp, #0\l00008340    ldmia sp!, \{fp\}\l00008344    bx lr\l }"]
+	"45" -> "47" [label="return", style=dashed, weight=2];
+	"46" [label="{BB 46 (00008324) | 00008324    mov r3, #15\l00008328    str r3, [fp, #-72]\l0000832c    mov r3, #1\l00008330    str r3, [fp, #-68]\l }"]
+	"46" -> "45" [weight=4];
+	"47" [label="EXIT"]
+}

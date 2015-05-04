@@ -48,7 +48,7 @@ protected:
 		if(opt_virtualize)
 			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
 		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
-		workspace()->require(LOOP_INFO_FEATURE, props); // TODO! LOOP_EXIT_EDGE
+		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
 
         const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
         const dfa::State *inital_state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
