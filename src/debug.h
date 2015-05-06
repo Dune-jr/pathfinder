@@ -6,7 +6,6 @@
 
 // #define DBGG
 // #define DBG_WARNINGS
-// #define DBG_NO_DEBUG	   0b1 << 0
 #define DBG_NO_COLOR	   0b1 << 1
 #define DBG_NO_INFO		   0b1 << 2
 #define DBG_LINE_NB		   0b1 << 3
@@ -123,21 +122,21 @@ public:
 	}
 	static bool shouldPrint(const elm::String& str)
 	{
-		if(dbg_verbose > DBG_VERBOSE_ALL)
-			return false;
 		if(dbg_flags&DBG_NO_PREDICATES)
 		{	
+			if(str.startsWith(_ << &color::Pur() << " "))
+				return false;
 			if(str.startsWith(_ << &color::IPur() << " "))
 				return false;
 			if(str.startsWith(_ << &color::IYel() << "-"))
 				return false;
 			if(str.startsWith("Predicates generated:") || str.startsWith("|-> "))
 				return false;
-			if(str.startsWith(_ << &color::IBlu() << "["))
+			if(str.startsWith(_ << &color::IBlu() << ""))
+				return false;
+			if(str.startsWith(_ << &color::Blu() << "  "))
 				return false;
 		}
-		// if(str.startsWith(_ << &color::IPur() << " "))
-		// 	return false;
 		return true;
 	}
 	inline static elm::String dbgInfo(const char* file, int line)
@@ -155,12 +154,14 @@ public:
 #define DBG_INFO() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "] " << color::RCol()
 #define DBG_INFO_STD() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__).chars() << "] " << color::RCol()
 
-#define DBG(str) { elm::String stringed_str = _ << str;\
-	if(Debug::shouldPrint(stringed_str)) \
-		cout << Debug::dbgInfo(__FILE__, __LINE__) << stringed_str << color::RCol() << io::endl; }
-#define DBG_STD(str) { elm::String stringed_str = _ << str;\
-	if(Debug::shouldPrint(_ << str)) \
-		std::cout << Debug::dbgInfo(__FILE__, __LINE__).chars() << str << color::RCol().chars() << io::endl; }
+#define DBG(str) { if(dbg_verbose == DBG_VERBOSE_ALL) {\
+		elm::String stringed_str = _ << str;\
+		if(Debug::shouldPrint(stringed_str)) \
+			cout << Debug::dbgInfo(__FILE__, __LINE__) << stringed_str << color::RCol() << io::endl; } }
+#define DBG_STD(str) { if(dbg_verbose == DBG_VERBOSE_ALL) {\
+		elm::String stringed_str = _ << str;\
+		if(Debug::shouldPrint(_ << str)) \
+			std::cout << Debug::dbgInfo(__FILE__, __LINE__).chars() << str << color::RCol().chars() << io::endl; } }
 #define DBG_TEST(tested_cond, expected_cond) \
 	((tested_cond) == (expected_cond) ? "\033[92m" : "\033[91m") << \
 	((tested_cond) ? "true" : "false") << "\033[0m"

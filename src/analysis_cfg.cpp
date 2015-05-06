@@ -296,7 +296,6 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 				OrderedPath original_full_path = (*sl_iter).getPath();
 				original_full_path.addLast(e); // need to add e
 				infeasible_paths.add(original_full_path);
-				// TODO! clean that mess below...
 				if(dbg_verbose == DBG_VERBOSE_ALL)
 				{
 					Path ofp;
@@ -315,6 +314,7 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, co
 	const Identifier<bool>& motherloop_fixpoint_state_id, const Identifier<bool>& fixpoint_reached_id)
 {
 	State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
+	bool delete_s = false;
 	s->merge(sl);//, *bb_outs);
 	s->setFixpointState(Analysis::listOfFixpoints(sl));
 	#ifdef DBGG
@@ -328,6 +328,7 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, co
 			delete s;
 			s = processed_loopheader_bb_id(bb);
 			s->setFixpointState(true); // ensure we keep this property
+			// delete_s = true;
 		}
 		else
 		{
@@ -338,6 +339,7 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, co
 				if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
 					cout << color::Bold() << "FIXPOINT on BB#" << bb->number() << color::RCol() << endl;
 				s->setFixpointState(true);
+				delete_s = true;
 				// we need to clear the annotation for future fixpoints on this loop 
 				// // huh,not really the reason why. If this was a fixpoint in a previous analysis it'll be one in future ones
 				// processed_loopheader_bb_id.remove(bb); //  this makes absurd results...
@@ -357,6 +359,8 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, co
 	sl.clear();
 	sl += *s; // sl <- {s}
 	fixpoint_reached_id.set(bb, s->fixpointState());
+	if(delete_s)
+		delete s;
 }
 
 /**
@@ -489,7 +493,7 @@ void Analysis::placeboProcessBB(BasicBlock* bb)
 		total_paths++;
 		return;
 	}
-	if(LOOP_HEADER(bb)) // TODO: fix to merge paths into 1 at loop headers (?)
+	if(LOOP_HEADER(bb))
 		loop_header_count++;
 	for(BasicBlock::OutIterator outs(bb); outs; outs++)
 		if(!BACK_EDGE(*outs) && isAHandledEdgeKind(outs->kind())) // Filter out irrelevant edges (calls...)

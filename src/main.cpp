@@ -92,6 +92,7 @@ protected:
 			if(dbg_verbose < DBG_VERBOSE_NONE)
 				cout << "output to " + entry + ".ffx" << endl;
 		}
+		// */
 	}
 
 private:

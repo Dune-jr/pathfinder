@@ -104,6 +104,13 @@ Constant Constant::operator-() const
 {
 	return Constant(-_val, _kind, !_sign);
 }
+// bit-to-bit NOT
+Constant Constant::operator~() const
+{
+	if(!isAbsolute())
+		return Constant();
+	return Constant(~_val, CONSTANT_ABSOLUTE);
+}
 Constant Constant::operator*(const Constant& c) const
 {
 	if(c == 0 || *this == 0)
@@ -194,7 +201,7 @@ io::Output& Constant::print(io::Output& out) const
 	switch(_kind)
 	{
 		case CONSTANT_ABSOLUTE:
-			if(_val >= 64 || _val <= -63) // print large values in hex
+			if(_val >= 64) //|| _val <= -63) // print large values in hex
 				return (out << "0x" << io::hex(_val));
 			return (out << _val);
 		case CONSTANT_RELATIVE:

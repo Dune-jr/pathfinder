@@ -69,8 +69,6 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			switch(seminsts.op())
 			{
 				case NOP:
-					ASSERT(!UNTESTED_CRITICAL);
-					DBG(color::BIRed() << "Untested operand NOP running!")
 					break;
 				case BRANCH:
 					break;
@@ -317,7 +315,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						*/
 
 						// b is usually a tempvar that has been previously set to a constant value
-						if(!isConstant(b))
+						if(!isConstant(b) || !constants[b].isAbsolute())
 						{
 							DBG(color::Blu() << "  [" << OperandVar(b) << " could not be identified to a constant value]")
 							invalidateVar(d); // only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
@@ -355,13 +353,11 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					}
 					break;
 				case ASR: // TODO test: is this really legit?
-					ASSERT(!UNTESTED_CRITICAL);
-					DBG(color::BIRed() << "Untested ASR operator running!")
 				case SHR:
 					opd1 = new OperandVar(d);
 					{
 						// b is usually a tempvar that has been previously set to a constant value
-						if(!isConstant(b))
+						if(!isConstant(b) || !constants[b].isAbsolute())
 						{
 							DBG(color::Blu() << "  [" << OperandVar(b) << " could not be identified as a constant value]")
 							invalidateVar(d);
@@ -387,7 +383,6 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					{
 						if(a == d) // d <- -d
 						{	// [-1 * d / d]
-							// update(OperandVar(d), OperandArithExpr(ARITHOPR_MUL, OperandConst(-1), OperandVar(d)));
 							update(OperandVar(d), OperandArithExpr(ARITHOPR_NEG, OperandVar(d))); // TODO test
 							if(isConstant(d))
 								constants.set(d, -constants[d]);
@@ -405,21 +400,43 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						}
 					}
 					break;
-				case NOT:		// d <- ~a
+				case NOT: // d <- ~a
+					if(isConstant(a) && constants[a].isAbsolute()) 
+					{
+						DBG(color::BIRed() << "Untested operator NOT running!")
+						t::int32 val = ~(constants[a].val());
+						if(val < 0)
+							val = -val; // TODO! handle better with unsigned support
+						constants.set(d, val);
+					}
+					invalidateVar(d); // invalidate in all cases
+					break;
 				case AND:		// d <- a & b
 				case OR:		// d <- a | b
 				case XOR:		// d <- a ^ b
-					ASSERT(!UNTESTED_CRITICAL);
-					DBG(color::BIRed() << "Unimplemented operator NOT/AND/OR/XOR running!")
-					dumpPredicates();
-					invalidateVar(d);
+					if(isConstant(a) && isConstant(b) && constants[a].isAbsolute() && constants[b].isAbsolute())
+					{
+						ASSERT(!UNTESTED_CRITICAL);
+						DBG(color::BIRed() << "Untested operator AND/OR/XOR running!")
+						t::int32 val;
+						if(seminsts.op() == AND)
+							val = constants[a].val() & constants[b].val();
+						if(seminsts.op() == OR)
+							val = constants[a].val() | constants[b].val();
+						if(seminsts.op() == XOR)
+							val = constants[a].val() ^ constants[b].val();
+						constants.set(d, val);					
+					}
+					else
+						DBG(color::Blu() << "  [An operand could not be identified as a constant value]")
+					invalidateVar(d); // invalidate either way
 					break;
 				case MULU:
 					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Untested unsigned variant running!")
 				case MUL:
 					make_pred = true;
-					opd1 = new OperandVar(d);
+					// opd1 = new OperandVar(d);
 					{
 						if(d == a)
 						{
@@ -479,13 +496,26 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							}
 							else // d <- a*b
 							{
+								ASSERT(!UNTESTED_CRITICAL);
 								opd1 = new OperandVar(d);
 								invalidateVar(d);
-								opd21 = new OperandVar(a);
-								opd22 = new OperandVar(b);
-								opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
 								if(isConstant(a) && isConstant(b))
+								{
 									constants.set(d, constants[a]*constants[b]);
+									make_pred = false;
+								}
+								else
+								{
+									if(isConstant(a))
+										opd21 = new OperandConst(constants[a]);
+									else
+										opd21 = new OperandVar(a);
+									if(isConstant(b))
+										opd22 = new OperandConst(constants[b]);
+									else
+										opd22 = new OperandVar(b);
+									opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
+								}
 							}
 						}
 						break;
@@ -935,67 +965,7 @@ Option<Constant> Analysis::State::findConstantValueOfVar(const OperandVar& var)
 	return some(constants[var]);
 }
 
-// bool Analysis::State::findConstantValueOfVar_old(const OperandVar& var, t::int32& val)
-// {
-	/* we should separate kinds:
-	*  OperandConst or OperandMem : nothing to do
-	*  OperandArith or OperandVar : recursive call to findConstantValueOfVar with an exclusion list to avoid infinite loops
-	*  complexity issues! :(
-	*  split these in two functions : let this one as is and create a findConstantValueOfVarRecursively
-	*  if this (simpler) first function fails, call the second one
-	*  that does not improve worst-case scenario complexity but avoids worst case scanrios a lot
-	*/
-	/*
-	for(SLList<Predicate>::Iterator iter(generated_preds); iter; iter++)
-	{
-		if(iter->opr() == CONDOPR_EQ) // operator is =
-		{
-			if(iter->leftOperand() == var) // left operand matches our var
-				if(Option<OperandConst> maybe_val = iter->rightOperand().evalConstantOperand()) // other operand can be evald to const
-				{
-					// val = ((OperandConst&)iter->rightOperand()).value();
-					val = (*maybe_val).value();
-					return true;
-				}
-				
-			if(iter->rightOperand() == var) // right operand matches our var
-				if(Option<OperandConst> maybe_val = iter->leftOperand().evalConstantOperand()) // other operand can be evald to const
-				{
-					// val = ((OperandConst&)iter->leftOperand()).value();
-					val = (*maybe_val).value();
-					return true;
-				}
-		}
-	}
-	if(!var.isTempVar()) // we need to parse previously generated preds as well
-	{
-		SLList<LabelledPredicate> top_list = labelled_preds.first(); // getTopList();
-		for(SLList<LabelledPredicate>::Iterator iter(top_list); iter; iter++)
-		{
-			if(iter->pred().opr() == CONDOPR_EQ) // operator is =
-			{
-				if(iter->pred().leftOperand() == var) // left operand matches our var
-					if(Option<OperandConst> maybe_val = iter->pred().rightOperand().evalConstantOperand()) // other operand can be evald to const
-					{
-						// val = ((OperandConst&)iter->rightOperand()).value();
-						val = (*maybe_val).value();
-						return true;
-					}
-					
-				if(iter->pred().rightOperand() == var) // right operand matches our var
-					if(Option<OperandConst> maybe_val = iter->pred().leftOperand().evalConstantOperand()) // other operand can be evald to const
-					{
-						// val = ((OperandConst&)iter->leftOperand()).value();
-						val = (*maybe_val).value();
-						return true;
-					}
-			}
-		}
-	}
-	return false; // No matches found
-}*/
-
-// TODO: improve to handle affine equations ("[SP-12] -1 = 0" etc...)
+// maybe we should improve this to handle affine equations ("[SP-12] -1 = 0" etc...)
 Option<Constant> Analysis::State::findConstantValueOfMemCell(const OperandMem& mem, Path &labels)
 {
 	for(PredIterator piter(*this); piter; piter++)
@@ -1053,131 +1023,6 @@ Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& 
 			}
 			// else algorithm failed (for example var = -sp or var = sp+sp)
 		}
-		/*
-			Operand* opd_left  = piter.pred().leftOperand().copy();
-			Operand* opd_right = piter.pred().rightOperand().copy();
-			Operand* opd_result = NULL;
-			Operand* new_opd = NULL;
-			// write this clearer maybe
-			int found_var = 0; // 0 = not found, 1 = found in opdleft, 2 = found in opdright
-			int found_sp = 0; // 0 = not found, 1 = found in opdleft, 2 = found in opdright
-			int delta = 0;
-			pop_result_t res;
-			/// left operand ///-
-			do
-			{
-				res = opd_left->doAffinePop(opd_result, new_opd);
-				if(res == POPRESULT_DONE)
-				{
-					if(opd_result->kind() == OPERAND_CONST)
-						delta += ((OperandConst*)opd_result)->value();
-					if(opd_result->kind() == OPERAND_VAR)
-					{
-						if(*opd_result == var && !found_var)
-							found_var = 1; // we found it on the left side of the equation
-						else if(*opd_result == sp && !found_sp)
-							found_sp = 1; // we found it on the left side of the equation
-						else
-						{
-							// FAIL! we found something that is neither var nor sp, or we had already found them
-							res = POPRESULT_FAIL;
-							break;
-						}
-					}
-				}
-				if(res == POPRESULT_CONTINUE)
-				{
-					if(opd_result->kind() == OPERAND_CONST)
-					{
-						delta += ((OperandConst*)opd_result)->value();
-						opd_left = new_opd;
-					}
-					if(opd_result->kind() == OPERAND_VAR)
-					{
-						if(*opd_result == var && !found_var)
-						{
-							found_var = 1; // we found it on the left side of the equation
-							opd_left = new_opd;
-						}								
-						else if(*opd_result == sp && !found_sp)
-						{
-							found_sp = 1; // we found it on the left side of the equation
-							opd_left = new_opd;
-						}
-						else
-						{
-							// FAIL! we found something that is neither var nor sp, or we had already found them
-							res = POPRESULT_FAIL;
-							break;
-						}
-					}
-				}
-			} while(res == POPRESULT_CONTINUE);
-			if(res == POPRESULT_FAIL)
-			{
-				continue; // this affine analysis failed
-			}
-			do
-			{
-				res = opd_right->doAffinePop(opd_result, new_opd);
-				if(res == POPRESULT_DONE)
-				{
-					if(opd_result->kind() == OPERAND_CONST)
-						delta -= ((OperandConst*)opd_result)->value();
-					if(opd_result->kind() == OPERAND_VAR)
-					{
-						if(*opd_result == var && !found_var)
-							found_var = 2; // we found it on the left side of the equation
-						else if(*opd_result == sp && !found_sp)
-							found_sp = 2; // we found it on the left side of the equation
-						else
-						{
-							// FAIL! we found something that is neither var nor sp, or we had already found them
-							res = POPRESULT_FAIL;
-							break;
-						}
-					}
-				}
-				if(res == POPRESULT_CONTINUE)
-				{
-					if(opd_result->kind() == OPERAND_CONST)
-					{
-						delta -= ((OperandConst*)opd_result)->value();
-						opd_right = new_opd;
-					}
-					if(opd_result->kind() == OPERAND_VAR)
-					{
-						if(*opd_result == var && !found_var)
-						{
-							found_var = 2; // we found it on the left side of the equation
-							opd_right = new_opd;
-						}								
-						else if(*opd_result == sp && !found_sp)
-						{
-							found_sp = 2; // we found it on the left side of the equation
-							opd_right = new_opd;
-						}
-						else
-						{
-							// FAIL! we found something that is neither var nor sp, or we had already found them
-							res = POPRESULT_FAIL;
-							break;
-						}
-					}
-				}
-			} while(res == POPRESULT_CONTINUE);
-			if(res == POPRESULT_FAIL)
-			{
-				continue; // this affine analysis failed
-			}
-			if(found_var && found_sp && found_sp != found_var) // we want them to be on opposite sides, otherwise we have ?var = -sp + K !
-			{
-				if(found_var == 1)
-					delta = -delta;
-				return delta;
-			}
-		}
-		*/
 	}
 	DBG(color::IRed() << "findStackRelativeValueOfVar failed!")
 	return none; // no matches found

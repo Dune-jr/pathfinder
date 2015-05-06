@@ -43,6 +43,7 @@ public:
 	Constant operator+(const Constant& c) const;
 	Constant operator-(const Constant& c) const;
 	Constant operator-() const;
+	Constant operator~() const;
 	Constant operator*(const Constant& c) const;
 	Constant operator/(const Constant& c) const;
 	Constant operator%(const Constant& c) const;

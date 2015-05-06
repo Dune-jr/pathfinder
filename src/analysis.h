@@ -185,7 +185,7 @@ private:
 
 	const dfa::State* dfa_state;
 	const OperandVar sp; // Stack Pointer
-	Vector<OrderedPath> infeasible_paths; // TODO! Set<Path, PathComparator<Path> > path; to make Set useful
+	Vector<OrderedPath> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
 	int max_tempvars, max_registers, flags;
 	int total_paths, loop_header_count, bb_count;
 	int ip_count, unminimized_ip_count;

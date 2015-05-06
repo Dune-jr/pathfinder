@@ -186,7 +186,7 @@ void ConstantVariables::label(Edge* label)
  * @fn void ConstantVariables::merge(const SLList<ConstantVariables>& cvl);
  * This uses the current ConstantVariables and change it to the result of the merge of it with the cvl list parameter
  */
-// TODO! we can improve this a lot
+// TODO: we can improve this a lot
 void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
 {
 	for(SLList<ConstantVariables>::Iterator iter(cvl); iter; iter++)

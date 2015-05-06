@@ -119,7 +119,7 @@ void Analysis::State::merge(const SLList<State>& sl)
 	labelled_preds.clear();
 	SLList<ConstantVariables> cvl;
 	// intialize to first element
-	ASSERTP(!sl.isEmpty(), "call to Analysis::State::merge with empty sl parameter"); // TODO maybe just leave the state empty
+	ASSERTP(!sl.isEmpty(), "call to Analysis::State::merge with empty sl parameter"); // maybe just leave the state empty
 	constants = sl.first().constants;
 	// copy firstElement.labelled_preds into labelled_preds with empty labels
 	for(SLList<LabelledPredicate>::Iterator iter(sl.first().labelled_preds); iter; iter++)
