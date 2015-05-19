@@ -143,14 +143,22 @@ void Analysis::processCFG(CFG* cfg)
 
 		/* End For */
 		// merging state lists that got too large
-		mergeOversizedStateList(sl, 250);
-		if(state_count >= 50 && dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
-			cout << " " << state_count << " states updated." << endl;
+		if(!mergeOversizedStateList(sl))
+			if(state_count >= 50 && dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
+				cout << " " << state_count << " states updated." << endl;
 
 		/* For e in bb.outs */
 		for(BasicBlock::OutIterator bb_outs(bb); bb_outs; bb_outs++)
 		{
-			if(isAHandledEdgeKind(bb_outs->kind())) // filter out calls etc
+			/*
+			if(bb_outs->kind() == Edge::VIRTUAL_RETURN && !sl.isEmpty())
+			{
+				// TODO!!!
+				DBG(sl.first().constants[13])
+				sl.first().dumpPredicates();
+				DBG("constants=" << sl.first().constants)
+			}*/
+			if(isAHandledEdgeKind(bb_outs->kind())) // filter out calls etc // not
 			{
 				if(BACK_EDGE(*bb_outs))
 					DBG(color::Whi() << "End of loop reached.")
@@ -416,12 +424,12 @@ void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
 	}
 }
 
-void Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl, int thresold) const
+bool Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl/*, int thresold*/) const
 {
 	if(!(flags&MERGE))
-		return;
+		return false;
 	int count = sl.count();
-	if(count >= thresold)
+	if(count >= state_size_limit)
 	{
 		State s((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
 		s.merge(sl);
@@ -430,7 +438,9 @@ void Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl, int thresold
 		sl += s;
 		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
 			cout << " " << count << " states updated then merged into 1." << endl;
+		return true;
 	}
+	return false;
 }
 
 void Analysis::cleanIncomingEdges(BasicBlock *bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const

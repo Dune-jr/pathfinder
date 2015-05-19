@@ -3,8 +3,8 @@
 
 void addIndents(io::Output& out, int n) { for(int i=0; i<n; i++) out << "\t"; }
 
-Analysis::Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int flags)
-	: dfa_state(dfa_state), sp(sp), max_tempvars(max_tempvars), max_registers(max_registers), flags(flags)
+Analysis::Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int state_size_limit, int flags)
+	: dfa_state(dfa_state), sp(sp), max_tempvars(max_tempvars), max_registers(max_registers), state_size_limit(state_size_limit), flags(flags)
 	, loop_header_count(0), bb_count(cfg->countBB()-1) // do not count ENTRY
 	, ip_count(0), unminimized_ip_count(0)
 {

@@ -37,7 +37,7 @@ public:
 	typedef Set<Edge*> Path;
 	class State;
 
-	Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int flags);
+	Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int state_size_limit, int flags);
 	inline Vector<OrderedPath> infeasiblePaths() const { return infeasible_paths; }
 	static bool listOfFixpoints(const SLList<Analysis::State>& sl);
 	
@@ -46,8 +46,9 @@ public:
 		const dfa::State* dfa_state;
 		const OperandVar& sp; // the Stack Pointer register
 		OrderedPath path;
-		ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
-		SLList<LabelledPredicate> labelled_preds; // previously generated predicates
+	// TODO!!!
+	public:	ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
+	private:	SLList<LabelledPredicate> labelled_preds; // previously generated predicates
 		SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
 		SLList<LabelledPredicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
 			// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
@@ -186,7 +187,7 @@ private:
 	const dfa::State* dfa_state;
 	const OperandVar sp; // Stack Pointer
 	Vector<OrderedPath> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
-	int max_tempvars, max_registers, flags;
+	int max_tempvars, max_registers, state_size_limit, flags;
 	int total_paths, loop_header_count, bb_count;
 	int ip_count, unminimized_ip_count;
 	
@@ -198,7 +199,7 @@ private:
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
 	void addDisorderedPath(const Path& infeasible_path, const OrderedPath& full_path, Edge* last_edge);
 	void purgeStateList(SLList<Analysis::State>& sl) const;
-	void mergeOversizedStateList(SLList<Analysis::State>& sl, int thresold) const;
+	bool mergeOversizedStateList(SLList<Analysis::State>& sl/*, int thresold*/) const;
 	void placeboProcessCFG(CFG* cfg);
 	void placeboProcessBB(BasicBlock *bb);
 	void printResults(int exec_time_ms) const;

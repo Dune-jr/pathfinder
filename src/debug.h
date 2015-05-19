@@ -12,7 +12,7 @@
 #define DBG_NO_TIME		   0b1 << 4
 #define DBG_NO_PREDICATES  0b1 << 5
 #define DBG_PREANALYSIS	   0b1 << 6
-#define UNTESTED_CRITICAL false // Do not raise exception when executing untested code
+#define UNTESTED_CRITICAL true // Do not raise exception when executing untested code
 #define DBG_SEPARATOR " "
 
 #define DBG_VERBOSE_ALL			 0

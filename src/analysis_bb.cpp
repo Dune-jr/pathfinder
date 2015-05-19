@@ -154,7 +154,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					break;
 				case SETP:
 					ASSERT(!UNTESTED_CRITICAL);
-					DBG(color::BIRed() << "Unimplemented operand SETP running!")
+					DBG(color::BIRed() << "Unimplemented operator SETP running!")
 					invalidateVar(d);
 					break;
 				case CMP:
@@ -403,33 +403,34 @@ void Analysis::State::processBB(const BasicBlock *bb)
 				case NOT: // d <- ~a
 					if(isConstant(a) && constants[a].isAbsolute()) 
 					{
-						DBG(color::BIRed() << "Untested operator NOT running!")
 						t::int32 val = ~(constants[a].val());
 						if(val < 0)
 							val = -val; // TODO! handle better with unsigned support
+						invalidateVar(d);
 						constants.set(d, val);
 					}
-					invalidateVar(d); // invalidate in all cases
+					else invalidateVar(d);
 					break;
 				case AND:		// d <- a & b
 				case OR:		// d <- a | b
 				case XOR:		// d <- a ^ b
 					if(isConstant(a) && isConstant(b) && constants[a].isAbsolute() && constants[b].isAbsolute())
 					{
-						ASSERT(!UNTESTED_CRITICAL);
-						DBG(color::BIRed() << "Untested operator AND/OR/XOR running!")
 						t::int32 val;
 						if(seminsts.op() == AND)
 							val = constants[a].val() & constants[b].val();
-						if(seminsts.op() == OR)
-							val = constants[a].val() | constants[b].val();
-						if(seminsts.op() == XOR)
+						else if(seminsts.op() == XOR)
 							val = constants[a].val() ^ constants[b].val();
-						constants.set(d, val);					
+						else if(seminsts.op() == OR)
+							val = constants[a].val() | constants[b].val();
+						invalidateVar(d); // don't do this earlier in case d==a or d==b
+						constants.set(d, val);
 					}
 					else
+					{
 						DBG(color::Blu() << "  [An operand could not be identified as a constant value]")
-					invalidateVar(d); // invalidate either way
+						invalidateVar(d);
+					}
 					break;
 				case MULU:
 					ASSERT(!UNTESTED_CRITICAL);
@@ -477,8 +478,6 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						{
 							if(d == b) // d <- a*d
 							{	// [d/a / d] // we will have to assume that 0/0 is scratch!
-								ASSERT(!UNTESTED_CRITICAL);
-								DBG(color::BIRed() << "Untested case of operator MUL running!")
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)));
 								if(isConstant(d))
 								{
@@ -496,7 +495,6 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							}
 							else // d <- a*b
 							{
-								ASSERT(!UNTESTED_CRITICAL);
 								opd1 = new OperandVar(d);
 								invalidateVar(d);
 								if(isConstant(a) && isConstant(b))

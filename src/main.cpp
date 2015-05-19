@@ -38,8 +38,8 @@ public:
 		opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
 		opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")),
 		opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis")),
-		opt_merge(option::SwitchOption::Make(*this).cmd("--merge").description("merge when exceeding 200 states at a control point")),
-		opt_virtualize(option::SwitchOption::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG")) { }
+		opt_virtualize(option::SwitchOption::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG")),
+		opt_merge(option::ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point")) { }
 
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
@@ -77,11 +77,11 @@ protected:
 			dbg_flags |= DBG_NO_PREDICATES;
 		if(opt_preanalysis)
 			dbg_flags |= DBG_PREANALYSIS;
-		if(opt_merge)
+		if(opt_merge) // 250 is good
 			analysis_flags |= Analysis::MERGE;
 		if(opt_virtualize)
 			analysis_flags |= Analysis::FOLLOW_CALLS;
-		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, analysis_flags);
+		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, opt_merge.get(), analysis_flags);
 
 		// outputing to .ffx
 		if(opt_output)
@@ -97,8 +97,8 @@ protected:
 
 private:
 	option::Manager manager;
-	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred, opt_preanalysis, opt_merge, opt_virtualize;
-	// option::IntOption opt_merge;
+	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred, opt_preanalysis, opt_virtualize;
+	option::ValueOption<int> opt_merge;
 };
 
 OTAWA_RUN(Display);
