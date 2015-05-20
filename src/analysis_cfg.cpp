@@ -114,7 +114,7 @@ void Analysis::processCFG(CFG* cfg)
 		for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
 			sl.addAll(*PROCESSED_EDGES(*bb_ins));
 		// at this point of the algorithm, all incoming edges of bb have been processed
-		purgeStateList(sl); // remove all invalidate states
+		purgeStateList(sl); // remove all invalid states
 		cleanIncomingBackEdges(bb, PROCESSED_EDGES);
 
 		// in case of a loop, merge the state list into a single state, and do lot of annotation stuff
@@ -150,6 +150,19 @@ void Analysis::processCFG(CFG* cfg)
 		/* For e in bb.outs */
 		for(BasicBlock::OutIterator bb_outs(bb); bb_outs; bb_outs++)
 		{
+			// on call return, program stacking: remove obsolete predicates featuring stack addresses lower than current sp
+			if(bb_outs->kind() == Edge::VIRTUAL_RETURN)
+			{
+				if(const Option<Constant> current_sp = getCurrentStackPointer(sl))
+				{
+					DBG(color::IYel() << "Return reached, invalidating stack below " << *current_sp) // invalid states have been purged at this point
+					for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; sl_iter++)
+						sl_iter.item().invalidateStackBelow(*current_sp);
+				}
+				else DBG(color::IYel() << "Return reached, but sp value is lost or variable")
+				/*sl.first().dumpPredicates();
+				DBG("constants=" << sl.first().constants)*/
+			}
 			if(isAHandledEdgeKind(bb_outs->kind())) // filter out calls etc // not
 			{
 				if(BACK_EDGE(*bb_outs))
@@ -351,7 +364,7 @@ void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, co
 {
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
-		elm::sys::Thread::make();
+		// elm::sys::Thread::make(); // TODO
 
 		State s = *sl_iter;
 		s.appendEdge(e, is_conditional);
@@ -631,6 +644,20 @@ bool Analysis::isAHandledEdgeKind(Edge::kind_t kind) const
 		default:
 			return false;
 	}
+}
+
+Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>& sl) const
+{
+	Option<Constant> rtn = elm::none;
+	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
+	{
+		if(sl_iter->constants.isConstant(sp)) // TODO!!! fix encapsulation hack
+		{
+			ASSERT(!rtn || *rtn == sl_iter->constants[sp]); // currently this algorithm assumes at each pathpoint all states have the same SP. if this assumption ever fails, enforce that we only return an answer if all states know the value of sp
+			rtn = elm::some(sl_iter->constants[sp]);
+		}
+	}
+	return rtn;
 }
 
 bool Analysis::isConditional(BasicBlock* bb) const

@@ -68,6 +68,7 @@ public:
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
 	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const = 0;
 	virtual int involvesVariable(const OperandVar& opdv) const = 0;
+	virtual bool involvesStackBelow(const Constant& stack_limit) const = 0;
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
 	virtual bool involvesMemory() const = 0;
 	virtual bool update(const Operand& opd, const Operand& opd_modifier) = 0;
@@ -102,6 +103,7 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	int involvesVariable(const OperandVar& opdv) const;
+	bool involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
@@ -138,6 +140,7 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	int involvesVariable(const OperandVar& opdv) const;
+	bool involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
@@ -163,19 +166,17 @@ class OperandMem : public Operand
 {	
 public:
 	OperandMem(const OperandMem& opd);
-	OperandMem(const OperandConst& opdc); // relative to true means the memory is relative to the stack pointer
-	// OperandMem(const OperandConst& opdc, bool relative = false); // relative to true means the memory is relative to the stack pointer
+	OperandMem(const OperandConst& opdc);
 	OperandMem(); // for use in Option
 	~OperandMem();
 	
-	// inline bool isAbsolute() const { return _kind == OPERANDMEM_ABSOLUTE; }
-	// inline bool isRelative() const { return _kind == OPERANDMEM_RELATIVE; }
 	inline const OperandConst& getConst() const { ASSERT(_opdc); return *_opdc; }
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	int involvesVariable(const OperandVar& opdv) const;
+	bool involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
@@ -216,6 +217,7 @@ public:
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	int involvesVariable(const OperandVar& opdv) const;
+	bool involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesMemory() const;

@@ -39,6 +39,10 @@ int Predicate::involvesVariable(const OperandVar& opdv) const
 	return _opd1->involvesVariable(opdv) + _opd2->involvesVariable(opdv);
 }
 
+bool Predicate::involvesStackBelow(const Constant& stack_limit) const
+{
+	return _opd1->involvesStackBelow(stack_limit) || _opd2->involvesStackBelow(stack_limit);
+}
 bool Predicate::involvesMemoryCell(const OperandMem& opdm) const
 {
 	return _opd1->involvesMemoryCell(opdm) || _opd2->involvesMemoryCell(opdm);

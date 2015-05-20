@@ -36,6 +36,7 @@ bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) cons
 }
 int OperandConst::involvesVariable(const OperandVar& opdv) const { return 0; }
 bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return false; }
+bool OperandConst::involvesStackBelow(const Constant& stack_limit) const { return false; }
 bool OperandConst::involvesMemory() const { return false; }
 bool OperandConst::update(const Operand& opd, const Operand& opd_modifier) { return false; }
 // pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
@@ -96,6 +97,7 @@ int OperandVar::involvesVariable(const OperandVar& opdv) const
 	return (int)(opdv == *this);
 }
 bool OperandVar::involvesMemoryCell(const OperandMem& opdm) const { return false; }
+bool OperandVar::involvesStackBelow(const Constant& stack_limit) const { return false; }
 bool OperandVar::involvesMemory() const { return false; }
 // since the parent has to do the modification, and var has no child, return false
 bool OperandVar::update(const Operand& opd, const Operand& opd_modifier) { return false; }
@@ -152,6 +154,7 @@ bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 }
 int OperandMem::involvesVariable(const OperandVar& opdv) const { return 0; }
 bool OperandMem::involvesMemoryCell(const OperandMem& opdm) const {	return *this == opdm; }
+bool OperandMem::involvesStackBelow(const Constant& stack_limit) const { return _opdc->value().isRelative() && (_opdc->value().val() < stack_limit.val()); }
 bool OperandMem::involvesMemory() const { return true; }
 /*operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {
@@ -363,6 +366,12 @@ int OperandArithExpr::involvesVariable(const OperandVar& opdv) const
 	if(isUnary())
 		return opd1->involvesVariable(opdv);
 	return opd1->involvesVariable(opdv) + opd2->involvesVariable(opdv);
+}
+bool OperandArithExpr::involvesStackBelow(const Constant& stack_limit) const
+{
+	if(isUnary())
+		return opd1->involvesStackBelow(stack_limit);
+	return opd1->involvesStackBelow(stack_limit) || opd2->involvesStackBelow(stack_limit);
 }
 bool OperandArithExpr::involvesMemoryCell(const OperandMem& opdm) const
 {

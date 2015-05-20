@@ -14,7 +14,7 @@
 using namespace otawa::sem;
 
 /**
- * @fn void Analysis::State::throw();
+ * @fn void Analysis::State::throwInfo();
  * throw all gathered info on current state
  */
 void Analysis::State::throwInfo()
@@ -797,6 +797,25 @@ bool Analysis::State::invalidateTempVars()
 		iter++;
 	}
 	return rtn;
+}
+
+int Analysis::State::invalidateStackBelow(const Constant& stack_limit)
+{
+	int count = 0;
+	ASSERT(stack_limit.isRelative());
+	// do not try to replace everything unlike invalidateTempVars - the point is to get rid of useless obsolete data
+	for(PredIterator piter(*this); piter; )
+	{
+		if(piter.pred().involvesStackBelow(stack_limit))
+		{
+			removePredicate(piter);
+			count++;
+			continue;
+		}
+		piter++;
+	}
+	DBG(color::IYel() << "- " << count << " predicates")
+	return count;
 }
 
 // this mindlessly replaces all occurences of var by expr

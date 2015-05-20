@@ -46,7 +46,8 @@ public:
 		const dfa::State* dfa_state;
 		const OperandVar& sp; // the Stack Pointer register
 		OrderedPath path;
-		ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
+	public:	ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
+	private: // TODO!!!	
 		SLList<LabelledPredicate> labelled_preds; // previously generated predicates
 		SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
 		SLList<LabelledPredicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
@@ -82,6 +83,7 @@ public:
 		// analysis_bb.cpp
 		void processBB(const BasicBlock *bb);
 		void throwInfo();
+		int invalidateStackBelow(const Constant& stack_limit);
 
 		inline const State* operator->(void) const { return this; }
 
@@ -207,6 +209,7 @@ private:
 	void onPathEnd();
 	void onAnyInfeasiblePath();
 	bool isAHandledEdgeKind(Edge::kind_t kind) const;
+	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	bool isConditional(BasicBlock* bb) const;
 	void cleanIncomingEdges(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const;
 	void cleanIncomingBackEdges(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const;

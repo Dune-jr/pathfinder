@@ -35,6 +35,7 @@ public:
 	inline bool isComplete() const { return _opd1->isComplete() && _opd2->isComplete(); }
 	Predicate* copy() const;
 	int involvesVariable(const OperandVar& opdv) const;
+	bool involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool isAffine(const OperandVar& opdv, const OperandVar& sp) const;

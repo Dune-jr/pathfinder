@@ -157,7 +157,7 @@ bool ConstantVariables::invalidateTempVars()
 	}
 	if(!changes)
 		return false;
-	DBG(color::IYel() << "- " << changes << (changes > 1 ? " tempvars" : " tempvar"))
+	DBG(color::IYel() << "- " << changes << (changes > 1 ? " tempvar predicates" : " tempvar predicates"))
 	// DBG(color::IRed() << "State: " << *this)
 	return true;
 }
