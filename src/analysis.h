@@ -105,14 +105,14 @@ public:
 		bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);
 		bool replaceTempVar(const OperandMem& mem, const Operand& expr);
 		bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
-		Option<Constant> findConstantValueOfVar(const OperandVar& var); // changed to a simple lookup to "constants"
-		Option<Constant> findConstantValueOfMemCell(const OperandMem& mem, Path &labels);
+		Option<OperandConst> findConstantValueOfVar(const OperandVar& var); // changed to a simple lookup to "constants"
+		Option<OperandConst> findConstantValueOfMemCell(const OperandMem& mem, Path &labels);
 		Option<t::int32> findStackRelativeValueOfVar(const OperandVar& var, Path& labels);
 		bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
 		Option<OperandMem> getOperandMem(const OperandVar& var, Path& labels);
 		bool invalidateAllMemory();
 		Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken);
-		Option<OperandConst> getConstantDataValue(const OperandMem& addr_mem, otawa::sem::type_t type);
+		Option<OperandConst> getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type);
 		inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 
 		// PredIterator class

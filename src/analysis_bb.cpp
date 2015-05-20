@@ -98,11 +98,17 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					}
 					break;
 				case LOAD: // reg <- MEM_type(addr)
-					invalidateVar(reg);
+					invalidateVar(reg); // TODO: shouldn't we invalidate reg later incase we LOAD ?11, ?11 
 					if(Option<OperandMem> addr_mem = getOperandMem(addr, labels))
 					{
 						// if it's a constant address of some read-only data
-						if(Option<OperandConst> addr_const_value = getConstantDataValue(*addr_mem, (*seminsts).type()))
+						if(Option<OperandConst> addr_const_value = getConstantValueOfReadOnlyMemCell(*addr_mem, (*seminsts).type()))
+						{
+							DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "R-O memory data " << *addr_mem << " simplified to " << *addr_const_value)
+							constants.set(d, (*addr_const_value).value());
+						}
+						// or maybe we can link it to a constant value from the predicates
+						else if(Option<OperandConst> addr_const_value = findConstantValueOfMemCell(*addr_mem, labels))
 						{
 							DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "Memory data " << *addr_mem << " simplified to " << *addr_const_value)
 							constants.set(d, (*addr_const_value).value());
@@ -725,8 +731,8 @@ bool Analysis::State::invalidateMem(const OperandVar& var)
 bool Analysis::State::invalidateMem(const OperandMem& addr)
 {
 	Path labels;
-	if(Option<Constant> maybe_val = findConstantValueOfMemCell(addr, labels))
-		return replaceMem(addr, OperandConst(*maybe_val), labels); // try to keep the info
+	if(Option<OperandConst> maybe_val = findConstantValueOfMemCell(addr, labels))
+		return replaceMem(addr, *maybe_val, labels); // try to keep the info
 	bool rtn = false;
 	for(PredIterator piter(*this); piter; )
 	{
@@ -956,15 +962,15 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd
  * @return true if a value was found
  */
 // TODO: add a Path& labels parameter
-Option<Constant> Analysis::State::findConstantValueOfVar(const OperandVar& var)
+Option<OperandConst> Analysis::State::findConstantValueOfVar(const OperandVar& var)
 {
 	if(!isConstant(var))
 		return none;
-	return some(constants[var]);
+	return some(OperandConst(constants[var]));
 }
 
-// maybe we should improve this to handle affine equations ("[SP-12] -1 = 0" etc...)
-Option<Constant> Analysis::State::findConstantValueOfMemCell(const OperandMem& mem, Path &labels)
+// TODO: maybe we should improve this to handle affine equations ("[SP-12] -1 = 0" etc...)
+Option<OperandConst> Analysis::State::findConstantValueOfMemCell(const OperandMem& mem, Path &labels)
 {
 	for(PredIterator piter(*this); piter; piter++)
 	{
@@ -976,7 +982,7 @@ Option<Constant> Analysis::State::findConstantValueOfMemCell(const OperandMem& m
 			if(Option<OperandConst> maybe_val = p.rightOperand().evalConstantOperand())
 			{
 				labels += piter.labels();
-				return (*maybe_val).value();
+				return *maybe_val;
 			}
 		}
 		else if(p.rightOperand() == mem)
@@ -984,7 +990,7 @@ Option<Constant> Analysis::State::findConstantValueOfMemCell(const OperandMem& m
 			if(Option<OperandConst> maybe_val = p.leftOperand().evalConstantOperand())
 			{
 				labels += piter.labels();
-				return (*maybe_val).value();
+				return *maybe_val;
 			}
 		}
 	}
@@ -1071,11 +1077,11 @@ bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_le
 
 Option<OperandMem> Analysis::State::getOperandMem(const OperandVar& var, Path& labels)
 {
-	if(Option<Constant> val = findConstantValueOfVar(var))
-		return some(OperandMem(OperandConst(*val)));
+	if(Option<OperandConst> val = findConstantValueOfVar(var))
+		return some(OperandMem(*val));
 	if(Option<t::int32> val = findStackRelativeValueOfVar(var, labels))
 		return some(OperandMem(OperandConst(SP+*val)));
-		// return some(OperandMem(OperandConst(*val), true));
+		//return some(OperandMem(OperandConst(*val), true));
 	return none;
 }
 
@@ -1146,7 +1152,7 @@ Predicate* Analysis::State::getPredicateGeneratedByCondition(sem::inst condition
 /*
 	Check if addr_mem is the constant address of some read-only data, if so returns the constant data value
 */
-Option<OperandConst> Analysis::State::getConstantDataValue(const OperandMem& addr_mem, otawa::sem::type_t type)
+Option<OperandConst> Analysis::State::getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type)
 {
 	const Constant& addr = addr_mem.getConst().value();
 	if(!addr.isAbsolute())
