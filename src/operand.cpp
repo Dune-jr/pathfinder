@@ -1,3 +1,6 @@
+/*
+ * Defines our operands
+ */
 #include <elm/io/Output.h>
 #include "operand.h"
 #include "debug.h"

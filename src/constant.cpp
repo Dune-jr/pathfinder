@@ -1,3 +1,7 @@
+/*
+ * Constant is an enhanced int32 type allowing other constants such as the value of the Stack Pointer at the start of the program
+ */
+
 #include "constant.h"
 #include "debug.h"
 
@@ -201,7 +205,7 @@ io::Output& Constant::print(io::Output& out) const
 	switch(_kind)
 	{
 		case CONSTANT_ABSOLUTE:
-			if(_val >= 64) //|| _val <= -63) // print large values in hex
+			if(_val >= 64 || _val <= -63) // print large values in hex
 				return (out << "0x" << io::hex(_val));
 			return (out << _val);
 		case CONSTANT_RELATIVE:

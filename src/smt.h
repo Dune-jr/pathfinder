@@ -1,5 +1,6 @@
-// Interfacing with the SMT solver
-
+/*
+ * Interfacing with the SMT solver
+ */
 #ifndef _SMT_H
 #define _SMT_H
 

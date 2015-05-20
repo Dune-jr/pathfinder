@@ -1,5 +1,5 @@
 /*
- * Skeleton of the analysis algorithm, defines the way we parse the CFG 
+ * Macro analysis: skeleton of the analysis algorithm, defines the way we parse the CFG 
  */
 
 #include <ctime>
@@ -7,7 +7,8 @@
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include <otawa/cfg/BasicBlock.h>
-#include <otawa/cfg/features.h>
+#include <otawa/cfg/features.h> 
+#include <elm/sys/Thread.h> // multithreading
 
 #include "analysis.h"
 #include "smt.h"
@@ -59,8 +60,7 @@ void Analysis::State::appendEdge(Edge* e, bool is_conditional)
 
 	// label our list of predicates with the current edge then append it
 	labelled_preds += labelPredicateList(relevant_preds, e);
-	// label the constants as well
-	constants.label(e);
+	constants.label(e); // label the constants as well
 }
 
 /**
@@ -159,7 +159,7 @@ void Analysis::processCFG(CFG* cfg)
 					if(!LOOP_EXIT_EDGE(*bb_outs)) // take everything but loop exit edges
 					{	// adds to PROCESSED_EDGE
 						bool enable_smt = ENCLOSING_LOOP_HEADER.exists(bb_outs->target()) ? false : true; // only compute smt if this is "level 0" sequential code
-						processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not
+						processOutEdge(*bb_outs, sl, PROCESSED_EDGES, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not
 						if(!wl.contains(bb_outs->target()))
 							wl.push(bb_outs->target());
 						#ifdef DBGG
@@ -191,7 +191,7 @@ void Analysis::processCFG(CFG* cfg)
 						#ifdef DBGG
 							cout << "enable_smt=" << DBG_TEST(enable_smt, true) << endl;
 						#endif
-						processOutEdge(*bb_outs, PROCESSED_EDGES, sl, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not 
+						processOutEdge(*bb_outs, sl, PROCESSED_EDGES, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not 
 						if(!wl.contains(bb_outs->target()))
 							wl.push(bb_outs->target());
 					}
@@ -231,7 +231,7 @@ int Analysis::processBB(State& s, BasicBlock* bb)
  * @fn SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl);
  * Processes outgoing Edge e from a BasicBlock for each element of sl
 */
-void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt)
+void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const Identifier<SLList<Analysis::State> >& processed_edges_id, bool is_conditional, bool enable_smt)
 {
 	/* wl <- sl ⊙ e; */
 	processed_edges_id.remove(e); // clearing: useless?
@@ -241,36 +241,20 @@ void Analysis::processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> 
 		processed_edges_id.ref(e).addFirst(invalid_state);
 		return;
 	}
-	SLList<Option<Path> > sl_paths;
-	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
-	{
-		State s = *sl_iter;
-		s.appendEdge(e, is_conditional);
-
-		if(enable_smt)
-		{
-			// SMT call
-			SMT smt;
-			const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
-			sl_paths.addLast(infeasible_path);
-			if(infeasible_path)
-			{
-				// we need to add some sort of {} to say this is an infeasible path
-				State invalid_state;
-				processed_edges_id.ref(e).addFirst(invalid_state);
-#ifdef DBG_WARNINGS
-				if((*infeasible_path).contains(s.lastEdge())) // make sure the last edge was relevant in this path
-					cerr << "WARNING: !infeasible_path->contains(s.lastEdge())" << endl;
-#endif
-			}
-			else
-				processed_edges_id.ref(e).addFirst(s);
-		}
-		else
-			processed_edges_id.ref(e).addFirst(s);			
-	}
 	if(!enable_smt) 
+	{
+		for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
+		{
+			State s = *sl_iter;
+			s.appendEdge(e, is_conditional);
+			processed_edges_id.ref(e).addFirst(s);
+		}
 		return;
+	}
+	// SMT is enabled
+	SLList<Option<Path> > sl_paths;
+	// get a list of infeasible paths matching the list of state "sl_paths"
+	stateListToInfeasiblePathList(sl_paths, sl, e, processed_edges_id, is_conditional);
 	SLList<Option<Path> >::Iterator sl_paths_iter(sl_paths);
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++, sl_paths_iter++)
 	{
@@ -363,6 +347,36 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, co
 		delete s;
 }
 
+void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, bool is_conditional)
+{
+	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
+	{
+		elm::sys::Thread::make();
+
+		State s = *sl_iter;
+		s.appendEdge(e, is_conditional);
+
+		// SMT call
+		SMT smt;
+		const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
+		/* mutex START */
+		sl_paths.addLast(infeasible_path);
+		if(infeasible_path)
+		{
+			// we need to add some sort of {} to say this is an infeasible path
+			State invalid_state;
+			processed_edges_id.ref(e).addFirst(invalid_state);
+			#ifdef DBG_WARNINGS
+				if((*infeasible_path).contains(s.lastEdge())) // make sure the last edge was relevant in this path
+					cerr << "WARNING: !infeasible_path->contains(s.lastEdge())" << endl;
+			#endif
+		}
+		else
+			processed_edges_id.ref(e).addFirst(s);
+		/* mutex END */
+	}
+}
+
 /**
  * @fn bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample);
  * Checks if the minimized list of edges we found 'infeasible_path' is valid,
@@ -382,8 +396,6 @@ bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, co
 		{
 			valid = false;
 			counterexample = _ << (*sl_subiter).getPathString() << "+" << e->source()->number() << "->" << e->target()->number();
-			// DBG("isSubPath(" << (*sl_subiter).getPath() << ", " << e->source()->number()<<">"<<e->target()->number() << ", " 
-			// 	<< pathToString(infeasible_path) << ") = " << isSubPath((*sl_subiter).getPath(), e, infeasible_path))
 			break;
 		}
 	}

@@ -1,3 +1,7 @@
+/*
+ * Defines our predicates
+ */
+
 #include <elm/io/Output.h>
 #include "predicate.h"
 #include "debug.h"

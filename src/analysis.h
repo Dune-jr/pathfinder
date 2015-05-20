@@ -193,8 +193,9 @@ private:
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
 	int processBB(State& s, BasicBlock *bb);
-	void processOutEdge(Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt);
+	void processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const Identifier<SLList<Analysis::State> >& processed_edges_id, bool is_conditional, bool enable_smt);
 	void processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, const Identifier<Analysis::State*>& processed_loopheader_bb_id, const Identifier<bool>& motherloop_fixpoint_state_id, const Identifier<bool>& fixpoint_reached_id);
+	void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, bool is_conditional);
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
 	void addDisorderedPath(const Path& infeasible_path, const OrderedPath& full_path, Edge* last_edge);
 	void purgeStateList(SLList<Analysis::State>& sl) const;

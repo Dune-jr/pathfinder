@@ -1,3 +1,7 @@
+/*
+ * Micro analysis: defines how we parse a BasicBlock
+ */
+
 #include <otawa/cfg/BasicBlock.h>
 #include <otawa/sem/inst.h>
 #include <otawa/sem/PathIter.h>
@@ -411,7 +415,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					{
 						t::int32 val = ~(constants[a].val());
 						if(val < 0)
-							val = -val; // TODO! handle better with unsigned support
+							val = -val; // TODO: handle better with unsigned support
 						invalidateVar(d);
 						constants.set(d, val);
 					}
@@ -1165,46 +1169,46 @@ Option<OperandConst> Analysis::State::getConstantValueOfReadOnlyMemCell(const Op
 		case INT16:
 		case INT32:
 		case INT64: // TODO: can't we just do the same as UINT and (int) convert it?
-			return none;
+		return none;
 		case UINT8:
-			{
-				t::uint8 v;
-				dfa_state->get(addr.val(), v);
-				return elm::some(OperandConst(v));
-			}
+		{
+			t::uint8 v;
+			dfa_state->get(addr.val(), v);
+			return elm::some(OperandConst(v));
+		}
 		case UINT16:
-			{
-				t::uint16 v;
-				dfa_state->get(addr.val(), v);
-				return elm::some(OperandConst(v));
-			}
+		{
+			t::uint16 v;
+			dfa_state->get(addr.val(), v);
+			return elm::some(OperandConst(v));
+		}
 		case UINT32:
-			{
-				t::uint32 v;
-				dfa_state->get(addr.val(), v);
-				return elm::some(OperandConst(v));
-			}
+		{
+			t::uint32 v;
+			dfa_state->get(addr.val(), v);
+			return elm::some(OperandConst(v));
+		}
 		case UINT64:
-			{
-				t::uint64 v;
-				dfa_state->get(addr.val(), v);
-				return elm::some(OperandConst(v));
-			}
+		{
+			t::uint64 v;
+			dfa_state->get(addr.val(), v);
+			return elm::some(OperandConst(v));
+		}
 		case FLOAT32:
-			{
-				float v;
-				dfa_state->get(addr.val(), v);
-				return elm::some(OperandConst(v));
-			}
+		{
+			float v;
+			dfa_state->get(addr.val(), v);
+			return elm::some(OperandConst(v));
+		}
 		case FLOAT64:
-			{
-				double v;
-				dfa_state->get(addr.val(), v);
-				return elm::some(OperandConst(v));
-			}
+		{
+			double v;
+			dfa_state->get(addr.val(), v);
+			return elm::some(OperandConst(v));
+		}
 		case MAX_TYPE:
 		case NO_TYPE:
-			return none;
+		return none;
 	}
 	return none;
 }

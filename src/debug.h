@@ -1,3 +1,6 @@
+/*
+ * Debugging, printing tools
+ */
 #ifndef _DEBUG_H
 #define _DEBUG_H
 

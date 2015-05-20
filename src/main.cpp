@@ -7,12 +7,9 @@
 #include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
 #include <otawa/hard/Platform.h>
 #include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
-
 #include "analysis.h"
-#include "predicate.h"
 #include "ffx.h"
 #include "debug.h"
-#include "constant.h"
 
 using namespace elm;
 using namespace otawa;

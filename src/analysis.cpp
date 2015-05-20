@@ -1,3 +1,7 @@
+/*
+ * General analysis methods
+ */
+
 #include "analysis.h"
 #include <otawa/cfg/Edge.h>
 

@@ -1,5 +1,6 @@
-// Interfacing with the SMT solver
-
+/*
+ * Interfacing with the SMT solver
+ */
 #include <cvc4/expr/command.h> // getUnsatCoreCommand
 #include <cvc4/util/unsat_core.h>
 #include <elm/genstruct/SLList.h>
