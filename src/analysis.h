@@ -46,9 +46,8 @@ public:
 		const dfa::State* dfa_state;
 		const OperandVar& sp; // the Stack Pointer register
 		OrderedPath path;
-	// TODO!!!
-	public:	ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
-	private:	SLList<LabelledPredicate> labelled_preds; // previously generated predicates
+		ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
+		SLList<LabelledPredicate> labelled_preds; // previously generated predicates
 		SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
 		SLList<LabelledPredicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
 			// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
@@ -199,7 +198,7 @@ private:
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
 	void addDisorderedPath(const Path& infeasible_path, const OrderedPath& full_path, Edge* last_edge);
 	void purgeStateList(SLList<Analysis::State>& sl) const;
-	bool mergeOversizedStateList(SLList<Analysis::State>& sl/*, int thresold*/) const;
+	bool mergeOversizedStateList(SLList<Analysis::State>& sl) const;
 	void placeboProcessCFG(CFG* cfg);
 	void placeboProcessBB(BasicBlock *bb);
 	void printResults(int exec_time_ms) const;
@@ -260,8 +259,7 @@ template <class C> io::Output& printCollection(io::Output& out, const C& items)
 	{
 		out << io::endl;
 		addIndents(out, --indent);
-	}
-	
+	}	
 	return (out << color::Bold() << "]" << color::NoBold());
 }
 

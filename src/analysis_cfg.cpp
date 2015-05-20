@@ -150,14 +150,6 @@ void Analysis::processCFG(CFG* cfg)
 		/* For e in bb.outs */
 		for(BasicBlock::OutIterator bb_outs(bb); bb_outs; bb_outs++)
 		{
-			/*
-			if(bb_outs->kind() == Edge::VIRTUAL_RETURN && !sl.isEmpty())
-			{
-				// TODO!!!
-				DBG(sl.first().constants[13])
-				sl.first().dumpPredicates();
-				DBG("constants=" << sl.first().constants)
-			}*/
 			if(isAHandledEdgeKind(bb_outs->kind())) // filter out calls etc // not
 			{
 				if(BACK_EDGE(*bb_outs))
