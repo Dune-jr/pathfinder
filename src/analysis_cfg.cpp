@@ -11,7 +11,8 @@
 #include <elm/sys/Thread.h> // multithreading
 
 #include "analysis.h"
-#include "smt.h"
+// #include "smt.h" // TODO:
+#include "smt_job.h"
 #include "debug.h"
 
 using namespace elm::genstruct;
@@ -362,17 +363,16 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, co
 
 void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, bool is_conditional)
 {
+	//*
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
-		// elm::sys::Thread::make(); // TODO
-
 		State s = *sl_iter;
 		s.appendEdge(e, is_conditional);
 
 		// SMT call
 		SMT smt;
 		const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
-		/* mutex START */
+		// mutex START
 		sl_paths.addLast(infeasible_path);
 		if(infeasible_path)
 		{
@@ -386,8 +386,45 @@ void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, co
 		}
 		else
 			processed_edges_id.ref(e).addFirst(s);
-		/* mutex END */
+		// mutex END
 	}
+	//*/
+	// TODO!! rewrite with addFirst instead of addLast to optimize
+	// TODO!! replace both SLLists with Vector
+	// first off, run threads
+	/*
+	SLList<elm::sys::Thread*> threads;
+	SLList<SMTJob*> jobs;
+	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
+	{
+		State s = *sl_iter;
+		s.appendEdge(e, is_conditional);
+		SMTJob* job = new SMTJob(s); // runnable
+		elm::sys::Thread* t = elm::sys::Thread::make(*job);
+		t->start();
+		threads.addLast(t);
+		jobs.addLast(job);
+	}
+
+	// then, join and get result
+	SLList<SMTJob*>::Iterator jobs_iter(jobs);
+	for(SLList<elm::sys::Thread*>::Iterator threads_iter(threads); threads_iter; threads_iter++, jobs_iter++)
+	{
+		threads_iter->join();
+		const Option<Path>& infeasible_path = jobs_iter.item()->getResult(); // TODO is this ok? o_o
+		const State& s = jobs_iter.item()->getState();
+		sl_paths.addLast(infeasible_path);
+		if(infeasible_path)
+		{
+			// we need to add some sort of {} to say this is an infeasible path
+			State invalid_state;
+			processed_edges_id.ref(e).addFirst(invalid_state);
+		}
+		else
+			processed_edges_id.ref(e).addFirst(s);
+		delete *jobs_iter;
+	}
+	//*/
 }
 
 /**
@@ -651,10 +688,20 @@ Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>&
 	Option<Constant> rtn = elm::none;
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
-		if(sl_iter->constants.isConstant(sp)) // TODO!!! fix encapsulation hack
+		if(sl_iter->getConstants().isConstant(sp))
 		{
-			ASSERT(!rtn || *rtn == sl_iter->constants[sp]); // currently this algorithm assumes at each pathpoint all states have the same SP. if this assumption ever fails, enforce that we only return an answer if all states know the value of sp
-			rtn = elm::some(sl_iter->constants[sp]);
+			// TODO!!! just return here if we trust this assert (but we shouldn't there is a problem in some of the malardalen-slow benchmarks)
+			if(!(!rtn || *rtn == sl_iter->getConstants()[sp]))
+			{
+				cout << "rtn=" << *rtn << ", constants[sp]="<< sl_iter->getConstants()[sp] << endl;
+				for(SLList<Analysis::State>::Iterator sl_subiter(sl); sl_subiter; sl_subiter++)
+				{
+					sl_subiter->dumpPredicates();
+					DBG("constants = " << sl_subiter->getConstants())
+				}
+			}
+			ASSERT(!rtn || *rtn == sl_iter->getConstants()[sp]); // currently this algorithm assumes at each pathpoint all states have the same SP. if this assumption ever fails, enforce that we only return an answer if all states know the value of sp
+			rtn = elm::some(sl_iter->getConstants()[sp]);
 		}
 	}
 	return rtn;

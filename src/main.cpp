@@ -36,7 +36,7 @@ public:
 		opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")),
 		opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis")),
 		opt_virtualize(option::SwitchOption::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG")),
-		opt_merge(option::ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point")) { }
+		opt_merge(option::ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)) { }
 
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {

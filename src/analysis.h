@@ -46,7 +46,7 @@ public:
 		const dfa::State* dfa_state;
 		const OperandVar& sp; // the Stack Pointer register
 		OrderedPath path;
-	public:	ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
+		ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
 	private: // TODO!!!	
 		SLList<LabelledPredicate> labelled_preds; // previously generated predicates
 		SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
