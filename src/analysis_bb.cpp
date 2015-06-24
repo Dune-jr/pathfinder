@@ -316,14 +316,11 @@ void Analysis::State::processBB(const BasicBlock *bb)
 				case SHL:
 					opd1 = new OperandVar(d);
 					{
-						/*
-						if(d == b) // safety test, shouldn't happen unless assembly language allows variable bit shifting
+						/*if(d == b) // safety test, shouldn't happen unless assembly language allows variable bit shifting
 						{	// well actually ldr r3, [r3, r2, lsl #2] makes it happen in ARM...
 							invalidateVar(d);
 							break;
-						}
-						*/
-
+						}*/
 						// b is usually a tempvar that has been previously set to a constant value
 						if(!isConstant(b) || !constants[b].isAbsolute())
 						{
@@ -421,9 +418,9 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					}
 					else invalidateVar(d);
 					break;
-				case AND:		// d <- a & b
-				case OR:		// d <- a | b
-				case XOR:		// d <- a ^ b
+				case AND: // d <- a & b
+				case OR:  // d <- a | b
+				case XOR: // d <- a ^ b
 					if(isConstant(a) && isConstant(b) && constants[a].isAbsolute() && constants[b].isAbsolute())
 					{
 						t::int32 val;

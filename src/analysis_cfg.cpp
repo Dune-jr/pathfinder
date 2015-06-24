@@ -478,6 +478,7 @@ void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
 	}
 }
 
+// if the list is bigger than a thresold, merge all states into one (a bit brutal)
 bool Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl/*, int thresold*/) const
 {
 	if(!(flags&MERGE))
@@ -497,6 +498,7 @@ bool Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl/*, int threso
 	return false;
 }
 
+// remove annotations from incoming edges to BasicBlock bb
 void Analysis::cleanIncomingEdges(BasicBlock *bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const
 {
 	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
@@ -504,6 +506,7 @@ void Analysis::cleanIncomingEdges(BasicBlock *bb, const Identifier<SLList<Analys
 		//processed_edges_id.ref(*bb_ins).clear();
 }
 
+// remove annotations from incoming back edges
 void Analysis::cleanIncomingBackEdges(BasicBlock *bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const
 {
 	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
@@ -550,6 +553,7 @@ void Analysis::placeboProcessCFG(CFG* cfg)
 	}
 }
 
+// obsolete
 void Analysis::placeboProcessBB(BasicBlock* bb)
 {
 	if(bb->isExit())

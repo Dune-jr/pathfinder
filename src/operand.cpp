@@ -454,12 +454,12 @@ pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_o
 					// example of why we had  to do this: if we have (...) - (t1 + 2)
 					// (t1+2).doAffinePop() will return +2 even though it's actually -2
 					else // OPERAND_VAR
-						return POPRESULT_FAIL; // TO*DO: maybe improve this, see higher
+						return POPRESULT_FAIL; // TO*DO: maybe improve this, see above
 				default:
 					return POPRESULT_FAIL; // this case shouldn't happen
 			}
 	}
-	return POPRESULT_FAIL; // TO*DO! why do i have to write this?
+	return POPRESULT_FAIL;
 }
 */
 

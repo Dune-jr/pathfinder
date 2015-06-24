@@ -5,7 +5,6 @@
 #include "smt.h"
 #include "analysis.h"
 
-// TODO: I have to write public explicitly, dunno why
 class SMTJob : public elm::sys::Runnable
 {
 public:

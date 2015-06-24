@@ -38,7 +38,7 @@ bool Constant::operator==(const Constant& c) const
 		case CONSTANT_RELATIVE:
 			return (_val == c._val) && (_sign == c._sign);
 		default:
-			assert(false); // TODO: why do I need this
+			assert(false);
 	}
 }
 Constant Constant::operator+(const Constant& c) const
