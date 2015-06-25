@@ -288,20 +288,23 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const 
 			}
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
 			{
-				unminimized_ip_count++;
 				DBG("   counterexample: " << counterexample)
-				 // falling back on full path (not as useful as a result, but still something)
-				OrderedPath original_full_path = (*sl_iter).getPath();
-				original_full_path.addLast(e); // need to add e
-				infeasible_paths.add(original_full_path);
-				if(dbg_verbose == DBG_VERBOSE_ALL)
+				unminimized_ip_count++;
+				if(flags&UNMINIMIZED_PATHS)
 				{
-					Path ofp;
-					for(OrderedPath::Iterator original_full_orderedpath_iter(original_full_path); original_full_orderedpath_iter; original_full_orderedpath_iter++)
-						ofp += *original_full_orderedpath_iter;
-					DBG(color::On_IRed() << "Inf. path found: " << pathToString(ofp) << color::RCol() << " (unrefined)")
+					// falling back on full path (not as useful as a result, but still something)
+					OrderedPath original_full_path = (*sl_iter).getPath();
+					original_full_path.addLast(e); // need to add e
+					infeasible_paths.add(original_full_path);
+					if(dbg_verbose == DBG_VERBOSE_ALL)
+					{
+						Path ofp;
+						for(OrderedPath::Iterator original_full_orderedpath_iter(original_full_path); original_full_orderedpath_iter; original_full_orderedpath_iter++)
+							ofp += *original_full_orderedpath_iter;
+						DBG(color::On_IRed() << "Inf. path found: " << pathToString(ofp) << color::RCol() << " (unrefined)")
+					}
+					// TODO: do a C) where we still try to refine this infeasible path?
 				}
-				// TODO: do a C) where we still try to refine this infeasible path?
 			}
 			onAnyInfeasiblePath();
 		}

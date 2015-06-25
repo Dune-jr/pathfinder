@@ -175,9 +175,10 @@ public:
 	// flags 
 	enum
 	{
-		FOLLOW_CALLS	= 0b1 << 1,
-		// SUPERSILENT		= 0b1 << 2,
-		MERGE			= 0b1 << 3,
+		FOLLOW_CALLS		= 0b1 << 1,
+		//SUPERSILENT		= 0b1 << 2,
+		MERGE				= 0b1 << 3,
+		UNMINIMIZED_PATHS	= 0b1 << 4,
 	};
 	
 private:
