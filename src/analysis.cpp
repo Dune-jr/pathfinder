@@ -79,7 +79,8 @@ elm::String Analysis::State::getPathString() const
 			DBG("str=" << str)
 			DBG("lastid=" << lastid << ", (*iter)->source->number()=" << (*iter))
 		}
-		ASSERTP(first || (*iter)->source()->number() == lastid, "OrderedPath previous target and current source do not match! ex: 1->2, 2->4, 3->5"); // when path is x->y and y'->z, there must be y=y'
+		// when path is x->y and y'->z, there must be y=y'
+		ASSERTP(first || (*iter)->source()->number() == lastid, "OrderedPath previous target and current source do not match! ex: 1->2, 2->4, 3->5");
 		if(first)
 		{
 #			ifndef NO_UTF8

@@ -36,6 +36,7 @@ public:
 		opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")),
 		opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis")),
 		opt_nounminimized(option::SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
+		opt_automerge(option::SwitchOption::Make(*this).cmd("--automerge").description("let the algorithm decide when to merge")),
 		opt_virtualize(option::ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
 		opt_merge(option::ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)) { }
 
@@ -55,7 +56,7 @@ protected:
 		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
 		int max_registers = workspace()->platform()->regCount(); // retrieve the count of registers
 		int max_tempvars = workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
-		int analysis_flags = 0;
+		int analysis_flags = 0, merge_frequency = 0;
 
 		if(opt_s1)
 			dbg_verbose = 1;
@@ -77,11 +78,14 @@ protected:
 			dbg_flags |= DBG_PREANALYSIS;
 		if(!opt_nounminimized)
 			analysis_flags |= Analysis::UNMINIMIZED_PATHS;
-		if(opt_merge) // 250 is good
+		if(opt_merge || opt_automerge)
+		{
 			analysis_flags |= Analysis::MERGE;
+			merge_frequency = opt_automerge ? 250 : opt_merge.get(); // 250 is good 
+		}
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::FOLLOW_CALLS;
-		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, opt_merge.get(), analysis_flags);
+		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, merge_frequency, analysis_flags);
 
 		// outputing to .ffx
 		if(opt_output)
@@ -97,7 +101,8 @@ protected:
 
 private:
 	option::Manager manager;
-	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred, opt_preanalysis, opt_nounminimized;//, opt_virtualize;
+	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred,
+						 opt_preanalysis, opt_nounminimized, opt_automerge; //, opt_virtualize;
 	option::ValueOption<bool> opt_virtualize;
 	option::ValueOption<int> opt_merge;
 };
