@@ -8,10 +8,9 @@
 #include <otawa/cfg/Edge.h>
 #include <otawa/cfg/BasicBlock.h>
 #include <otawa/cfg/features.h> 
-#include <elm/sys/Thread.h> // multithreading
+// #include <elm/sys/Thread.h> // multithreading
 
 #include "analysis.h"
-// #include "smt.h" // TODO:
 #include "smt_job.h"
 #include "debug.h"
 

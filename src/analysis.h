@@ -224,7 +224,7 @@ private:
 template <class C> io::Output& printCollection(io::Output& out, const C& items)
 {
 	int count = items.count();
-	if(count > 10)
+	if(count > 25)
 	{
 		out << "#" << count << "#";
 		return out; // just exit if too many items

@@ -37,7 +37,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 	// parse assembly instructions
 	for(BasicBlock::InstIterator insts(bb); insts; insts++)
 	{
-		DBG(color::Pur() << *insts)
+		DBG(color::BIPur() << *insts)
 		Block block;
 		insts->semInsts(block);
 		
@@ -874,6 +874,7 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& 
 	return rtn;
 }
 
+// replaces all occurences of opdm in all predicates by expr + append "labels"
 bool Analysis::State::replaceMem(const OperandMem& opdm, const Operand& expr, const Path& labels)
 {
 	bool rtn = false;

@@ -129,6 +129,8 @@ public:
 		{	
 			if(str.startsWith(_ << &color::Pur() << " "))
 				return false;
+			if(str.startsWith(_ << &color::BIPur() << " "))
+				return false;
 			if(str.startsWith(_ << &color::IPur() << " "))
 				return false;
 			if(str.startsWith(_ << &color::IYel() << "-"))

@@ -17,7 +17,7 @@ settings.cc.flags:Add("-Wno-deprecated")
 settings.cc.flags:Add("-O0")
 --settings.link.libpath:Add("/home/ruiz/.local/lib")
 settings.link.flags:Add("-lcvc4")
--- -lcvc4 -L/home/jruiz/.local/lib -I/home/jruiz/.local/include/ -Wno-deprecated
+-- -lgmp -lcvc4 -L/home/jruiz/.local/lib -I/home/jruiz/.local/include/ -Wno-deprecated
 
 -- libgmp
 settings.link.flags:Add("-lgmp")

@@ -26,7 +26,7 @@ SMT::SMT(): smt(&em), variables(em), integer(em.integerType())
 	// smt.setOption("dump-unsat-cores", CVC4::SExpr("true"));
 	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
 	// smt.setOption("dump", "assertions:pre-everything");
-	// smt.setOption("dump-to-", "dump.log");
+	// smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
 }
 
 // gets a copy of the labelled_preds SLList

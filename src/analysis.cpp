@@ -181,7 +181,7 @@ elm::String Analysis::State::dumpEverything() const
 		<< "  * OrderedPath path=" << getPathString() << endl
 		<< "  * ConstantVariables constants=" << constants << endl
 		<< "  * SLList<LabelledPredicate> labelled_preds=" << labelled_preds << endl
-		// << "  * SLList<LabelledPredicate> generated_preds=" << generated_preds << endl
+		<< "  * SLList<LabelledPredicate> generated_preds=" << generated_preds << endl
 		// << "  * SLList<LabelledPredicate> generated_preds_taken=" << generated_preds_taken << endl
 		<< "--- END OF DUMP ---" << endl;
 }
