@@ -109,13 +109,13 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						if(Option<OperandConst> addr_const_value = getConstantValueOfReadOnlyMemCell(*addr_mem, (*seminsts).type()))
 						{
 							DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "R-O memory data " << *addr_mem << " simplified to " << *addr_const_value)
-							constants.set(d, (*addr_const_value).value());
+							constants.set(d, (*addr_const_value).value()); // no need to add labels since it's globally true
 						}
 						// or maybe we can link it to a constant value from the predicates
 						else if(Option<OperandConst> addr_const_value = findConstantValueOfMemCell(*addr_mem, labels))
 						{
 							DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "Memory data " << *addr_mem << " simplified to " << *addr_const_value)
-							constants.set(d, (*addr_const_value).value());
+							constants.set(d, (*addr_const_value).value()); // TODO! add missing labels 
 						}
 						else
 						{							

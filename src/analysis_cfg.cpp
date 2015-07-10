@@ -738,7 +738,7 @@ bool Analysis::allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identif
 {
 	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
 		if(!BACK_EDGE(*bb_ins))
-			if(!annotation_identifier.get(*bb_ins))
+			if(!annotation_identifier.exists(*bb_ins))
 				return false;
 	return true;
 }
@@ -746,7 +746,7 @@ bool Analysis::allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identif
 bool Analysis::allIncomingEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const
 {
 	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
-		if(!annotation_identifier.get(*bb_ins))
+		if(!annotation_identifier.exists(*bb_ins))
 			return false;
 	return true;
 }

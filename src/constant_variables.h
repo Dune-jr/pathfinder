@@ -14,7 +14,7 @@ using namespace elm::genstruct;
 // ConstantVariables class
 class ConstantVariables {
 private:
-	// LabelledValue strcut
+	// LabelledValue class
 	class LabelledValue
 	{
 	public:
