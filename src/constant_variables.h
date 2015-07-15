@@ -1,6 +1,7 @@
 #ifndef _CONSTANT_VARIABLES_H
 #define _CONSTANT_VARIABLES_H
 
+#include <elm/avl/Set.h>
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include <otawa/sem/inst.h>
@@ -10,16 +11,15 @@
 
 using namespace otawa;
 using namespace elm::genstruct; 
+using namespace elm::avl;
 
-// ConstantVariables class
 class ConstantVariables {
-private:
-	// LabelledValue class
+public:
 	class LabelledValue
 	{
 	public:
 		LabelledValue() { }
-		LabelledValue(const Constant& val, Set<Edge*> labels, bool updated = false) : _val(val), _labels(labels), _updated(updated) { }
+		LabelledValue(const Constant& val, Set<Edge*> labels, bool updated = true) : _val(val), _labels(labels), _updated(updated) { }
 		inline Constant val() const { return _val; }
 		inline const Set<Edge*>& labels() const { return _labels; }
 		inline bool isUpdated() const { return _updated; }
@@ -37,17 +37,8 @@ private:
 		bool _updated;
 
 		io::Output& print(io::Output& out) const;
-	};
+	}; // LabelledValue class
 
-	Option<LabelledValue>* tempvars;
-	Option<LabelledValue>* registers;
-	unsigned int _max_tempvars;
-	unsigned int _max_registers;
-
-	Option<LabelledValue>& getCell(const OperandVar& opdv) const;
-	io::Output& print(io::Output& out) const;
-
-public:
 	ConstantVariables(unsigned int max_tempvars, unsigned int max_registers);
 	ConstantVariables(const ConstantVariables& cv);
 	~ConstantVariables();
@@ -56,6 +47,9 @@ public:
 	inline unsigned int maxRegisters() const { return _max_registers; }
 	bool isConstant(const OperandVar& opdv) const;
 	Constant getValue(const OperandVar& opdv) const; // this must not be called if !isConstant(opdv)...
+	Set<Edge*> getLabels(const OperandVar& opdv) const; // same
+	ConstantVariables::LabelledValue getLabelledValue(const OperandVar& opdv) const; // same
+		   void set(const OperandVar& opdv, const LabelledValue& lval);
 		   void set(const OperandVar& opdv, const Constant& val, bool updated_flag = true);
 	inline void set(const OperandVar& opdv, const OperandConst& opdc, bool updated_flag = true) { set(opdv, opdc.value(), updated_flag); }
 		   void update(const OperandVar& opdv, const Constant& val, bool updated_flag = true);
@@ -72,6 +66,15 @@ public:
 	bool sameValuesAs(const ConstantVariables& cv) const; // less strict (only values)
 	inline bool operator!=(const ConstantVariables& cv) const { return !(*this == cv); }
 	friend io::Output& operator<<(io::Output& out, const ConstantVariables& cv) { return cv.print(out); }
-};
+
+private:
+	Option<LabelledValue>* tempvars;
+	Option<LabelledValue>* registers;
+	unsigned int _max_tempvars;
+	unsigned int _max_registers;
+
+	Option<LabelledValue>& getCell(const OperandVar& opdv) const;
+	io::Output& print(io::Output& out) const;
+}; // ConstantVariables class
 
 #endif

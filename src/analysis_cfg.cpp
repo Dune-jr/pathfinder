@@ -129,7 +129,7 @@ void Analysis::processCFG(CFG* cfg)
 		for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
 		{
 			state_count++;
-			if(dbg_flags&DBG_VERBOSE_ALL)
+			if(dbg_verbose == DBG_VERBOSE_ALL)
 				DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
 			fixpoint = sl_iter.item().fixpointState();
 			#ifdef DBGG
@@ -532,7 +532,7 @@ bool Analysis::fixpointFoundOnAllMotherLoops(BasicBlock *bb, const Identifier<bo
 void Analysis::placeboProcessCFG(CFG* cfg)
 {
 	if(dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_NONE)
-		cout << bb_count << " BBs found." << endl;
+		cout << color::ICya() << bb_count << color::RCol() << " BBs found." << endl;
 	else
 		DBG(color::Whi() << total_paths << " paths found.")
 	if(!(dbg_flags&DBG_PREANALYSIS))
@@ -599,19 +599,20 @@ void Analysis::printResults(int exec_time_ms) const
 	}
 	if(dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_NONE)
 	{
-		cout << infeasible_paths_count << " infeasible path(s) found.";
+		cout << color::BIGre() << infeasible_paths_count << color::RCol() << " infeasible path(s) found.";
 		if(!(dbg_flags&DBG_NO_TIME))
 		{
 		    std::ios_base::fmtflags oldflags = std::cout.flags();
 		    std::streamsize oldprecision = std::cout.precision();
-			std::cout << std::fixed << std::setprecision(3) << " (" << ((float)exec_time_ms)/1000.f << "s)" << std::endl;
+			std::cout << std::fixed << std::setprecision(3) << "\e[0;93m" << " (" << ((float)exec_time_ms)/1000.f << "s)" << "\e[0;m" << std::endl;
 		    std::cout.flags(oldflags);
 		    std::cout.precision (oldprecision);
 		}
 		else
 			cout << endl;
 	}
-	cout << "Total IP count: " << ip_count << ", Unminimized IP count:" << unminimized_ip_count << endl;
+	cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << infeasible_paths_count-unminimized_ip_count << color::RCol() <<
+			"+" << color::Yel() << unminimized_ip_count << color::RCol() << " => " << color::IRed() << ip_count << color::RCol() << endl;
 }
 
 // TODO: do something prettier here, maybe with a operator== on OrderedPath to use contains.... or just use Sets with a Comparator...

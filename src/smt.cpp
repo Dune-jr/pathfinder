@@ -127,6 +127,7 @@ bool SMT::checkPredSat(const SLList<Option<Expr> >& exprs)
 		for(SLList<Option<Expr> >::Iterator iter(exprs); iter; iter++)
 			if(*iter)
 				smt.assertFormula(**iter, true); // second parameter to true for unsat cores
+
 		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
 		return isSat;
 	}
@@ -137,11 +138,6 @@ bool SMT::checkPredSat(const SLList<Option<Expr> >& exprs)
 		#endif
 		return true;
 	}
-	/*catch(...)
-	{
-		cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" << endl;
-		return true;	
-	}*/
 }
 
 // check predicates satisfiability
@@ -152,15 +148,15 @@ bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds)
 		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
 			if(Option<Expr> expr = getExpr(iter->pred()))
 				smt.assertFormula(*expr); // second parameter to true for unsat cores
-	
+
 		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
 		return isSat;
 	}
 	catch(CVC4::LogicException e)
 	{
-#ifdef DBG_WARNINGS
-		cout << "WARNING: non-linear call to CVC4, defaulted to SAT." << endl;
-#endif
+		#ifdef DBG_WARNINGS
+			cout << "WARNING: non-linear call to CVC4, defaulted to SAT." << endl;
+		#endif
 		return true;
 	}
 }

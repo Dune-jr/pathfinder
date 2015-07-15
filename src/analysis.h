@@ -104,14 +104,15 @@ public:
 		bool replaceMem(const OperandMem& opd, const Operand& expr, const Path& labels);
 		bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);
 		bool replaceTempVar(const OperandMem& mem, const Operand& expr);
-		bool update(const OperandVar& opd_to_update, const Operand& opd_modifier);
+		bool update(const OperandVar& opd_to_update, const Operand& opd_modifier, Path& labels);
 		Option<OperandConst> findConstantValueOfVar(const OperandVar& var); // changed to a simple lookup to "constants"
 		Option<OperandConst> findConstantValueOfMemCell(const OperandMem& mem, Path &labels);
 		Option<t::int32> findStackRelativeValueOfVar(const OperandVar& var, Path& labels);
-		bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right);
+		bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right, Path& labels);
 		Option<OperandMem> getOperandMem(const OperandVar& var, Path& labels);
 		bool invalidateAllMemory();
-		Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken);
+		void updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const;
+		Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels);
 		Option<OperandConst> getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type);
 		inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 
@@ -218,7 +219,7 @@ private:
 	bool allIncomingEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
 	elm::String wlToString() const;
-	elm::String pathToString(const Path& path);
+	static elm::String pathToString(const Path& path);
 }; // Analysis class
 
 template <class C> io::Output& printCollection(io::Output& out, const C& items)

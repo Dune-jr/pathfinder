@@ -6,6 +6,7 @@
 #include "debug.h"
 
 using namespace elm;
+using namespace elm::avl;
 
 // Operands: Constants
 OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }
@@ -54,9 +55,10 @@ Option<OperandConst> OperandConst::evalConstantOperand() const
 	return some(*this);
 }
 Option<Operand*> OperandConst::simplify() { return none; }
-Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesSimplified& constants) { return none; }
+Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars) { return none; }
 
 // Operands: Variables
+OperandVar::OperandVar() : _addr(777) { }
 OperandVar::OperandVar(const OperandVar& opd) : _addr(opd._addr) { }
 OperandVar::OperandVar(t::int32 addr) : _addr(addr) { }
 // OperandVar::~OperandVar() { }
@@ -105,10 +107,13 @@ bool OperandVar::update(const Operand& opd, const Operand& opd_modifier) { retur
 void OperandVar::parseAffineEquation(AffineEquationState& state) const { state.onVarFound(this->_addr); }
 Option<OperandConst> OperandVar::evalConstantOperand() const { return none; }
 Option<Operand*> OperandVar::simplify() { return none; }
-Option<Operand*> OperandVar::replaceConstants(const ConstantVariablesSimplified& constants)
+Option<Operand*> OperandVar::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars)
 {
 	if(constants.isConstant(this->_addr))
+	{
+		replaced_vars.push(*this);
 		return new OperandConst(constants[this->_addr]);
+	}
 	return none;
 }
 
@@ -270,7 +275,7 @@ bool OperandMem::update(const Operand& opd, const Operand& opd_modifier) { retur
 void OperandMem::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
 Option<Operand*> OperandMem::simplify() { return none; }
-Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesSimplified& constants) { return none; }
+Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars) { return none; }
  
 // Operands: Arithmetic Expressions
 OperandArithExpr::OperandArithExpr(arithoperator_t opr, const Operand& opd1_)
@@ -614,16 +619,16 @@ Option<Operand*> OperandArithExpr::simplify()
 	}
 	return none;
 }
-Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesSimplified& constants)
+Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars)
 {
-	if(Option<Operand*> o = opd1->replaceConstants(constants))
+	if(Option<Operand*> o = opd1->replaceConstants(constants, replaced_vars))
 	{
 		delete opd1;
 		opd1 = *o;
 	}
 	if(isBinary())
 	{
-		if(Option<Operand*> o = opd2->replaceConstants(constants))
+		if(Option<Operand*> o = opd2->replaceConstants(constants, replaced_vars))
 		{
 			delete opd2;
 			opd2 = *o;

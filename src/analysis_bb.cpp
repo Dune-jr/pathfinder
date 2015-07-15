@@ -79,7 +79,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 				case CONT:
 					{
 						Predicate *p;
-						if(!(p = getPredicateGeneratedByCondition(condition, false)))
+						if(!(p = getPredicateGeneratedByCondition(condition, false, labels)))
 							break; // in view of this, we cannot generate a predicate 
 						make_pred = true;
 						opr = p->opr();
@@ -92,7 +92,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					condition = *seminsts; // save this for later
 					{
 						Predicate *p;
-						if(!(p = getPredicateGeneratedByCondition(condition, true)))
+						if(!(p = getPredicateGeneratedByCondition(condition, true, labels)))
 							break; // in view of this, we cannot generate a predicate 
 						make_pred = true;
 						opr = p->opr();
@@ -109,13 +109,13 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						if(Option<OperandConst> addr_const_value = getConstantValueOfReadOnlyMemCell(*addr_mem, (*seminsts).type()))
 						{
 							DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "R-O memory data " << *addr_mem << " simplified to " << *addr_const_value)
-							constants.set(d, (*addr_const_value).value()); // no need to add labels since it's globally true
+							constants.set(d, ConstantVariables::LabelledValue((*addr_const_value).value(), labels, true)); 
 						}
 						// or maybe we can link it to a constant value from the predicates
 						else if(Option<OperandConst> addr_const_value = findConstantValueOfMemCell(*addr_mem, labels))
 						{
 							DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "Memory data " << *addr_mem << " simplified to " << *addr_const_value)
-							constants.set(d, (*addr_const_value).value()); // TODO! add missing labels 
+							constants.set(d, ConstantVariables::LabelledValue((*addr_const_value).value(), labels, true)); // TODO! check other constants.set to add labels
 						}
 						else
 						{							
@@ -181,7 +181,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					{
 						if(d == b) // d <- d+d
 						{	// [d/2 / d]
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(2)));
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(2)), labels);
 							opd11 = new OperandVar(d);
 							opd12 = new OperandVar(2);
 							opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
@@ -192,7 +192,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						}
 						else // d <- d+b
 						{	// [d-b / d]
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(b)));
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(b)), labels);
 							if(isConstant(d))
 							{
 								if(isConstant(b))
@@ -215,7 +215,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					{
 						if(d == b) // d <- d+a
 						{	// [d-a / d]
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(a)));
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(a)), labels);
 							if(isConstant(d))
 							{
 								if(isConstant(a))
@@ -258,7 +258,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						}
 						else // d <- d-b
 						{	// [d+b / d]
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_ADD, OperandVar(d), OperandVar(b)));
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_ADD, OperandVar(d), OperandVar(b)), labels);
 							if(isConstant(d))
 							{
 								if(isConstant(b))
@@ -281,7 +281,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					{
 						if(d == b) // d <- a-d
 						{	// [a-d / d], this function f has a f°f=Id property
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(a), OperandVar(d)));
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(a), OperandVar(d)), labels);
 							if(isConstant(d))
 							{
 								if(isConstant(a)) // everything is const, update const value of d
@@ -334,7 +334,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						{
 							ASSERT(!UNTESTED_CRITICAL);
 							DBG(color::BIRed() << "Untested case of operator SHL running!")
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << b_val)));
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << b_val)), labels);
 							// we also add a predicate to say that d is now a multiple of 2^b
 							opd11 = new OperandVar(d);
 							opd12 = new OperandConst(1 << b_val);
@@ -390,7 +390,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					{
 						if(a == d) // d <- -d
 						{	// [-1 * d / d]
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_NEG, OperandVar(d))); // TODO test
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_NEG, OperandVar(d)), labels); // TODO test
 							if(isConstant(d))
 								constants.set(d, -constants[d]);
 						}
@@ -465,7 +465,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							{	// [d/b / d] // we will have to assume that 0/0 is scratch!
 								ASSERT(!UNTESTED_CRITICAL);
 								DBG(color::BIRed() << "Untested case of operator MUL running!")
-								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)));
+								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)), labels);
 								if(isConstant(d))
 								{
 									if(isConstant(b))
@@ -485,7 +485,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						{
 							if(d == b) // d <- a*d
 							{	// [d/a / d] // we will have to assume that 0/0 is scratch!
-								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)));
+								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)), labels);
 								if(isConstant(d))
 								{
 									if(isConstant(a))
@@ -614,18 +614,35 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			{
 				ASSERT(opd1);
 				ASSERT(opd2);
-				const ConstantVariablesSimplified& cvs = constants.toSimplified();
+				const ConstantVariablesSimplified& cvs = constants.toSimplified(); // TODO! This is taking ressources because of bad class design
+				Vector<OperandVar> replaced_vars;
 				// If we have predicates such as ?16 = ?4 ~ t1, make sure none of these are identified as constants in the constantVariables table!
-				if(Option<Operand*> maybe_opd1 = opd1->replaceConstants(cvs))
+				// TODO! move this replaceConstants stuff to a function maybe?
+				if(Option<Operand*> maybe_opd1 = opd1->replaceConstants(cvs, replaced_vars))
 				{
 					delete opd1;
 					opd1 = *maybe_opd1;
 				}
-				if(Option<Operand*> maybe_opd2 = opd2->replaceConstants(cvs))
+				if(Option<Operand*> maybe_opd2 = opd2->replaceConstants(cvs, replaced_vars))
 				{
 					delete opd2;
 					opd2 = *maybe_opd2;
 				}
+				if(dbg_verbose == DBG_VERBOSE_ALL && replaced_vars) // pretty printing of replaceConstants
+				{
+					int count = 0;
+					elm::String str = "";
+					for(Vector<OperandVar>::Iterator iter(replaced_vars); iter; iter++)
+					{
+						if(count++)
+							str = _ << str << ", ";
+						str = _ << str << *iter << ":" << constants[*iter];
+						if(constants.getLabels(*iter))
+							str = _ << str << pathToString(constants.getLabels(*iter));	
+					}
+  					DBG(color::IPur() << DBG_SEPARATOR << color::IBlu() << " Replaced constant" << (count>1?"s ":" ") << str)
+				}
+				updateLabelsWithReplacedConstantsInfo(labels, replaced_vars);
 				DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << Predicate(opr, *opd1, *opd2))
 				generated_preds += LabelledPredicate(Predicate(opr, *opd1, *opd2), labels);
 			}
@@ -640,14 +657,17 @@ void Analysis::State::processBB(const BasicBlock *bb)
 		invalidateTempVars();
 	}
 	
-	if(generated_preds_taken)
+	if(dbg_verbose == DBG_VERBOSE_ALL)
 	{
-		DBG("Predicates generated: ")
-		DBG("|-> taken path: " << generated_preds_taken)
-		DBG("|-> not taken path: " << generated_preds)
+		if(generated_preds_taken)
+		{	// TODO! print constant variables that changed too
+			DBG("Predicates generated: ")
+			DBG("|-> taken path: " << generated_preds_taken)
+			DBG("|-> not taken path: " << generated_preds)
+		}
+		else
+			DBG("Predicates generated: " << generated_preds)
 	}
-	else
-		DBG("Predicates generated: " << generated_preds)
 }
 
 // returns true if a variable has been invalidated
@@ -931,17 +951,19 @@ bool Analysis::State::replaceMem(const OperandMem& opdm, const Operand& expr, co
 
 // returns true if a variable has been updated
 // second operand is usually an OperandArithExpr
-bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd_modifier)
+bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd_modifier, Path& labels)
 {
 	Operand *opd_modifier_new, *opd_modifier_prenew = opd_modifier.copy();
 	// for example instead of doing [?13+t1/?13], do [?13+4/?13]
-	if(Option<Operand*> maybe_opd_modifier_new = opd_modifier_prenew->replaceConstants(constants.toSimplified())) // replace constants
+	Vector<OperandVar> replaced_vars;
+	if(Option<Operand*> maybe_opd_modifier_new = opd_modifier_prenew->replaceConstants(constants.toSimplified(), replaced_vars)) // replace constants
 	{
 		delete opd_modifier_prenew;
 		opd_modifier_new = *maybe_opd_modifier_new;
 	}
 	else
 		opd_modifier_new = opd_modifier_prenew;
+	updateLabelsWithReplacedConstantsInfo(labels, replaced_vars);
 
 	// amongst other things this can simplify constant arithopr such as 8+(4-2)
 	if(Option<Operand*> opd_modifier_new_simplified = opd_modifier_new->simplify())
@@ -968,7 +990,7 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd
 			LabelledPredicate lp = LabelledPredicate(p, piter.labels());
 			setPredicate(piter, lp);
 			DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " " DBG_SEPARATOR << color::ICya() << " + " << *piter)
-			movePredicateToGenerated(piter); // cf issue "ANALYSIS SOUNDNESS: predicates may lack labels"
+			movePredicateToGenerated(piter);
 			rtn = true;
 		}
 	}
@@ -1057,9 +1079,10 @@ Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& 
  * For a register variable ?X, try to find a predicate ?X = (opd_left ~ opd_right), and return false if it cannot find any
  * @return true if a value was found
  */
-bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right)
+bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right, Path& labels)
 {
 	// We only explore the local generated_preds. This seems reasonable since we should be able to find this predicate in the local BB
+	// BUT this does not exempt us from looking for labels because these predicates can be themselves associated to predicates of previous BBs
 	for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; iter++)
 	{
 		const Predicate& p = iter->pred();
@@ -1074,6 +1097,7 @@ bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_le
 					{
 						opd_left = opd.leftOperand().copy();
 						opd_right = opd.rightOperand().copy();
+						labels += iter->labels();
 						return true;
 					}
 				}
@@ -1087,6 +1111,7 @@ bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_le
 					{
 						opd_left = opd.leftOperand().copy();
 						opd_right = opd.rightOperand().copy();
+						labels += iter->labels();
 						return true;
 					}
 				}
@@ -1123,12 +1148,22 @@ bool Analysis::State::invalidateAllMemory()
 	return rtn;
 }
 
-Predicate* Analysis::State::getPredicateGeneratedByCondition(sem::inst condition, bool taken)
+/*
+ * Operand::replaceConstants returns a Vector of replaced constant variables,
+ * then we have to process ConstantVariables constants to find the matching labels and add them to the labels list
+ */
+void Analysis::State::updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const
+{
+	for(Vector<OperandVar>::Iterator iter(replaced_vars); iter; iter++)
+		labels += constants.getLabels(*iter);
+}
+
+Predicate* Analysis::State::getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels)
 {
 	cond_t kind = condition.cond();
-	t::int16 sr = condition.sr();
+	t::int16 sr = condition.sr(); // ARM's r16
 	Operand *opd_left = NULL, *opd_right = NULL;
-	if(!findValueOfCompVar(OperandVar(sr), opd_left, opd_right))
+	if(!findValueOfCompVar(OperandVar(sr), opd_left, opd_right, labels))
 		return NULL;
 	
 	condoperator_t opr;

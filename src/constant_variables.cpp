@@ -109,6 +109,31 @@ Constant ConstantVariables::getValue(const OperandVar& opdv) const
 	return k.value().val();
 }
 
+Set<Edge*> ConstantVariables::getLabels(const OperandVar& opdv) const
+{
+	Option<LabelledValue>& k = getCell(opdv);
+	assert(k.isOne());
+	return k.value().labels();
+}
+
+ConstantVariables::LabelledValue ConstantVariables::getLabelledValue(const OperandVar& opdv) const
+{
+	Option<LabelledValue>& k = getCell(opdv);
+	assert(k.isOne());
+	return k.value();
+}
+
+// reset and set the value (the label list is emptied)
+void ConstantVariables::set(const OperandVar& opdv, const LabelledValue& lval)
+{
+	if(!lval.val().isValid())
+		return invalidate(opdv);
+	Option<LabelledValue>& k = getCell(opdv);
+	invalidate(opdv);
+	DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << opdv << "==" << OperandConst(lval.val()))
+	k = some(lval);
+}
+
 // reset and set the value (the label list is emptied)
 void ConstantVariables::set(const OperandVar& opdv, const Constant& val, bool updated_flag)
 {

@@ -1,14 +1,18 @@
 #ifndef _OPERAND_H
 #define _OPERAND_H
 
+#include <otawa/cfg/Edge.h>
+#include <elm/genstruct/Vector.h>
 #include <elm/io/Output.h>
 #include <elm/util/Option.h>
 #include <cvc4/expr/expr.h>
 #include <cvc4/expr/type.h>
 #include "constant.h"
-#include "constant_variables_simplified.h"
+#include "constant_variables_simplified.h" // reason for this is recursive inclusion of classes, using a visitor in constant_variables for toPredicates may be cleaner
 
+using otawa::Edge;
 using namespace elm;
+using namespace elm::genstruct;
 
 enum arithoperator_t
 {
@@ -77,7 +81,7 @@ public:
 	virtual void parseAffineEquation(AffineEquationState& state) const = 0;
 	virtual Option<OperandConst> evalConstantOperand() const = 0; // all uses commented out?
 	virtual Option<Operand*> simplify() = 0; // Warning: Option=none does not warrant that nothing has been simplified!
-	virtual Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants) = 0;
+	virtual Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars) = 0;
 	virtual bool accept(OperandVisitor& visitor) const = 0;
 	virtual operand_kind_t kind() const = 0;
 	
@@ -109,7 +113,7 @@ public:
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
-	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
+	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return true; }
@@ -129,6 +133,7 @@ private:
 class OperandVar : public Operand
 {	
 public:
+	OperandVar(); // for Vector<OperandVar>
 	OperandVar(const OperandVar& opd);
 	OperandVar(t::int32 addr);
 	// ~OperandVar();
@@ -146,7 +151,7 @@ public:
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
-	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
+	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return (_addr == opdv.addr()) || (_addr == sp.addr()); }
@@ -182,7 +187,7 @@ public:
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
-	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
+	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return false; }
@@ -224,7 +229,7 @@ public:
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
-	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants); // warning: Option=none does not warrant that nothing has been replaced!
+	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
 	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const
