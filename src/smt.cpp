@@ -196,6 +196,7 @@ Kind_t SMT::getKind(condoperator_t opr) const
 	}
 }
 
+/*
 void SMT::printInfeasiblePath(const Analysis::Path& path) const
 {
 	elm::String str = "[";
@@ -211,6 +212,7 @@ void SMT::printInfeasiblePath(const Analysis::Path& path) const
 	str = str.concat(_ << "]");
 	DBG(color::On_IRed() << "Inf. path found: " << str)
 }
+*/
 
 /*
 void SMT::removeIncompletePredicates(SLList<LabelledPredicate>& labelled_preds)
