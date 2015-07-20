@@ -5,8 +5,6 @@
 #include <elm/genstruct/Vector.h>
 #include <elm/io/Output.h>
 #include <elm/util/Option.h>
-#include <cvc4/expr/expr.h>
-#include <cvc4/expr/type.h>
 #include "constant.h"
 #include "constant_variables_simplified.h" // reason for this is recursive inclusion of classes, using a visitor in constant_variables for toPredicates may be cleaner
 

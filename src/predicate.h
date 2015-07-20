@@ -2,7 +2,6 @@
 #define _PREDICATE_H
 
 #include <elm/io/Output.h>
-#include <cvc4/expr/expr.h>
 #include "operand.h"
 
 using namespace elm;

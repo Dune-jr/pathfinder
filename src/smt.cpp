@@ -1,77 +1,33 @@
 /*
  * Interfacing with the SMT solver
  */
-#include <cvc4/expr/command.h> // getUnsatCoreCommand
-#include <cvc4/util/unsat_core.h>
+#include <iostream> // TODO!
 #include <elm/genstruct/SLList.h>
-#include <elm/genstruct/Vector.h>
-#include <elm/util/BitVector.h>
-#include <otawa/cfg/Edge.h>
 #include "smt.h"
-#include "smt_variable_stack.h"
-#include "operand.h"
 #include "debug.h"
 
-using namespace CVC4::kind;
-using elm::BitVector;
-using otawa::Edge;
-using CVC4::Expr;
+using namespace elm::genstruct;
 
-SMT::SMT(): smt(&em), variables(em), integer(em.integerType())
-{
-	smt.setLogic("QF_LIA"); // Quantifier-Free (no forall, exists...) Linear Integer Arithmetic
-	smt.setOption("incremental", CVC4::SExpr("false")); // non incremental
-	smt.setOption("produce-unsat-cores", CVC4::SExpr("true"));
-	smt.setOption("rewrite-divk", CVC4::SExpr("true"));
-	// smt.setOption("dump-unsat-cores", CVC4::SExpr("true"));
-	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
-	// smt.setOption("dump", "assertions:pre-everything");
-	// smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
-}
+SMT::SMT() { }
 
-// gets a copy of the labelled_preds SLList
-// actually always returns 1 infeasible path, but that may be changed in the future
-// Option<Analysis::Path> SMT::seekInfeasiblePaths(SLList<LabelledPredicate> labelled_preds, const ConstantVariables& constants)
 Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 {
 	// add the constant info to the the list of predicates
-	SLList<LabelledPredicate> labelled_preds = s.getLabelledPreds();
+	SLList<LabelledPredicate> labelled_preds = s.getLabelledPreds(); // implicit copy
 	labelled_preds += s.getConstants().toPredicates();
-	// get a SLList<Option<Expr> > out of a SLList<LabelledPredicate> in order to know which LP matches which expr
-	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
-		exprs.addLast(getExpr(iter->pred()));
 	
-	if(checkPredSat(exprs))
+	if(checkPredSat(labelled_preds))
 	{
 		DBG("Checking path " << s.getPathString() << ": " << color::BGre() << "SAT")
 		return elm::none;
 	}
 	DBG("Checking path " << s.getPathString() << ": " << color::BIRed() << "UNSAT")
 
-	CVC4::UnsatCore unsat_core = smt.getUnsatCore(); // get an unsat subset of our assumptions
-	Analysis::Path path; // build our path
-	bool empty = true;
-	std::basic_string<char> unsat_core_output = "[";
-	for(CVC4::UnsatCore::const_iterator unsat_core_iter = unsat_core.begin(); unsat_core_iter != unsat_core.end(); unsat_core_iter++)
-	{
-		if(!empty)
-			unsat_core_output += ", ";	
-		unsat_core_output += (*unsat_core_iter).toString();
-		empty = false;
-		SLList<LabelledPredicate>::Iterator lp_iter(labelled_preds);
-		SLList<Option<Expr> >::Iterator expr_iter(exprs);
+	Analysis::Path path;
+	std::basic_string<char> unsat_core_output;
+	bool unsat_core_success = retrieveUnsatCore(path, labelled_preds, unsat_core_output);
 
-		for(; lp_iter; lp_iter++, expr_iter++)
-		{
-			if(*expr_iter && **expr_iter == *unsat_core_iter)
-			{
-				path += (*lp_iter).labels();
-				// Set<const Edge*>::Iterator label_iter((*lp_iter).labels());
-				// DBG(" => fst label: " << (*label_iter)->source()->number() << "->" << (*label_iter)->target()->number())
-			}
-		}
-	}
-	if(empty)
+	if(!unsat_core_success)
 	{
 		DBG(color::BIWhi() << "A)" << color::RCol() << " Extracting UNSAT core... " << color::IRed() << "FAILED!");
 		DBG("   Using original predicates:")
@@ -87,16 +43,7 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	else
 	{
 		DBG(color::BIWhi() << "A)" << color::RCol() << " Extracting UNSAT core... " << color::IGre() << "SUCCESS!");
-		DBG_STD("   UNSAT core: " << unsat_core_output << "]")
-#ifdef DBGG
-		cout << "   Original predicates:" << endl;
-		for(SLList<LabelledPredicate>::Iterator parse_iter(labelled_preds); parse_iter; parse_iter++)
-		{
-			if((*parse_iter).pred().isComplete())
-				cout << "   * " << (*parse_iter) << endl;
-		}
-		std::cout << "   UNSAT core: " << unsat_core_output << "]" << endl;
-#endif
+		DBG_STD("   UNSAT core: " << unsat_core_output)
 	}
 
 	// printInfeasiblePath(path);
@@ -119,28 +66,7 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 //*/
 }
 
-// check predicates satisfiability
-bool SMT::checkPredSat(const SLList<Option<Expr> >& exprs)
-{
-	try
-	{
-		for(SLList<Option<Expr> >::Iterator iter(exprs); iter; iter++)
-			if(*iter)
-				smt.assertFormula(**iter, true); // second parameter to true for unsat cores
-
-		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
-		return isSat;
-	}
-	catch(CVC4::LogicException e)
-	{
-		#ifdef DBG_WARNINGS
-			cout << "WARNING: non-linear call to CVC4, defaulted to SAT." << endl;
-		#endif
-		return true;
-	}
-}
-
-// check predicates satisfiability
+/*
 bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds)
 {	
 	try
@@ -161,60 +87,6 @@ bool SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds)
 	}
 }
 
-Option<Expr> SMT::getExpr(const Predicate& p)
-{
-	if(!p.isComplete())
-		return elm::none;
-	return em.mkExpr(getKind(p), getExpr(p.leftOperand()), getExpr(p.rightOperand()));
-}
-
-Option<Expr> SMT::getExpr(const Operand& o)
-{
-	if(!o.isComplete())
-		return elm::none;
-		
-	SMTOperandVisitor visitor(em, variables);
-	if(!o.accept(visitor))
-		return elm::none;
-	return elm::some(visitor.result());
-}
-
-Kind_t SMT::getKind(condoperator_t opr) const
-{
-	switch(opr)
-	{
-		case CONDOPR_LT:
-			return LT;
-		case CONDOPR_LE:
-			return LEQ;
-		case CONDOPR_EQ:
-			return EQUAL;
-		case CONDOPR_NE:
-			return DISTINCT;
-		default:
-			assert(false);
-	}
-}
-
-/*
-void SMT::printInfeasiblePath(const Analysis::Path& path) const
-{
-	elm::String str = "[";
-	bool first = true;
-	for(Analysis::Path::Iterator iter(path); iter; iter++)
-	{
-		if(first)
-			first = false;
-		else
-			str = str.concat(_ << ", ");
-		str = str.concat(_ << (*iter)->source()->number() << "->" << (*iter)->target()->number());
-	}
-	str = str.concat(_ << "]");
-	DBG(color::On_IRed() << "Inf. path found: " << str)
-}
-*/
-
-/*
 void SMT::removeIncompletePredicates(SLList<LabelledPredicate>& labelled_preds)
 {
 	SLList<LabelledPredicate>::Iterator iter(labelled_preds);

@@ -3,6 +3,8 @@
  */
 
 #include <ctime>
+#include <iostream> // std::cout
+#include <iomanip> // std::setprecision
 #include <elm/io/Output.h>
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
@@ -11,7 +13,14 @@
 // #include <elm/sys/Thread.h> // multithreading
 
 #include "analysis.h"
-#include "smt_job.h"
+// #include "smt_job.h"
+// #include "smt.h"
+#ifdef SMT_SOLVER_CVC4
+	#include "cvc4/cvc4_smt.h"
+#endif
+#ifdef SMT_SOLVER_Z3
+	#include "z3/z3_smt.h"
+#endif
 #include "debug.h"
 
 using namespace elm::genstruct;
@@ -372,7 +381,12 @@ void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, co
 		s.appendEdge(e, is_conditional);
 
 		// SMT call
-		SMT smt;
+#ifdef SMT_SOLVER_CVC4
+		CVC4SMT smt;
+#endif
+#ifdef SMT_SOLVER_Z3
+		Z3SMT smt;
+#endif
 		const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
 		// mutex START
 		sl_paths.addLast(infeasible_path);

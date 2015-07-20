@@ -25,6 +25,7 @@
 
 extern int dbg_flags;
 extern int dbg_verbose;
+using namespace elm;
 
 namespace debug {
 namespace color

@@ -4,9 +4,7 @@
 #include <otawa/cfg/Edge.h>
 #include <otawa/dfa/State.h> // dfa::State: isInitialized(addr), get(addr, _)...
 #include <otawa/prop/Identifier.h>
-#include <otawa/sem/inst.h>
 #include <elm/avl/Set.h>
-#include <elm/imm/list.h>
 #include <elm/genstruct/SLList.h>
 #include <elm/util/Comparator.h>
 #include "constant_variables.h"
