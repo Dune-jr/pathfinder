@@ -85,7 +85,7 @@ Option<Expr> CVC4SMT::getExpr(const Predicate& p)
 Option<Expr> CVC4SMT::getExpr(const Operand& o)
 {
 	if(!o.isComplete())
-		return elm::none;
+		return elm::none; // this could cause a crash
 		
 	CVC4OperandVisitor visitor(em, variables);
 	if(!o.accept(visitor))

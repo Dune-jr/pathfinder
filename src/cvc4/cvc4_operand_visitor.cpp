@@ -45,7 +45,7 @@ bool CVC4OperandVisitor::visit(const class OperandMem& o)
 bool CVC4OperandVisitor::visit(const class OperandArithExpr& o)
 {
 	if(!o.isComplete())
-		return false; // fial
+		return false; // fail
 	Kind_t kind = getKind(o.opr());
 	if(!o.leftOperand().accept(*this))
 		return false;

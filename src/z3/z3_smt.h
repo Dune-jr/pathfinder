@@ -1,5 +1,5 @@
 /*
- * Implementing Z3 as the SMT solver
+ * Implementing z3 as the SMT solver
  */
 #ifndef _Z3_Z3_SMT_H
 #define _Z3_Z3_SMT_H
@@ -21,15 +21,17 @@ private:
     z3::context c;
     z3::solver s;
     z3::params p;
-    // Z3VariableStack variables;
-    // SLList<Option<Expr> > exprs;
+    z3::expr sp;
+    // Z3VariableStack variables; // no need of this with z3!
+    Vector<unsigned int> labels_hash;
 
     // SMT virtual pure methods
     bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds);
     bool retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredicate>& labelled_preds, std::basic_string<char>& unsat_core_output);
-    // Option<Expr> getExpr(const Predicate& p);
-    // Option<Expr> getExpr(const Operand& o);
-    // Kind_t getKind(const Predicate& p) const;
+    z3::expr getExpr(const Predicate& p);
+    z3::expr getExpr(const Operand& o);
+    // int charCoupleToInt(const char* label) const;
+    // void intToCharCouple(int x, char label[4]) const;
 };
 
 #endif

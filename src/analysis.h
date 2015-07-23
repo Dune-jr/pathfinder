@@ -38,6 +38,7 @@ public:
 	Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int state_size_limit, int flags);
 	inline Vector<OrderedPath> infeasiblePaths() const { return infeasible_paths; }
 	static bool listOfFixpoints(const SLList<Analysis::State>& sl);
+	static elm::String pathToString(const Path& path);
 	
 	class State {
 	private:
@@ -217,7 +218,6 @@ private:
 	bool allIncomingEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
 	elm::String wlToString() const;
-	static elm::String pathToString(const Path& path);
 }; // Analysis class
 
 template <class C> io::Output& printCollection(io::Output& out, const C& items)
