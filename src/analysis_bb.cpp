@@ -874,29 +874,25 @@ bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 {
 	bool rtn = false;
-	for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; )
+	for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; iter++;)
 	{
 		if(iter->pred().involvesVariable(temp_var))
 		{
 			Predicate p(iter->pred());
-			String prev_str = _ << p;
-			
+			String prev_str = _ << p;			
 			p.update(temp_var, expr);
-			if(p.isIdent()) // if we just transformed t1 = X into X = X
+			if(!p.isIdent()) // if we just transformed t1 = X into X = X, don't add to generated_preds
 			{
-				iter++;
-				continue;
+				if(rtn == false) // first time
+				{
+					DBG(color::IBlu() << "[" << expr << " / " << temp_var << "]")
+					rtn = true;
+				}
+				DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
+				DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << p)
+				generated_preds.set(iter, LabelledPredicate(p, iter->labels()));
 			}
-			if(rtn == false) // first time
-			{
-				DBG(color::IBlu() << "[" << expr << " / " << temp_var << "]")
-				rtn = true;
-			}
-			DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
-			DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << p)
-			generated_preds.set(iter, LabelledPredicate(p, iter->labels()));
 		}
-		iter++;
 	}
 	return rtn;
 }

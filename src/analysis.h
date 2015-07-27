@@ -180,6 +180,7 @@ public:
 		//SUPERSILENT		= 0b1 << 2,
 		MERGE				= 0b1 << 3,
 		UNMINIMIZED_PATHS	= 0b1 << 4,
+		DRY_RUN				= 0b1 << 5,
 	};
 	
 private:

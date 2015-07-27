@@ -36,6 +36,7 @@ public:
 		opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")),
 		opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis")),
 		opt_nounminimized(option::SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
+		opt_dry(option::SwitchOption::Make(*this).cmd("--dry").description("dry run (no solver calls)")),
 		opt_automerge(option::SwitchOption::Make(*this).cmd("--automerge").description("let the algorithm decide when to merge")),
 		opt_virtualize(option::ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
 		opt_merge(option::ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)) { }
@@ -78,6 +79,8 @@ protected:
 			dbg_flags |= DBG_PREANALYSIS;
 		if(!opt_nounminimized)
 			analysis_flags |= Analysis::UNMINIMIZED_PATHS;
+		if(opt_dry)
+			analysis_flags |= Analysis::DRY_RUN;
 		if(opt_merge || opt_automerge)
 		{
 			analysis_flags |= Analysis::MERGE;
@@ -102,7 +105,7 @@ protected:
 private:
 	option::Manager manager;
 	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred,
-						 opt_preanalysis, opt_nounminimized, opt_automerge; //, opt_virtualize;
+						 opt_preanalysis, opt_nounminimized, opt_dry, opt_automerge; //, opt_virtualize;
 	option::ValueOption<bool> opt_virtualize;
 	option::ValueOption<int> opt_merge;
 };

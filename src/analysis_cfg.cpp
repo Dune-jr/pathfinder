@@ -79,7 +79,7 @@ void Analysis::State::appendEdge(Edge* e, bool is_conditional)
 */
 void Analysis::processCFG(CFG* cfg)
 {
-	DBG("Using SMT solver " << SMT::printChosenSolverInfo())
+	DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
 	DBG(color::Whi() << "Processing CFG " << cfg)
 	total_paths = loop_header_count = 0;
 	int processed_bbs = 0;
@@ -381,6 +381,13 @@ void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, co
 		State s = *sl_iter;
 		s.appendEdge(e, is_conditional);
 
+		if(flags&DRY_RUN) // no SMT call
+		{
+			sl_paths.addLast(elm::none);
+			processed_edges_id.ref(e).addFirst(s);
+			continue;
+		}
+			
 		// SMT call
 #ifdef SMT_SOLVER_CVC4
 		CVC4SMT smt;
@@ -705,26 +712,24 @@ bool Analysis::isAHandledEdgeKind(Edge::kind_t kind) const
 	}
 }
 
+// either we find SP in all the paths we merge (and the same SP), either we return elm::none
 Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>& sl) const
 {
-	Option<Constant> rtn = elm::none;
+	Option<Constant> rtn = elm::none; // also acts like a bool first = true
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
 		if(sl_iter->getConstants().isConstant(sp))
 		{
-			// TODO!!! just return here if we trust this assert (but we shouldn't there is a problem in some of the malardalen-slow benchmarks)
-			if(!(!rtn || *rtn == sl_iter->getConstants()[sp]))
+			if(rtn)
 			{
-				cout << "rtn=" << *rtn << ", constants[sp]="<< sl_iter->getConstants()[sp] << endl;
-				for(SLList<Analysis::State>::Iterator sl_subiter(sl); sl_subiter; sl_subiter++)
-				{
-					sl_subiter->dumpPredicates();
-					DBG("constants = " << sl_subiter->getConstants())
-				}
+				if(*rtn != sl_iter->getConstants()[sp])
+					return elm::none; // paths have different SP value
 			}
-			ASSERT(!rtn || *rtn == sl_iter->getConstants()[sp]); // currently this algorithm assumes at each pathpoint all states have the same SP. if this assumption ever fails, enforce that we only return an answer if all states know the value of sp
-			rtn = elm::some(sl_iter->getConstants()[sp]);
+			else
+				rtn = elm::some(sl_iter->getConstants()[sp]);
 		}
+		else
+			return elm::none; // one of the paths has invalidated SP
 	}
 	return rtn;
 }
