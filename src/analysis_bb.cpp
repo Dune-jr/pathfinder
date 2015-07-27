@@ -428,7 +428,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							val = constants[a].val() & constants[b].val();
 						else if(seminsts.op() == XOR)
 							val = constants[a].val() ^ constants[b].val();
-						else if(seminsts.op() == OR)
+						else //if(seminsts.op() == OR)
 							val = constants[a].val() | constants[b].val();
 						invalidateVar(d); // don't do this earlier in case d==a or d==b
 						constants.set(d, val);
@@ -874,7 +874,7 @@ bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& expr)
 {
 	bool rtn = false;
-	for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; iter++;)
+	for(SLList<LabelledPredicate>::Iterator iter(generated_preds); iter; iter++)
 	{
 		if(iter->pred().involvesVariable(temp_var))
 		{
