@@ -82,6 +82,7 @@ Kind_t CVC4OperandVisitor::getKind(arithoperator_t opr)
 			return MULT;
 			break;
 		case ARITHOPR_DIV:
+			// return DIVISION; // real version
 			// return INTS_DIVISION_TOTAL;
 			return INTS_DIVISION; // this is a version without interpreted division by 0
 			break;

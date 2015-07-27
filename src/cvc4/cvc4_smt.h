@@ -33,8 +33,6 @@ private:
 	Option<Expr> getExpr(const Predicate& p);
 	Option<Expr> getExpr(const Operand& o);
 	Kind_t getKind(const Predicate& p) const;
-	
-	const CVC4::Type integer; // Z // TODO!! try with rationals instead to improve computation time!
 };
 
 #endif

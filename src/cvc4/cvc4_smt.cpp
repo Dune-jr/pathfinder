@@ -13,7 +13,7 @@ using namespace CVC4::kind;
 using elm::BitVector;
 using CVC4::Expr;
 
-CVC4SMT::CVC4SMT(): smt(&em), variables(em), integer(em.integerType())
+CVC4SMT::CVC4SMT(): smt(&em), variables(em)
 {
 	smt.setLogic("QF_LIA"); // Quantifier-Free (no forall, exists...) Linear Integer Arithmetic
 	smt.setOption("incremental", CVC4::SExpr("false")); // non incremental

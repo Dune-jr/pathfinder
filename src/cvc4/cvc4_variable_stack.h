@@ -18,27 +18,8 @@ public:
 private:
 	AVLMap<t::int32, Expr> varmap; // registers, tempvars (these should be invalidated prior to SMT call though)
 	AVLMap<Constant, Expr> memmap; // relative addresses in memory
+	const CVC4::Type integer; // Z
 	Expr expr_sp;
-
-	/*
-	struct relative_address
-	{	// Example for [?13+0x8]
-		t::int32 variable; // 13
-		t::int32 constant; // 0x8
-
-		inline bool operator==(relative_address x) const
-		{
-			return (variable == x.variable) && (constant == x.constant);
-		}
-		inline bool operator>(relative_address x) const
-		{
-			// arbitrary order: variables come first
-			if(variable > x.variable)
-				return constant > x.constant;
-			return variable > x.variable;
-		}
-	};
-	*/
 };
 
 #endif

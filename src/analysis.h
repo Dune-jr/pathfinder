@@ -95,6 +95,7 @@ public:
 		io::Output& print(io::Output& out) const;
 
 		// analysis_bb.cpp
+		LabelledPredicate makeLabelledPredicate(condoperator_t opr, Operand* opd1, Operand* opd2, Path& labels) const;
 		bool invalidateVar(const OperandVar& var, bool invalidate_constant_info = true);
 		bool invalidateMem(const OperandMem& addr);
 		bool invalidateMem(const OperandVar& var);

@@ -611,43 +611,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					make_pred = false;
 			}
 			if(make_pred)
-			{
-				ASSERT(opd1);
-				ASSERT(opd2);
-				const ConstantVariablesSimplified& cvs = constants.toSimplified(); // TODO: This is taking ressources because of bad class design
-				Vector<OperandVar> replaced_vars;
-				// If we have predicates such as ?16 = ?4 ~ t1, make sure none of these are identified as constants in the constantVariables table!
-				// TODO! move this replaceConstants stuff to a function maybe?
-				if(Option<Operand*> maybe_opd1 = opd1->replaceConstants(cvs, replaced_vars))
-				{
-					delete opd1;
-					opd1 = *maybe_opd1;
-				}
-				if(Option<Operand*> maybe_opd2 = opd2->replaceConstants(cvs, replaced_vars))
-				{
-					delete opd2;
-					opd2 = *maybe_opd2;
-				}
-				if(dbg_verbose == DBG_VERBOSE_ALL && replaced_vars) // pretty printing of replaceConstants
-				{
-					int count = 0;
-					elm::String str = "";
-					for(Vector<OperandVar>::Iterator iter(replaced_vars); iter; iter++)
-					{
-						if(count++)
-							str = _ << str << ", ";
-						str = _ << str << *iter << ":" << constants[*iter];
-						if(constants.getLabels(*iter))
-							str = _ << str << pathToString(constants.getLabels(*iter));	
-					}
-  					DBG(color::IPur() << DBG_SEPARATOR << color::IBlu() << " Replaced constant" << (count>1?"s ":" ") << str)
-				}
-				updateLabelsWithReplacedConstantsInfo(labels, replaced_vars);
-				DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << Predicate(opr, *opd1, *opd2))
-				generated_preds += LabelledPredicate(Predicate(opr, *opd1, *opd2), labels);
-			}
-			if(opd1) delete opd1;
-			if(opd2) delete opd2;
+				generated_preds += makeLabelledPredicate(opr, opd1, opd2, labels);
 			if(opd11) delete opd11;
 			if(opd12) delete opd12;
 			if(opd21) delete opd21;
@@ -660,7 +624,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 	if(dbg_verbose == DBG_VERBOSE_ALL)
 	{
 		if(generated_preds_taken)
-		{	// TODO! print constant variables that changed too
+		{
 			DBG("Predicates generated: ")
 			DBG("|-> taken path: " << generated_preds_taken)
 			DBG("|-> not taken path: " << generated_preds)
@@ -671,6 +635,46 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			DBG("Constants updated: " << constants.printChanges())
 		}
 	}
+}
+
+// do all the preprocessing and pretty printing job for making a predicate, then return the final labelled predicate ready to be added to the list
+LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, Operand* opd1, Operand* opd2, Path& labels) const
+{
+	ASSERT(opd1);
+	ASSERT(opd2);
+	const ConstantVariablesSimplified& cvs = constants.toSimplified(); // TODO: This is taking ressources because of bad class design
+	Vector<OperandVar> replaced_vars;
+	// If we have predicates such as ?16 = ?4 ~ t1, make sure none of these are identified as constants in the constantVariables table!
+	if(Option<Operand*> maybe_opd1 = opd1->replaceConstants(cvs, replaced_vars))
+	{
+		delete opd1;
+		opd1 = *maybe_opd1;
+	}
+	if(Option<Operand*> maybe_opd2 = opd2->replaceConstants(cvs, replaced_vars))
+	{
+		delete opd2;
+		opd2 = *maybe_opd2;
+	}
+	if(dbg_verbose == DBG_VERBOSE_ALL && replaced_vars) // pretty printing of replaceConstants
+	{
+		int count = 0;
+		elm::String str = "";
+		for(Vector<OperandVar>::Iterator iter(replaced_vars); iter; iter++)
+		{
+			if(count++)
+				str = _ << str << ", ";
+			str = _ << str << *iter << ":" << constants[*iter];
+			if(constants.getLabels(*iter))
+				str = _ << str << pathToString(constants.getLabels(*iter));	
+		}
+			DBG(color::IPur() << DBG_SEPARATOR << color::IBlu() << " Replaced constant" << (count>1?"s ":" ") << str)
+	}
+	updateLabelsWithReplacedConstantsInfo(labels, replaced_vars);
+	const Predicate& p = Predicate(opr, *opd1, *opd2);
+	DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
+	if(opd1) delete opd1;
+	if(opd2) delete opd2;
+	return LabelledPredicate(p, labels);
 }
 
 // returns true if a variable has been invalidated

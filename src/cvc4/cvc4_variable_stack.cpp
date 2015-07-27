@@ -6,9 +6,9 @@
 
 using CVC4::Expr;
 
-CVC4VariableStack::CVC4VariableStack(CVC4::ExprManager& em)
+CVC4VariableStack::CVC4VariableStack(CVC4::ExprManager& em) : integer(em.integerType())
 {
-	expr_sp = em.mkVar("SP", em.integerType());
+	expr_sp = em.mkVar("SP", integer);
 }
 
 Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o)
@@ -19,7 +19,7 @@ Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o)
 	else
 	{	// not in stack, create it
 		elm::String label = _ << o;
-		Expr expr = em.mkVar(label.chars(), em.integerType());
+		Expr expr = em.mkVar(label.chars(), integer);
 		varmap.put(addr, expr);
 		return expr;
 	}
@@ -53,7 +53,7 @@ Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, 
 			default:
 				assert(false);
 		}
-		Expr expr = em.mkVar(label.chars(), em.integerType());
+		Expr expr = em.mkVar(label.chars(), integer);
 		memmap.put(addr, expr);
 		return expr;
 	}
