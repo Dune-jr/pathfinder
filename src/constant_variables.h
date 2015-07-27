@@ -58,6 +58,7 @@ public:
 	bool invalidateTempVars();
 	void label(Edge* label);
 	void merge(const SLList<ConstantVariables>& cvl);
+	elm::String printChanges() const;
 	SLList<LabelledPredicate> toPredicates() const;
 	ConstantVariablesSimplified toSimplified() const;
 	inline Constant operator[](const OperandVar& opdv) const { return getValue(opdv); }

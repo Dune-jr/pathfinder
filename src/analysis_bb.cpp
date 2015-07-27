@@ -115,7 +115,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						else if(Option<OperandConst> addr_const_value = findConstantValueOfMemCell(*addr_mem, labels))
 						{
 							DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "Memory data " << *addr_mem << " simplified to " << *addr_const_value)
-							constants.set(d, ConstantVariables::LabelledValue((*addr_const_value).value(), labels, true)); // TODO! check other constants.set to add labels
+							constants.set(d, ConstantVariables::LabelledValue((*addr_const_value).value(), labels, true));
 						}
 						else
 						{							
@@ -614,7 +614,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			{
 				ASSERT(opd1);
 				ASSERT(opd2);
-				const ConstantVariablesSimplified& cvs = constants.toSimplified(); // TODO! This is taking ressources because of bad class design
+				const ConstantVariablesSimplified& cvs = constants.toSimplified(); // TODO: This is taking ressources because of bad class design
 				Vector<OperandVar> replaced_vars;
 				// If we have predicates such as ?16 = ?4 ~ t1, make sure none of these are identified as constants in the constantVariables table!
 				// TODO! move this replaceConstants stuff to a function maybe?
@@ -666,7 +666,10 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			DBG("|-> not taken path: " << generated_preds)
 		}
 		else
+		{
 			DBG("Predicates generated: " << generated_preds)
+			DBG("Constants updated: " << constants.printChanges())
+		}
 	}
 }
 

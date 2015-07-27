@@ -79,6 +79,7 @@ void Analysis::State::appendEdge(Edge* e, bool is_conditional)
 */
 void Analysis::processCFG(CFG* cfg)
 {
+	DBG("Using SMT solver " << SMT::printChosenSolverInfo())
 	DBG(color::Whi() << "Processing CFG " << cfg)
 	total_paths = loop_header_count = 0;
 	int processed_bbs = 0;
@@ -324,7 +325,7 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, co
 {
 	State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
 	bool delete_s = false;
-	s->merge(sl);//, *bb_outs);
+	s->merge(sl);
 	s->setFixpointState(Analysis::listOfFixpoints(sl));
 	#ifdef DBGG
 		cout << "merged:" << s->dumpEverything();
@@ -350,7 +351,7 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, co
 				s->setFixpointState(true);
 				delete_s = true;
 				// we need to clear the annotation for future fixpoints on this loop 
-				// // huh,not really the reason why. If this was a fixpoint in a previous analysis it'll be one in future ones
+				// // huh, not really the reason why. If this was a fixpoint in a previous analysis it'll be one in future ones
 				// processed_loopheader_bb_id.remove(bb); //  this makes absurd results...
 			}
 			else
@@ -405,8 +406,8 @@ void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, co
 		// mutex END
 	}
 	//*/
-	// TODO!! rewrite with addFirst instead of addLast to optimize
-	// TODO!! replace both SLLists with Vector
+	// TODO: rewrite with addFirst instead of addLast to optimize
+	// TODO: replace both SLLists with Vector
 	// first off, run threads
 	/*
 	SLList<elm::sys::Thread*> threads;

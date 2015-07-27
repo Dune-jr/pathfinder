@@ -234,6 +234,35 @@ void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
 			registers[i] = some(LabelledValue((*registers[i]).val(), Set<Edge*>::null, true));
 }
 
+// returns a one-line string with pretty printing of changes that occured in the constants during the current block (updated flag)
+elm::String ConstantVariables::printChanges() const
+{
+	elm::String rtn = "[";
+	bool first = true;
+	/*for(unsigned int i = 0; i < _max_tempvars; i++)
+	{
+		if(tempvars[i] && (*tempvars[i]).isUpdated())
+		{
+			if(!first)
+				rtn = rtn.concat(elm::String(", "));
+			else first = false;
+			rtn = rtn.concat(_ << "t" << i+1 << "=" << (*tempvars[i]).val());
+		}
+	}*/
+	for(unsigned int i = 0; i < _max_registers; i++)
+	{
+
+		if(registers[i] && (*registers[i]).isUpdated()) 
+		{
+			if(!first)
+				rtn = rtn.concat(elm::String(", "));
+			else first = false;
+			rtn = rtn.concat(_ << "?" << i << "=" << (*registers[i]).val());
+		}
+	}
+	return rtn.concat(elm::String("]"));
+}
+
 SLList<LabelledPredicate> ConstantVariables::toPredicates() const
 {
 	SLList<LabelledPredicate> l;

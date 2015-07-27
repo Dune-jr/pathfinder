@@ -1,7 +1,7 @@
 /*
  * Interfacing with the SMT solver
  */
-#include <iostream> // TODO!
+// #include <iostream>
 #include <elm/genstruct/SLList.h>
 #include "smt.h"
 #include "debug.h"
@@ -64,6 +64,16 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	
 	return elm::some(filterPaths(bitcode_list, map_bit_to_pathpoint, paths_to_keep, true)); // generate the list of non-redundant paths and return it
 //*/
+}
+
+const elm::String SMT::printChosenSolverInfo()
+{
+#ifdef SMT_SOLVER_Z3
+	return "z3";
+#endif
+#ifdef SMT_SOLVER_CVC4
+	return "cvc4";
+#endif
 }
 
 /*

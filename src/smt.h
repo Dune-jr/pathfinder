@@ -15,17 +15,18 @@
 	#endif
 #endif
 
+#include <iostream> // std::cout, std::basic_string
 #include <elm/genstruct/SLList.h>
 #include "analysis.h"
 
 using namespace elm::genstruct;
 
-//template<E>
 class SMT
 {
 public:
 	SMT();
 	Option<Analysis::Path> seekInfeasiblePaths(const Analysis::State& s);
+	static const elm::String printChosenSolverInfo();
 	
 private:
 	virtual bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds) = 0;
