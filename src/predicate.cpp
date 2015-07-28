@@ -57,9 +57,9 @@ bool Predicate::involvesMemory() const
  * Test if the predicate only contains + or - operations, only occurences of opdv and sp, and no memory cells
  * This does not test whether there is only one occurence of opdv and sp
  */
-bool Predicate::isAffine(const OperandVar& opdv, const OperandVar& sp) const
+bool Predicate::isAffine(const OperandVar& opdv) const
 {
-	return _opr == CONDOPR_EQ && _opd1->isAffine(opdv, sp) && _opd2->isAffine(opdv, sp);
+	return _opr == CONDOPR_EQ && _opd1->isAffine(opdv) && _opd2->isAffine(opdv);
 }
 
 unsigned int Predicate::countTempVars() const

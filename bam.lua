@@ -21,7 +21,7 @@ config:Finalize("config.lua")
 
 -- Settings
 settings = NewSettings()
-settings.cc.flags:Add("-O3")
+settings.cc.flags:Add("-O0")
 
 -- Wall option
 if ScriptArgs["wall"]=="true" or ScriptArgs["Wall"]=="true" then

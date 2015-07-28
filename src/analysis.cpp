@@ -71,7 +71,7 @@ elm::String Analysis::State::getPathString() const
 {
 	elm::String str;
 	bool first = true;
-	int lastid;
+	int lastid = 0; // -Wmaybe-uninitialized
 	for(OrderedPath::Iterator iter(path); iter; iter++)
 	{
 		if(!first && (*iter)->source()->number() != lastid)

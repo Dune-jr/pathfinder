@@ -75,7 +75,7 @@ public:
 	virtual bool involvesMemory() const = 0;
 	virtual bool update(const Operand& opd, const Operand& opd_modifier) = 0;
 	virtual bool isComplete() const = 0;
-	virtual bool isAffine(const OperandVar& opdv, const OperandVar& sp) const = 0;
+	virtual bool isAffine(const OperandVar& opdv) const = 0;
 	virtual void parseAffineEquation(AffineEquationState& state) const = 0;
 	virtual Option<OperandConst> evalConstantOperand() const = 0; // all uses commented out?
 	virtual Option<Operand*> simplify() = 0; // Warning: Option=none does not warrant that nothing has been simplified!
@@ -114,7 +114,7 @@ public:
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
-	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return true; }
+	inline bool isAffine(const OperandVar& opdv) const { return true; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
 
@@ -152,7 +152,7 @@ public:
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
-	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return (_addr == opdv.addr()) || (_addr == sp.addr()); }
+	inline bool isAffine(const OperandVar& opdv) const { return _addr == opdv.addr(); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
 	
@@ -188,7 +188,7 @@ public:
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
-	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const { return false; }
+	inline bool isAffine(const OperandVar& opdv) const { return false; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_MEM; }
 	
@@ -230,8 +230,8 @@ public:
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
-	inline bool isAffine(const OperandVar& opdv, const OperandVar& sp) const
-		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv, sp) && opd2->isAffine(opdv, sp); }
+	inline bool isAffine(const OperandVar& opdv) const
+		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv) && opd2->isAffine(opdv); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
 	
@@ -247,16 +247,17 @@ private:
 	io::Output& print(io::Output& out) const;
 };
 
+
 class AffineEquationState
 {
 public:
-	AffineEquationState(const OperandVar& sp) : _is_negative(false), _delta(0), _sp_counter(0), _var_counter(0), _sp(sp) { }
+	AffineEquationState() : _is_negative(false), _delta(0), _sp_counter(0), _var_counter(0) { }
 	inline int delta()       const { return sign()*_delta;     }
 	inline int spCounter()   const { return sign()*_sp_counter;  }
 	inline int varCounter()  const { return sign()*_var_counter; }
 	inline void reverseSign() { _is_negative ^= 1; _delta = -_delta; _sp_counter = -_sp_counter; _var_counter = -_var_counter; }
 	inline void addToDelta(int d) { _delta += d; }
-	inline void onVarFound(const OperandVar& var) { if(var==_sp) _sp_counter++; else _var_counter++; } // TODO: eventually this should never be a sp, and only do _var_counter++
+	inline void onVarFound(const OperandVar& var) { _var_counter++; if(_var) assert(*_var == var); else _var = elm::some(var); } // TODO! check for ud, 6 min. IP -> 5!!
 	inline void onSpFound(bool sign = SIGN_POSITIVE) { if(sign == SIGN_POSITIVE) _sp_counter++; else _sp_counter--; }
 
 private:
@@ -266,7 +267,7 @@ private:
 	int _delta;
 	int _sp_counter;
 	int _var_counter;
-	OperandVar _sp;
+	Option<OperandVar> _var; // TODO! remove, this is just to check consistency
 };
 
 io::Output& operator<<(io::Output& out, operand_kind_t kind);

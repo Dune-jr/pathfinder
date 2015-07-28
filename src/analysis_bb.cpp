@@ -1055,9 +1055,9 @@ Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& 
 		if(piter.pred().opr() != CONDOPR_EQ)
 			continue;
 		// Algorithm 3 (affine): ((?var +- ...) +- ... = (...)
-		if(piter.pred().isAffine(var, sp)) // try and look for an affine case ((.. + ..)-..) = (..-..)
+		if(piter.pred().isAffine(var)) // try and look for an affine case ((.. + ..)-..) = (..-..)
 		{
-			AffineEquationState eqstate(sp);
+			AffineEquationState eqstate;
 			piter.pred().leftOperand().parseAffineEquation(eqstate);
 			eqstate.reverseSign();
 			piter.pred().rightOperand().parseAffineEquation(eqstate);
@@ -1075,6 +1075,7 @@ Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& 
 		}
 	}
 	DBG(color::IRed() << "findStackRelativeValueOfVar failed!")
+	// DBG(dumpEverything())
 	return none; // no matches found
 }
 /**

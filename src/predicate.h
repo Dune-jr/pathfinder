@@ -37,7 +37,7 @@ public:
 	bool involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
-	bool isAffine(const OperandVar& opdv, const OperandVar& sp) const;
+	bool isAffine(const OperandVar& opdv) const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
