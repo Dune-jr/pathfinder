@@ -7,7 +7,7 @@
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 
-// #define DBGG
+// #define DBGG // debug loop analysis
 // #define DBG_WARNINGS
 #define DBG_NO_COLOR	   0b1 << 1
 #define DBG_NO_INFO		   0b1 << 2
@@ -136,8 +136,8 @@ public:
 				return false;
 			if(str.startsWith(_ << &color::IYel() << "-"))
 				return false;
-			if(str.startsWith("Predicates generated:") || str.startsWith("|-> "))
-				return false;
+			// if(str.startsWith("Predicates generated:") || str.startsWith("|-> "))
+			// 	return false;
 			if(str.startsWith(_ << &color::IBlu() << ""))
 				return false;
 			if(str.startsWith(_ << &color::Blu() << "  "))

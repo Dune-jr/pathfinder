@@ -257,7 +257,7 @@ public:
 	inline int varCounter()  const { return sign()*_var_counter; }
 	inline void reverseSign() { _is_negative ^= 1; _delta = -_delta; _sp_counter = -_sp_counter; _var_counter = -_var_counter; }
 	inline void addToDelta(int d) { _delta += d; }
-	inline void onVarFound(const OperandVar& var) { _var_counter++; if(_var) assert(*_var == var); else _var = elm::some(var); } // TODO! check for ud, 6 min. IP -> 5!!
+	inline void onVarFound(const OperandVar& var) { _var_counter++; if(_var) assert(*_var == var); else _var = elm::some(var); }
 	inline void onSpFound(bool sign = SIGN_POSITIVE) { if(sign == SIGN_POSITIVE) _sp_counter++; else _sp_counter--; }
 
 private:

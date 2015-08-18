@@ -628,11 +628,12 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			DBG("Predicates generated: ")
 			DBG("|-> taken path: " << generated_preds_taken)
 			DBG("|-> not taken path: " << generated_preds)
+			DBG("Constants updated: " << constants.printChanges())
 		}
 		else
 		{
 			DBG("Predicates generated: " << generated_preds)
-			DBG("Constants updated: " << constants.printChanges())
+			DBG("Constants updated: " << constants.printChanges()) // TODO! check that a mess doesn't happen with constants being updated by both taken and not taken path
 		}
 	}
 }

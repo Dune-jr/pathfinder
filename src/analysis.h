@@ -216,6 +216,8 @@ private:
 	void cleanIncomingEdges(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const;
 	void cleanIncomingBackEdges(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const;
 	bool fixpointFoundOnAllMotherLoops(BasicBlock *bb, const Identifier<bool>& fixpoint_found_id) const;
+	bool edgeIsExitingToLoopLevel0(const Edge* e) const;
+	bool shouldEnableSolver(const Edge* e);
 	bool allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool allIncomingEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;

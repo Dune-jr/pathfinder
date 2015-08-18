@@ -118,6 +118,7 @@ io::Output& Analysis::State::print(io::Output& out) const
  */
 void Analysis::State::merge(const SLList<State>& sl)
 {
+	DBG("merging " << sl)
 	// resetting stuff
 	generated_preds.clear();
 	generated_preds_taken.clear();
@@ -155,7 +156,7 @@ void Analysis::State::merge(const SLList<State>& sl)
 			else
 				labelled_preds.remove(iter);
 		}
-		cvl += (*sl_iter).constants;
+		cvl += (*sl_iter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
 	}
 	constants.merge(cvl);
 }
