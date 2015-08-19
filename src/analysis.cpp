@@ -67,38 +67,6 @@ SLList<LabelledPredicate> Analysis::State::labelPredicateList(const SLList<Label
 	return rtn;
 }
 
-elm::String Analysis::State::getPathString() const
-{
-	elm::String str;
-	bool first = true;
-	int lastid = 0; // -Wmaybe-uninitialized
-	for(OrderedPath::Iterator iter(path); iter; iter++)
-	{
-		if(!first && (*iter)->source()->number() != lastid)
-		{
-			DBG("str=" << str)
-			DBG("lastid=" << lastid << ", (*iter)->source->number()=" << (*iter))
-		}
-		// when path is x->y and y'->z, there must be y=y'
-		ASSERTP(first || (*iter)->source()->number() == lastid, "OrderedPath previous target and current source do not match! ex: 1->2, 2->4, 3->5");
-		if(first)
-		{
-#			ifndef NO_UTF8
-				if((*iter)->source()->number() == 0)
-					str = _ << "ε";
-				else
-#			endif
-				str = _ << (*iter)->source()->number();
-			first = false;
-		}
-		str = _ << str << "->" << (*iter)->target()->number();
-		lastid = (*iter)->target()->number();
-	}
-	if(str.isEmpty())
-		return "(empty)";
-	return str;
-}
-
 io::Output& Analysis::State::print(io::Output& out) const
 {
 	// out << ":" << labelled_preds << "/" << constants;

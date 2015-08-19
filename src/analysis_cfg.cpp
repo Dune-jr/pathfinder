@@ -37,7 +37,7 @@ Analysis::State::State(BasicBlock* entrybb, const dfa::State* state, const Opera
 	{
 		BasicBlock::OutIterator outs(entrybb);
 		ASSERT(outs);
-		path += *outs;
+		path.addLast(*outs);
 		constants.set(sp, SP, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
 	}
 }
@@ -49,7 +49,7 @@ Analysis::State::State(Edge* entry_edge, const dfa::State* state, const OperandV
 	labelled_preds.clear(); // labelled_preds := [[]]
 	if(init)
 	{
-		path += entry_edge;
+		path.addLast(entry_edge);
 		constants.set(sp, SP, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
 	}
 }
@@ -296,7 +296,7 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const 
 			ip_count++;
 			if(valid)
 			{
-				addDisorderedPath(infeasible_path, (*sl_iter).getPath(), e); // infeasible_paths += order(infeasible_path); to output proprer ffx!
+				addDisorderedPath(infeasible_path, (*sl_iter).getDetailedPath(), e); // infeasible_paths += order(infeasible_path); to output proprer ffx!
 				DBG(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path))
 			}
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
@@ -306,7 +306,7 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const 
 				if(flags&UNMINIMIZED_PATHS)
 				{
 					// falling back on full path (not as useful as a result, but still something)
-					OrderedPath original_full_path = (*sl_iter).getPath();
+					OrderedPath original_full_path = (*sl_iter).getDetailedPath().toOrderedPath();
 					original_full_path.addLast(e); // need to add e
 					infeasible_paths.add(original_full_path);
 					if(dbg_verbose == DBG_VERBOSE_ALL)
@@ -470,7 +470,7 @@ bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, co
 	for(SLList<Analysis::State>::Iterator sl_subiter(sl); sl_subiter; sl_subiter++, sl_paths_subiter++)
 	{
 		// if feasible path && contained in the minimized inf. path
-		if(!*sl_paths_subiter && isSubPath((*sl_subiter).getPath(), e, infeasible_path))
+		if(!*sl_paths_subiter && isSubPath((*sl_subiter).getDetailedPath().toOrderedPath(), e, infeasible_path))
 		{
 			valid = false;
 			counterexample = _ << (*sl_subiter).getPathString() << "+" << e->source()->number() << "->" << e->target()->number();
@@ -487,10 +487,10 @@ bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, co
  * @param full_path Full path it originates from (must include ip)
  * @param last_edge Edge to add at the end of full_path
  */
-void Analysis::addDisorderedPath(const Path& ip, const OrderedPath& full_path, Edge* last_edge)
+void Analysis::addDisorderedPath(const Path& ip, const DetailedPath& full_path, Edge* last_edge)
 {
 	OrderedPath ordered_ip;
-	for(OrderedPath::Iterator full_path_iter(full_path); full_path_iter; full_path_iter++)
+	for(DetailedPath::EdgeIterator full_path_iter(full_path); full_path_iter; full_path_iter++)
 	{
 		if(ip.contains(*full_path_iter))
 			ordered_ip.addLast(*full_path_iter);

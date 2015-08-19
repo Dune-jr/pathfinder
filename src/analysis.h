@@ -9,6 +9,7 @@
 #include <elm/util/Comparator.h>
 #include "constant_variables.h"
 #include "labelled_predicate.h"
+#include "detailed_path.h"
 #include "debug.h"
 
 using namespace otawa;
@@ -44,7 +45,8 @@ public:
 	private:
 		const dfa::State* dfa_state;
 		const OperandVar& sp; // the Stack Pointer register
-		OrderedPath path;
+		// OrderedPath path;
+		DetailedPath path;
 		ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
 		SLList<LabelledPredicate> labelled_preds; // previously generated predicates
 		SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
@@ -58,10 +60,12 @@ public:
 		State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = true);
 		State(Edge* entry_edge, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = false);
 		State(const State& s);
-		inline const OrderedPath& getPath() const { return path; }
-		inline Edge* lastEdge() const { return path.last(); }
+		// inline const OrderedPath& getPath() const { return path; }
+		inline const DetailedPath& getDetailedPath() const { return path; }
+		inline Edge* lastEdge() const { return path.lastEdge(); }
 		inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
 		inline const ConstantVariables& getConstants() const { return constants; }
+		inline elm::String getPathString() const { return path.toString(); }
 		inline bool isValid() const { return dfa_state != 0; }
 		inline bool fixpointState() const { return fixpoint; }
 		inline void setFixpointState(bool new_fixpoint) { fixpoint = new_fixpoint; }
@@ -69,7 +73,6 @@ public:
 		friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 
 		// analysis.cpp
-		elm::String getPathString() const;
 		elm::String dumpEverything() const;
 		void merge(const SLList<State>& sl);
 		void merge(const SLList<State>& sl, Edge* e);
@@ -141,7 +144,7 @@ public:
 					default: assert(false);
 				}
 			}
-			// this behaves fine when called while state == DONE. We use this in the code as of nov.14 (for movePredicateToGenerated)
+			// this behaves fine when called while state == DONE. We use this in the code as of 2014-11-14 (for movePredicateToGenerated)
 			void next(void) {
 				if(state == GENERATED_PREDS) gp_iter++;
 				if(state == LABELLED_PREDS) lp_iter++;
@@ -201,7 +204,7 @@ private:
 	void processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, const Identifier<Analysis::State*>& processed_loopheader_bb_id, const Identifier<bool>& motherloop_fixpoint_state_id, const Identifier<bool>& fixpoint_reached_id);
 	void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, bool is_conditional);
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
-	void addDisorderedPath(const Path& infeasible_path, const OrderedPath& full_path, Edge* last_edge);
+	void addDisorderedPath(const Path& infeasible_path, const DetailedPath& full_path, Edge* last_edge);
 	void purgeStateList(SLList<Analysis::State>& sl) const;
 	bool mergeOversizedStateList(SLList<Analysis::State>& sl) const;
 	void placeboProcessCFG(CFG* cfg);

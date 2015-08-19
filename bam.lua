@@ -22,6 +22,7 @@ config:Finalize("config.lua")
 -- Settings
 settings = NewSettings()
 settings.cc.flags:Add("-O0")
+otawa_config = "~/bin/otawa/otawa-config"
 
 -- Wall option
 if ScriptArgs["wall"]=="true" or ScriptArgs["Wall"]=="true" then
@@ -29,8 +30,8 @@ if ScriptArgs["wall"]=="true" or ScriptArgs["Wall"]=="true" then
 end
 
 -- OTAWA
-settings.cc.flags:Add("`~/bin/otawa/otawa-config --cflags`")
-settings.link.flags:Add("`~/bin/otawa/otawa-config --libs --rpath`")
+settings.cc.flags:Add("`" .. otawa_config .. " --cflags`")
+settings.link.flags:Add("`" .. otawa_config .." --libs --rpath`")
 	
 -- SMT choice
 if config.solver.value == "cvc4" then
