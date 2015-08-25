@@ -37,9 +37,10 @@ public:
 	class State;
 
 	Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int state_size_limit, int flags);
-	inline Vector<OrderedPath> infeasiblePaths() const { return infeasible_paths; }
+	inline Vector<DetailedPath> infeasiblePaths() const { return infeasible_paths; }
 	static bool listOfFixpoints(const SLList<Analysis::State>& sl);
 	static elm::String pathToString(const Path& path);
+	static elm::String orderedPathToString(const OrderedPath& path);
 	
 	class State {
 	private:
@@ -65,7 +66,9 @@ public:
 		inline Edge* lastEdge() const { return path.lastEdge(); }
 		inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
 		inline const ConstantVariables& getConstants() const { return constants; }
-		inline elm::String getPathString() const { return path.toString(); }
+		inline elm::String getPathString() const { return orderedPathToString(path.toOrderedPath()); }
+		inline void onLoopEntry(BasicBlock* loop_header) { path.onLoopEntry(loop_header); }
+		inline void onLoopExit(Option<BasicBlock*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }
 		inline bool isValid() const { return dfa_state != 0; }
 		inline bool fixpointState() const { return fixpoint; }
 		inline void setFixpointState(bool new_fixpoint) { fixpoint = new_fixpoint; }
@@ -192,7 +195,7 @@ private:
 
 	const dfa::State* dfa_state;
 	const OperandVar sp; // Stack Pointer
-	Vector<OrderedPath> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
+	Vector<DetailedPath> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
 	int max_tempvars, max_registers, state_size_limit, flags;
 	int total_paths, loop_header_count, bb_count;
 	int ip_count, unminimized_ip_count;
@@ -204,7 +207,8 @@ private:
 	void processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, const Identifier<Analysis::State*>& processed_loopheader_bb_id, const Identifier<bool>& motherloop_fixpoint_state_id, const Identifier<bool>& fixpoint_reached_id);
 	void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, bool is_conditional);
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
-	void addDisorderedPath(const Path& infeasible_path, const DetailedPath& full_path, Edge* last_edge);
+	void addDisorderedInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path, Edge* last_edge);
+	void addDetailedInfeasiblePath(const DetailedPath& infeasible_path);
 	void purgeStateList(SLList<Analysis::State>& sl) const;
 	bool mergeOversizedStateList(SLList<Analysis::State>& sl) const;
 	void placeboProcessCFG(CFG* cfg);
@@ -237,7 +241,7 @@ template <class C> io::Output& printCollection(io::Output& out, const C& items)
 	}
 	
 	static int indent = 0;
-	bool indented_output = (count > 5);
+	bool indented_output = (count > 5) && false; // TODO!
 	
 	if(indented_output)
 		addIndents(out, indent++);

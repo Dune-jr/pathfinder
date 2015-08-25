@@ -4,6 +4,7 @@
 #ifndef _DEBUG_H
 #define _DEBUG_H
 
+#include <iostream>
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 

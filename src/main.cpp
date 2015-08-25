@@ -93,11 +93,12 @@ protected:
 		// outputing to .ffx
 		if(opt_output)
 		{
-			const Vector<Analysis::OrderedPath>& infeasible_paths = analysis.infeasiblePaths();
+			const Vector<DetailedPath>& infeasible_paths = analysis.infeasiblePaths();
 			FFX ffx_output(infeasible_paths);
-			ffx_output.output(entry+".ffx");
+			const elm::String name = entry + ".ffx";
+			ffx_output.output(name);
 			if(dbg_verbose < DBG_VERBOSE_NONE)
-				cout << "output to " + entry + ".ffx" << endl;
+				cout << "output to " + name << endl;
 		}
 		// */
 	}

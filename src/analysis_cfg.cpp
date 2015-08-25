@@ -198,6 +198,8 @@ void Analysis::processCFG(CFG* cfg)
 						bool enable_smt = true;
 						if(LOOP_EXIT_EDGE(*bb_outs))
 						{
+							for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; sl_iter++)
+								sl_iter.item().onLoopExit(loop_header ? elm::some(bb) : ENCLOSING_LOOP_HEADER.get(bb)); 
 							if(MOTHERLOOP_FIXPOINT_STATE.exists(*bb_outs))
 							{
 								bool new_fixpoint_state = MOTHERLOOP_FIXPOINT_STATE(*bb_outs);
@@ -296,7 +298,7 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const 
 			ip_count++;
 			if(valid)
 			{
-				addDisorderedPath(infeasible_path, (*sl_iter).getDetailedPath(), e); // infeasible_paths += order(infeasible_path); to output proprer ffx!
+				addDisorderedInfeasiblePath(infeasible_path, (*sl_iter).getDetailedPath(), e); // infeasible_paths += order(infeasible_path); to output proprer ffx!
 				DBG(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path))
 			}
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
@@ -306,13 +308,14 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const 
 				if(flags&UNMINIMIZED_PATHS)
 				{
 					// falling back on full path (not as useful as a result, but still something)
-					OrderedPath original_full_path = (*sl_iter).getDetailedPath().toOrderedPath();
+					DetailedPath original_full_path = (*sl_iter).getDetailedPath();
 					original_full_path.addLast(e); // need to add e
-					infeasible_paths.add(original_full_path);
+					// infeasible_paths.add(original_full_path);
+					addDetailedInfeasiblePath(original_full_path);
 					if(dbg_verbose == DBG_VERBOSE_ALL)
 					{
 						Path ofp;
-						for(OrderedPath::Iterator original_full_orderedpath_iter(original_full_path); original_full_orderedpath_iter; original_full_orderedpath_iter++)
+						for(DetailedPath::EdgeIterator original_full_orderedpath_iter(original_full_path); original_full_orderedpath_iter; original_full_orderedpath_iter++)
 							ofp += *original_full_orderedpath_iter;
 						DBG(color::On_IRed() << "Inf. path found: " << pathToString(ofp) << color::RCol() << " (unrefined)")
 					}
@@ -371,6 +374,8 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, co
 	for(Vector<Edge*>::Iterator exits_iter(*EXIT_LIST.use(bb)); exits_iter; exits_iter++)
 		motherloop_fixpoint_state_id.ref(*exits_iter) = sl.first().fixpointState();  // annotate all the loop exit edges (bit hacky :-/)
 	sl.clear();
+	if(s->fixpointState())
+		s->onLoopEntry(bb);
 	sl += *s; // sl <- {s}
 	fixpoint_reached_id.set(bb, s->fixpointState());
 	if(delete_s)
@@ -487,17 +492,41 @@ bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, co
  * @param full_path Full path it originates from (must include ip)
  * @param last_edge Edge to add at the end of full_path
  */
-void Analysis::addDisorderedPath(const Path& ip, const DetailedPath& full_path, Edge* last_edge)
+void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& full_path, Edge* last_edge)
 {
-	OrderedPath ordered_ip;
-	for(DetailedPath::EdgeIterator full_path_iter(full_path); full_path_iter; full_path_iter++)
+	DetailedPath detailed_ip;
+	// parse the detailed path and add all the edges that match the Path ip and the loop entries
+	for(DetailedPath::Iterator full_path_iter(full_path); full_path_iter; full_path_iter++)
 	{
-		if(ip.contains(*full_path_iter))
-			ordered_ip.addLast(*full_path_iter);
+		if(full_path_iter->isEdge())
+		{
+			if(ip.contains(full_path_iter->getEdge()))
+				detailed_ip.addLast(*full_path_iter);
+		}
+		else
+			detailed_ip.addLast(*full_path_iter);
 	}
-	if(ip.contains(last_edge))
-		ordered_ip.addLast(last_edge);
-	infeasible_paths.add(ordered_ip);
+	if(ip.contains(last_edge)) // add the last edge too if in the infeasible path
+		detailed_ip.addLast(last_edge);
+	addDetailedInfeasiblePath(detailed_ip);
+}
+
+void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip)
+{
+	DetailedPath new_ip(ip);
+	assert(ip.hasAnEdge()); // maybe a strong assumption, we'll see
+	// first off, add loop entries for all missing loops
+	BasicBlock *bb = ip.firstEdge()->source();
+	if(LOOP_HEADER(bb))
+		new_ip.addEnclosingLoop(bb);
+	while(ENCLOSING_LOOP_HEADER.exists(bb))
+	{
+		bb = ENCLOSING_LOOP_HEADER(bb);
+		new_ip.addEnclosingLoop(bb);
+	}
+	// optimize by removing redundancies
+	new_ip.optimize();
+	infeasible_paths.add(new_ip);
 }
 
 /**
@@ -669,21 +698,12 @@ void Analysis::printResults(int exec_time_ms) const
 	else
 		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
 			<< "(" << (exec_time_ms>=1000 ? ((float)exec_time_ms)/(float(100)) : exec_time_ms) << (exec_time_ms>=1000 ? "s" : "ms") << ")")
-	for(Vector<OrderedPath>::Iterator iter(infeasible_paths); iter; iter++)
+	for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
 	{
-		const OrderedPath& l = *iter;
-		bool first = true;
-		elm::String str = "    * [";
-		for(OrderedPath::Iterator subiter(l); subiter; subiter++)
-		{
-			if(first) first = false; else // do nothing at first iteration
-				str = _ << str << ", ";
-			str = str.concat(_ << (*subiter)->source()->number() << "->" << (*subiter)->target()->number());
-		}
-		str = _ << str << "]";
-		DBG(color::IGre() << str)
-		if(dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_NONE)
-			cout << str << endl;
+		if(dbg_verbose == DBG_VERBOSE_ALL)
+			DBG(color::IGre() << "    * [" << iter->toString() << "]")
+		else if(dbg_verbose < DBG_VERBOSE_NONE)
+			cout << "    * [" << iter->toString() << "]" << endl;
 	}
 	if(dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_NONE)
 	{
@@ -704,28 +724,29 @@ void Analysis::printResults(int exec_time_ms) const
 }
 
 // TODO: do something prettier here, maybe with a operator== on OrderedPath to use contains.... or just use Sets with a Comparator...
+// TODO! implement a comparator on DetailedPath instead!
 void Analysis::removeDuplicateInfeasiblePaths()
 {
-	Vector<OrderedPath> new_ips;
-	for(Vector<OrderedPath>::Iterator ips_iter(infeasible_paths); ips_iter; )
+	Vector<DetailedPath> new_ips;
+	for(Vector<DetailedPath>::Iterator ips_iter(infeasible_paths); ips_iter; )
 	{
-		OrderedPath op = *ips_iter;
+		DetailedPath dp = *ips_iter;
 		infeasible_paths.remove(ips_iter);
 		bool contains = false;
 		{
-			for(Vector<OrderedPath>::Iterator ip_iter(infeasible_paths); ip_iter; ip_iter++)
+			for(Vector<DetailedPath>::Iterator ip_iter(infeasible_paths); ip_iter; ip_iter++)
 			{
 				bool equals = true;
-				// check *ip_iter == op
-				if(ip_iter.item().count() == op.count())
+				// check *ip_iter == dp
+				if(ip_iter.item().countEdges() == dp.countEdges())
 				{
-					OrderedPath::Iterator iter1(ip_iter.item());
-					for(OrderedPath::Iterator iter2(op); iter2; iter1++, iter2++)
+					DetailedPath::EdgeIterator iter1(ip_iter.item());
+					for(DetailedPath::EdgeIterator iter2(dp); iter2; iter1++, iter2++)
 					{
 						if(!(iter1.item() == iter2.item()))
 						{
 							equals = false;
-							break;
+							break; // to accelerate
 						}
 					}
 				}
@@ -739,7 +760,7 @@ void Analysis::removeDuplicateInfeasiblePaths()
 			}
 		}
 		if(!contains)
-			new_ips.add(op);
+			new_ips.add(dp);
 	}
 	infeasible_paths.clear();
 	infeasible_paths = new_ips;
@@ -865,6 +886,12 @@ elm::String Analysis::wlToString() const
 	return rtn;
 }
 
+/**
+ * @brief Get pretty printing for any unordered Path (Set of Edge*)
+ * 
+ * @param path Path to parse
+ * @return String representing the path
+ */
 elm::String Analysis::pathToString(const Path& path)
 {
 	elm::String str = "[";
@@ -878,5 +905,43 @@ elm::String Analysis::pathToString(const Path& path)
 		str = str.concat(_ << (*iter)->source()->number() << "->" << (*iter)->target()->number());
 	}
 	str = str.concat(_ << "]");
+	return str;
+}
+
+/**
+ * @brief Get pretty printing for any OrderedPath (SLList of Edge*)
+ * 
+ * @param path OrderedPath to parse
+ * @return String representing the path
+ */
+elm::String Analysis::orderedPathToString(const OrderedPath& path)
+{
+	elm::String str;
+	bool first = true;
+	int lastid = 0; // -Wmaybe-uninitialized
+	for(OrderedPath::Iterator iter(path); iter; iter++)
+	{
+		// if(!first && (*iter)->source()->number() != lastid)
+		// {
+		// 	DBG("str=" << str)
+		// 	DBG("lastid=" << lastid << ", (*iter)->source->number()=" << (*iter))
+		// }
+		// when path is x->y and y'->z, there must be y=y'
+		ASSERTP(first || (*iter)->source()->number() == lastid, "OrderedPath previous target and current source do not match! ex: 1->2, 2->4, 3->5");
+		if(first)
+		{
+#			ifndef NO_UTF8
+				if((*iter)->source()->number() == 0)
+					str = _ << "ε";
+				else
+#			endif
+				str = _ << (*iter)->source()->number();
+			first = false;
+		}
+		str = _ << str << "->" << (*iter)->target()->number();
+		lastid = (*iter)->target()->number();
+	}
+	if(str.isEmpty())
+		return "(empty)";
 	return str;
 }

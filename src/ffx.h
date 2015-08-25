@@ -9,14 +9,16 @@ using namespace elm;
 class FFX
 {
 public:
-	FFX(const Vector<Analysis::OrderedPath>& ips);
-	void output(const elm::String& filename) const;
+	FFX(const Vector<DetailedPath>& ips);
+	void output(const elm::String& filename);
 
 private:
-	void printInfeasiblePath(io::Output& FFXFile, const Analysis::OrderedPath& ip) const;
-	void printInfeasiblePathOldNomenclature(io::Output& FFXFile, const Analysis::OrderedPath& ip) const;
+	void printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip);
+	void printInfeasiblePathOldNomenclature(io::Output& FFXFile, const DetailedPath& ip);
+	elm::String indent(int indent_increase = 0);
 
-	const Vector<Analysis::OrderedPath>& infeasible_paths;
+	const Vector<DetailedPath>& infeasible_paths;
+	int indent_level;
 };
 
 #endif

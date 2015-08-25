@@ -81,8 +81,8 @@ io::Output& Analysis::State::print(io::Output& out) const
 }
 
 /**
- * @fn void Analysis::State::merge(const SLList<State>& sl, Edge* e);
- * Modifies the current state to be the result of the merge of a (SL)list of states 
+ * @fn void Analysis::State::merge(const SLList<State>& sl);
+ * Modifies the current state to be the result of the merge of an (SL)list of states 
  */
 void Analysis::State::merge(const SLList<State>& sl)
 {
@@ -131,7 +131,7 @@ void Analysis::State::merge(const SLList<State>& sl)
 
 /**
  * @fn void Analysis::State::merge(const SLList<State>& sl, Edge* e);
- * Modifies the current state to be the result of the merge of a (SL)list of states 
+ * Modifies the current state to be the result of the merge of an (SL)list of states 
  */
 void Analysis::State::merge(const SLList<State>& sl, Edge* e)
 {
@@ -188,6 +188,9 @@ bool Analysis::State::isFixPoint(const Analysis::State& s) const
 	return true;
 }
 
+/**
+ * @brief Computes a conjunction over the fixpoint boolean of all the states
+ */
 bool Analysis::listOfFixpoints(const SLList<Analysis::State>& sl)
 {
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
