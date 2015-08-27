@@ -19,6 +19,13 @@ private:
 
 	const Vector<DetailedPath>& infeasible_paths;
 	int indent_level;
+
+	enum
+	{
+		FFX_TAG_LOOP=0,
+		FFX_TAG_CALL=1,
+	};
+	typedef bool ffx_tag_t;
 };
 
 #endif
