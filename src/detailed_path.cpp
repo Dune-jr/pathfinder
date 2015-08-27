@@ -90,12 +90,32 @@ void DetailedPath::onLoopExit(Option<BasicBlock*> new_loop_header)
 
 void DetailedPath::onCall(Edge* e)
 {
-	// TODO!
+	_path.addLast(FlowInfo(FlowInfo::KIND_CALL, e));
 }
 
 void DetailedPath::onReturn()
 {
 	// TODO!
+}
+
+/**
+ * @fn bool DetailedPath::weakEqualsTo(const DetailedPath& dp) const;
+ * @brief weak equality: test if the edge paths are the same - do not consider other flow info
+ * 
+ * @param dp DetailedPath to compare to
+ */
+bool DetailedPath::weakEqualsTo(const DetailedPath& dp) const
+{
+	EdgeIterator dp_iter(dp), this_iter(*this);
+	while(dp_iter && this_iter)
+	{
+		if(*this_iter != *dp_iter) // compare edge*
+			return false; // not equal
+		dp_iter++, this_iter++;
+	}
+	if(dp_iter || this_iter) // if we are not done parsing one of the two paths
+		return false; // then not equal
+	return true; // all checks passed, equal
 }
 
 bool DetailedPath::hasAnEdge() const
@@ -134,7 +154,7 @@ SLList<Edge*> DetailedPath::toOrderedPath() const
 	return rtn;
 }
 
-elm::String DetailedPath::toString() const
+elm::String DetailedPath::toString(bool colored) const
 {
 	elm::String str;
 	bool first = true;
@@ -144,7 +164,7 @@ elm::String DetailedPath::toString() const
 			first = false;
 		else
 			str = str.concat(_ << ", ");
-		str = str.concat(iter->toString());
+		str = str.concat(iter->toString(colored));
 	}
 	return str;
 }
@@ -154,17 +174,19 @@ io::Output& DetailedPath::print(io::Output& out) const
 	return(out << toString());
 }
 
-elm::String DetailedPath::FlowInfo::toString() const
+elm::String DetailedPath::FlowInfo::toString(bool colored) const
 {
 	switch(_kind)
 	{
 		case KIND_EDGE:
 			return _ << getEdge()->source()->number() << "->" << getEdge()->target()->number();
 		case KIND_LOOP_ENTRY:
-			return _ << "LEn#" << getLoopHeader()->number();
+			return _ << debug::color::Whi() << "LEn#" << getLoopHeader()->number() << debug::color::RCol();
 		case KIND_LOOP_EXIT:
-		return _ << "LEx#" << getLoopHeader()->number();
+			return _ << debug::color::Whi() << "LEx#" << getLoopHeader()->number() << debug::color::RCol();
 		case KIND_CALL:
+			return _ << debug::color::Whi() << "C#" << getEdge()->source()->number() << debug::color::RCol();
+		case KIND_RETURN:
 		default:
 			return "";
 	}

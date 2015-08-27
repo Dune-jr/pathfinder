@@ -36,6 +36,7 @@ public:
 	void onReturn(); // TODO!
 
 	// utility
+	bool weakEqualsTo(const DetailedPath& dp) const;
 	void addEnclosingLoop(BasicBlock* loop_header);
 	void optimize();
 	bool hasAnEdge() const;
@@ -43,7 +44,7 @@ public:
 	Edge* lastEdge() const;
 	int countEdges() const;
 	SLList<Edge*> toOrderedPath() const;
-	elm::String toString() const;
+	elm::String toString(bool colored = true) const;
 	inline const SLList<FlowInfo>& path() const { return _path; }
 	inline const DetailedPath* operator->(void) const { return this; }
 	friend io::Output& operator<<(io::Output& out, const DetailedPath& dp) { return dp.print(out); }
@@ -58,6 +59,7 @@ public:
 			KIND_LOOP_ENTRY, // BasicBlock
 			KIND_LOOP_EXIT, // BasicBlock
 			KIND_CALL, // Edge
+			KIND_RETURN, // Edge
 		};
 		FlowInfo(kind_t kind, BasicBlock* bb);
 		FlowInfo(kind_t kind, Edge* e);
@@ -65,9 +67,10 @@ public:
 		inline bool isEdge() const { return _kind == KIND_EDGE; }
 		inline bool isLoopEntry() const { return _kind == KIND_LOOP_ENTRY; }
 		inline bool isLoopExit() const { return _kind == KIND_LOOP_EXIT; }
+		inline bool isCall() const { return _kind == KIND_CALL; }
 		inline Edge* getEdge() const { assert(isEdgeKind(_kind)); return (Edge*)_identifier; } // TODO! remove the assert
 		inline BasicBlock* getLoopHeader() const { assert(isBasicBlockKind(_kind)); return (BasicBlock*)_identifier; } // TODO! remove the assert
-		elm::String toString() const;
+		elm::String toString(bool colored = true) const;
 		inline bool operator==(const FlowInfo& fi) const { return (_kind == fi._kind) && (_identifier == fi._identifier); }
 		inline FlowInfo& operator=(const FlowInfo& fi) { _kind = fi._kind; _identifier = fi._identifier; return *this; }
 		inline const FlowInfo* operator->(void) const { return this; }
