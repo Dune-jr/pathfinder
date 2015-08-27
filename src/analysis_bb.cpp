@@ -612,10 +612,15 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			}
 			if(make_pred)
 				generated_preds += makeLabelledPredicate(opr, opd1, opd2, labels);
-			if(opd11) delete opd11;
-			if(opd12) delete opd12;
-			if(opd21) delete opd21;
-			if(opd22) delete opd22;
+			else
+			{
+				delete opd1;
+				delete opd2;
+			}
+			delete opd11;
+			delete opd12;
+			delete opd21;
+			delete opd22;
 		}
 		// all temporary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();
@@ -673,8 +678,8 @@ LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, Ope
 	updateLabelsWithReplacedConstantsInfo(labels, replaced_vars);
 	const Predicate& p = Predicate(opr, *opd1, *opd2);
 	DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
-	if(opd1) delete opd1;
-	if(opd2) delete opd2;
+	delete opd1;
+	delete opd2;
 	return LabelledPredicate(p, labels);
 }
 
