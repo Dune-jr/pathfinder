@@ -26,7 +26,6 @@
 
 extern int dbg_flags;
 extern int dbg_verbose;
-using namespace elm;
 
 namespace debug {
 namespace color
@@ -154,8 +153,8 @@ public:
 		if(!(dbg_flags&DBG_LINE_NB)) return color::Yel() << "[" << Debug::formattedDbgInfo(file, line) << "] " << color::RCol();
 	  	return color::Yel() << "[" << Debug::formattedDbgInfo(file, line) << "|" << io::align(io::RIGHT, io::width(6, ++line_nb)) << "] " << color::RCol(); 
 	}
-};
-} // Debug class
+}; // Debug class
+} // debug namespace
 
 // macros for debugging
 #define DBG_INFO() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "] " << color::RCol()
@@ -170,7 +169,7 @@ public:
 		if(Debug::shouldPrint(_ << str)) \
 			std::cout << Debug::dbgInfo(__FILE__, __LINE__).chars() << str << color::RCol().chars() << io::endl; } }
 #define DBG_TEST(tested_cond, expected_cond) \
-	((tested_cond) == (expected_cond) ? "\033[92m" : "\033[91m") << \
-	((tested_cond) ? "true" : "false") << "\033[0m"
+	((tested_cond) == (expected_cond) ? color::IGre() : color::IRed()) << \
+	((tested_cond) ? "true" : "false") << "\e[0m"
 
 #endif

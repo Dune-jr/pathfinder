@@ -43,7 +43,7 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	else
 	{
 		DBG(color::BIWhi() << "A)" << color::RCol() << " Extracting UNSAT core... " << color::IGre() << "SUCCESS!");
-		DBG_STD("   UNSAT core: " << unsat_core_output)
+		DBG("   UNSAT core: " << unsat_core_output.c_str())
 	}
 
 	// printInfeasiblePath(path);
