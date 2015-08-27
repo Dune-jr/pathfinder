@@ -26,6 +26,11 @@
 using namespace elm::genstruct;
 using namespace elm::io;
 
+Identifier<SLList<Analysis::State> > Analysis::PROCESSED_EDGES("IP analysis processed incoming edges"); //, SLList<State>::null);
+Identifier<Analysis::State*> 		 Analysis::PROCESSED_LOOPHEADER_BB("IP analysis processed loop headers (for fixpoints)");
+Identifier<bool>			 		 Analysis::MOTHERLOOP_FIXPOINT_STATE("IP analysis fixpoint state info on loop exit edges");
+Identifier<bool>			 		 Analysis::FIXPOINT_REACHED("IP analysis fixpoint state info on loop headers"); // for enable_smt
+
 Analysis::State::State() : dfa_state(NULL), sp(0), constants(0, 0) { }
 
 Analysis::State::State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init)
@@ -72,6 +77,21 @@ void Analysis::State::appendEdge(Edge* e, bool is_conditional)
 	constants.label(e); // label the constants as well
 }
 
+void Analysis::State::printFixPointState() const
+{
+	if(dbg_verbose > DBG_VERBOSE_ALL)
+		return; // save some time
+	BasicBlock *bb = path.lastEdge()->target();
+	DBG("Printing fixpoint state of BB#" << bb->number())
+	if(LOOP_HEADER(bb))
+		DBG("\t* loop#" << bb->number() << " = " << DBG_TEST(FIXPOINT_REACHED.exists(bb) && FIXPOINT_REACHED(bb) == true, true))
+	while(ENCLOSING_LOOP_HEADER.exists(bb))
+	{
+		bb = ENCLOSING_LOOP_HEADER(bb);
+		DBG("\t* loop#" << bb->number() << " = " << DBG_TEST(FIXPOINT_REACHED.exists(bb) && FIXPOINT_REACHED(bb) == true, true))
+	}
+}
+
 /**
  * @fn void Analysis::processCFG(CFG* cfg);
  * Runs the analysis on the CFG cfg
@@ -90,10 +110,6 @@ void Analysis::processCFG(CFG* cfg)
 	/* wl <- {ɛ} */
 	wl.push(cfg->firstBB());
 	/* lock[] <- {{}}; */
-	Identifier<SLList<Analysis::State> > PROCESSED_EDGES("IP analysis processed incoming edges"); //, SLList<State>::null);
-	Identifier<Analysis::State*> 		 PROCESSED_LOOPHEADER_BB("IP analysis processed loop headers (for fixpoints)");
-	Identifier<bool>			 		 MOTHERLOOP_FIXPOINT_STATE("IP analysis fixpoint state info on loop exit edges");
-	Identifier<bool>			 		 FIXPOINT_REACHED("IP analysis fixpoint state info on loop headers"); // for enable_smt
 	BasicBlock::OutIterator entry_outs(cfg->entry());
 	SLList<Analysis::State> entry_annotation;
 	entry_annotation += Analysis::State(cfg->entry(), dfa_state, sp, max_tempvars, max_registers);
@@ -125,13 +141,13 @@ void Analysis::processCFG(CFG* cfg)
 			sl.addAll(*PROCESSED_EDGES(*bb_ins));
 		// at this point of the algorithm, all incoming edges of bb have been processed
 		purgeStateList(sl); // remove all invalid states
-		cleanIncomingBackEdges(bb, PROCESSED_EDGES);
+		cleanIncomingBackEdges(bb);//, PROCESSED_EDGES);
 
 		// in case of a loop, merge the state list into a single state, and do lot of annotation stuff
 		if(loop_header && !sl.isEmpty())
-			processLoopHeader(bb, sl, PROCESSED_LOOPHEADER_BB, MOTHERLOOP_FIXPOINT_STATE, FIXPOINT_REACHED);
+			processLoopHeader(bb, sl); //, PROCESSED_LOOPHEADER_BB, MOTHERLOOP_FIXPOINT_STATE, FIXPOINT_REACHED
 		else
-			cleanIncomingEdges(bb, PROCESSED_EDGES);
+			cleanIncomingEdges(bb);//, PROCESSED_EDGES);
 
 		bool fixpoint = true;
 		int state_count = 0;
@@ -171,8 +187,6 @@ void Analysis::processCFG(CFG* cfg)
 						sl_iter.item().invalidateStackBelow(*current_sp);
 				}
 				else DBG(color::IYel() << "Return reached, but sp value is lost or variable")
-				/*sl.first().dumpPredicates();
-				DBG("constants=" << sl.first().constants)*/
 			}
 			if(isAHandledEdgeKind(bb_outs->kind())) // filter out calls etc // not
 			{
@@ -183,7 +197,7 @@ void Analysis::processCFG(CFG* cfg)
 					if(!LOOP_EXIT_EDGE(*bb_outs)) // take everything but loop exit edges
 					{	// adds to PROCESSED_EDGE
 						bool enable_smt = edgeIsExitingToLoopLevel0(bb_outs); // only call smt if this is "level 0" sequential code
-						processOutEdge(*bb_outs, sl, PROCESSED_EDGES, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not
+						processOutEdge(*bb_outs, sl, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not
 						if(!wl.contains(bb_outs->target()))
 							wl.push(bb_outs->target());
 						#ifdef DBGG
@@ -212,14 +226,21 @@ void Analysis::processCFG(CFG* cfg)
 							else // only state entering the loop is the strange case where it's a propagated infeasible path
 								enable_smt = false;
 						}
-						else // this is dirty, but it comes from the above code altering sl for all iterations of bb_outs when really it shouldn't... but copying is costly
+						else // this is sort of dirty, but it comes from the above code altering sl for all iterations of bb_outs when really it shouldn't... but copying is costly
+						{
 							for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; sl_iter++)
+							{
 								sl_iter.item().setFixpointState(true); // ensure this
-						enable_smt = enable_smt && fixpointFoundOnAllMotherLoops(bb, FIXPOINT_REACHED);
+								// unrelated: we also need to trigger calls 
+								if(sl_iter.item().fixpointState() && bb_outs->kind() == Edge::VIRTUAL_CALL) // not handling non virtual Edge::CALL I guess?
+									sl_iter.item().onCall(*bb_outs); // don't write calls that are also LOOP_EXIT_EDGE / TODO! double check this is ok
+							}
+						}
+						enable_smt = enable_smt && fixpointFoundOnAllMotherLoops(bb);
 						#ifdef DBGG
 							cout << "enable_smt=" << DBG_TEST(enable_smt, true) << ", shouldEnableSolver=" << DBG_TEST(shouldEnableSolver(*bb_outs), true) << endl;
 						#endif
-						processOutEdge(*bb_outs, sl, PROCESSED_EDGES, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not 
+						processOutEdge(*bb_outs, sl, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not 
 						if(!wl.contains(bb_outs->target()))
 							wl.push(bb_outs->target());
 					}
@@ -259,14 +280,14 @@ int Analysis::processBB(State& s, BasicBlock* bb)
  * @fn SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl);
  * Processes outgoing Edge e from a BasicBlock for each element of sl
 */
-void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const Identifier<SLList<Analysis::State> >& processed_edges_id, bool is_conditional, bool enable_smt)
+void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt)
 {
 	/* wl <- sl ⊙ e; */
-	processed_edges_id.remove(e); // clearing: useless?
+	PROCESSED_EDGES.remove(e); // cleaning
 	if(sl.isEmpty())
 	{	// just propagate the {bottom}
 		State invalid_state;
-		processed_edges_id.ref(e).addFirst(invalid_state);
+		PROCESSED_EDGES.ref(e).addFirst(invalid_state);
 		return;
 	}
 	if(!enable_smt || !shouldEnableSolver(e))
@@ -275,7 +296,7 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const 
 		{
 			State s = *sl_iter; // copy into new state
 			s.appendEdge(e, is_conditional);
-			processed_edges_id.ref(e).addFirst(s);
+			PROCESSED_EDGES.ref(e).addFirst(s);
 		}
 		return;
 	}
@@ -283,7 +304,7 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const 
 	// SMT is enabled
 	SLList<Option<Path> > sl_paths;
 	// get a list of infeasible paths matching the list of state "sl_paths"
-	stateListToInfeasiblePathList(sl_paths, sl, e, processed_edges_id, is_conditional);
+	stateListToInfeasiblePathList(sl_paths, sl, e, is_conditional);
 	SLList<Option<Path> >::Iterator sl_paths_iter(sl_paths);
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++, sl_paths_iter++)
 	{
@@ -298,8 +319,9 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const 
 			ip_count++;
 			if(valid)
 			{
-				addDisorderedInfeasiblePath(infeasible_path, (*sl_iter).getDetailedPath(), e); // infeasible_paths += order(infeasible_path); to output proprer ffx!
+				addDisorderedInfeasiblePath(infeasible_path, s.getDetailedPath(), e); // infeasible_paths += order(infeasible_path); to output proprer ffx!
 				DBG(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path))
+				s.printFixPointState();
 			}
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
 			{
@@ -308,7 +330,7 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const 
 				if(flags&UNMINIMIZED_PATHS)
 				{
 					// falling back on full path (not as useful as a result, but still something)
-					DetailedPath original_full_path = (*sl_iter).getDetailedPath();
+					DetailedPath original_full_path = s.getDetailedPath();
 					original_full_path.addLast(e); // need to add e
 					// infeasible_paths.add(original_full_path);
 					addDetailedInfeasiblePath(original_full_path);
@@ -327,8 +349,7 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const 
 	}
 }
 
-void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, const Identifier<Analysis::State*>& processed_loopheader_bb_id,
-	const Identifier<bool>& motherloop_fixpoint_state_id, const Identifier<bool>& fixpoint_reached_id)
+void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl)
 {
 	State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
 	bool delete_s = false;
@@ -337,19 +358,19 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, co
 	// #ifdef DBGG
 	DBG("merged: constants=" << s->getConstants() << ", labelled_preds=" << s->getLabelledPreds());
 	// #endif
-	if(processed_loopheader_bb_id.exists(bb))
+	if(PROCESSED_LOOPHEADER_BB.exists(bb))
 	{
 		if(s->fixpointState())
 		{
 			// don't compute anything, just extract the fixpoint we already know
 			delete s;
-			s = processed_loopheader_bb_id(bb);
+			s = PROCESSED_LOOPHEADER_BB(bb);
 			s->setFixpointState(true); // ensure we keep this property
 			// delete_s = true;
 		}
 		else
 		{
-			const State* prev_s = processed_loopheader_bb_id(bb);
+			const State* prev_s = PROCESSED_LOOPHEADER_BB(bb);
 			ASSERT(prev_s != NULL);
 			if(s->isFixPoint(*prev_s))
 			{
@@ -359,30 +380,30 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, co
 				delete_s = true;
 				// we need to clear the annotation for future fixpoints on this loop 
 				// // huh, not really the reason why. If this was a fixpoint in a previous analysis it'll be one in future ones
-				// processed_loopheader_bb_id.remove(bb); //  this makes absurd results...
+				// PROCESSED_LOOPHEADER_BB.remove(bb); //  this makes absurd results...
 			}
 			else
 			{
-				processed_loopheader_bb_id.ref(bb) = s;
+				PROCESSED_LOOPHEADER_BB.ref(bb) = s;
 				delete prev_s;
 			}
 		}
 	}
 	else
-		processed_loopheader_bb_id.ref(bb) = s;
+		PROCESSED_LOOPHEADER_BB.ref(bb) = s;
 
 	for(Vector<Edge*>::Iterator exits_iter(*EXIT_LIST.use(bb)); exits_iter; exits_iter++)
-		motherloop_fixpoint_state_id.ref(*exits_iter) = sl.first().fixpointState();  // annotate all the loop exit edges (bit hacky :-/)
+		MOTHERLOOP_FIXPOINT_STATE.ref(*exits_iter) = sl.first().fixpointState();  // annotate all the loop exit edges (bit hacky :-/)
 	sl.clear();
 	if(s->fixpointState())
 		s->onLoopEntry(bb);
 	sl += *s; // sl <- {s}
-	fixpoint_reached_id.set(bb, s->fixpointState());
+	FIXPOINT_REACHED.set(bb, s->fixpointState());
 	if(delete_s)
 		delete s;
 }
 
-void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, bool is_conditional)
+void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional)
 {
 	//*
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
@@ -393,7 +414,7 @@ void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, co
 		if(flags&DRY_RUN) // no SMT call
 		{
 			sl_paths.addLast(elm::none);
-			processed_edges_id.ref(e).addFirst(s);
+			PROCESSED_EDGES.ref(e).addFirst(s);
 			continue;
 		}
 			
@@ -411,14 +432,14 @@ void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, co
 		{
 			// we need to add some sort of {} to say this is an infeasible path
 			State invalid_state;
-			processed_edges_id.ref(e).addFirst(invalid_state);
+			PROCESSED_EDGES.ref(e).addFirst(invalid_state);
 			#ifdef DBG_WARNINGS
 				if((*infeasible_path).contains(s.lastEdge())) // make sure the last edge was relevant in this path
 					cerr << "WARNING: !infeasible_path->contains(s.lastEdge())" << endl;
 			#endif
 		}
 		else
-			processed_edges_id.ref(e).addFirst(s);
+			PROCESSED_EDGES.ref(e).addFirst(s);
 		// mutex END
 	}
 	//*/
@@ -576,11 +597,11 @@ bool Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl/*, int threso
  * @param bb BasicBlock to process
  * @param processed_edges_id Identifier for processed edges
  */
-void Analysis::cleanIncomingEdges(BasicBlock *bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const
+void Analysis::cleanIncomingEdges(BasicBlock *bb) const
 {
 	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
-		processed_edges_id.remove(*bb_ins);
-		//processed_edges_id.ref(*bb_ins).clear();
+		PROCESSED_EDGES.remove(*bb_ins);
+		//PROCESSED_EDGES.ref(*bb_ins).clear();
 }
 
 /**
@@ -589,23 +610,23 @@ void Analysis::cleanIncomingEdges(BasicBlock *bb, const Identifier<SLList<Analys
  * @param bb BasicBlock to process
  * @param processed_edges_id Identifier for processed (back) edges
  */
-void Analysis::cleanIncomingBackEdges(BasicBlock *bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const
+void Analysis::cleanIncomingBackEdges(BasicBlock *bb) const
 {
 	for(BasicBlock::InIterator bb_ins(bb); bb_ins; bb_ins++)
 		if(BACK_EDGE(*bb_ins))
-			processed_edges_id.remove(*bb_ins);
-			// processed_edges_id.ref(*bb_ins).clear();
+			PROCESSED_EDGES.remove(*bb_ins);
+			// PROCESSED_EDGES.ref(*bb_ins).clear();
 }
 
 /**
  * @brief Checks if a fix point has been found on all parent loops
  */
-bool Analysis::fixpointFoundOnAllMotherLoops(BasicBlock *bb, const Identifier<bool>& fixpoint_found_id) const
+bool Analysis::fixpointFoundOnAllMotherLoops(BasicBlock *bb) const
 {
 	while(ENCLOSING_LOOP_HEADER.exists(bb))
 	{
 		bb = ENCLOSING_LOOP_HEADER(bb);
-		if(!fixpoint_found_id.exists(bb) || fixpoint_found_id(bb) != true)
+		if(!FIXPOINT_REACHED.exists(bb) || FIXPOINT_REACHED(bb) != true)
 			return false;
 	}
 	return true;
@@ -619,7 +640,7 @@ bool Analysis::fixpointFoundOnAllMotherLoops(BasicBlock *bb, const Identifier<bo
  */
 bool Analysis::edgeIsExitingToLoopLevel0(const Edge* e) const
 {
-	return !( ENCLOSING_LOOP_HEADER.exists(e->target()) );
+	return !LOOP_HEADER(e->target()) && !ENCLOSING_LOOP_HEADER.exists(e->target());
 }
 
 /**
@@ -712,7 +733,7 @@ void Analysis::printResults(int exec_time_ms) const
 		{
 		    std::ios_base::fmtflags oldflags = std::cout.flags();
 		    std::streamsize oldprecision = std::cout.precision();
-			std::cout << std::fixed << std::setprecision(3) << "\e[0;93m" << " (" << ((float)exec_time_ms)/1000.f << "s)" << "\e[0;m" << std::endl;
+			std::cout << std::fixed << std::setprecision(3) << color::IYel().chars() << " (" << ((float)exec_time_ms)/1000.f << "s)" << color::RCol().chars() << std::endl;
 		    std::cout.flags(oldflags);
 		    std::cout.precision (oldprecision);
 		}
@@ -723,40 +744,24 @@ void Analysis::printResults(int exec_time_ms) const
 			"+" << color::Yel() << unminimized_ip_count << color::RCol() << " => " << color::IRed() << ip_count << color::RCol() << endl;
 }
 
-// TODO: do something prettier here, maybe with a operator== on OrderedPath to use contains.... or just use Sets with a Comparator...
-// TODO! implement a comparator on DetailedPath instead!
+/**
+ * @fn void Analysis::removeDuplicateInfeasiblePaths();
+ * Look for infeasible paths that share the same ordered list of edges and remove duplicates 
+ */
 void Analysis::removeDuplicateInfeasiblePaths()
 {
 	Vector<DetailedPath> new_ips;
-	for(Vector<DetailedPath>::Iterator ips_iter(infeasible_paths); ips_iter; )
+	for(Vector<DetailedPath>::Iterator dp_iter(infeasible_paths); dp_iter; )
 	{
-		DetailedPath dp = *ips_iter;
-		infeasible_paths.remove(ips_iter);
+		DetailedPath dp(*dp_iter);
+		infeasible_paths.remove(dp_iter);
 		bool contains = false;
+		for(Vector<DetailedPath>::Iterator dp_subiter(infeasible_paths); dp_subiter; dp_subiter++)
 		{
-			for(Vector<DetailedPath>::Iterator ip_iter(infeasible_paths); ip_iter; ip_iter++)
+			if(dp_subiter->weakEqualsTo(dp)) // if dp == *dp_subiter*
 			{
-				bool equals = true;
-				// check *ip_iter == dp
-				if(ip_iter.item().countEdges() == dp.countEdges())
-				{
-					DetailedPath::EdgeIterator iter1(ip_iter.item());
-					for(DetailedPath::EdgeIterator iter2(dp); iter2; iter1++, iter2++)
-					{
-						if(!(iter1.item() == iter2.item()))
-						{
-							equals = false;
-							break; // to accelerate
-						}
-					}
-				}
-				else
-					equals = false;
-				if(equals)
-				{
-					contains = true;
-					break;
-				}
+				contains = true; // dp is equal to an element of infeasible_paths \ dp
+				break;
 			}
 		}
 		if(!contains)
@@ -766,13 +771,19 @@ void Analysis::removeDuplicateInfeasiblePaths()
 	infeasible_paths = new_ips;
 }
 
-// debugs to do on path end
+/**
+ * @fn void Analysis::onPathEnd();
+ * Print debugs due on path end
+ */
 void Analysis::onPathEnd()
 {
 	DBG(color::BBla() << color::On_Yel() << "EXIT block reached")
 }
 
-// debugs to do when we find an infeasible path
+/**
+ * @fn void Analysis::onAnyInfeasiblePath();
+ * Print debugs due on finding an infeasible path
+ */
 void Analysis::onAnyInfeasiblePath()
 {
 	DBG(color::BIYel() << "Stopping current path analysis")

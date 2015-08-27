@@ -41,6 +41,11 @@ public:
 	static bool listOfFixpoints(const SLList<Analysis::State>& sl);
 	static elm::String pathToString(const Path& path);
 	static elm::String orderedPathToString(const OrderedPath& path);
+
+	static Identifier<SLList<Analysis::State> >	PROCESSED_EDGES;
+	static Identifier<Analysis::State*>			PROCESSED_LOOPHEADER_BB;
+	static Identifier<bool>						MOTHERLOOP_FIXPOINT_STATE;
+	static Identifier<bool>						FIXPOINT_REACHED;
 	
 	class State {
 	private:
@@ -69,6 +74,7 @@ public:
 		inline elm::String getPathString() const { return orderedPathToString(path.toOrderedPath()); }
 		inline void onLoopEntry(BasicBlock* loop_header) { path.onLoopEntry(loop_header); }
 		inline void onLoopExit(Option<BasicBlock*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }
+		inline void onCall(Edge* e) { path.onCall(e); }
 		inline bool isValid() const { return dfa_state != 0; }
 		inline bool fixpointState() const { return fixpoint; }
 		inline void setFixpointState(bool new_fixpoint) { fixpoint = new_fixpoint; }
@@ -83,6 +89,7 @@ public:
 
 		// analysis_cfg.cpp
 		void appendEdge(Edge* e, bool is_conditional);
+		void printFixPointState() const;
 
 		// analysis_bb.cpp
 		void processBB(const BasicBlock *bb);
@@ -203,9 +210,9 @@ private:
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
 	int processBB(State& s, BasicBlock *bb);
-	void processOutEdge(Edge* e, const SLList<Analysis::State>& sl, const Identifier<SLList<Analysis::State> >& processed_edges_id, bool is_conditional, bool enable_smt);
-	void processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl, const Identifier<Analysis::State*>& processed_loopheader_bb_id, const Identifier<bool>& motherloop_fixpoint_state_id, const Identifier<bool>& fixpoint_reached_id);
-	void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, const Identifier<SLList<Analysis::State> >& processed_edges_id, bool is_conditional);
+	void processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt);
+	void processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl);
+	void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional);
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
 	void addDisorderedInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path, Edge* last_edge);
 	void addDetailedInfeasiblePath(const DetailedPath& infeasible_path);
@@ -220,9 +227,9 @@ private:
 	bool isAHandledEdgeKind(Edge::kind_t kind) const;
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	bool isConditional(BasicBlock* bb) const;
-	void cleanIncomingEdges(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const;
-	void cleanIncomingBackEdges(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& processed_edges_id) const;
-	bool fixpointFoundOnAllMotherLoops(BasicBlock *bb, const Identifier<bool>& fixpoint_found_id) const;
+	void cleanIncomingEdges(BasicBlock* bb) const;
+	void cleanIncomingBackEdges(BasicBlock* bb) const;
+	bool fixpointFoundOnAllMotherLoops(BasicBlock *bb) const;
 	bool edgeIsExitingToLoopLevel0(const Edge* e) const;
 	bool shouldEnableSolver(const Edge* e);
 	bool allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;

@@ -22,7 +22,8 @@ void FFX::output(const elm::String& filename)
 
 void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 {
-	int active_loops = 0;
+	SLList<ffx_tag_t> open_tags;
+	// int active_loops = 0, active_calls = 0;
 	FFXFile	<< indent(  ) << "<not-all seq=\"true\">" << endl; indent(+1);
 	for(DetailedPath::Iterator iter(ip); iter; iter++)
 	{
@@ -38,28 +39,55 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			FFXFile << indent(  ) << "<loop address=\"0x" << loop_header->address() << "\">"
 					<< " <!-- loop " << loop_header->number() << " -->" << endl; indent(+1);
 			FFXFile << indent(  ) << "<iteration number=\"n\">" << endl; indent(+1);
-			active_loops++;
+			open_tags += FFX_TAG_LOOP;
 		}
 		else if(iter->isLoopExit())
 		{
-			if(active_loops > 0)
+			ASSERTP(!open_tags.isEmpty(), "</loop> found when no context is open")
+			/*ASSERTP(open_tags.first() == FFX_TAG_LOOP, "</loop> found when not directly in loop context");*/
+			while(open_tags.first() != FFX_TAG_LOOP)
 			{
-				FFXFile << indent(-1) << "</iteration>" << endl;
-				if(const BasicBlock* loop_header = iter->getLoopHeader()) // if not NULL, we have info
-					FFXFile << indent(-1) << "</loop> <!-- loop " << loop_header->number() << "-->" << endl;
-				else
-					FFXFile << indent(-1) << "</loop>" << endl;
-				active_loops--;
+				FFXFile << indent(-1) << "</call>" << endl;
+				open_tags.removeFirst();
 			}
-			// TODO: else problem!
+			FFXFile << indent(-1) << "</iteration>" << endl;
+			if(const BasicBlock* loop_header = iter->getLoopHeader()) // if not NULL, we have info
+				FFXFile << indent(-1) << "</loop> <!-- loop " << loop_header->number() << "-->" << endl;
+			else
+				FFXFile << indent(-1) << "</loop>" << endl;
+			open_tags.removeFirst();
 		}
+		else if(iter->isCall())
+		{
+			const BasicBlock* source = iter->getEdge()->source();
+			FFXFile << indent( ) << "<call address=\"0x" << source->address() << "\"> <!-- call " << source->number() << " -->" << endl; indent(+1);
+			open_tags += FFX_TAG_CALL;
+		}
+		else assert(false); // we should handle all kinds
 	}
 	// close running <loop ... > environments
-	for( ; active_loops > 0; active_loops--)
+	for(SLList<ffx_tag_t>::Iterator open_tags_iter(open_tags); !open_tags_iter.ended(); open_tags_iter++)
+	{
+		switch(*open_tags_iter)
+		{
+			case FFX_TAG_LOOP:
+				FFXFile << indent(-1) << "</iteration>" << endl;
+				FFXFile << indent(-1) << "</loop>" << endl;
+				break;
+			case FFX_TAG_CALL:
+				FFXFile << indent(-1) << "</call>" << endl;
+				break;
+			default:
+				assert(false);
+		}
+	}
+	/*for( ; active_loops > 0; active_loops--)
 	{
 		FFXFile << indent(-1) << "</iteration>" << endl;
 		FFXFile << indent(-1) << "</loop>" << endl;
 	}
+	for( ; active_calls > 0; active_calls--)
+		FFXFile << indent(-1) << "</call>" << endl;*/
 	FFXFile << indent(-1) << "</not-all>" << endl;
 }
 
