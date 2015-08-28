@@ -38,6 +38,7 @@ public:
 	// utility
 	bool weakEqualsTo(const DetailedPath& dp) const;
 	void addEnclosingLoop(BasicBlock* loop_header);
+	void merge(const Vector<DetailedPath>& detailed_paths);
 	void optimize();
 	bool hasAnEdge() const;
 	Edge* firstEdge() const;
@@ -129,6 +130,7 @@ public:
 
 private:
 	SLList<FlowInfo> _path;
+	
 	void removeDuplicates();
 	void removeAntagonists();
 	io::Output& print(io::Output& out) const;

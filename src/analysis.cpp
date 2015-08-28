@@ -129,19 +129,22 @@ void Analysis::State::merge(const SLList<State>& sl)
 	constants.merge(cvl);
 }
 
-/**
+/*
  * @fn void Analysis::State::merge(const SLList<State>& sl, Edge* e);
  * Modifies the current state to be the result of the merge of an (SL)list of states 
  */
-void Analysis::State::merge(const SLList<State>& sl, Edge* e)
+/*void Analysis::State::merge(const SLList<State>& sl, Edge* e)
 {
 	DBG(color::Whi() << "Merging " << sl.count() << " paths at BB " << e->source()->number())
 	merge(sl);
 	labelled_preds = labelPredicateList(labelled_preds, e);
 	constants.label(e);
-	path.clear();
+	path.merge(stateListToPathVector(sl)); // clears up path and merge all of sl into 1
 	DBG("Merged predicates: " << generated_preds << ", " << constants)
-}
+}*/
+
+// void Analysis::State::stateListToPathVector(const SLList<State>& sl)
+// { }
 
 elm::String Analysis::State::dumpEverything() const
 {

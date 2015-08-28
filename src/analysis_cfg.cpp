@@ -353,7 +353,7 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl)
 {
 	State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
 	bool delete_s = false;
-	s->merge(sl);
+	s->merge(sl); // TODO!! merge paths properly (preserve calls) // TODO!! merge paths properly (preserve calls) 
 	s->setFixpointState(Analysis::listOfFixpoints(sl));
 	// #ifdef DBGG
 	DBG("merged: constants=" << s->getConstants() << ", labelled_preds=" << s->getLabelledPreds());
@@ -580,7 +580,7 @@ bool Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl/*, int threso
 	if(count >= state_size_limit)
 	{
 		State s((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
-		s.merge(sl);
+		s.merge(sl); // TODO!! merge paths properly (preserve calls)
 		s.setFixpointState(Analysis::listOfFixpoints(sl));
 		sl.clear();
 		sl += s;
@@ -651,7 +651,7 @@ bool Analysis::edgeIsExitingToLoopLevel0(const Edge* e) const
  */
 bool Analysis::shouldEnableSolver(const Edge* e)
 {
-	return true; // TODO!!!
+	return true; // TODO!!
 	if(e->source()->outs.count() > 1)
 		return true; // conditional edge, call...
 	if(LOOP_EXIT_EDGE(*e))

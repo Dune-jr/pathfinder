@@ -118,6 +118,38 @@ bool DetailedPath::weakEqualsTo(const DetailedPath& dp) const
 	return true; // all checks passed, equal
 }
 
+
+/**
+ * @fn void DetailedPath::merge(const Vector<DetailedPath>& paths);
+ * Modifies the current path to be the result of the merge of a Vector of path (basically we're going to preserve info such as loop and call info)
+ */
+void DetailedPath::merge(const Vector<DetailedPath>& paths)
+{
+	_path.clear();
+	Edge* first_call = NULL;
+	for(Iterator this_iter(*this); this_iter; this_iter++)
+	{
+		if(this_iter->isCall())
+		{
+			first_call = this_iter->getEdge();
+			break;
+		}
+	}
+	if(first_call == NULL)
+		return; // nothing to do
+	for(Vector<DetailedPath>::Iterator paths_iter(paths); paths_iter; paths_iter++)
+	{
+		int count = 0;
+		cout << "DP#" << ++count << ": ";
+		for(Iterator flowinfo_iter(*paths_iter); flowinfo_iter; flowinfo_iter++)
+		{
+			if(flowinfo_iter->isCall())
+				cout << flowinfo_iter->toString() << ", ";
+		}
+		cout << io::endl;
+	}
+}
+
 bool DetailedPath::hasAnEdge() const
 {
 	return ! EdgeIterator(*this).ended();

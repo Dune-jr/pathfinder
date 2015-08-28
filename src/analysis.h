@@ -84,7 +84,7 @@ public:
 		// analysis.cpp
 		elm::String dumpEverything() const;
 		void merge(const SLList<State>& sl);
-		void merge(const SLList<State>& sl, Edge* e);
+		// void merge(const SLList<State>& sl, Edge* e);
 		bool isFixPoint(const Analysis::State& s) const;
 
 		// analysis_cfg.cpp
