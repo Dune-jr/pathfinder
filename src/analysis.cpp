@@ -72,6 +72,7 @@ io::Output& Analysis::State::print(io::Output& out) const
 	// out << ":" << labelled_preds << "/" << constants;
 	if(isValid())
 		return (out << getPathString());
+		// return (out << path);
 	else
 #		ifndef NO_UTF8
 			return (out << "⊥");
@@ -126,7 +127,11 @@ void Analysis::State::merge(const SLList<State>& sl)
 		}
 		cvl += (*sl_iter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
 	}
-	constants.merge(cvl);
+	this->constants.merge(cvl);
+	this->path.merge(stateListToPathVector(sl)); // merge paths as well while keeping some flow info and shrink that in this->path
+#ifdef DBGG
+	cout << color::Pur() << "result of merge, this->path=" << this->path.toString() << color::Pur() << ", *this=" << *this << color::RCol() << io::endl;
+#endif
 }
 
 /*
@@ -143,8 +148,15 @@ void Analysis::State::merge(const SLList<State>& sl)
 	DBG("Merged predicates: " << generated_preds << ", " << constants)
 }*/
 
-// void Analysis::State::stateListToPathVector(const SLList<State>& sl)
-// { }
+Vector<DetailedPath> Analysis::State::stateListToPathVector(const SLList<State>& sl) const
+{
+	Vector<DetailedPath> rtn;
+	for(SLList<State>::Iterator iter(sl); iter; iter++)
+	{
+		rtn.add((*iter).getDetailedPath());
+	}
+	return rtn;
+}
 
 elm::String Analysis::State::dumpEverything() const
 {
@@ -192,7 +204,7 @@ bool Analysis::State::isFixPoint(const Analysis::State& s) const
 }
 
 /**
- * @brief Computes a conjunction over the fixpoint boolean of all the states
+ * @brief Computes a conjunction over the fixpoint booleans of all the states
  */
 bool Analysis::listOfFixpoints(const SLList<Analysis::State>& sl)
 {

@@ -4,6 +4,7 @@
 #ifndef _DEBUG_H
 #define _DEBUG_H
 
+#include "elmdebug.h"
 #include <iostream>
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
@@ -28,9 +29,15 @@ extern int dbg_flags;
 extern int dbg_verbose;
 
 namespace debug {
+/*
 namespace color
 {
 	inline elm::String RCol() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[0m"; } // Reset colors
+	inline elm::String Bold() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[1m"; } // Switch bold ON
+	inline elm::String Dim() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[2m"; } // Switch darker text ON
+	inline elm::String NoBold() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[21m"; } // Switch bold OFF
+	inline elm::String NoDim() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[22m"; } // Switch darker text OFF
+	// No support for Blink (\e[5m) as it is deprecated
 
 	inline elm::String Bla() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[0;30m"; } // Regular
 	inline elm::String BBla() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[1;30m"; } // Bold
@@ -95,11 +102,8 @@ namespace color
 	inline elm::String BIWhi() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[1;97m"; }
 	inline elm::String On_Whi() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[47m"; }
 	inline elm::String On_IWhi() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[0;107m"; }
-
-	inline elm::String Bold() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[1m"; }
-	inline elm::String NoBold() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[21m"; }
 } // color
-
+*/
 class Debug
 {
 	enum {
@@ -123,6 +127,10 @@ public:
 			return _ << whitespaces << str;
 		}		
 		return str;
+	}
+	static bool shouldAlwaysPrint()
+	{
+		return dbg_flags&DBG_NO_PREDICATES;
 	}
 	static bool shouldPrint(const elm::String& str)
 	{
@@ -159,17 +167,23 @@ public:
 // macros for debugging
 #define DBG_INFO() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "] " << color::RCol()
 #define DBG_INFO_STD() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__).chars() << "] " << color::RCol()
-
-#define DBG(str) { if(dbg_verbose == DBG_VERBOSE_ALL) {\
-		elm::String stringed_str = _ << str;\
-		if(Debug::shouldPrint(stringed_str)) \
-			cout << Debug::dbgInfo(__FILE__, __LINE__) << stringed_str << color::RCol() << io::endl; } }
+/* #define DBG(str) { if(dbg_verbose == DBG_VERBOSE_ALL) {\
+// 	if(!Debug::shouldAlwaysPrint())\
+// 	{\
+// 		elm::String stringed_str = _ << str;\
+// 		if(Debug::shouldPrint(stringed_str)) \
+// 			cout << Debug::dbgInfo(__FILE__, __LINE__) << stringed_str << color::RCol() << io::endl;\
+// 	} else\
+// 		cout << Debug::dbgInfo(__FILE__, __LINE__) << _ << str << color::RCol() << io::endl; } }
+*/
+#define DBGM(str) { if(dbg_verbose <= DBG_VERBOSE_MINIMAL) {\
+		cout << Debug::dbgInfo(__FILE__, __LINE__) << str << color::RCol() << io::endl;\
+	} }
 #define DBG_STD(str) { if(dbg_verbose == DBG_VERBOSE_ALL) {\
-		elm::String stringed_str = _ << str;\
-		if(Debug::shouldPrint(_ << str)) \
-			std::cout << Debug::dbgInfo(__FILE__, __LINE__).chars() << str << color::RCol().chars() << io::endl; } }
+	if(Debug::shouldPrint(_ << str)) \
+		std::cout << Debug::dbgInfo(__FILE__, __LINE__).chars() << str << color::RCol().chars() << io::endl; } }
 #define DBG_TEST(tested_cond, expected_cond) \
 	((tested_cond) == (expected_cond) ? color::IGre() : color::IRed()) << \
-	((tested_cond) ? "true" : "false") << "\e[0m"
+	((tested_cond) ? "true" : "false") << color::RCol()
 
 #endif

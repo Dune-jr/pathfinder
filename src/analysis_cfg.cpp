@@ -17,8 +17,7 @@
 // #include "smt.h"
 #ifdef SMT_SOLVER_CVC4
 	#include "cvc4/cvc4_smt.h"
-#endif
-#ifdef SMT_SOLVER_Z3
+#elif SMT_SOLVER_Z3
 	#include "z3/z3_smt.h"
 #endif
 #include "debug.h"
@@ -159,6 +158,7 @@ void Analysis::processCFG(CFG* cfg)
 				DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
 			fixpoint = sl_iter.item().fixpointState();
 			#ifdef DBGG
+			if(dbg_verbose <= DBG_VERBOSE_MINIMAL)
 				cout << "BB #" << bb->number() << ", fixpoint=" << DBG_TEST(fixpoint, true) << endl;
 			#endif
 			/* processBB(s, bb); */
@@ -210,7 +210,7 @@ void Analysis::processCFG(CFG* cfg)
 					if(!BACK_EDGE(*bb_outs)) // take everything but back edges
 					{	// adds to PROCESSED_EDGE
 						bool enable_smt = true;
-						if(LOOP_EXIT_EDGE(*bb_outs))
+						if(LOOP_EXIT_EDGE(*bb_outs)) // exiting the loop
 						{
 							for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; sl_iter++)
 								sl_iter.item().onLoopExit(loop_header ? elm::some(bb) : ENCLOSING_LOOP_HEADER.get(bb)); 
@@ -290,11 +290,14 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool i
 		PROCESSED_EDGES.ref(e).addFirst(invalid_state);
 		return;
 	}
+	bool is_call = e->kind() == Edge::VIRTUAL_CALL && !BACK_EDGE(*e);
 	if(!enable_smt || !shouldEnableSolver(e))
 	{
 		for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 		{
 			State s = *sl_iter; // copy into new state
+			if(is_call)
+				s.onCall(e);
 			s.appendEdge(e, is_conditional);
 			PROCESSED_EDGES.ref(e).addFirst(s);
 		}
@@ -304,7 +307,7 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool i
 	// SMT is enabled
 	SLList<Option<Path> > sl_paths;
 	// get a list of infeasible paths matching the list of state "sl_paths"
-	stateListToInfeasiblePathList(sl_paths, sl, e, is_conditional);
+	stateListToInfeasiblePathList(sl_paths, sl, e, is_conditional, is_call);
 	SLList<Option<Path> >::Iterator sl_paths_iter(sl_paths);
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++, sl_paths_iter++)
 	{
@@ -321,6 +324,7 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool i
 			{
 				addDisorderedInfeasiblePath(infeasible_path, s.getDetailedPath(), e); // infeasible_paths += order(infeasible_path); to output proprer ffx!
 				DBG(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path))
+				DBGM(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path)) //TODO!
 				s.printFixPointState();
 			}
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
@@ -352,12 +356,14 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool i
 void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl)
 {
 	State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
-	bool delete_s = false;
-	s->merge(sl); // TODO!! merge paths properly (preserve calls) // TODO!! merge paths properly (preserve calls) 
+	s->merge(sl); // merge paths properly (preserve calls)
 	s->setFixpointState(Analysis::listOfFixpoints(sl));
-	// #ifdef DBGG
+#	ifdef DBGG
+		cout << color::IPur() << "processLoopHeader after merge, s=" << *s << ", fixpt=" << DBG_TEST(s->fixpointState(), true) << color::RCol() << io::endl;
+#	endif
 	DBG("merged: constants=" << s->getConstants() << ", labelled_preds=" << s->getLabelledPreds());
-	// #endif
+	
+	bool delete_s = false;
 	if(PROCESSED_LOOPHEADER_BB.exists(bb))
 	{
 		if(s->fixpointState())
@@ -366,7 +372,6 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl)
 			delete s;
 			s = PROCESSED_LOOPHEADER_BB(bb);
 			s->setFixpointState(true); // ensure we keep this property
-			// delete_s = true;
 		}
 		else
 		{
@@ -399,17 +404,22 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl)
 		s->onLoopEntry(bb);
 	sl += *s; // sl <- {s}
 	FIXPOINT_REACHED.set(bb, s->fixpointState());
+#	ifdef DBGG
+		cout << color::IPur() << "end of processLoopHeader, s=" << *s << color::RCol() << io::endl;
+#	endif
 	if(delete_s)
 		delete s;
 }
 
-void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional)
+void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional, bool is_call)
 {
 	//*
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
 		State s = *sl_iter;
 		s.appendEdge(e, is_conditional);
+		if(is_call)
+			s.onCall(e);
 
 		if(flags&DRY_RUN) // no SMT call
 		{
@@ -421,8 +431,7 @@ void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, co
 		// SMT call
 #ifdef SMT_SOLVER_CVC4
 		CVC4SMT smt;
-#endif
-#ifdef SMT_SOLVER_Z3
+#elif SMT_SOLVER_Z3
 		Z3SMT smt;
 #endif
 		const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(s);
@@ -529,6 +538,8 @@ void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& f
 	}
 	if(ip.contains(last_edge)) // add the last edge too if in the infeasible path
 		detailed_ip.addLast(last_edge);
+	DBGM("addDisorderedInfeasiblePath(...), ip=" << pathToString(ip) << ", " 
+		<< color::ICya() << "full_path=[" << full_path << "]" << color::RCol() << ", result=" << detailed_ip); // TODO!
 	addDetailedInfeasiblePath(detailed_ip);
 }
 
@@ -580,7 +591,7 @@ bool Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl/*, int threso
 	if(count >= state_size_limit)
 	{
 		State s((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
-		s.merge(sl); // TODO!! merge paths properly (preserve calls)
+		s.merge(sl);
 		s.setFixpointState(Analysis::listOfFixpoints(sl));
 		sl.clear();
 		sl += s;

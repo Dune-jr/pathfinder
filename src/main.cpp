@@ -1,5 +1,3 @@
-// #define DBG_NO_DEBUG
-
 #include <elm/io/Output.h>
 #include <elm/types.h>
 #include <elm/options.h>
@@ -10,6 +8,11 @@
 #include "analysis.h"
 #include "ffx.h"
 #include "debug.h"
+
+
+		// #define ELM_NO_DBG
+		#include "elmdebug.h"
+		int elm::color::flags = elm::color::DEBUG | elm::color::SOURCE_INFO | elm::color::COLORS;
 
 using namespace elm;
 using namespace otawa;
@@ -49,6 +52,8 @@ protected:
 			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
 		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
+
+ELM_DBGLN("hello")
 
         const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
         const dfa::State *inital_state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state

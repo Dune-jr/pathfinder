@@ -29,6 +29,9 @@ void Analysis::State::throwInfo()
 
 void Analysis::State::processBB(const BasicBlock *bb)
 {
+#	ifdef DBGG
+		cout << color::Gre() << "Processing path " << getPathString() << color::RCol() << endl;
+#	endif
 	SLList<LabelledPredicate> generated_preds_before_condition;
 	sem::inst condition;
 	generated_preds.clear();

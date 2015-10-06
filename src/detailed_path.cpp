@@ -1,9 +1,12 @@
 #include "detailed_path.h"
 #include "debug.h"
 
+using namespace debug;
+
 DetailedPath::FlowInfo::FlowInfo(kind_t kind, BasicBlock* bb) : _kind(kind), _identifier(bb) { assert(isBasicBlockKind(kind)); }
 DetailedPath::FlowInfo::FlowInfo(kind_t kind, Edge* e) : _kind(kind), _identifier(e) { assert(isEdgeKind(kind)); }
-DetailedPath::FlowInfo::FlowInfo(const FlowInfo& fi) : _kind(fi._kind), _identifier(fi._identifier) { }
+// DetailedPath::FlowInfo::FlowInfo(const FlowInfo& fi) : _kind(fi._kind), _identifier(fi._identifier) { }
+DetailedPath::FlowInfo::FlowInfo(const FlowInfo& fi) { _kind = fi._kind; _identifier = fi._identifier; }
 
 DetailedPath::DetailedPath() { }
 DetailedPath::DetailedPath(const SLList<Edge*>& edge_list)
@@ -14,7 +17,7 @@ DetailedPath::DetailedPath(const SLList<Edge*>& edge_list)
 DetailedPath::DetailedPath(const DetailedPath& dp) : _path(dp._path) { }
 
 /**
- * @fn inline void DetailedPath::clear(void)
+ * @fn inline void DetailedPath::clear(void);
  * @brief Reset the detailed path
  */
 
@@ -35,8 +38,10 @@ void DetailedPath::addLast(Edge* e)
  */
 void DetailedPath::optimize()
 {
+	DBGM("optimizing " << toString())
 	removeDuplicates();
 	removeAntagonists();
+	removeCallsAtEndOfPath();
 }
 
 void DetailedPath::removeDuplicates()
@@ -64,16 +69,36 @@ void DetailedPath::removeAntagonists()
 	{
 		if(iter->isLoopExit() && prev->isLoopEntry() && (iter->getLoopHeader() == prev->getLoopHeader()))
 		{
-			remove(prev);
+			// Be careful, do not call prev before iter, because remove(prev) does NOT update info in iter.
 			remove(iter);
+			remove(prev);
 			return removeAntagonists(); // parse again
 		}
 	}
 }
 
+void DetailedPath::removeCallsAtEndOfPath()
+{
+	Iterator last_edge_iter(*this);
+	for(Iterator iter(*this); iter; iter++)
+		if(iter->isEdge())
+			last_edge_iter = iter;
+	// last_edge_iter is now at the position of the last edge in the path
+	if(!last_edge_iter)
+		return; // nothing remains, exit
+	for(last_edge_iter++; last_edge_iter; )
+		if(last_edge_iter->isCall())
+			remove(last_edge_iter);
+		else last_edge_iter++;
+}
+
+/**
+  * Add missing enclosing loop headers at the beginning of the path
+  */
 void DetailedPath::addEnclosingLoop(BasicBlock* loop_header)
 {
-	_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header));
+	if(!contains(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header)))
+		_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header));
 }
 
 void DetailedPath::onLoopEntry(BasicBlock* loop_header)
@@ -118,16 +143,23 @@ bool DetailedPath::weakEqualsTo(const DetailedPath& dp) const
 	return true; // all checks passed, equal
 }
 
-
+#define TODO
 /**
  * @fn void DetailedPath::merge(const Vector<DetailedPath>& paths);
  * Modifies the current path to be the result of the merge of a Vector of path (basically we're going to preserve info such as loop and call info)
+ * Previous info in current DetailedPath is ignored
  */
 void DetailedPath::merge(const Vector<DetailedPath>& paths)
 {
-	_path.clear();
+	ASSERTP(paths, "merge called with empty paths vector")
+	_path.clear(); // do not take in account current path
+#ifdef DBGG
+	int merge_count = 0;
+	for(Vector<DetailedPath>::Iterator iter(paths); iter; iter++)
+		cout << color::IRed() << "\tmerge[" << merge_count++ << "]=" << *iter << io::endl;
+	cout << color::RCol();
 	Edge* first_call = NULL;
-	for(Iterator this_iter(*this); this_iter; this_iter++)
+	for(Iterator this_iter(paths.first()); this_iter; this_iter++)
 	{
 		if(this_iter->isCall())
 		{
@@ -137,17 +169,65 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 	}
 	if(first_call == NULL)
 		return; // nothing to do
+	else cout << color::ICya() << "is call:" << first_call << color::RCol() << io::endl;
+	int count = 0;
 	for(Vector<DetailedPath>::Iterator paths_iter(paths); paths_iter; paths_iter++)
 	{
-		int count = 0;
-		cout << "DP#" << ++count << ": ";
-		for(Iterator flowinfo_iter(*paths_iter); flowinfo_iter; flowinfo_iter++)
+		cout << "DP#" << count++ << ": "; // TODO!!!
+		for(DetailedPath::Iterator flowinfo_iter(*paths_iter); flowinfo_iter; flowinfo_iter++)
 		{
 			if(flowinfo_iter->isCall())
 				cout << flowinfo_iter->toString() << ", ";
 		}
 		cout << io::endl;
 	}
+#endif
+	/* explanation of the algorithm:
+		Path#0: C#8, C#24, 
+		Path#1: C#8, C#24, 
+		Path#2: C#8
+		Path#4: C#8, C#24, C#25,
+
+		First, take this->_path := Path#0 (C#8, C#24)
+		Then for each Path#1-4 "p", check that p contains this->_path.
+		For example, when p=Path#2, p (C#8) does not contain this->_path (C#8, C#24) does not contain p, so we remove C#24 from this->_path
+	*/ 
+	bool first = true;
+	for(Vector<DetailedPath>::Iterator paths_iter(paths); paths_iter; paths_iter++)
+	{
+		const DetailedPath &p = *paths_iter;
+		if(first) // Path#0: initialize this->_path
+		{
+			first = false;
+			// this->_path initialized with all calls contained in paths[0]
+			for(DetailedPath::Iterator p_flowinfo_iter(p); p_flowinfo_iter; p_flowinfo_iter++)
+			{
+				if(p_flowinfo_iter->isCall())
+					this->_path.addLast(*p_flowinfo_iter); // use addLast instead of addFirst to preserve order of calls
+			}
+		}
+		else
+		{
+			for(DetailedPath::Iterator this_iter(*this); this_iter; ) // for each element in this->_path
+			{
+				if(!p.contains(this_iter)) // if it is not in p
+				{
+					#ifdef DBGG
+						cout << color::ICya() << "!p.contains(this_iter);" << color::RCol() << io::endl;
+						cout << "\t* p=" << p << io::endl;
+						cout << "\t* this=" << *this << io::endl;
+						cout << "\t* this_iter=" << *this_iter << io::endl;
+						cout << "this->remove(*this_iter);" << io::endl;
+					#endif
+					this->_path.remove(this_iter); // remove it from this->_path
+				}
+				else this_iter++;
+			}
+		}
+	}
+#	ifdef DBGG
+		cout << color::ICya() << "result: " << toString() << color::RCol() << io::endl;
+#	endif
 }
 
 bool DetailedPath::hasAnEdge() const
@@ -213,14 +293,15 @@ elm::String DetailedPath::FlowInfo::toString(bool colored) const
 		case KIND_EDGE:
 			return _ << getEdge()->source()->number() << "->" << getEdge()->target()->number();
 		case KIND_LOOP_ENTRY:
-			return _ << debug::color::Whi() << "LEn#" << getLoopHeader()->number() << debug::color::RCol();
+			return _ << color::Dim() << "LEn#" << getLoopHeader()->number() << color::NoDim();
 		case KIND_LOOP_EXIT:
-			return _ << debug::color::Whi() << "LEx#" << getLoopHeader()->number() << debug::color::RCol();
+			return _ << color::Dim() << "LEx#" << getLoopHeader()->number() << color::NoDim();
 		case KIND_CALL:
-			return _ << debug::color::Whi() << "C#" << getEdge()->source()->number() << debug::color::RCol();
+			// return _ << color::Dim() << "C#" << getEdge()->source()->number() << color::NoDim();
+			return _ << color::Dim() << "C#" << getEdge()->source()->number() << "-" << getEdge()->target()->number() << color::NoDim();
 		case KIND_RETURN:
 		default:
-			return "";
+			return _ << "[UKNOWN KIND " << (int)_kind << "]";
 	}
 }
 

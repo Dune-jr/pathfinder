@@ -71,7 +71,7 @@ public:
 		inline Edge* lastEdge() const { return path.lastEdge(); }
 		inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
 		inline const ConstantVariables& getConstants() const { return constants; }
-		inline elm::String getPathString() const { return orderedPathToString(path.toOrderedPath()); }
+		inline elm::String getPathString() const { return path.toString(); /*orderedPathToString(path.toOrderedPath());*/ }
 		inline void onLoopEntry(BasicBlock* loop_header) { path.onLoopEntry(loop_header); }
 		inline void onLoopExit(Option<BasicBlock*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }
 		inline void onCall(Edge* e) { path.onCall(e); }
@@ -82,6 +82,7 @@ public:
 		friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 
 		// analysis.cpp
+		Vector<DetailedPath> stateListToPathVector(const SLList<State>& sl) const;
 		elm::String dumpEverything() const;
 		void merge(const SLList<State>& sl);
 		// void merge(const SLList<State>& sl, Edge* e);
@@ -130,7 +131,7 @@ public:
 		inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 
 		// PredIterator class
-		class PredIterator: public PreIterator<PredIterator, LabelledPredicate> {
+		class PredIterator: public PreIterator<PredIterator, const LabelledPredicate&> {
 			enum pred_iterator_state_t
 			{
 				GENERATED_PREDS, // must have !gp_iter.ended()
@@ -212,7 +213,7 @@ private:
 	int processBB(State& s, BasicBlock *bb);
 	void processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt);
 	void processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl);
-	void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional);
+	void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional, bool is_call);
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
 	void addDisorderedInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path, Edge* last_edge);
 	void addDetailedInfeasiblePath(const DetailedPath& infeasible_path);

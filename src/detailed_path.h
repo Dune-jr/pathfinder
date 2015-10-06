@@ -26,7 +26,9 @@ public:
 	inline void clear() { _path.clear(); }
 	void addLast(Edge* e);
 	inline void addLast(const FlowInfo& fi) { _path.addLast(fi); }
+	inline bool contains(const FlowInfo &fi) const { return _path.contains(fi); }
 	inline void remove(Iterator &iter) { _path.remove(iter); }
+	// inline void remove(Iterator &iter) { _path.remove(iter.getFlowInfoIter()); }
 	inline void removeLast() { _path.removeLast(); }
 	
 	// events
@@ -114,25 +116,35 @@ public:
 	}; // EdgeIterator class
 
 	// Iterator class
-	class Iterator: public PreIterator<Iterator, FlowInfo> {
+	class Iterator: public SLList<FlowInfo>::Iterator {
 	public:
-		inline Iterator() { }
+		inline Iterator(const DetailedPath& dpath) : SLList<FlowInfo>::Iterator(dpath._path) { }
+	};
+
+	/*
+	// old Iterator class
+	class Iterator: public PreIterator<Iterator, const FlowInfo&> {
+	public:
+		// inline Iterator() { }
 		inline Iterator(const DetailedPath& dpath) : _iter(dpath._path) { }
 		inline Iterator(const Iterator& iter) : _iter(iter._iter) { }
 
 		inline bool ended(void) const { return _iter.ended(); }
-		inline FlowInfo item(void) const { return _iter.item(); }
+		inline const FlowInfo& item(void) const { return _iter.item(); }
 		inline void next(void) { _iter.next(); }
 
+		// inline const SLList<FlowInfo>::Iterator& getFlowInfoIter(void) { return _iter; }
 	private:
 		SLList<FlowInfo>::Iterator _iter;
 	}; // Iterator class
+	*/
 
 private:
 	SLList<FlowInfo> _path;
 	
 	void removeDuplicates();
 	void removeAntagonists();
+	void removeCallsAtEndOfPath();
 	io::Output& print(io::Output& out) const;
 }; // DetailedPath class
 
