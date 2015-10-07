@@ -118,9 +118,9 @@ void DetailedPath::onCall(Edge* e)
 	_path.addLast(FlowInfo(FlowInfo::KIND_CALL, e));
 }
 
-void DetailedPath::onReturn()
+void DetailedPath::onReturn(BasicBlock* bb)
 {
-	// TODO!
+	_path.addLast(FlowInfo(FlowInfo::KIND_RETURN, bb));
 }
 
 /**
@@ -297,9 +297,10 @@ elm::String DetailedPath::FlowInfo::toString(bool colored) const
 		case KIND_LOOP_EXIT:
 			return _ << color::Dim() << "LEx#" << getLoopHeader()->number() << color::NoDim();
 		case KIND_CALL:
-			// return _ << color::Dim() << "C#" << getEdge()->source()->number() << color::NoDim();
-			return _ << color::Dim() << "C#" << getEdge()->source()->number() << "-" << getEdge()->target()->number() << color::NoDim();
+			return _ << color::Dim() << "C#" << getEdge()->source()->number() << color::NoDim();
+			// return _ << color::Dim() << "C#" << getEdge()->source()->number() << "-" << getEdge()->target()->number() << color::NoDim();
 		case KIND_RETURN:
+			return _ << color::Dim() << "R#" << getBasicBlock()->number() << color::NoDim();
 		default:
 			return _ << "[UKNOWN KIND " << (int)_kind << "]";
 	}

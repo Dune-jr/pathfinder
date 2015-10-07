@@ -4,6 +4,7 @@
 #ifndef _DEBUG_H
 #define _DEBUG_H
 
+#define ELM_NO_DBG
 #include "elmdebug.h"
 #include <iostream>
 #include <elm/string/String.h>
@@ -17,6 +18,7 @@
 #define DBG_NO_TIME		   0b1 << 4
 #define DBG_NO_PREDICATES  0b1 << 5
 #define DBG_PREANALYSIS	   0b1 << 6
+#define DBG_PROGRESS	   0b1 << 7
 #define UNTESTED_CRITICAL true // Do not raise exception when executing untested code
 #define DBG_SEPARATOR " "
 
@@ -167,15 +169,16 @@ public:
 // macros for debugging
 #define DBG_INFO() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "] " << color::RCol()
 #define DBG_INFO_STD() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__).chars() << "] " << color::RCol()
-/* #define DBG(str) { if(dbg_verbose == DBG_VERBOSE_ALL) {\
-// 	if(!Debug::shouldAlwaysPrint())\
-// 	{\
-// 		elm::String stringed_str = _ << str;\
-// 		if(Debug::shouldPrint(stringed_str)) \
-// 			cout << Debug::dbgInfo(__FILE__, __LINE__) << stringed_str << color::RCol() << io::endl;\
-// 	} else\
-// 		cout << Debug::dbgInfo(__FILE__, __LINE__) << _ << str << color::RCol() << io::endl; } }
-*/
+/**/
+#define DBG(str) { if(dbg_verbose == DBG_VERBOSE_ALL) {\
+	if(!Debug::shouldAlwaysPrint())\
+	{\
+		elm::String stringed_str = _ << str;\
+		if(Debug::shouldPrint(stringed_str)) \
+			cout << Debug::dbgInfo(__FILE__, __LINE__) << stringed_str << color::RCol() << io::endl;\
+	} else\
+		cout << Debug::dbgInfo(__FILE__, __LINE__) << _ << str << color::RCol() << io::endl; } }
+/**/
 #define DBGM(str) { if(dbg_verbose <= DBG_VERBOSE_MINIMAL) {\
 		cout << Debug::dbgInfo(__FILE__, __LINE__) << str << color::RCol() << io::endl;\
 	} }

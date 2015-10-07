@@ -75,6 +75,7 @@ public:
 		inline void onLoopEntry(BasicBlock* loop_header) { path.onLoopEntry(loop_header); }
 		inline void onLoopExit(Option<BasicBlock*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }
 		inline void onCall(Edge* e) { path.onCall(e); }
+		inline void onReturn(BasicBlock* bb) { path.onReturn(bb); }
 		inline bool isValid() const { return dfa_state != 0; }
 		inline bool fixpointState() const { return fixpoint; }
 		inline void setFixpointState(bool new_fixpoint) { fixpoint = new_fixpoint; }
@@ -207,6 +208,9 @@ private:
 	int max_tempvars, max_registers, state_size_limit, flags;
 	int total_paths, loop_header_count, bb_count;
 	int ip_count, unminimized_ip_count;
+
+	// analysis.cpp
+	void debugProgress(int bb_number, bool enable_smt) const;
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);

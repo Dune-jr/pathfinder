@@ -158,6 +158,17 @@ Vector<DetailedPath> Analysis::State::stateListToPathVector(const SLList<State>&
 	return rtn;
 }
 
+void Analysis::debugProgress(int bb_number, bool enable_smt) const
+{
+	if(dbg_verbose >= DBG_VERBOSE_RESULTS_ONLY && (dbg_flags&DBG_PROGRESS))
+	{
+		static int processed_bbs = 0;
+		if(enable_smt)
+			++processed_bbs; // only increase processed_bbs when we are in a state where we are no longer looking for a fixpoint
+		cout << "[" << processed_bbs*100/bb_count << "%] Processed BB #" << bb_number << " of " << bb_count << "        " << endl << "\e[1A";
+	}
+}
+
 elm::String Analysis::State::dumpEverything() const
 {
 	return _

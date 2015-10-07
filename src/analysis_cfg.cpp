@@ -173,6 +173,7 @@ void Analysis::processCFG(CFG* cfg)
 			if(state_count >= 50 && dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
 				cout << " " << state_count << " states updated." << endl;
 
+		bool enable_smt = true;
 		// TODO! I want to make sure that when we have 3 loops if lvl1=no fixpoint, lvl2=fixpoint, and lvl3 finds a fixpoint, we don't enable smt...
 		/* For e in bb.outs */
 		for(BasicBlock::OutIterator bb_outs(bb); bb_outs; bb_outs++)
@@ -196,7 +197,7 @@ void Analysis::processCFG(CFG* cfg)
 				{
 					if(!LOOP_EXIT_EDGE(*bb_outs)) // take everything but loop exit edges
 					{	// adds to PROCESSED_EDGE
-						bool enable_smt = edgeIsExitingToLoopLevel0(bb_outs); // only call smt if this is "level 0" sequential code
+						enable_smt = edgeIsExitingToLoopLevel0(bb_outs); // only call smt if this is "level 0" sequential code
 						processOutEdge(*bb_outs, sl, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not
 						if(!wl.contains(bb_outs->target()))
 							wl.push(bb_outs->target());
@@ -209,7 +210,7 @@ void Analysis::processCFG(CFG* cfg)
 				{
 					if(!BACK_EDGE(*bb_outs)) // take everything but back edges
 					{	// adds to PROCESSED_EDGE
-						bool enable_smt = true;
+						enable_smt = true;
 						if(LOOP_EXIT_EDGE(*bb_outs)) // exiting the loop
 						{
 							for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; sl_iter++)
@@ -234,6 +235,8 @@ void Analysis::processCFG(CFG* cfg)
 								// unrelated: we also need to trigger calls 
 								if(sl_iter.item().fixpointState() && bb_outs->kind() == Edge::VIRTUAL_CALL) // not handling non virtual Edge::CALL I guess?
 									sl_iter.item().onCall(*bb_outs); // don't write calls that are also LOOP_EXIT_EDGE / TODO! double check this is ok
+								if(sl_iter.item().fixpointState() && bb_outs->kind() == Edge::VIRTUAL_RETURN && RETURN_OF.exists(bb_outs->source()))
+									sl_iter.item().onReturn(RETURN_OF(bb_outs->source())); // don't write returns that are also LOOP_EXIT_EDGE
 							}
 						}
 						enable_smt = enable_smt && fixpointFoundOnAllMotherLoops(bb);
@@ -248,6 +251,7 @@ void Analysis::processCFG(CFG* cfg)
 			}
 		}
 		/* End For */
+		debugProgress(bb->number(), enable_smt);
 	}
 	/* End While */
 	/* end */
@@ -662,7 +666,7 @@ bool Analysis::edgeIsExitingToLoopLevel0(const Edge* e) const
  */
 bool Analysis::shouldEnableSolver(const Edge* e)
 {
-	return true; // TODO!!
+	// return true; // TODO!!
 	if(e->source()->outs.count() > 1)
 		return true; // conditional edge, call...
 	if(LOOP_EXIT_EDGE(*e))
@@ -746,7 +750,7 @@ void Analysis::printResults(int exec_time_ms) const
 		    std::streamsize oldprecision = std::cout.precision();
 			std::cout << std::fixed << std::setprecision(3) << color::IYel().chars() << " (" << ((float)exec_time_ms)/1000.f << "s)" << color::RCol().chars() << std::endl;
 		    std::cout.flags(oldflags);
-		    std::cout.precision (oldprecision);
+		    std::cout.precision(oldprecision);
 		}
 		else
 			cout << endl;

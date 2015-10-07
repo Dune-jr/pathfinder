@@ -24,11 +24,11 @@ namespace elm
 		{
 		public:
 			Color(const elm::CString& str) : _str(str) { }
-			inline operator elm::CString() const
+			inline operator elm::CString() const // (CString)Red
 				{ return (flags&COLOR) ? _str : ""; }
-			inline elm::CString operator()() const
+			inline elm::CString operator()() const // Red()
 				{ return (elm::CString)*this; }
-			friend inline io::Output& operator<<(io::Output& out, const Color& color)
+			friend inline io::Output& operator<<(io::Output& out, const Color& color) // cout << Red << ...
 				{ return (out << color()); }
 		private:
 			elm::CString _str;
@@ -55,7 +55,7 @@ namespace elm
 } // elm namespace
 
 #define ELM_DBG(str) { if(elm::color::flags&elm::color::DEBUG) elm::cout << /*dbgInfo(__FILE__, __LINE__) <<*/ str << elm::color::RCol << elm::io::endl; }
-#define ELM_DBGLN(str) { if(elm::color::flags&elm::color::DEBUG) elm::cout << /*dbgInfo(__FILE__, __LINE__) <<*/ str << elm::color::RCol << elm::io::endl; }
+#define ELM_DBGLN(str) { if(elm::color::flags&elm::color::DEBUG) ELM_DBG(str << elm::color::RCol << elm::io::endl); }
 
 #ifndef ELM_NO_DBG
 	#define DBG ELM_DBG

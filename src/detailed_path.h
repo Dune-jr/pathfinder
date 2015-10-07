@@ -35,7 +35,7 @@ public:
 	void onLoopEntry(BasicBlock* loop_header);
 	void onLoopExit(Option<BasicBlock*> new_loop_header);
 	void onCall(Edge* e);
-	void onReturn(); // TODO!
+	void onReturn(BasicBlock* bb); // TODO!
 
 	// utility
 	bool weakEqualsTo(const DetailedPath& dp) const;
@@ -62,7 +62,7 @@ public:
 			KIND_LOOP_ENTRY, // BasicBlock
 			KIND_LOOP_EXIT, // BasicBlock
 			KIND_CALL, // Edge
-			KIND_RETURN, // Edge
+			KIND_RETURN, // BasicBlock
 		};
 		FlowInfo(kind_t kind, BasicBlock* bb);
 		FlowInfo(kind_t kind, Edge* e);
@@ -71,8 +71,10 @@ public:
 		inline bool isLoopEntry() const { return _kind == KIND_LOOP_ENTRY; }
 		inline bool isLoopExit() const { return _kind == KIND_LOOP_EXIT; }
 		inline bool isCall() const { return _kind == KIND_CALL; }
-		inline Edge* getEdge() const { assert(isEdgeKind(_kind)); return (Edge*)_identifier; } // TODO! remove the assert
-		inline BasicBlock* getLoopHeader() const { assert(isBasicBlockKind(_kind)); return (BasicBlock*)_identifier; } // TODO! remove the assert
+		inline bool isReturn() const { return _kind == KIND_RETURN; }
+		inline Edge* getEdge() const { assert(isEdgeKind(_kind)); return (Edge*)_identifier; } // TODO! remove the asserts?
+		inline BasicBlock* getBasicBlock() const { assert(isBasicBlockKind(_kind)); return (BasicBlock*)_identifier; }
+		inline BasicBlock* getLoopHeader() const { return getBasicBlock(); }
 		elm::String toString(bool colored = true) const;
 		inline bool operator==(const FlowInfo& fi) const { return (_kind == fi._kind) && (_identifier == fi._identifier); }
 		inline FlowInfo& operator=(const FlowInfo& fi) { _kind = fi._kind; _identifier = fi._identifier; return *this; }
@@ -82,8 +84,10 @@ public:
 	private:
 		kind_t _kind;
 		void* _identifier; // BasicBlock*, Edge*
-		inline bool isBasicBlockKind(kind_t kind) const { return (kind == KIND_LOOP_ENTRY) || (kind == KIND_LOOP_EXIT); }
-		inline bool isEdgeKind(kind_t kind) const { return (kind == KIND_EDGE) || (kind == KIND_CALL); }
+		inline bool isBasicBlockKind(kind_t kind) const
+			{ return (kind == KIND_LOOP_ENTRY) || (kind == KIND_LOOP_EXIT) || (kind == KIND_RETURN); }
+		inline bool isEdgeKind(kind_t kind) const
+			{ return (kind == KIND_EDGE) || (kind == KIND_CALL); }
 		io::Output& print(io::Output& out) const;
 	}; // FlowInfo class
 
