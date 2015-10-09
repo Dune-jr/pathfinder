@@ -1,5 +1,6 @@
 #include "detailed_path.h"
 #include "debug.h"
+#include "otawa/cfg/features.h"
 
 using namespace debug;
 
@@ -38,7 +39,6 @@ void DetailedPath::addLast(Edge* e)
  */
 void DetailedPath::optimize()
 {
-	DBGM("optimizing " << toString())
 	removeDuplicates();
 	removeAntagonists();
 	removeCallsAtEndOfPath();
@@ -120,7 +120,15 @@ void DetailedPath::onCall(Edge* e)
 
 void DetailedPath::onReturn(BasicBlock* bb)
 {
-	_path.addLast(FlowInfo(FlowInfo::KIND_RETURN, bb));
+	BasicBlock::InIterator ins(bb);
+	while(otawa::RECURSIVE_LOOP(ins))
+	{
+		ins++;
+		ASSERTP(ins, "Only recursive loop calls have been found pointing to BasicBlock bb.")  // useless check in case of a well-formed CFG
+	}
+	_path.addLast(FlowInfo(FlowInfo::KIND_RETURN, ins->source()));
+	while(ins++)
+		ASSERTP(otawa::RECURSIVE_LOOP(ins), "First BB of function has several incoming non-recursive edges (e.g. it is called several times)");
 }
 
 /**
@@ -173,7 +181,7 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 	int count = 0;
 	for(Vector<DetailedPath>::Iterator paths_iter(paths); paths_iter; paths_iter++)
 	{
-		cout << "DP#" << count++ << ": "; // TODO!!!
+		cout << "DP#" << count++ << ": ";
 		for(DetailedPath::Iterator flowinfo_iter(*paths_iter); flowinfo_iter; flowinfo_iter++)
 		{
 			if(flowinfo_iter->isCall())
@@ -270,20 +278,36 @@ elm::String DetailedPath::toString(bool colored) const
 {
 	elm::String str;
 	bool first = true;
-	for(Iterator iter(*this); iter; iter++)
+	if(dbg_flags&DBG_PRINT_FLOWINFO)
 	{
-		if(first)
-			first = false;
-		else
-			str = str.concat(_ << ", ");
-		str = str.concat(iter->toString(colored));
+		// iterate on everything
+		for(Iterator iter(*this); iter; iter++)
+		{
+			if(first)
+				first = false;
+			else
+				str = str.concat(_ << ", ");
+			str = str.concat(iter->toString(colored));
+		}
+	}
+	else
+	{
+		// print limited info, iterate only on edges
+		for(EdgeIterator iter(*this); iter; iter++)
+		{
+			if(first)
+				first = false;
+			else
+				str = str.concat(_ << ", ");
+			str = str.concat(_ << iter->source()->number() << "->" << iter->target()->number());
+		}
 	}
 	return str;
 }
 
 io::Output& DetailedPath::print(io::Output& out) const
 {
-	return(out << toString());
+	return out << toString();
 }
 
 elm::String DetailedPath::FlowInfo::toString(bool colored) const

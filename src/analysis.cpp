@@ -71,8 +71,8 @@ io::Output& Analysis::State::print(io::Output& out) const
 {
 	// out << ":" << labelled_preds << "/" << constants;
 	if(isValid())
-		return (out << getPathString());
-		// return (out << path);
+		// return (out << getPathString()); // TODO!
+		return (out << path);
 	else
 #		ifndef NO_UTF8
 			return (out << "⊥");

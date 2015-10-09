@@ -328,7 +328,6 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool i
 			{
 				addDisorderedInfeasiblePath(infeasible_path, s.getDetailedPath(), e); // infeasible_paths += order(infeasible_path); to output proprer ffx!
 				DBG(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path))
-				DBGM(color::On_IRed() << "Inf. path found: " << pathToString(infeasible_path)) //TODO!
 				s.printFixPointState();
 			}
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
@@ -542,8 +541,10 @@ void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& f
 	}
 	if(ip.contains(last_edge)) // add the last edge too if in the infeasible path
 		detailed_ip.addLast(last_edge);
+#ifdef DBGG
 	DBGM("addDisorderedInfeasiblePath(...), ip=" << pathToString(ip) << ", " 
 		<< color::ICya() << "full_path=[" << full_path << "]" << color::RCol() << ", result=" << detailed_ip); // TODO!
+#endif
 	addDetailedInfeasiblePath(detailed_ip);
 }
 
@@ -737,9 +738,9 @@ void Analysis::printResults(int exec_time_ms) const
 	for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
 	{
 		if(dbg_verbose == DBG_VERBOSE_ALL)
-			DBG(color::IGre() << "    * [" << iter->toString() << "]")
+			DBG(color::IGre() << "    * [" << *iter << "]")
 		else if(dbg_verbose < DBG_VERBOSE_NONE)
-			cout << "    * [" << iter->toString() << "]" << endl;
+			cout << "    * [" << *iter << "]" << endl;
 	}
 	if(dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_NONE)
 	{

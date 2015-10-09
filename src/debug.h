@@ -19,6 +19,7 @@
 #define DBG_NO_PREDICATES  0b1 << 5
 #define DBG_PREANALYSIS	   0b1 << 6
 #define DBG_PROGRESS	   0b1 << 7
+#define DBG_PRINT_FLOWINFO 0b1 << 8
 #define UNTESTED_CRITICAL true // Do not raise exception when executing untested code
 #define DBG_SEPARATOR " "
 
