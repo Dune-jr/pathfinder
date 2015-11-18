@@ -105,21 +105,30 @@ bool ConstantVariables::isConstant(const OperandVar& opdv) const
 Constant ConstantVariables::getValue(const OperandVar& opdv) const
 {
 	Option<LabelledValue>& k = getCell(opdv);
-	assert(k.isOne());
+	ASSERT(k.isOne());
 	return k.value().val();
 }
 
 Set<Edge*> ConstantVariables::getLabels(const OperandVar& opdv) const
 {
 	Option<LabelledValue>& k = getCell(opdv);
-	assert(k.isOne());
+	ASSERT(k.isOne());
 	return k.value().labels();
+}
+
+Set<Edge*> ConstantVariables::getLabels(const OperandVar& opdv1, const OperandVar& opdv2) const
+{
+	Option<LabelledValue>& k1 = getCell(opdv1), k2 = getCell(opdv2);
+	ASSERT(k1.isOne() && k2.isOne());
+	Set<Edge*> labels = k1.value().labels();
+	labels.addAll(k2.value().labels());
+	return labels;
 }
 
 ConstantVariables::LabelledValue ConstantVariables::getLabelledValue(const OperandVar& opdv) const
 {
 	Option<LabelledValue>& k = getCell(opdv);
-	assert(k.isOne());
+	ASSERT(k.isOne());
 	return k.value();
 }
 
@@ -135,14 +144,14 @@ void ConstantVariables::set(const OperandVar& opdv, const LabelledValue& lval)
 }
 
 // reset and set the value (the label list is emptied)
-void ConstantVariables::set(const OperandVar& opdv, const Constant& val, bool updated_flag)
+void ConstantVariables::set(const OperandVar& opdv, const Constant& val, const Set<Edge*>& labels, bool updated_flag)
 {
 	if(!val.isValid())
 		return invalidate(opdv);
 	Option<LabelledValue>& k = getCell(opdv);
 	invalidate(opdv);
 	DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << opdv << "==" << OperandConst(val))
-	k = some(LabelledValue(val, Set<Edge*>::null, updated_flag));
+	k = some(LabelledValue(val, labels, updated_flag));
 }
 
 // set to a value without changing the labels

@@ -42,7 +42,7 @@ Analysis::State::State(BasicBlock* entrybb, const dfa::State* state, const Opera
 		BasicBlock::OutIterator outs(entrybb);
 		ASSERT(outs);
 		path.addLast(*outs);
-		constants.set(sp, SP, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
 	}
 }
 
@@ -54,7 +54,7 @@ Analysis::State::State(Edge* entry_edge, const dfa::State* state, const OperandV
 	if(init)
 	{
 		path.addLast(entry_edge);
-		constants.set(sp, SP, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
 	}
 }
 
@@ -80,14 +80,21 @@ void Analysis::State::printFixPointState() const
 {
 	if(dbg_verbose > DBG_VERBOSE_ALL)
 		return; // save some time
-	BasicBlock *bb = path.lastEdge()->target();
-	DBG("Printing fixpoint state of BB#" << bb->number())
-	if(LOOP_HEADER(bb))
-		DBG("\t* loop#" << bb->number() << " = " << DBG_TEST(FIXPOINT_REACHED.exists(bb) && FIXPOINT_REACHED(bb) == true, true))
-	while(ENCLOSING_LOOP_HEADER.exists(bb))
+	if(!path.hasAnEdge())
 	{
-		bb = ENCLOSING_LOOP_HEADER(bb);
-		DBG("\t* loop#" << bb->number() << " = " << DBG_TEST(FIXPOINT_REACHED.exists(bb) && FIXPOINT_REACHED(bb) == true, true))
+		DBG("Failed to print fixpoint state: the state path is empty")
+	}
+	else
+	{
+		BasicBlock *bb = path.lastEdge()->target();
+		DBG("Printing fixpoint state of BB#" << bb->number())
+		if(LOOP_HEADER(bb))
+			DBG("\t* loop#" << bb->number() << " = " << DBG_TEST(FIXPOINT_REACHED.exists(bb) && FIXPOINT_REACHED(bb) == true, true))
+		while(ENCLOSING_LOOP_HEADER.exists(bb))
+		{
+			bb = ENCLOSING_LOOP_HEADER(bb);
+			DBG("\t* loop#" << bb->number() << " = " << DBG_TEST(FIXPOINT_REACHED.exists(bb) && FIXPOINT_REACHED(bb) == true, true))
+		}
 	}
 }
 
@@ -400,6 +407,7 @@ void Analysis::processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl)
 	else
 		PROCESSED_LOOPHEADER_BB.ref(bb) = s;
 
+	ASSERTP(EXIT_LIST.exists(bb), "Loop header's EXIT_LIST does not exist. Maybe an infinite loop?");
 	for(Vector<Edge*>::Iterator exits_iter(*EXIT_LIST.use(bb)); exits_iter; exits_iter++)
 		MOTHERLOOP_FIXPOINT_STATE.ref(*exits_iter) = sl.first().fixpointState();  // annotate all the loop exit edges (bit hacky :-/)
 	sl.clear();

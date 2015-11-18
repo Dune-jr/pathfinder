@@ -115,11 +115,13 @@ void DetailedPath::onLoopExit(Option<BasicBlock*> new_loop_header)
 
 void DetailedPath::onCall(Edge* e)
 {
+	return; // TODO!!
 	_path.addLast(FlowInfo(FlowInfo::KIND_CALL, e));
 }
 
 void DetailedPath::onReturn(BasicBlock* bb)
 {
+	return; // TODO!!
 	BasicBlock::InIterator ins(bb);
 	while(otawa::RECURSIVE_LOOP(ins))
 	{
@@ -253,7 +255,7 @@ Edge* DetailedPath::lastEdge() const
 	Edge* rtn = NULL;
 	for(EdgeIterator iter(*this); iter; iter++)
 		rtn = *iter;
-	assert(rtn != NULL);
+	ASSERTP(rtn != NULL, "lastEdge() called on empty DetailedPath");
 	return rtn;
 }
 

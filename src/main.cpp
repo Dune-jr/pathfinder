@@ -9,10 +9,9 @@
 #include "ffx.h"
 #include "debug.h"
 
-
-		// #define ELM_NO_DBG
-		#include "elmdebug.h"
-		int elm::color::flags = elm::color::DEBUG | elm::color::SOURCE_INFO | elm::color::COLORS;
+	// #define ELM_NO_DBG
+	#include "elmdebug.h"
+	int elm::color::flags = elm::color::DEBUG | elm::color::SOURCE_INFO;
 
 using namespace elm;
 using namespace otawa;
@@ -48,7 +47,7 @@ public:
 
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
-		workspace()->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
+		// workspace()->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
 		workspace()->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
 		if(opt_virtualize.get())
 			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
@@ -70,8 +69,9 @@ protected:
 			dbg_verbose = 2;
 		if(opt_s3)
 			dbg_verbose = 3;
-		if(opt_nocolor)
-			dbg_flags |= DBG_NO_COLOR;
+		if(!opt_nocolor)
+			color::flags |= color::COLORS;
+			// dbg_flags |= DBG_NO_COLOR;
 		if(opt_noinfo)
 			dbg_flags |= DBG_NO_INFO;
 		if(opt_linenumbers)

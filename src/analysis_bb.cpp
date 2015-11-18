@@ -69,9 +69,9 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			bool make_pred = false;
 			
 			// some shortcuts (the seminsts.F functions are not called at this point)
-			const t::int16& a = seminsts.a(), b = seminsts.b(), d = seminsts.d();
-			const t::int32& cst = seminsts.cst();
-			const t::int16& reg = seminsts.reg(), addr = seminsts.addr();
+			const t::int16 &a = seminsts.a(), &b = seminsts.b(), &d = seminsts.d();
+			const t::int32 &cst = seminsts.cst();
+			const t::int16 &reg = seminsts.reg(), &addr = seminsts.addr();
 			
 			switch(seminsts.op())
 			{
@@ -148,15 +148,12 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						invalidateAllMemory();
 					}
 					break;
-				case SCRATCH:
-					invalidateVar(d);
-					break;
 				case SET:
 					invalidateVar(d);
 					opd1 = new OperandVar(d);
 					opd2 = new OperandVar(a);
 					if(isConstant(a)) // if a is already identified as a constant
-						constants.set(d, constants[a]); // then constants[d] = constants[a]
+						constants.set(d, constants[a], getLabels(a)); // then constants[d] = constants[a]
 					else // no use generating this predicate if it is a constant, because the ConstantVariables object handles that
 						make_pred = true; // d = already
 					break;
@@ -191,7 +188,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							opd2 = new OperandConst(0);
 							make_pred = true; // d % 2 = 0
 							if(isConstant(d))
-								constants.set(d, constants[d]*2);
+								constants.set(d, constants[d]*2, getLabels(d));
 						}
 						else // d <- d+b
 						{	// [d-b / d]
@@ -199,7 +196,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							if(isConstant(d))
 							{
 								if(isConstant(b))
-									constants.set(d, constants[d]+constants[b]);
+									constants.set(d, constants[d]+constants[b], getLabels(d, b));
 								else
 								{
 									// d = constants[d] + b
@@ -222,7 +219,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							if(isConstant(d))
 							{
 								if(isConstant(a))
-									constants.set(d, constants[d]+constants[a]);
+									constants.set(d, constants[d]+constants[a], getLabels(d, a));
 								else
 								{
 									// d = a + constants[d]
@@ -245,7 +242,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							opd22 = new OperandVar(b);
 							opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
 							if(isConstant(a) && isConstant(b))
-								constants.set(d, constants[a]+constants[b]);
+								constants.set(d, constants[a]+constants[b], getLabels(a, b));
 							else make_pred = true; // d = a+b
 							// the invalidation in constants is already handled by invalidateVar
 						}
@@ -265,7 +262,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							if(isConstant(d))
 							{
 								if(isConstant(b))
-									constants.set(d, constants[d]-constants[b]);
+									constants.set(d, constants[d]-constants[b], getLabels(d, b));
 								else
 								{
 									// d = constants[d] - b
@@ -288,7 +285,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							if(isConstant(d))
 							{
 								if(isConstant(a)) // everything is const, update const value of d
-									constants.set(d, constants[a]-constants[d]);
+									constants.set(d, constants[a]-constants[d], getLabels(a, d));
 								else
 								{
 									// d = a - constants[d]
@@ -310,7 +307,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							opd22 = new OperandVar(b);
 							opd2 = new OperandArithExpr(ARITHOPR_SUB, *opd21, *opd22);
 							if(isConstant(a) && isConstant(b))
-								constants.set(d, constants[a]-constants[b]);
+								constants.set(d, constants[a]-constants[b], getLabels(a, b));
 							else make_pred = true; // d = a-b
 							// the invalidation in constants is already handled by invalidateVar
 						}
@@ -337,23 +334,34 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						{
 							ASSERT(!UNTESTED_CRITICAL);
 							DBG(color::BIRed() << "Untested case of operator SHL running!")
+							labels = getLabels(b);
 							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << b_val)), labels);
 							// we also add a predicate to say that d is now a multiple of 2^b
-							opd11 = new OperandVar(d);
-							opd12 = new OperandConst(1 << b_val);
-							opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
-							opd2 = new OperandConst(0);
 							if(isConstant(d)) // we must update constant value of d
-								constants.set(d, constants[d] << b_val);
-							else make_pred = true;
+							{
+								const Path& l = getLabels(d, b);
+								constants.set(d, constants[d] << b_val, l);
+							}
+							else
+							{ 
+								opd11 = new OperandVar(d);
+								opd12 = new OperandConst(1 << b_val);
+								opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
+								opd2 = new OperandConst(0);
+								make_pred = true; // will use labels
+							}
 						}
 						else // d <- a << b
 						{
-							invalidateVar(d);
 							if(isConstant(a))
-								constants.set(d, constants[a] << b_val);
+							{
+								const Path& l = getLabels(a, b);
+								invalidateVar(d);
+								constants.set(d, constants[a] << b_val, l);
+							}
 							else
 							{
+								invalidateVar(d);
 								opd21 = new OperandVar(a);
 								opd22 = new OperandConst(1 << b_val); // 2^b_val
 								opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
@@ -373,18 +381,31 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							invalidateVar(d);
 							break;
 						}
-						t::int32 b_val = constants[b].val();
-						DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(b_val) << "]")
-						invalidateVar(d);
-						if(d == a) // d <- d >> b
+						else if(d == a) // d <- d >> b
+						{
+							invalidateVar(d);
 							break; // not much we can do because we lost info (cf (*))
-						// d <- a >> b
-						opd21 = new OperandVar(a);
-						opd22 = new OperandConst(1 << b_val); // 2^b_val
-						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
-						if(isConstant(a))
-							constants.set(d, constants[a] >> b_val);
-						else make_pred = true;
+						}
+						else // d <- a >> b
+						{
+							t::int32 b_val = constants[b].val();
+							DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(b_val) << "]")
+							if(isConstant(a))
+							{
+								const Path& l = getLabels(a, b);
+								invalidateVar(d);
+								constants.set(d, constants[a] >> b_val, l);
+							}
+							else
+							{
+								labels = getLabels(b);
+								invalidateVar(d);
+								opd21 = new OperandVar(a);
+								opd22 = new OperandConst(1 << b_val); // 2^b_val
+								opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
+								make_pred = true; // this will use labels
+							}
+						}
 					}
 					break;
 				case NEG: // TODO test
@@ -395,7 +416,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						{	// [-1 * d / d]
 							update(OperandVar(d), OperandArithExpr(ARITHOPR_NEG, OperandVar(d)), labels); // TODO test
 							if(isConstant(d))
-								constants.set(d, -constants[d]);
+								constants.set(d, -constants[d], getLabels(d));
 						}
 						else
 						{	
@@ -405,7 +426,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							opd22 = new OperandVar(a);
 							opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
 							if(isConstant(a))
-								constants.set(d, -constants[a]);
+								constants.set(d, -constants[a], getLabels(a));
 							else make_pred = true;
 						}
 					}
@@ -413,11 +434,12 @@ void Analysis::State::processBB(const BasicBlock *bb)
 				case NOT: // d <- ~a
 					if(isConstant(a) && constants[a].isAbsolute()) 
 					{
-						t::int32 val = ~(constants[a].val());
-						if(val < 0)
-							val = -val; // TODO: handle better with unsigned support
+						t::int32 a_val = ~(constants[a].val());
+						if(a_val < 0)
+							a_val = -a_val; // TODO: handle better with unsigned support
+						labels = getLabels(a); // save before in case d==a
 						invalidateVar(d);
-						constants.set(d, val);
+						constants.set(d, a_val, labels);
 					}
 					else invalidateVar(d);
 					break;
@@ -433,8 +455,9 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							val = constants[a].val() ^ constants[b].val();
 						else //if(seminsts.op() == OR)
 							val = constants[a].val() | constants[b].val();
+						labels = getLabels(a, b);
 						invalidateVar(d); // don't do this earlier in case d==a or d==b
-						constants.set(d, val);
+						constants.set(d, val, labels);
 					}
 					else
 					{
@@ -460,7 +483,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 								opd1 = new OperandConst(0);
 								opd2 = new OperandVar(d);
 								if(isConstant(d))
-									constants.set(d, constants[d]*constants[d]);
+									constants.set(d, constants[d]*constants[d], getLabels(d));
 								else
 									constants.invalidate(d);
 							}
@@ -472,7 +495,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 								if(isConstant(d))
 								{
 									if(isConstant(b))
-										constants.set(d, constants[d]*constants[b]);
+										constants.set(d, constants[d]*constants[b], getLabels(d, b));
 									else
 										constants.invalidate(d);
 								}
@@ -492,7 +515,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 								if(isConstant(d))
 								{
 									if(isConstant(a))
-										constants.set(d, constants[d]*constants[a]);
+										constants.set(d, constants[d]*constants[a], getLabels(d, a));
 									else
 										constants.invalidate(d);
 								}
@@ -509,7 +532,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 								invalidateVar(d);
 								if(isConstant(a) && isConstant(b))
 								{
-									constants.set(d, constants[a]*constants[b]);
+									constants.set(d, constants[a]*constants[b], getLabels(a, b));
 									make_pred = false;
 								}
 								else
@@ -562,7 +585,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							if(isConstant(d))
 							{
 								if(isConstant(b))
-									constants.set(d, constants[d]/constants[b]);
+									constants.set(d, constants[d]/constants[b], getLabels(d, b));
 								else constants.invalidate(d);
 							}
 						}
@@ -575,7 +598,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							if(isConstant(d))
 							{
 								if(isConstant(a))
-									constants.set(d, constants[a]/constants[d]);
+									constants.set(d, constants[a]/constants[d], getLabels(a, d));
 								else constants.invalidate(d);
 							}
 						}
@@ -587,7 +610,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							opd22 = new OperandVar(b);
 							opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
 							if(isConstant(a) && isConstant(b))
-								constants.set(d, constants[a]/constants[b]);
+								constants.set(d, constants[a]/constants[b], getLabels(a, b));
 							else make_pred = true; // d = a / b
 						}
 					}
@@ -604,13 +627,17 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						opd2 = new OperandArithExpr(ARITHOPR_MOD, *opd21, *opd22);
 					}
 					if(isConstant(a) && isConstant(b))
-						constants.set(d, constants[a]%constants[b]);
+						constants.set(d, constants[a]%constants[b], getLabels(a, b));
 					else make_pred = true;
 					break;
 				case SPEC: // special instruction (d: code, cst: sub-code)
 					invalidateVar(d);
 					break;
 				default:
+					ASSERT(!UNTESTED_CRITICAL);
+					DBG(color::BIRed() << "Unknown seminst running!")
+				case SCRATCH:
+					invalidateVar(d);
 					make_pred = false;
 			}
 			if(make_pred)
@@ -647,6 +674,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 }
 
 // do all the preprocessing and pretty printing job for making a predicate, then return the final labelled predicate ready to be added to the list
+// this function handles the deletion of opd1 and opd2
 LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, Operand* opd1, Operand* opd2, Path& labels) const
 {
 	assert(opd1);
@@ -997,7 +1025,7 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd
 			// updating the predicate
 			Predicate p = piter.pred();
 			bool update_state = p.update(opd_to_update, *opd_modifier_new);
-			ASSERTP(update_state, "nothing was updated");
+			ASSERTP(update_state, "nothing was updated even though involvesVariable() returned true");
 
 			LabelledPredicate lp = LabelledPredicate(p, piter.labels());
 			setPredicate(piter, lp);
@@ -1168,7 +1196,10 @@ bool Analysis::State::invalidateAllMemory()
 void Analysis::State::updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const
 {
 	for(Vector<OperandVar>::Iterator iter(replaced_vars); iter; iter++)
+	// {
 		labels += constants.getLabels(*iter);
+		// DBG(color::IRed() << "replaced_vars:" << *iter << ", labels+=" << pathToString(constants.getLabels(*iter)))
+	// }
 }
 
 Predicate* Analysis::State::getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels)

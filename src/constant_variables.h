@@ -19,7 +19,7 @@ public:
 	{
 	public:
 		LabelledValue() { }
-		LabelledValue(const Constant& val, Set<Edge*> labels, bool updated = true) : _val(val), _labels(labels), _updated(updated) { }
+		LabelledValue(const Constant& val, const Set<Edge*>& labels, bool updated = true) : _val(val), _labels(labels), _updated(updated) { }
 		inline Constant val() const { return _val; }
 		inline const Set<Edge*>& labels() const { return _labels; }
 		inline bool isUpdated() const { return _updated; }
@@ -48,10 +48,13 @@ public:
 	bool isConstant(const OperandVar& opdv) const;
 	Constant getValue(const OperandVar& opdv) const; // this must not be called if !isConstant(opdv)...
 	Set<Edge*> getLabels(const OperandVar& opdv) const; // same
+	Set<Edge*> getLabels(const OperandVar& opdv1, const OperandVar& opdv2) const;
+	// template<typename First, typename ... OpdVars>
+	// 	void getLabelsOf(First head, const OpdVars&... tail) const;
 	ConstantVariables::LabelledValue getLabelledValue(const OperandVar& opdv) const; // same
 		   void set(const OperandVar& opdv, const LabelledValue& lval);
-		   void set(const OperandVar& opdv, const Constant& val, bool updated_flag = true);
-	inline void set(const OperandVar& opdv, const OperandConst& opdc, bool updated_flag = true) { set(opdv, opdc.value(), updated_flag); }
+		   void set(const OperandVar& opdv, const Constant& val, const Set<Edge*>& labels = Set<Edge*>::null, bool updated_flag = true);
+	inline void set(const OperandVar& opdv, const OperandConst& opdc, const Set<Edge*>& labels = Set<Edge*>::null, bool updated_flag = true) { set(opdv, opdc.value(), labels, updated_flag); }
 		   void update(const OperandVar& opdv, const Constant& val, bool updated_flag = true);
 	inline void update(const OperandVar& opdv, const OperandConst& opdc, bool updated_flag = true) { update(opdv, opdc.value(), updated_flag); }
 	void invalidate(const OperandVar& opdv);

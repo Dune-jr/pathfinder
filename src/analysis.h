@@ -130,6 +130,8 @@ public:
 		Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels);
 		Option<OperandConst> getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type);
 		inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
+		inline Set<Edge*> getLabels(const OperandVar& opdv) const { return constants.getLabels(opdv); }
+		inline Set<Edge*> getLabels(const OperandVar& opdv1, const OperandVar& opdv2) const { return constants.getLabels(opdv1, opdv2); }
 
 		// PredIterator class
 		class PredIterator: public PreIterator<PredIterator, const LabelledPredicate&> {

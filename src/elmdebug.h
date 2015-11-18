@@ -5,6 +5,8 @@
 #define _ELM_DEBUG_H
 
 #include <elm/string/CString.h>
+#include <elm/io/Output.h>
+#include <ostream>
 
 namespace elm
 {
@@ -24,12 +26,16 @@ namespace elm
 		{
 		public:
 			Color(const elm::CString& str) : _str(str) { }
-			inline operator elm::CString() const // (CString)Red
-				{ return (flags&COLOR) ? _str : ""; }
 			inline elm::CString operator()() const // Red()
-				{ return (elm::CString)*this; }
-			friend inline io::Output& operator<<(io::Output& out, const Color& color) // cout << Red << ...
+				{ return (flags&COLOR) ? _str : ""; }
+			inline operator elm::CString() const // (CString)Red
+				{ return (*this)(); }
+			inline operator const char*() const // (const char*)Red
+				{ return (*this)().chars(); }
+			friend inline elm::io::Output& operator<<(elm::io::Output& out, const Color& color) // elm::cout << Red
 				{ return (out << color()); }
+			friend inline std::ostream& operator<<(std::ostream& out, const Color& color) // std::cout << Red
+				{ return out << color().chars(); }
 		private:
 			elm::CString _str;
 		}; // Color class
