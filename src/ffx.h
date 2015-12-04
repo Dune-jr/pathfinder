@@ -10,7 +10,7 @@ class FFX
 {
 public:
 	FFX(const Vector<DetailedPath>& ips);
-	void output(const elm::String& filename);
+	void output(const elm::String& filename, const elm::String& function_name);
 
 private:
 	void printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip);

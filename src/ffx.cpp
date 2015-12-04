@@ -1,8 +1,9 @@
 #include "ffx.h"
 
+// TODO! do so that when there is NO LEx after a LEn, we use iteration=*
 FFX::FFX(const Vector<DetailedPath>& ips) : infeasible_paths(ips), indent_level(0) { }
-
-void FFX::output(const elm::String& filename)
+// TODO!!! debug this function name thing
+void FFX::output(const elm::String& function_name, const elm::String& filename)
 {
 	io::OutFileStream FFXStream(filename);
 	io::Output FFXFile(FFXStream);
@@ -10,7 +11,7 @@ void FFX::output(const elm::String& filename)
 	// header
 	FFXFile << indent(  ) << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" << endl;
 	FFXFile << indent(  ) << "<flowfacts>" << endl;
-	FFXFile << indent(+1) << "<function name=\"main\">" << endl; indent(+1);
+	FFXFile << indent(+1) << "<function name=\"" << function_name << "\">" << endl; indent(+1);
 
 	for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
 		printInfeasiblePath(FFXFile, *iter);
@@ -43,6 +44,9 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		}
 		else if(iter->isLoopExit())
 		{
+			// TODO!!! we should fix this LEx that doesn't have a previous LEn, that's a bug...
+			cout << "</loop> found when no context is open" << endl;
+			continue;
 			ASSERTP(!open_tags.isEmpty(), "</loop> found when no context is open")
 			/*ASSERTP(open_tags.first() == FFX_TAG_LOOP, "</loop> found when not directly in loop context");*/
 			while(open_tags.first() != FFX_TAG_LOOP)

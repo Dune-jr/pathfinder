@@ -3,6 +3,7 @@
  */
 
 #include <ctime>
+#include <cmath>
 #include <iostream> // std::cout
 #include <iomanip> // std::setprecision
 #include <elm/io/Output.h>
@@ -550,6 +551,7 @@ void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& f
 	if(ip.contains(last_edge)) // add the last edge too if in the infeasible path
 		detailed_ip.addLast(last_edge);
 #ifdef DBGG
+	detailed_ip.optimize();
 	DBGM("addDisorderedInfeasiblePath(...), ip=" << pathToString(ip) << ", " 
 		<< color::ICya() << "full_path=[" << full_path << "]" << color::RCol() << ", result=" << detailed_ip); // TODO!
 #endif
@@ -766,6 +768,22 @@ void Analysis::printResults(int exec_time_ms) const
 	}
 	cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << infeasible_paths_count-unminimized_ip_count << color::RCol() <<
 			"+" << color::Yel() << unminimized_ip_count << color::RCol() << " => " << color::IRed() << ip_count << color::RCol() << endl;
+	if(dbg_flags&DBG_AVG_IP_LENGTH && infeasible_paths_count > 0)
+	{
+		int sum_path_lengths = 0, squaredsum_path_lengths = 0;
+		for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
+		{
+			sum_path_lengths += iter->countEdges();
+			squaredsum_path_lengths += iter->countEdges() * iter->countEdges();
+		}
+		float average_length = (float)sum_path_lengths / (float)infeasible_paths_count;
+		float norm2 = sqrt((float)squaredsum_path_lengths / (float)infeasible_paths_count);
+	    std::ios_base::fmtflags oldflags = std::cout.flags();
+	    std::streamsize oldprecision = std::cout.precision();
+		std::cout << std::fixed << std::setprecision(2) << " (Average: " << average_length << ", Norm2: " << norm2 << ")" << endl;
+		std::cout.flags(oldflags);
+		std::cout.precision(oldprecision);
+	}
 }
 
 /**

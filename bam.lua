@@ -22,8 +22,8 @@ config:Finalize("config.lua")
 -- Settings
 settings = NewSettings()
 settings.cc.flags:Add("-O0")
--- otawa_config = "~/bin/otawa/otawa-config"
-otawa_config = "otawa-config"
+otawa_config = "~/bin/otawa/otawa-config"
+-- otawa_config = "otawa-config"
 
 -- Wall option
 if ScriptArgs["wall"]=="true" or ScriptArgs["Wall"]=="true" then

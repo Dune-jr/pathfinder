@@ -152,9 +152,7 @@ Vector<DetailedPath> Analysis::State::stateListToPathVector(const SLList<State>&
 {
 	Vector<DetailedPath> rtn;
 	for(SLList<State>::Iterator iter(sl); iter; iter++)
-	{
-		rtn.add((*iter).getDetailedPath());
-	}
+		rtn.add(iter->getDetailedPath());
 	return rtn;
 }
 

@@ -10,7 +10,7 @@
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 
-// #define DBGG // debug loop analysis
+// #define DBGG // debug loop analysis and many other
 // #define DBG_WARNINGS
 #define DBG_NO_COLOR	   0b1 << 1
 #define DBG_NO_INFO		   0b1 << 2
@@ -20,6 +20,7 @@
 #define DBG_PREANALYSIS	   0b1 << 6
 #define DBG_PROGRESS	   0b1 << 7
 #define DBG_PRINT_FLOWINFO 0b1 << 8
+#define DBG_AVG_IP_LENGTH  0b1 << 8
 #define UNTESTED_CRITICAL true // Do not raise exception when executing untested code
 #define DBG_SEPARATOR " "
 

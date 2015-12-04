@@ -37,8 +37,9 @@ public:
 		opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
 		opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")),
 		opt_noflowinfo(option::SwitchOption::Make(*this).cmd("--no-flowinfo").description("do not print context flowinfo in path debugs")),
-		opt_progress(option::SwitchOption::Make(*this).cmd("--show-progress").description("Display analysis progress")),
-		opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis")),
+		opt_progress(option::SwitchOption::Make(*this).cmd("--show-progress").description("display analysis progress")),
+		opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis (obsolete)")),
+		opt_avgiplength(option::SwitchOption::Make(*this).cmd("--average-ip-length").description("display average length of infeasible_paths found")),
 		opt_nounminimized(option::SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
 		opt_dry(option::SwitchOption::Make(*this).cmd("--dry").description("dry run (no solver calls)")),
 		opt_automerge(option::SwitchOption::Make(*this).cmd("--automerge").description("let the algorithm decide when to merge")),
@@ -64,11 +65,11 @@ protected:
 		int analysis_flags = 0, merge_frequency = 0;
 
 		if(opt_s1)
-			dbg_verbose = 1;
+			dbg_verbose = 1; 
 		if(opt_s2)
 			dbg_verbose = 2;
 		if(opt_s3)
-			dbg_verbose = 3;
+			dbg_verbose = 3; // high verbose numbers are more silent. TODO: that is counterintuitive
 		if(!opt_nocolor)
 			color::flags |= color::COLORS;
 			// dbg_flags |= DBG_NO_COLOR;
@@ -86,7 +87,9 @@ protected:
 			dbg_flags |= DBG_PROGRESS;
 		if(opt_preanalysis)
 			dbg_flags |= DBG_PREANALYSIS;
-		if(!opt_nounminimized)
+		if(opt_avgiplength)
+			dbg_flags |= DBG_AVG_IP_LENGTH;
+		if(! opt_nounminimized)
 			analysis_flags |= Analysis::UNMINIMIZED_PATHS;
 		if(opt_dry)
 			analysis_flags |= Analysis::DRY_RUN;
@@ -105,7 +108,7 @@ protected:
 			const Vector<DetailedPath>& infeasible_paths = analysis.infeasiblePaths();
 			FFX ffx_output(infeasible_paths);
 			const elm::String name = entry + ".ffx";
-			ffx_output.output(name);
+			ffx_output.output(elm::String(entry), name);
 			if(dbg_verbose < DBG_VERBOSE_NONE)
 				cout << "output to " + name << endl;
 		}
@@ -115,7 +118,7 @@ protected:
 private:
 	option::Manager manager;
 	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred, 
-		opt_noflowinfo, opt_progress, opt_preanalysis, opt_nounminimized, opt_dry, opt_automerge; //, opt_virtualize;
+		opt_noflowinfo, opt_progress, opt_preanalysis, opt_avgiplength, opt_nounminimized, opt_dry, opt_automerge; //, opt_virtualize;
 	option::ValueOption<bool> opt_virtualize;
 	option::ValueOption<int> opt_merge;
 };
