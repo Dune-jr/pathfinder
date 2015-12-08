@@ -4,8 +4,9 @@
 #ifndef _DEBUG_H
 #define _DEBUG_H
 
-// #define ELM_NO_DBG
+#define ELM_NO_DBG // do not use standard macro names
 #include "elmdebug.h"
+#define DBG ELM_DBGLN // default DBG to ELM_DBGLN. If we want to get the no-newline behavior, we have to use ELM_DBG (or elm::cout)
 #include <iostream>
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
@@ -39,7 +40,7 @@ extern int dbg_verbose;
 	((tested_cond) ? "true" : "false") << color::RCol()
 
 #endif
-	
+
 /*
 namespace debug {
 namespace color

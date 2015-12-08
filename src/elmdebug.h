@@ -105,8 +105,8 @@ namespace elm
 	} // debug namespace
 } // elm namespace
 
-#define ELM_DBG(str) { if(elm::debug::flags&elm::debug::DEBUG) elm::cout << elm::debug::Debug::debugPrefix(__FILE__, __LINE__) << str << elm::color::RCol << elm::io::endl; }
-#define ELM_DBGLN(str) { ELM_DBG(str << elm::color::RCol << elm::io::endl); }
+#define ELM_DBG(str) { if(elm::debug::flags&elm::debug::DEBUG) elm::cout << elm::debug::Debug::debugPrefix(__FILE__, __LINE__) << str << elm::color::RCol; }
+#define ELM_DBGLN(str) { ELM_DBG(str << elm::io::endl); }
 
 // shortcuts
 #ifndef ELM_NO_DBG
