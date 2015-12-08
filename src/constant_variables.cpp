@@ -1,6 +1,5 @@
 #include "constant_variables.h"
-
-using namespace debug;
+#include "debug.h"
 
 // ConstantVariables
 ConstantVariables::ConstantVariables(unsigned int max_tempvars, unsigned int max_registers)

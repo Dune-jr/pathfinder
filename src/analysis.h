@@ -15,7 +15,6 @@
 using namespace otawa;
 using namespace elm::genstruct;
 using namespace elm::avl;
-using namespace debug;
 
 // pretty printing
 void addIndents(io::Output& out, int n);

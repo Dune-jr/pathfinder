@@ -15,7 +15,7 @@
 	#endif
 #endif
 
-#include <iostream> // std::cout, std::basic_string
+// #include <iostream> // std::cout, std::basic_string
 #include <elm/genstruct/SLList.h>
 #include "analysis.h"
 

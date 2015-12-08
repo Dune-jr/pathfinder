@@ -9,10 +9,6 @@
 #include "ffx.h"
 #include "debug.h"
 
-	// #define ELM_NO_DBG
-	#include "elmdebug.h"
-	int elm::color::flags = elm::color::DEBUG | elm::color::SOURCE_INFO;
-
 using namespace elm;
 using namespace otawa;
 
@@ -20,7 +16,8 @@ void testPredicates();
 void testOperands();
 void testSimplify();	
 
-int dbg_flags = 0b00000000; // global flags
+int elm::debug::flags = 0b00000000; // global elm debug flags
+int dbg_flags = 0b00000000; // global analysis flags for debugging
 int dbg_verbose = 0; // global verbose level (higher = less verbose)
 
 class Display: public Application {
@@ -35,7 +32,7 @@ public:
 		opt_noinfo(option::SwitchOption::Make(*this).cmd("--no-info").description("do not print file/line number info")),
 		opt_linenumbers(option::SwitchOption::Make(*this).cmd("--line-nb").cmd("--line-numbers").description("number lines of the output")),
 		opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
-		opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")),
+		// opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")), // no longer working
 		opt_noflowinfo(option::SwitchOption::Make(*this).cmd("--no-flowinfo").description("do not print context flowinfo in path debugs")),
 		opt_progress(option::SwitchOption::Make(*this).cmd("--show-progress").description("display analysis progress")),
 		opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis (obsolete)")),
@@ -65,22 +62,26 @@ protected:
 		int analysis_flags = 0, merge_frequency = 0;
 
 		if(opt_s1)
-			dbg_verbose = 1; 
+			dbg_verbose = 1;
 		if(opt_s2)
 			dbg_verbose = 2;
 		if(opt_s3)
 			dbg_verbose = 3; // high verbose numbers are more silent. TODO: that is counterintuitive
-		if(!opt_nocolor)
-			color::flags |= color::COLORS;
+		if(dbg_verbose == DBG_VERBOSE_ALL) // 0
+			elm::debug::flags |= elm::debug::DEBUG;
+		if(! opt_nocolor)
+			elm::debug::flags |= elm::debug::COLORS;
 			// dbg_flags |= DBG_NO_COLOR;
-		if(opt_noinfo)
-			dbg_flags |= DBG_NO_INFO;
+		if(! opt_noinfo)
+			elm::debug::flags |= elm::debug::SOURCE_INFO;
+			// dbg_flags |= DBG_NO_INFO;
 		if(opt_linenumbers)
-			dbg_flags |= DBG_LINE_NB;
+			elm::debug::flags |= elm::debug::NUMBERING;
+			// dbg_flags |= DBG_LINE_NB;
 		if(opt_notime)
 			dbg_flags |= DBG_NO_TIME;
-		if(opt_nopred)
-			dbg_flags |= DBG_NO_PREDICATES;
+		// if(opt_nopred)
+		 	// dbg_flags |= DBG_NO_PREDICATES;
 		if(! opt_noflowinfo)
 			dbg_flags |= DBG_PRINT_FLOWINFO;
 		if(opt_progress)
@@ -117,7 +118,7 @@ protected:
 
 private:
 	option::Manager manager;
-	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime, opt_nopred, 
+	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime,// opt_nopred, 
 		opt_noflowinfo, opt_progress, opt_preanalysis, opt_avgiplength, opt_nounminimized, opt_dry, opt_automerge; //, opt_virtualize;
 	option::ValueOption<bool> opt_virtualize;
 	option::ValueOption<int> opt_merge;

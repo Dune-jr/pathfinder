@@ -4,7 +4,7 @@
 #ifndef _DEBUG_H
 #define _DEBUG_H
 
-#define ELM_NO_DBG
+// #define ELM_NO_DBG
 #include "elmdebug.h"
 #include <iostream>
 #include <elm/string/String.h>
@@ -12,16 +12,17 @@
 
 // #define DBGG // debug loop analysis and many other
 // #define DBG_WARNINGS
-#define DBG_NO_COLOR	   0b1 << 1
-#define DBG_NO_INFO		   0b1 << 2
-#define DBG_LINE_NB		   0b1 << 3
+
+// #define DBG_NO_COLOR	   0b1 << 1
+// #define DBG_NO_INFO		   0b1 << 2
+// #define DBG_LINE_NB		   0b1 << 3
 #define DBG_NO_TIME		   0b1 << 4
-#define DBG_NO_PREDICATES  0b1 << 5
+// #define DBG_NO_PREDICATES  0b1 << 5
 #define DBG_PREANALYSIS	   0b1 << 6
 #define DBG_PROGRESS	   0b1 << 7
 #define DBG_PRINT_FLOWINFO 0b1 << 8
 #define DBG_AVG_IP_LENGTH  0b1 << 9
-#define UNTESTED_CRITICAL true // Do not raise exception when executing untested code
+#define UNTESTED_CRITICAL true // Raise exceptions when executing untested code
 #define DBG_SEPARATOR " "
 
 #define DBG_VERBOSE_ALL			 0
@@ -32,8 +33,15 @@
 extern int dbg_flags;
 extern int dbg_verbose;
 
-namespace debug {
+#define DBG_STD(str) { if(elm::color::flags&elm::color::DEBUG) std::cout << elm::color::Debug::debugPrefix(__FILE__, __LINE__).chars() << str << elm::color::RCol << std::endl; }
+#define DBG_TEST(tested_cond, expected_cond) \
+	((tested_cond) == (expected_cond) ? color::IGre() : color::IRed()) << \
+	((tested_cond) ? "true" : "false") << color::RCol()
+
+#endif
+	
 /*
+namespace debug {
 namespace color
 {
 	inline elm::String RCol() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[0m"; } // Reset colors
@@ -107,7 +115,7 @@ namespace color
 	inline elm::String On_Whi() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[47m"; }
 	inline elm::String On_IWhi() { return (dbg_flags&DBG_NO_COLOR) ? "" : "\e[0;107m"; }
 } // color
-*/
+
 class Debug
 {
 	enum {
@@ -129,8 +137,7 @@ public:
 			for(unsigned int i = 0, len = str.length(); i < DEBUG_HEADERSIZE - len; i++)
 				whitespaces = whitespaces.concat(elm::CString(" "));
 			return _ << whitespaces << str;
-		}		
-		return str;
+		}
 	}
 	static bool shouldAlwaysPrint()
 	{
@@ -171,7 +178,7 @@ public:
 // macros for debugging
 #define DBG_INFO() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__) << "] " << color::RCol()
 #define DBG_INFO_STD() color::Yel() << "[" << Debug::formattedDbgInfo(__FILE__, __LINE__).chars() << "] " << color::RCol()
-/**/
+
 #define DBG(str) { if(dbg_verbose == DBG_VERBOSE_ALL) {\
 	if(!Debug::shouldAlwaysPrint())\
 	{\
@@ -180,15 +187,10 @@ public:
 			cout << Debug::dbgInfo(__FILE__, __LINE__) << stringed_str << color::RCol() << io::endl;\
 	} else\
 		cout << Debug::dbgInfo(__FILE__, __LINE__) << _ << str << color::RCol() << io::endl; } }
-/**/
 #define DBGM(str) { if(dbg_verbose <= DBG_VERBOSE_MINIMAL) {\
 		cout << Debug::dbgInfo(__FILE__, __LINE__) << str << color::RCol() << io::endl;\
-	} }
-#define DBG_STD(str) { if(dbg_verbose == DBG_VERBOSE_ALL) {\
+	} }*/
+/*#define DBG_STD(str) { if(dbg_verbose == DBG_VERBOSE_ALL) {\
 	if(Debug::shouldPrint(_ << str)) \
 		std::cout << Debug::dbgInfo(__FILE__, __LINE__).chars() << str << color::RCol().chars() << io::endl; } }
-#define DBG_TEST(tested_cond, expected_cond) \
-	((tested_cond) == (expected_cond) ? color::IGre() : color::IRed()) << \
-	((tested_cond) ? "true" : "false") << color::RCol()
-
-#endif
+*/
