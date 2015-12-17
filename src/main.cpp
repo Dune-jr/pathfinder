@@ -16,10 +16,9 @@ void testPredicates();
 void testOperands();
 void testSimplify();	
 
-int elm::debug::flags = 0b00000000; // global elm debug flags
 int dbg_flags = 0b00000000; // global analysis flags for debugging
 int dbg_verbose = 0; // global verbose level (higher = less verbose)
-
+	
 class Display: public Application {
 public:
     Display(void): Application("display", Version(1, 0, 0)),
@@ -67,17 +66,11 @@ protected:
 			dbg_verbose = 2;
 		if(opt_s3)
 			dbg_verbose = 3; // high verbose numbers are more silent. TODO: that is counterintuitive
-		if(dbg_verbose == DBG_VERBOSE_ALL) // 0
-			elm::debug::flags |= elm::debug::DEBUG;
-		if(! opt_nocolor)
-			elm::debug::flags |= elm::debug::COLORS;
-			// dbg_flags |= DBG_NO_COLOR;
-		if(! opt_noinfo)
-			elm::debug::flags |= elm::debug::SOURCE_INFO;
-			// dbg_flags |= DBG_NO_INFO;
-		if(opt_linenumbers)
-			elm::debug::flags |= elm::debug::NUMBERING;
-			// dbg_flags |= DBG_LINE_NB;
+		elm::log::Debug::setDebugFlag(dbg_verbose == DBG_VERBOSE_ALL);
+		elm::log::Debug::setColorFlag(! opt_nocolor);
+		elm::log::Debug::setSourceInfoFlag(! opt_noinfo);
+		elm::log::Debug::setNumberingFlag(opt_linenumbers);
+		elm::log::Debug::setPrefixColor(elm::color::Yel);
 		if(opt_notime)
 			dbg_flags |= DBG_NO_TIME;
 		// if(opt_nopred)

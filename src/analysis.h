@@ -6,7 +6,7 @@
 #include <otawa/prop/Identifier.h>
 #include <elm/avl/Set.h>
 #include <elm/genstruct/SLList.h>
-#include <elm/util/Comparator.h>
+#include <elm/compare.h>
 #include "constant_variables.h"
 #include "labelled_predicate.h"
 #include "detailed_path.h"

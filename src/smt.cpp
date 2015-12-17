@@ -1,15 +1,24 @@
 /*
  * Interfacing with the SMT solver
  */
-// #include <iostream>
 #include <elm/genstruct/SLList.h>
 #include "smt.h"
 #include "debug.h"
 
 using namespace elm::genstruct;
 
+/**
+ * @class SMT
+ * @brief Interface with the SMT solver
+ */
 SMT::SMT() { }
 
+/**
+ * @fn Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s);
+ * @brief Check the satisfiability of a state
+ * @param s State to check
+ * @return If unsatisfiable, returns a path, otherwise elm::none
+ */
 Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 {
 	// add the constant info to the the list of predicates
@@ -63,9 +72,14 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	const BitVector& paths_to_keep = getListOfPathsToKeep(bitcode_list); // get the list of relevant paths (removes redundant bitcode such as 101 in {101, 100})
 	
 	return elm::some(filterPaths(bitcode_list, map_bit_to_pathpoint, paths_to_keep, true)); // generate the list of non-redundant paths and return it
-//*/
+*/
 }
 
+/**
+ * @fn const elm::String SMT::printChosenSolverInfo();
+ * @brief Print the name of the solver being used
+ * @return Short string containing the name of the solver
+ */
 const elm::String SMT::printChosenSolverInfo()
 {
 #ifdef SMT_SOLVER_Z3

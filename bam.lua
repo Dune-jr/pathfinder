@@ -15,7 +15,7 @@ config:Add(OptCCompiler("compiler"))
 -- config:Add(OptLibrary("zlib", "zlib.h", false))
 config:Add(OptLibrary("cvc4", "cvc4/cvc4.h", false))
 config:Add(OptLibrary("z3", "z3++.h", false))
-config:Add(OptString("solver", "cvc4"))	
+config:Add(OptString("solver", "cvc4"))
 config:Finalize("config.lua")
 
 

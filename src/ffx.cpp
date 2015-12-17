@@ -2,7 +2,6 @@
 
 // TODO! do so that when there is NO LEx after a LEn, we use iteration=*
 FFX::FFX(const Vector<DetailedPath>& ips) : infeasible_paths(ips), indent_level(0) { }
-// TODO!!! debug this function name thing
 void FFX::output(const elm::String& function_name, const elm::String& filename)
 {
 	io::OutFileStream FFXStream(filename);

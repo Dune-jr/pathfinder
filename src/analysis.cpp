@@ -3,6 +3,7 @@
  */
 
 #include "analysis.h"
+// #include "dependence.h"
 #include <otawa/cfg/Edge.h>
 
 void addIndents(io::Output& out, int n) { for(int i=0; i<n; i++) out << "\t"; }
@@ -14,6 +15,7 @@ Analysis::Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int m
 {
 	DBG("Stack pointer identified to " << sp)
 	processCFG(cfg);
+	// Dependence Dependence(cfg); // TODO!!!
 }
 
 // PredIterator

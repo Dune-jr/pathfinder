@@ -126,10 +126,10 @@ void Analysis::processCFG(CFG* cfg)
 	while(!wl.isEmpty())
 	{
 		DBG("wl=" << wlToString())
-		/* bb::wl <- wl; */
 #ifdef DBGG
 		cout << color::Blu() << "wl=" << wlToString() << color::RCol() << endl;
 #endif
+		/* bb::wl <- wl; */
 		BasicBlock *bb = wl.pop();
 		SLList<Analysis::State> sl;
 		const bool loop_header = LOOP_HEADER(bb);
