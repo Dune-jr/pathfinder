@@ -8,6 +8,82 @@
 using namespace elm;
 using namespace elm::avl;
 
+/**
+ * @class Operand
+ * @brief Abstract class for any operand of a Predicate
+ */
+
+/**
+ * @fn Operand* Operand::copy() const;
+ * @brief Copy the Operand
+ */
+/**
+ * @fn unsigned int Operand::countTempVars() const;
+ * @brief Count the number of temporary variables in the Operand
+ * @warning This will count a variable several times if it occurs several times
+ */
+/**
+ * @fn bool Operand::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+ * @brief Check if the Operand is a single temporary variable (example "t3"). If true, copies itself in <b>temp_var</b>, if false, copies itself in <b>expr</b>
+ * @return True if the Operand is a single temporary variable
+ */
+/**
+ * @fn int Operand::involvesVariable(const OperandVar& opdv) const;
+ * @brief Check for any reference to a variable in the Operand
+ */
+/**
+ * @fn bool Operand::involvesStackBelow(const Constant& stack_limit) const;
+ * @brief Check for any reference (OperandMem) to the value in an address in the stack, below the given stack_limit
+ * @return True if a reference has been found
+ */
+/**
+ * @fn bool Operand::involvesMemoryCell(const OperandMem& opdm) const;
+ * @brief Check for any reference to a given memory cell in the Operand
+ * @param opdm Memory cell to look for in the operand
+ */
+/**
+ * @fn bool Operand::involvesMemory() const;
+ * @brief Check for any reference to a value in the stack or the heap in the Operand
+ */
+/**
+ * @fn bool Operand::update(const Operand& opd, const Operand& opd_modifier);
+ * @brief
+ */
+/**
+ * @fn bool Operand::isComplete() const;
+ * @brief Check whether the Operand is complete, as opposed to a temporary predicate (such as ?0 ~ 1)
+ */
+/**
+ * @fn bool Operand::isAffine(const OperandVar& opdv) const;
+ * @brief Check whether the Operand is affine regarding to opdv, that is, it does not contain any reference to the heap, the stack or another variable than opdv 
+ */
+/**
+ * @fn void Operand::parseAffineEquation(AffineEquationState& state) const;
+ * @brief
+ */
+/**
+ * @fn Option<OperandConst> Operand::evalConstantOperand() const;
+ * @brief
+ * @warning Deprecated, bound to be removed in the future
+ */
+/**
+ * @fn Option<Operand*> Operand::simplify();
+ * @brief Simplify the operand, may return a new equivalent Operand to replace the current one with
+ * @warning If elm::none is returned, it is not safe to assume that nothing has been simplified!
+ */
+/**
+ * @fn Option<Operand*> Operand::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars);
+ * @brief
+ */
+/**
+ * @fn bool Operand::accept(OperandVisitor& visitor) const;
+ * @brief
+ */
+/**
+ * @fn operand_kind_t Operand::kind() const;
+ * @brief Returns an operand kind, in order to characterize each implementation of Operand
+ */
+
 // Operands: Constants
 OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }
 OperandConst::OperandConst(const Constant& value) : _value(value) { }
@@ -636,6 +712,12 @@ Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesSimpl
 	}
 	return none;
 }
+
+/**
+ * @class AffineEquationState
+ * @brief Provide tools to analyse affine equations.
+ * For a given variable var, try to find an integer constant &Delta; such that var = +-SP + &Delta; 
+ */
 
 io::Output& operator<<(io::Output& out, operand_kind_t kind)
 {
