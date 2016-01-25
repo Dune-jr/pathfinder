@@ -30,8 +30,9 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		if(iter->isEdge())
 		{
 			const Edge* e = iter->getEdge();
-			FFXFile << indent(  ) << "<edge src=\"0x" << e->source()->address() << "\" dst=\"0x" << e->target()->address() << "\" />" 
-					<< " <!-- " << e->source()->number() << "->" << e->target()->number() << " -->" << endl;
+			FFXFile << indent(  ) << "<edge src=\"0x" << e->source()->address() << "\" dst=\"0x" << e->target()->address()
+				//	<< "\" />" << " <!-- " << e->source()->number() << "->" << e->target()->number() << " -->" << endl;
+					<< "\" srcindex=\"" << e->source()->number() << "\" dstindex=\"" << e->target()->number() << "\" />" << endl;
 		}
 		else if(iter->isLoopEntry())
 		{

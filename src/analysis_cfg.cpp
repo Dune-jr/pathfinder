@@ -873,6 +873,11 @@ Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>&
 	return rtn;
 }
 
+/**
+ * @brief Test if a BasicBlock is conditional
+ * A BasicBlock is conditional if and only if it has more than one outgoing edge, including a taken edge
+ * @param BasicBlock to test
+ */
 bool Analysis::isConditional(BasicBlock* bb) const
 {
 	int count = 0;
@@ -890,7 +895,7 @@ bool Analysis::isConditional(BasicBlock* bb) const
 
 /**
 	@fn int Analysis::allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
-	returns true when all incoming non-back edges (look edges) are annotated with the given annotation
+	Returns true when all incoming non-back edges (look edges) are annotated with the given annotation
 	@param bb BasicBlock to check
 	@param annotation_identifier the annotation id we test on the incoming edges
 */

@@ -6,6 +6,7 @@
 #include <otawa/hard/Platform.h>
 #include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
 #include "analysis.h"
+#include "dependence.h" // TODO!!!
 #include "ffx.h"
 #include "debug.h"
 
@@ -29,7 +30,7 @@ public:
 		opt_output(option::SwitchOption::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file")),
 		opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").cmd("--no-colors").description("do not use colors")),
 		opt_noinfo(option::SwitchOption::Make(*this).cmd("--no-info").description("do not print file/line number info")),
-		opt_linenumbers(option::SwitchOption::Make(*this).cmd("--line-nb").cmd("--line-numbers").description("number lines of the output")),
+		opt_linenumbers(option::SwitchOption::Make(*this).cmd("-l").cmd("--line-nb").cmd("--line-numbers").description("number lines of the output")),
 		opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
 		// opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")), // no longer working
 		opt_noflowinfo(option::SwitchOption::Make(*this).cmd("--no-flowinfo").description("do not print context flowinfo in path debugs")),
@@ -95,6 +96,7 @@ protected:
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::FOLLOW_CALLS;
 		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, merge_frequency, analysis_flags);
+		// Dependence dependence = Dependence(cfg, workspace());// TODO!!!
 
 		// outputing to .ffx
 		if(opt_output)

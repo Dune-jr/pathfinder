@@ -58,6 +58,8 @@ public:
 		   void update(const OperandVar& opdv, const Constant& val, bool updated_flag = true);
 	inline void update(const OperandVar& opdv, const OperandConst& opdc, bool updated_flag = true) { update(opdv, opdc.value(), updated_flag); }
 	void invalidate(const OperandVar& opdv);
+	inline void invalidateOperand(const Operand& opd)
+		{ if(opd.kind() == OPERAND_VAR) invalidate((const OperandVar&)opd); }
 	bool invalidateTempVars();
 	void label(Edge* label);
 	void merge(const SLList<ConstantVariables>& cvl);

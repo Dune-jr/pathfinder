@@ -24,7 +24,7 @@ template <class T> inline io::Output& operator<<(io::Output& out, const Vector<T
 
 /*
 class PathComparator: public elm::Comparator<SLList<const Edge*> > {
-	static inline int compare(const SLList<const Edge*>& v1, const SLList<const Edge*>& v2)
+		static inline int compare(const SLList<const Edge*>& v1, const SLList<const Edge*>& v2)
 		{ return 0; }
 };
 */
@@ -45,9 +45,9 @@ public:
 	static Identifier<Analysis::State*>			PROCESSED_LOOPHEADER_BB;
 	static Identifier<bool>						MOTHERLOOP_FIXPOINT_STATE;
 	static Identifier<bool>						FIXPOINT_REACHED;
-	
+
 	class State {
-	private:
+		private:
 		const dfa::State* dfa_state;
 		const OperandVar& sp; // the Stack Pointer register
 		// OrderedPath path;
@@ -97,6 +97,7 @@ public:
 		void throwInfo();
 		int invalidateStackBelow(const Constant& stack_limit);
 
+
 		inline const State* operator->(void) const { return this; }
 
 	private:
@@ -111,9 +112,11 @@ public:
 		// analysis_bb.cpp
 		LabelledPredicate makeLabelledPredicate(condoperator_t opr, Operand* opd1, Operand* opd2, Path& labels) const;
 		bool invalidateVar(const OperandVar& var, bool invalidate_constant_info = true);
+		bool invalidate(const Operand& var, bool invalidate_constant_info = true);
 		bool invalidateMem(const OperandMem& addr);
 		bool invalidateMem(const OperandVar& var);
 		bool invalidateTempVars();
+		bool replaceOperand(const Operand& opd, const Operand& expr);
 		bool replaceVar(const OperandVar& var, const Operand& expr);
 		bool replaceMem(const OperandMem& opd, const Operand& expr, const Path& labels);
 		bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);

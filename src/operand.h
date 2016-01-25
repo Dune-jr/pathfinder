@@ -69,7 +69,8 @@ public:
 	virtual Operand* copy() const = 0;
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
 	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const = 0;
-	virtual int involvesVariable(const OperandVar& opdv) const = 0;
+	bool involvesOperand(const Operand& opd) const { return this->operator==(opd); }
+	virtual int involvesVariable(const OperandVar& opdv) const = 0; // TODO! rewrite using involvesOperand, if the int return thing is not critical?
 	virtual bool involvesStackBelow(const Constant& stack_limit) const = 0;
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
 	virtual bool involvesMemory() const = 0;
@@ -104,6 +105,7 @@ public:
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+	bool involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
@@ -142,6 +144,7 @@ public:
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+	bool involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
@@ -178,6 +181,7 @@ public:
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+	bool involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
@@ -219,6 +223,7 @@ public:
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
+	bool involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
 	bool involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;

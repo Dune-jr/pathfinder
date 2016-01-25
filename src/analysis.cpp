@@ -20,7 +20,7 @@ Analysis::Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int m
 	, loop_header_count(0), bb_count(cfg->countBB()-1) // do not count ENTRY
 	, ip_count(0), unminimized_ip_count(0)
 {
-	DBG("Stack pointer identified to " << sp)
+	DBG("Stack pointer identified to r" << sp)
 	processCFG(cfg);
 	// Dependence Dependence(cfg); // TODO!!!
 }

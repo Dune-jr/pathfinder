@@ -105,7 +105,8 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					}
 					break;
 				case LOAD: // reg <- MEM_type(addr)
-					invalidateVar(reg); // TODO: shouldn't we invalidate reg later incase we LOAD ?11, ?11 
+					invalidateVar(reg); // TODO: shouldn't we invalidate reg later incase we LOAD ?11, ?11
+					// DBG(color::IRed() << dumpEverything())
 					if(Option<OperandMem> addr_mem = getOperandMem(addr, labels))
 					{
 						// if it's a constant address of some read-only data
@@ -163,8 +164,8 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					constants.set(d, cst); // constants[d] = cst
 					break;
 				case SETP:
-					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Unimplemented operator SETP running!")
+					ASSERT(!UNTESTED_CRITICAL);
 					invalidateVar(d);
 					break;
 				case CMP:
@@ -469,87 +470,183 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Untested unsigned variant running!")
 				case MUL:
-					make_pred = true;
-					// opd1 = new OperandVar(d);
+					if(d == a)
 					{
-						if(d == a)
+						if(d == b) // d <- d*d
 						{
-							if(d == b) // d <- d*d
+							ASSERT(!UNTESTED_CRITICAL);
+							DBG(color::BIRed() << "Untested case of operator MUL running!")
+							invalidateVar(d, KEEP_CONSTANT_INFO); // we have no way to do [sqrt(d) / d], so just invalidate
+							opr = CONDOPR_LE; // and add a "0 <= d" predicate
+							opd1 = new OperandConst(0);
+							opd2 = new OperandVar(d);
+							make_pred = true;
+							if(isConstant(d))
+								constants.set(d, constants[d]*constants[d], getLabels(d));
+							else
+								constants.invalidate(d);
+						}
+						else // d <- d*b
+						{	// [d/b / d] // we will have to assume that 0/0 is scratch!
+							DBG(color::BIRed() << "Untested case of operator MUL running!")
+							ASSERT(!UNTESTED_CRITICAL);
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)), labels); // constants will be replaced later
+							if(isConstant(d))
 							{
-								ASSERT(!UNTESTED_CRITICAL);
-								DBG(color::BIRed() << "Untested case of operator MUL running!")
-								invalidateVar(d, KEEP_CONSTANT_INFO); // we have no way to do [sqrt(d) / d], so just invalidate
-								opr = CONDOPR_LE; // and add a "0 <= d" predicate
-								opd1 = new OperandConst(0);
-								opd2 = new OperandVar(d);
-								if(isConstant(d))
-									constants.set(d, constants[d]*constants[d], getLabels(d));
+								if(isConstant(b))
+									constants.set(d, constants[d]*constants[b], getLabels(d, b));
 								else
-									constants.invalidate(d);
-							}
-							else // d <- d*b
-							{	// [d/b / d] // we will have to assume that 0/0 is scratch!
-								ASSERT(!UNTESTED_CRITICAL);
-								DBG(color::BIRed() << "Untested case of operator MUL running!")
-								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)), labels);
-								if(isConstant(d))
 								{
-									if(isConstant(b))
-										constants.set(d, constants[d]*constants[b], getLabels(d, b));
-									else
-										constants.invalidate(d);
+									opd1 = new OperandVar(d);
+									opd2 = new OperandArithExpr(ARITHOPR_MUL, OperandConst(constants[d]), OperandVar(b));
+									constants.invalidate(d);
+									make_pred = true;
 								}
-								
-								// we also add a predicate to say that d is now a multiple of b
+							}
+							else
+							{	// we add a predicate to say that d is now a multiple of b
 								opd11 = new OperandVar(d);
 								opd12 = new OperandVar(b);
 								opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12); // d % b (%0 is to consider!)
 								opd2 = new OperandConst(0);
+								make_pred = true;
 							}
 						}
-						else
-						{
-							if(d == b) // d <- a*d
-							{	// [d/a / d] // we will have to assume that 0/0 is scratch!
-								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)), labels);
-								if(isConstant(d))
+					}
+					else
+					{
+						if(d == b) // d <- a*d
+						{	// [d/a / d] // we will have to assume that 0/0 is scratch!
+							DBG(color::BIRed() << "Untested case of operator MUL running!")
+							ASSERT(!UNTESTED_CRITICAL);
+							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)), labels); // constants will be replaced later
+							if(isConstant(d))
+							{
+								if(isConstant(a))
+									constants.set(d, constants[d]*constants[a], getLabels(d, a));
+								else
 								{
-									if(isConstant(a))
-										constants.set(d, constants[d]*constants[a], getLabels(d, a));
-									else
-										constants.invalidate(d);
+									opd1 = new OperandVar(d);
+									opd2 = new OperandArithExpr(ARITHOPR_MUL, OperandVar(a), OperandConst(constants[d]));
+									constants.invalidate(d);
+									make_pred = true;
 								}
-								
-								// we also add a predicate to say that d is now a multiple of a
+							}
+							else
+							{ 	// we add a predicate to say that d is now a multiple of a
 								opd11 = new OperandVar(d);
 								opd12 = new OperandVar(a);
 								opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12); // d % a (%0 is to consider!)
 								opd2 = new OperandConst(0);
+								make_pred = true;
 							}
-							else // d <- a*b
+						}
+						else // d <- a*b
+						{
+							invalidateVar(d);
+							if(isConstant(a) && isConstant(b))
+								constants.set(d, constants[a]*constants[b], getLabels(a, b));
+							else
 							{
+								if(isConstant(a))
+									opd21 = new OperandConst(constants[a]);
+								else
+									opd21 = new OperandVar(a);
+								if(isConstant(b))
+									opd22 = new OperandConst(constants[b]);
+								else
+									opd22 = new OperandVar(b);
 								opd1 = new OperandVar(d);
-								invalidateVar(d);
-								if(isConstant(a) && isConstant(b))
-								{
-									constants.set(d, constants[a]*constants[b], getLabels(a, b));
-									make_pred = false;
-								}
+								opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
+								make_pred = true;
+							}
+						}
+					}
+					break;
+				case MULH:
+					if(d == a)
+					{
+						if(d == b) // d <- d*d >>32
+						{
+							DBG(color::BIRed() << "Untested case of operator MULH running!")
+							ASSERT(!UNTESTED_CRITICAL);
+							invalidateVar(d, KEEP_CONSTANT_INFO); // we have no way to do [sqrt(d) / d], so just invalidate
+							opr = CONDOPR_LE; // and add a "0 <= d" predicate
+							opd1 = new OperandConst(0);
+							opd2 = new OperandVar(d);
+							if(isConstant(d))
+								constants.set(d, (constants[d]*constants[d])>>32, getLabels(d));
+							else
+								constants.invalidate(d);
+							make_pred = true;
+						}
+						else // d <- d*b >>32
+						{	// [d/b / d] // we will have to assume that 0/0 is scratch!
+							DBG(color::BIRed() << "Untested case of operator MULH running!")
+							ASSERT(!UNTESTED_CRITICAL);
+							const OperandArithExpr two_power_32 = OperandArithExpr(ARITHOPR_MUL, OperandConst(1<<16), OperandConst(1<<16));
+							// update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandArithExpr(ARITHOPR_MUL, OperandVar(d), two_power_32), OperandVar(b)), labels);
+									if(!isConstant(d))	invalidateVar(d);
+							if(isConstant(d))
+							{
+								if(isConstant(b))
+									constants.set(d, (constants[d]*constants[b])>>32, getLabels(d, b));
 								else
 								{
-									if(isConstant(a))
-										opd21 = new OperandConst(constants[a]);
-									else
-										opd21 = new OperandVar(a);
-									if(isConstant(b))
-										opd22 = new OperandConst(constants[b]);
-									else
-										opd22 = new OperandVar(b);
-									opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
+									opd1 = new OperandVar(d);
+									opd2 = new OperandArithExpr(ARITHOPR_DIV, OperandArithExpr(ARITHOPR_MUL, OperandConst(constants[d]), OperandVar(b)), two_power_32);
+									constants.invalidate(d);
+									make_pred = true;
+								}
+							}
+							
+						}
+					}
+					else
+					{
+						if(d == b) // d <- a*d >>32
+						{	// [d/a / d] // we will have to assume that 0/0 is scratch!
+							DBG(color::BIRed() << "Untested case of operator MULH running!")
+							ASSERT(!UNTESTED_CRITICAL);
+							const OperandArithExpr two_power_32 = OperandArithExpr(ARITHOPR_MUL, OperandConst(1<<16), OperandConst(1<<16)); // TODO!!! this get turned into 0 by update simplifications, that's bad!
+							// update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandArithExpr(ARITHOPR_MUL, OperandVar(d), two_power_32), OperandVar(a)), labels);
+									if(!isConstant(d))	invalidateVar(d);
+							if(isConstant(d))
+							{
+								if(isConstant(a))
+									constants.set(d, (constants[d]*constants[a])>>32, getLabels(d, a));
+								else
+								{							
+									opd1 = new OperandVar(d);
+									opd2 = new OperandArithExpr(ARITHOPR_DIV, OperandArithExpr(ARITHOPR_MUL, OperandVar(a), OperandConst(constants[d])), two_power_32);
+									constants.invalidate(d);
+									make_pred = true;
 								}
 							}
 						}
-						break;
+						else // d <- a*b >>32
+						{
+							DBG(color::BIRed() << "Untested case of operator MULH running!")
+							ASSERT(!UNTESTED_CRITICAL);
+							const OperandArithExpr two_power_32 = OperandArithExpr(ARITHOPR_MUL, OperandConst(1<<16), OperandConst(1<<16));
+							invalidateVar(d);
+							if(isConstant(a) && isConstant(b))
+								constants.set(d, (constants[a]*constants[b])>>32, getLabels(a, b));
+							else
+							{
+								if(isConstant(a))
+									opd21 = new OperandConst(constants[a]);
+								else
+									opd21 = new OperandVar(a);
+								if(isConstant(b))
+									opd22 = new OperandConst(constants[b]);
+								else
+									opd22 = new OperandVar(b);
+								opd1 = new OperandVar(d);
+								opd2 = new OperandArithExpr(ARITHOPR_DIV, OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22), two_power_32);
+								make_pred = true;
+							}
+						}
 					}
 					break;
 				case DIVU:
@@ -634,8 +731,8 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					invalidateVar(d);
 					break;
 				default:
-					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Unknown seminst running!")
+					ASSERT(!UNTESTED_CRITICAL);
 				case SCRATCH:
 					invalidateVar(d);
 					make_pred = false;
@@ -775,9 +872,71 @@ bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_const
 	return rtn;
 }
 
-/*
-	This tries to find a matching OperandMem for the provided OperandVar, then calls invalidateMem(OperandMem)
-*/
+// generic function on works
+// TODO: documentation
+bool Analysis::State::invalidate(const Operand& var, bool invalidate_constant_info)
+{
+	bool rtn = false;
+
+	// try and identify a value for ?3 (look for a ?3 = X predicate)
+	for(PredIterator piter(*this); piter; piter++)
+	{
+		const Predicate &p = piter.pred();
+		if(p.opr() == CONDOPR_EQ)
+		{
+			const int left_involves_var = p.leftOperand().involvesOperand(var);
+			const int right_involves_var = p.rightOperand().involvesOperand(var);
+			if(left_involves_var == 1 && right_involves_var == 0) // var is in left operand
+			{
+				if(p.leftOperand() == var) // left operand is exactly var (that is, predicate is "var = ???")
+				{
+					Operand* expr = p.rightOperand().copy(); // backup the "???" expr
+					removePredicate(piter); // remove current predicate
+					replaceOperand(var, *expr); // [??? / var]
+					DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << Predicate(CONDOPR_EQ, var, *expr))
+					delete expr;
+					rtn = true;
+					break; // stop and move on
+				}
+			}
+			else if(left_involves_var == 0 && right_involves_var == 1) // var is in right operand
+			{
+				if(p.rightOperand() == var) // right operand is exactly var (that is, predicate is "??? = var")
+				{
+					Operand* expr = p.leftOperand().copy(); // backup the "???" expr
+					removePredicate(piter); // remove current predicate
+					replaceOperand(var, *expr); // [??? / var]
+					DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << Predicate(CONDOPR_EQ, *expr, var))
+					delete expr;
+					rtn = true;
+					break; // stop and move on
+				}
+			}
+		}
+	}
+
+	if(!rtn) // no X expression has been found to match ?3 = X, thus we have to remove every occurence of ?3
+	{
+		for(PredIterator piter(*this); piter; )
+		{
+			if(piter.pred().involvesOperand(var))
+			{
+				DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << *piter)
+				removePredicate(piter);
+				rtn = true;
+			}
+			else piter++;
+		}
+	}
+
+	if(invalidate_constant_info)
+		constants.invalidateOperand(var);
+	return rtn;
+}
+
+/**
+ * This tries to find a matching OperandMem for the provided OperandVar, then calls invalidateMem(OperandMem)
+ */
 bool Analysis::State::invalidateMem(const OperandVar& var)
 {
 	Path labels_to_throw;
@@ -790,11 +949,14 @@ bool Analysis::State::invalidateMem(const OperandVar& var)
 	return invalidateMem(*addr);
 }
 
-/*
-	Replace every occurence of the OperandMem parameter by a constant value if possible, removes the occurences from the predicate lists otherwise
-*/
+/**
+ * Replace every occurence of the OperandMem parameter by a constant value if possible, removes the occurences from the predicate lists otherwise
+ */
 bool Analysis::State::invalidateMem(const OperandMem& addr)
 {
+	Path labels;
+	return invalidate(addr);
+	/*
 	Path labels;
 	if(Option<OperandConst> maybe_val = findConstantValueOfMemCell(addr, labels))
 		return replaceMem(addr, *maybe_val, labels); // try to keep the info
@@ -810,6 +972,7 @@ bool Analysis::State::invalidateMem(const OperandMem& addr)
 		else piter++;
 	}
 	return rtn;
+	*/
 }
 
 // This function will try to keep the information contained in the tempvars 
@@ -894,6 +1057,35 @@ bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 				if(rtn == false) // first time
 				{
 					DBG(color::IBlu() << "[" << expr << " / " << var << "]")
+					rtn = true;
+				}
+				DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)
+				DBG(color::IBlu() << DBG_SEPARATOR " " << color::ICya() << "+ " << p)
+				setPredicate(piter, LabelledPredicate(p, piter.labels()));
+				movePredicateToGenerated(piter); // this does piter++
+				continue;
+			}
+		}
+		piter++;
+	}
+	return rtn;
+}
+
+// this mindlessly replaces all occurences of var by expr
+bool Analysis::State::replaceOperand(const Operand& opd, const Operand& expr)
+{
+	bool rtn = false;
+	for(PredIterator piter(*this); piter; )
+	{
+		if(piter.pred().involvesOperand(opd))
+		{
+			Predicate p = piter.pred();
+			String prev_str = _ << piter.pred();
+			if(p.update(opd, expr)) // something updated
+			{
+				if(rtn == false) // first time
+				{
+					DBG(color::IBlu() << "[" << expr << " / " << opd << "]")
 					rtn = true;
 				}
 				DBG(color::IBlu() << DBG_SEPARATOR " " << color::Cya()  << "- " << prev_str)

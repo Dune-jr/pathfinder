@@ -39,6 +39,11 @@ Predicate* Predicate::copy() const
 	return new Predicate(*this);
 }
 
+bool Predicate::involvesOperand(const Operand& opd) const
+{
+	return _opd1->involvesOperand(opd) || _opd2->involvesOperand(opd);
+}
+
 /**
  * @brief Test if the predicate contains a variable
  * @details Count (recursively) the occurences of the variable operand opdv in the predicate.
