@@ -589,7 +589,7 @@ Option<OperandConst> OperandArithExpr::evalConstantOperand() const
 		if(Option<OperandConst> val2 = opd2->evalConstantOperand())
 		{
 			const t::int32& v1 = (*val1).value().val();
-			const t::int32& v2 = (*val1).value().val();
+			const t::int32& v2 = (*val2).value().val();
 			switch(_opr)
 			{
 				case ARITHOPR_ADD:
@@ -601,11 +601,11 @@ Option<OperandConst> OperandArithExpr::evalConstantOperand() const
 				case ARITHOPR_MULH:
 					return some(OperandConst(Constant((t::int64(v1)*t::int64(v2))/t::int64(0x100000000ul))));
 				case ARITHOPR_DIV:
-					if((*val2).value() == 0)
+					if(v2 == 0)
 						return none;
 					return some(OperandConst(v1 / v2));
 				case ARITHOPR_MOD:
-					if((*val2).value() == 0)
+					if(v2 == 0)
 						return none;
 					return some(OperandConst(v1 % v2));
 				case ARITHOPR_CMP:
