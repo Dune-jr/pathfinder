@@ -91,6 +91,9 @@ bool Z3OperandVisitor::visit(const class OperandArithExpr& o)
 			case ARITHOPR_MUL:
 				e = expr_left * expr_right;
 				break;
+			case ARITHOPR_MULH:
+				e = (expr_left * expr_right) / c.int_val((0x100000000ull));
+				break;
 			case ARITHOPR_DIV:
 				e = expr_left / expr_right;
 				break;

@@ -37,7 +37,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		else if(iter->isLoopEntry())
 		{
 			const BasicBlock* loop_header = iter->getLoopHeader();
-			FFXFile << indent(  ) << "<loop address=\"0x" << loop_header->address() << "\">"
+			FFXFile << indent(  ) << "<loop address=\"0x" << loop_header->address() << "\" index=\"" << loop_header->number() << "\">"
 					<< " <!-- loop " << loop_header->number() << " -->" << endl; indent(+1);
 			FFXFile << indent(  ) << "<iteration number=\"n\">" << endl; indent(+1);
 			open_tags += FFX_TAG_LOOP;
@@ -81,8 +81,6 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			case FFX_TAG_CALL:
 				FFXFile << indent(-1) << "</call>" << endl;
 				break;
-			default:
-				assert(false);
 		}
 	}
 	/*for( ; active_loops > 0; active_loops--)

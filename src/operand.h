@@ -22,6 +22,7 @@ enum arithoperator_t
 	ARITHOPR_ADD, // (+)   Addition
 	ARITHOPR_SUB, // (-)   Substraction
 	ARITHOPR_MUL, // (*)   Multiplication
+	ARITHOPR_MULH,// (*H)  32 Most significant bits from 64-bit multiplication
 	ARITHOPR_DIV, // (/)   Division
 	ARITHOPR_MOD, // (mod) Modulo
 	ARITHOPR_CMP, // (~)   Special operator to be used with CONDOPR_EQ and a register that indicates

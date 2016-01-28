@@ -570,7 +570,7 @@ void OperandArithExpr::parseAffineEquation(AffineEquationState& state) const
 
 // An ArithExpr can be const if all of its children are const!
 Option<OperandConst> OperandArithExpr::evalConstantOperand() const
-{
+{ // TODO! clean this up and remove isUnary() test
 	if(isUnary())
 	{
 		if(Option<OperandConst> val = opd1->evalConstantOperand())
@@ -580,7 +580,7 @@ Option<OperandConst> OperandArithExpr::evalConstantOperand() const
 				case ARITHOPR_NEG:
 					return some(OperandConst(-(*val).value()));
 				default:
-					assert(false);
+					ASSERTP(false, "unknown unary operand");
 			}
 		}
 	}
@@ -588,26 +588,30 @@ Option<OperandConst> OperandArithExpr::evalConstantOperand() const
 	{
 		if(Option<OperandConst> val2 = opd2->evalConstantOperand())
 		{
+			const t::int32& v1 = (*val1).value().val();
+			const t::int32& v2 = (*val1).value().val();
 			switch(_opr)
 			{
 				case ARITHOPR_ADD:
-					return some(OperandConst((*val1).value() + (*val2).value()));
+					return some(OperandConst(v1 + v2));
 				case ARITHOPR_SUB:
-					return some(OperandConst((*val1).value() - (*val2).value()));
+					return some(OperandConst(v1 - v2));
 				case ARITHOPR_MUL:
-					return some(OperandConst((*val1).value() * (*val2).value()));
+					return some(OperandConst(v1 * v2));
+				case ARITHOPR_MULH:
+					return some(OperandConst(Constant((t::int64(v1)*t::int64(v2))/t::int64(0x100000000ul))));
 				case ARITHOPR_DIV:
 					if((*val2).value() == 0)
 						return none;
-					return some(OperandConst((*val1).value() / (*val2).value()));
+					return some(OperandConst(v1 / v2));
 				case ARITHOPR_MOD:
 					if((*val2).value() == 0)
 						return none;
-					return some(OperandConst((*val1).value() % (*val2).value()));
+					return some(OperandConst(v1 % v2));
 				case ARITHOPR_CMP:
 					return none; // This can't be evaluated (wouldn't make much sense if this case was matched after the if anyway)
 				default:
-					assert(false);
+					ASSERTP(false, "unknown binary operand")
 			}
 		}
 	}
@@ -654,6 +658,8 @@ Option<Operand*> OperandArithExpr::simplify()
 		case ARITHOPR_MUL:
 			if(opd2_is_constant && opd2_val == 1)
 				return some(opd1->copy()); // [x / 1 * x]
+		case ARITHOPR_MULH:
+			break; // nothing to do
 		case ARITHOPR_DIV:
 		case ARITHOPR_MOD:
 			if(opd1_is_constant && opd1_val == 1)
@@ -661,7 +667,7 @@ Option<Operand*> OperandArithExpr::simplify()
 			break;
 		case ARITHOPR_CMP:
 			return none;
-		default:
+		case ARITHOPR_NEG:
 			ASSERT(false); // unary operators should have been handled earlier
 	}
 	// additional tests
@@ -681,6 +687,7 @@ Option<Operand*> OperandArithExpr::simplify()
 				return some((Operand*) new OperandConst(0)); // [0 / x - x]
 			break;
 		case ARITHOPR_MUL:
+		case ARITHOPR_MULH:
 			if(opd2_is_constant && opd2_val == 0)
 				return some((Operand*) new OperandConst(0)); // [0 / x*0]
 		case ARITHOPR_DIV:
@@ -690,7 +697,7 @@ Option<Operand*> OperandArithExpr::simplify()
 			break;
 		case ARITHOPR_CMP:
 			return none;
-		default:
+		case ARITHOPR_NEG:
 			ASSERT(false); // unary operators should have been handled earlier
 	}
 	return none;
@@ -770,6 +777,9 @@ io::Output& operator<<(io::Output& out, arithoperator_t opr)
 			break;
 		case ARITHOPR_MUL:
 			out << "*";
+			break;
+		case ARITHOPR_MULH:
+			out << "*H";
 			break;
 		case ARITHOPR_DIV:
 			out << "/";

@@ -182,8 +182,6 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr)
 				out << "!=";
 #			endif
 			break;
-		default:
-			out << "???";
 	}
 	return out;
 }

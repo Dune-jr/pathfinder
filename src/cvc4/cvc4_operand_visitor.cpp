@@ -55,8 +55,11 @@ bool CVC4OperandVisitor::visit(const class OperandArithExpr& o)
 	{
 		if(!o.rightOperand().accept(*this))
 			return false;
-		Expr expr_right = expr;	
-		expr = em.mkExpr(kind, expr_left, expr_right);
+		Expr expr_right = expr;
+		if(o.opr() == ARITHOPR_MULH) // special case: divide result by 2^32
+			expr = em.mkExpr(getKind(ARITHOPR_DIV), em.mkExpr(kind, expr_left, expr_right), em.mkConst(CVC4::Rational(0x100000000ul)));
+		else
+			expr = em.mkExpr(kind, expr_left, expr_right);
 	}
 	else
 		expr = em.mkExpr(kind, expr_left); // this is the unary version of mkExpr
@@ -81,6 +84,9 @@ Kind_t CVC4OperandVisitor::getKind(arithoperator_t opr)
 		case ARITHOPR_MUL:
 			return MULT;
 			break;
+		case ARITHOPR_MULH:
+			return MULT; // will be handled separately by caller
+			break;
 		case ARITHOPR_DIV:
 			// return DIVISION; // real version
 			// return INTS_DIVISION_TOTAL;
@@ -90,8 +96,9 @@ Kind_t CVC4OperandVisitor::getKind(arithoperator_t opr)
 			// return INTS_MODULUS_TOTAL;
 			return INTS_MODULUS; // this is a version without interpreted division by 0
 			break;
+		case ARITHOPR_CMP:
+			ASSERTP(false, "non-complete operator");
 		default:
-			// non-complete operator!
 			assert(false);
 	}
 }

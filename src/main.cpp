@@ -6,7 +6,6 @@
 #include <otawa/hard/Platform.h>
 #include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
 #include "analysis.h"
-#include "dependence.h" // TODO!!!
 #include "ffx.h"
 #include "debug.h"
 
@@ -96,7 +95,6 @@ protected:
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::FOLLOW_CALLS;
 		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, merge_frequency, analysis_flags);
-		// Dependence dependence = Dependence(cfg, workspace());// TODO!!!
 
 		// outputing to .ffx
 		if(opt_output)

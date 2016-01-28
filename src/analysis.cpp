@@ -3,7 +3,6 @@
  */
 
 #include "analysis.h"
-// #include "dependence.h"
 #include <otawa/cfg/Edge.h>
 
 /**
@@ -22,7 +21,6 @@ Analysis::Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int m
 {
 	DBG("Stack pointer identified to r" << sp)
 	processCFG(cfg);
-	// Dependence Dependence(cfg); // TODO!!!
 }
 
 /**

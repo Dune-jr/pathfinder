@@ -203,7 +203,7 @@ void Analysis::processCFG(CFG* cfg)
 					DBG(color::Whi() << "End of loop reached.")
 				if(!fixpoint) // fixpoint not found
 				{
-					if(!LOOP_EXIT_EDGE(*bb_outs)) // take everything but loop exit edges
+					if(!LOOP_EXIT_EDGE.exists(*bb_outs)) // take everything but loop exit edges
 					{	// adds to PROCESSED_EDGE
 						enable_smt = edgeIsExitingToLoopLevel0(bb_outs); // only call smt if this is "level 0" sequential code
 						processOutEdge(*bb_outs, sl, isConditional(bb), enable_smt); // annotate regardless of returned new_sl being empty or not
@@ -219,7 +219,7 @@ void Analysis::processCFG(CFG* cfg)
 					if(!BACK_EDGE(*bb_outs)) // take everything but back edges
 					{	// adds to PROCESSED_EDGE
 						enable_smt = true;
-						if(LOOP_EXIT_EDGE(*bb_outs)) // exiting the loop
+						if(LOOP_EXIT_EDGE.exists(*bb_outs)) // exiting the loop
 						{
 							for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; sl_iter++)
 								sl_iter.item().onLoopExit(loop_header ? elm::some(bb) : ENCLOSING_LOOP_HEADER.get(bb)); 
@@ -552,7 +552,7 @@ void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& f
 		detailed_ip.addLast(last_edge);
 #ifdef DBGG
 	detailed_ip.optimize();
-	DBGM("addDisorderedInfeasiblePath(...), ip=" << pathToString(ip) << ", " 
+	DBG("addDisorderedInfeasiblePath(...), ip=" << pathToString(ip) << ", " 
 		<< color::ICya() << "full_path=[" << full_path << "]" << color::RCol() << ", result=" << detailed_ip); // TODO!
 #endif
 	addDetailedInfeasiblePath(detailed_ip);
@@ -680,7 +680,7 @@ bool Analysis::shouldEnableSolver(const Edge* e)
 	// return true; // TODO!!
 	if(e->source()->outs.count() > 1)
 		return true; // conditional edge, call...
-	if(LOOP_EXIT_EDGE(*e))
+	if(LOOP_EXIT_EDGE.exists(*e))
 		return true;
 	return false;
 	// TODO: improve, let's be smarter

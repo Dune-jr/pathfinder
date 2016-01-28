@@ -44,7 +44,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 		Block block;
 		insts->semInsts(block);
 		
-		PathIter seminsts;
+	PathIter seminsts;
 		// parse semantical instructions with PathIter
 		for(seminsts.start(*insts); seminsts; seminsts++)
 		{
@@ -574,64 +574,62 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							opr = CONDOPR_LE; // and add a "0 <= d" predicate
 							opd1 = new OperandConst(0);
 							opd2 = new OperandVar(d);
+							make_pred = true;
 							if(isConstant(d))
-								constants.set(d, (constants[d]*constants[d])>>32, getLabels(d));
+								constants.set(d, (t::int64(constants[d].val())*t::int64(constants[d].val()))>>32, getLabels(d));
 							else
 								constants.invalidate(d);
-							make_pred = true;
 						}
 						else // d <- d*b >>32
 						{	// [d/b / d] // we will have to assume that 0/0 is scratch!
 							DBG(color::BIRed() << "Untested case of operator MULH running!")
 							ASSERT(!UNTESTED_CRITICAL);
-							const OperandArithExpr two_power_32 = OperandArithExpr(ARITHOPR_MUL, OperandConst(1<<16), OperandConst(1<<16));
-							// update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandArithExpr(ARITHOPR_MUL, OperandVar(d), two_power_32), OperandVar(b)), labels);
-									if(!isConstant(d))	invalidateVar(d);
+							invalidateVar(d, KEEP_CONSTANT_INFO);
 							if(isConstant(d))
 							{
 								if(isConstant(b))
-									constants.set(d, (constants[d]*constants[b])>>32, getLabels(d, b));
+									constants.set(d, (t::int64(constants[d].val())*t::int64(constants[b].val()))>>32, getLabels(d, b));
 								else
 								{
 									opd1 = new OperandVar(d);
-									opd2 = new OperandArithExpr(ARITHOPR_DIV, OperandArithExpr(ARITHOPR_MUL, OperandConst(constants[d]), OperandVar(b)), two_power_32);
-									constants.invalidate(d);
+									opd2 = new OperandArithExpr(ARITHOPR_MULH, OperandConst(constants[d]), OperandVar(b));
 									make_pred = true;
+									constants.invalidate(d);
 								}
 							}
-							
+							else
+								constants.invalidate(d);
 						}
 					}
 					else
 					{
 						if(d == b) // d <- a*d >>32
 						{	// [d/a / d] // we will have to assume that 0/0 is scratch!
-							DBG(color::BIRed() << "Untested case of operator MULH running!")
-							ASSERT(!UNTESTED_CRITICAL);
-							const OperandArithExpr two_power_32 = OperandArithExpr(ARITHOPR_MUL, OperandConst(1<<16), OperandConst(1<<16)); // TODO!!! this get turned into 0 by update simplifications, that's bad!
-							// update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandArithExpr(ARITHOPR_MUL, OperandVar(d), two_power_32), OperandVar(a)), labels);
-									if(!isConstant(d))	invalidateVar(d);
+							invalidateVar(d, KEEP_CONSTANT_INFO);
 							if(isConstant(d))
 							{
 								if(isConstant(a))
-									constants.set(d, (constants[d]*constants[a])>>32, getLabels(d, a));
+									constants.set(d, (t::int64(constants[a].val())*t::int64(constants[d].val()))>>32, getLabels(d, a));
 								else
-								{							
+								{
+									DBG(color::BIRed() << "Untested case of operator MULH running!")
+									ASSERT(!UNTESTED_CRITICAL);	
 									opd1 = new OperandVar(d);
-									opd2 = new OperandArithExpr(ARITHOPR_DIV, OperandArithExpr(ARITHOPR_MUL, OperandVar(a), OperandConst(constants[d])), two_power_32);
-									constants.invalidate(d);
+									opd2 = new OperandArithExpr(ARITHOPR_MULH, OperandVar(a), OperandConst(constants[d]));
 									make_pred = true;
+									constants.invalidate(d);
 								}
 							}
+							else
+								constants.invalidate(d);
 						}
 						else // d <- a*b >>32
 						{
 							DBG(color::BIRed() << "Untested case of operator MULH running!")
 							ASSERT(!UNTESTED_CRITICAL);
-							const OperandArithExpr two_power_32 = OperandArithExpr(ARITHOPR_MUL, OperandConst(1<<16), OperandConst(1<<16));
 							invalidateVar(d);
 							if(isConstant(a) && isConstant(b))
-								constants.set(d, (constants[a]*constants[b])>>32, getLabels(a, b));
+								constants.set(d, (t::int64(constants[a].val())*t::int64(constants[b].val()))>>32, getLabels(a, b));
 							else
 							{
 								if(isConstant(a))
@@ -643,7 +641,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 								else
 									opd22 = new OperandVar(b);
 								opd1 = new OperandVar(d);
-								opd2 = new OperandArithExpr(ARITHOPR_DIV, OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22), two_power_32);
+								opd2 = new OperandArithExpr(ARITHOPR_MULH, *opd21, *opd22);
 								make_pred = true;
 							}
 						}
