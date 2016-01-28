@@ -2,4 +2,5 @@
 
 bam -c
 rm config.lua
-bam -j 2 solver=z3
+bam -j 2 solver=z3 Wall=true
+
