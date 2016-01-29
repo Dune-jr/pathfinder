@@ -570,50 +570,38 @@ void OperandArithExpr::parseAffineEquation(AffineEquationState& state) const
 
 // An ArithExpr can be const if all of its children are const!
 Option<OperandConst> OperandArithExpr::evalConstantOperand() const
-{ // TODO! clean this up and remove isUnary() test
-	if(isUnary())
+{
+	Option<OperandConst> val1 = opd1->evalConstantOperand();
+	Option<OperandConst> val2 = isUnary() ? elm::none : opd2->evalConstantOperand();
+	if(val1 && (val2 || isUnary()))
 	{
-		if(Option<OperandConst> val = opd1->evalConstantOperand())
+#		define V1 (*val1).value().val()
+#		define V2 (*val2).value().val()
+		switch(_opr)
 		{
-			switch(_opr)
-			{
-				case ARITHOPR_NEG:
-					return some(OperandConst(-(*val).value()));
-				default:
-					ASSERTP(false, "unknown unary operand");
-			}
+			case ARITHOPR_NEG:
+				return some(OperandConst(-V1));
+			case ARITHOPR_ADD:
+				return some(OperandConst(V1 + V2));
+			case ARITHOPR_SUB:
+				return some(OperandConst(V1 - V2));
+			case ARITHOPR_MUL:
+				return some(OperandConst(V1 * V2));
+			case ARITHOPR_MULH:
+				return some(OperandConst(Constant( (t::int64(V1)*t::int64(V2))/t::int64(0x100000000ul) )));
+			case ARITHOPR_DIV:
+				if(V2 == 0)
+					return none;
+				return some(OperandConst(V1 / V2));
+			case ARITHOPR_MOD:
+				if(V2 == 0)
+					return none;
+				return some(OperandConst(V1 % V2));
+			case ARITHOPR_CMP:
+				return none; // This can't be evaluated (wouldn't make much sense if this case was matched after the if anyway)
 		}
-	}
-	else if(Option<OperandConst> val1 = opd1->evalConstantOperand())
-	{
-		if(Option<OperandConst> val2 = opd2->evalConstantOperand())
-		{
-			const t::int32& v1 = (*val1).value().val();
-			const t::int32& v2 = (*val2).value().val();
-			switch(_opr)
-			{
-				case ARITHOPR_ADD:
-					return some(OperandConst(v1 + v2));
-				case ARITHOPR_SUB:
-					return some(OperandConst(v1 - v2));
-				case ARITHOPR_MUL:
-					return some(OperandConst(v1 * v2));
-				case ARITHOPR_MULH:
-					return some(OperandConst(Constant((t::int64(v1)*t::int64(v2))/t::int64(0x100000000ul))));
-				case ARITHOPR_DIV:
-					if(v2 == 0)
-						return none;
-					return some(OperandConst(v1 / v2));
-				case ARITHOPR_MOD:
-					if(v2 == 0)
-						return none;
-					return some(OperandConst(v1 % v2));
-				case ARITHOPR_CMP:
-					return none; // This can't be evaluated (wouldn't make much sense if this case was matched after the if anyway)
-				default:
-					ASSERTP(false, "unknown binary operand")
-			}
-		}
+#		undef V1 
+#		undef V2
 	}
 	return none; // one of the operands is not constant or we failed to evaluate it
 }
