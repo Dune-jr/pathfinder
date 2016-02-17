@@ -31,12 +31,14 @@ bool CVC4SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds)
 	// get a SLList<Option<Expr> > out of a SLList<LabelledPredicate> in order to know which LP matches which expr // TODO: this is superfluous with Z3
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
 		exprs.addLast(getExpr(iter->pred()));
-
+// elm::cout << "labelled_preds=" << labelled_preds << endl;
 	try
 	{
 		for(SLList<Option<Expr> >::Iterator iter(exprs); iter; iter++)
-			if(*iter)
+			if(*iter) {
 				smt.assertFormula(**iter, true); // second parameter to true for unsat cores
+				// std::cout << "\tassertFormula(" << **iter << ")\n"; // TODO!!!
+			}
 
 		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
 		return isSat;

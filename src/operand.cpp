@@ -32,9 +32,9 @@ using namespace elm::avl;
  * @brief Check for any reference to a variable in the Operand
  */
 /**
- * @fn bool Operand::involvesStackBelow(const Constant& stack_limit) const;
+ * @fn Option<Constant> Operand::involvesStackBelow(const Constant& stack_limit) const;
  * @brief Check for any reference (OperandMem) to the value in an address in the stack, below the given stack_limit
- * @return True if a reference has been found
+ * @return The reference in the stack, elm::none if none was found
  */
 /**
  * @fn bool Operand::involvesMemoryCell(const OperandMem& opdm) const;
@@ -113,7 +113,7 @@ bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) cons
 }
 int OperandConst::involvesVariable(const OperandVar& opdv) const { return 0; }
 bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return false; }
-bool OperandConst::involvesStackBelow(const Constant& stack_limit) const { return false; }
+Option<Constant> OperandConst::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
 bool OperandConst::involvesMemory() const { return false; }
 bool OperandConst::update(const Operand& opd, const Operand& opd_modifier) { return false; }
 // pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
@@ -175,7 +175,7 @@ int OperandVar::involvesVariable(const OperandVar& opdv) const
 	return (int)(opdv == *this);
 }
 bool OperandVar::involvesMemoryCell(const OperandMem& opdm) const { return false; }
-bool OperandVar::involvesStackBelow(const Constant& stack_limit) const { return false; }
+Option<Constant> OperandVar::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
 bool OperandVar::involvesMemory() const { return false; }
 // since the parent has to do the modification, and var has no child, return false
 bool OperandVar::update(const Operand& opd, const Operand& opd_modifier) { return false; }
@@ -235,7 +235,12 @@ bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 }
 int OperandMem::involvesVariable(const OperandVar& opdv) const { return 0; }
 bool OperandMem::involvesMemoryCell(const OperandMem& opdm) const {	return *this == opdm; }
-bool OperandMem::involvesStackBelow(const Constant& stack_limit) const { return _opdc->value().isRelative() && (_opdc->value().val() < stack_limit.val()); }
+Option<Constant> OperandMem::involvesStackBelow(const Constant& stack_limit) const 
+{
+	if(_opdc->value().isRelative() && (_opdc->value().val() < stack_limit.val()))
+		return elm::some(_opdc->value());
+	return elm::none;
+}
 bool OperandMem::involvesMemory() const { return true; }
 /*operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
 {
@@ -448,11 +453,14 @@ int OperandArithExpr::involvesVariable(const OperandVar& opdv) const
 		return opd1->involvesVariable(opdv);
 	return opd1->involvesVariable(opdv) + opd2->involvesVariable(opdv);
 }
-bool OperandArithExpr::involvesStackBelow(const Constant& stack_limit) const
+Option<Constant> OperandArithExpr::involvesStackBelow(const Constant& stack_limit) const
 {
 	if(isUnary())
 		return opd1->involvesStackBelow(stack_limit);
-	return opd1->involvesStackBelow(stack_limit) || opd2->involvesStackBelow(stack_limit);
+	if(const Option<Constant>& opd1_rtn = opd1->involvesStackBelow(stack_limit))
+		return opd1_rtn;
+	else
+		return opd2->involvesStackBelow(stack_limit);
 }
 bool OperandArithExpr::involvesMemoryCell(const OperandMem& opdm) const
 {

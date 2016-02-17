@@ -33,9 +33,9 @@ public:
 	inline bool isIdent() const { return (*_opd1 == *_opd2) && _opr == CONDOPR_EQ; }
 	inline bool isComplete() const { return _opd1->isComplete() && _opd2->isComplete(); }
 	Predicate* copy() const;
-	bool involvesOperand(const Operand& opd) const;
+	int involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
-	bool involvesStackBelow(const Constant& stack_limit) const;
+	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool isAffine(const OperandVar& opdv) const;

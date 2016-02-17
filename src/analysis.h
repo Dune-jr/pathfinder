@@ -111,6 +111,7 @@ public:
 
 		// analysis_bb.cpp
 		LabelledPredicate makeLabelledPredicate(condoperator_t opr, Operand* opd1, Operand* opd2, Path& labels) const;
+		bool tryToKeepVar(const OperandVar& var);//, const Predicate*& removed_predicate);
 		bool invalidateVar(const OperandVar& var, bool invalidate_constant_info = true);
 		bool invalidate(const Operand& var, bool invalidate_constant_info = true);
 		bool invalidateMem(const OperandMem& addr);

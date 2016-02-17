@@ -39,9 +39,9 @@ Predicate* Predicate::copy() const
 	return new Predicate(*this);
 }
 
-bool Predicate::involvesOperand(const Operand& opd) const
+int Predicate::involvesOperand(const Operand& opd) const
 {
-	return _opd1->involvesOperand(opd) || _opd2->involvesOperand(opd);
+	return _opd1->involvesOperand(opd) + _opd2->involvesOperand(opd);
 }
 
 /**
@@ -56,9 +56,11 @@ int Predicate::involvesVariable(const OperandVar& opdv) const
 	return _opd1->involvesVariable(opdv) + _opd2->involvesVariable(opdv);
 }
 
-bool Predicate::involvesStackBelow(const Constant& stack_limit) const
+Option<Constant> Predicate::involvesStackBelow(const Constant& stack_limit) const
 {
-	return _opd1->involvesStackBelow(stack_limit) || _opd2->involvesStackBelow(stack_limit);
+	if(const Option<Constant>& opd1_rtn = _opd1->involvesStackBelow(stack_limit))
+		return opd1_rtn;
+	else return _opd2->involvesStackBelow(stack_limit);
 }
 bool Predicate::involvesMemoryCell(const OperandMem& opdm) const
 {

@@ -23,7 +23,7 @@
 #define DBG_PROGRESS	   0b1 << 7
 #define DBG_PRINT_FLOWINFO 0b1 << 8
 #define DBG_AVG_IP_LENGTH  0b1 << 9
-#define UNTESTED_CRITICAL false // Raise exceptions when executing untested code
+#define UNTESTED_CRITICAL true // Raise exceptions when executing untested code
 #define DBG_SEPARATOR " "
 
 #define DBG_VERBOSE_ALL			 0

@@ -28,8 +28,8 @@ public:
 		opt_s3(option::SwitchOption::Make(*this).cmd("--s3").cmd("--fullsilent").description("run with zero output")),
 		opt_output(option::SwitchOption::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file")),
 		opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").cmd("--no-colors").description("do not use colors")),
-		opt_noinfo(option::SwitchOption::Make(*this).cmd("--no-info").description("do not print file/line number info")),
-		opt_linenumbers(option::SwitchOption::Make(*this).cmd("-l").cmd("--line-nb").cmd("--line-numbers").description("number lines of the output")),
+		opt_src_info(option::SwitchOption::Make(*this).cmd("-i").cmd("--src-info").description("print file/line number info")),
+		opt_nolinenumbers(option::SwitchOption::Make(*this).cmd("--nl").cmd("--no-line-nb").description("do not number lines of the output")),
 		opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
 		// opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")), // no longer working
 		opt_noflowinfo(option::SwitchOption::Make(*this).cmd("--no-flowinfo").description("do not print context flowinfo in path debugs")),
@@ -68,8 +68,8 @@ protected:
 			dbg_verbose = 3; // high verbose numbers are more silent. TODO: that is counterintuitive
 		elm::log::Debug::setDebugFlag(dbg_verbose == DBG_VERBOSE_ALL);
 		elm::log::Debug::setColorFlag(! opt_nocolor);
-		elm::log::Debug::setSourceInfoFlag(! opt_noinfo);
-		elm::log::Debug::setNumberingFlag(opt_linenumbers);
+		elm::log::Debug::setSourceInfoFlag(opt_src_info);
+		elm::log::Debug::setNumberingFlag(! opt_nolinenumbers);
 		elm::log::Debug::setPrefixColor(elm::color::Yel);
 		if(opt_notime)
 			dbg_flags |= DBG_NO_TIME;
@@ -110,8 +110,8 @@ protected:
 	}
 
 private:
-	option::Manager manager;
-	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_noinfo, opt_linenumbers, opt_notime,// opt_nopred, 
+	// option::Manager manager;
+	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_notime,// opt_nopred, 
 		opt_noflowinfo, opt_progress, opt_preanalysis, opt_avgiplength, opt_nounminimized, opt_dry, opt_automerge; //, opt_virtualize;
 	option::ValueOption<bool> opt_virtualize;
 	option::ValueOption<int> opt_merge;

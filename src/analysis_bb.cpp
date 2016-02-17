@@ -106,7 +106,6 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					break;
 				case LOAD: // reg <- MEM_type(addr)
 					invalidateVar(reg); // TODO: shouldn't we invalidate reg later incase we LOAD ?11, ?11
-					// DBG(color::IRed() << dumpEverything())
 					if(Option<OperandMem> addr_mem = getOperandMem(addr, labels))
 					{
 						// if it's a constant address of some read-only data
@@ -333,8 +332,6 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(b_val) << "]")
 						if(d == a) // d <- d << b
 						{
-							ASSERT(!UNTESTED_CRITICAL);
-							DBG(color::BIRed() << "Untested case of operator SHL running!")
 							labels = getLabels(b);
 							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << b_val)), labels);
 							// we also add a predicate to say that d is now a multiple of 2^b
@@ -488,25 +485,31 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						}
 						else // d <- d*b
 						{	// [d/b / d] // we will have to assume that 0/0 is scratch!
-							DBG(color::BIRed() << "Untested case of operator MUL running!")
-							ASSERT(!UNTESTED_CRITICAL);
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)), labels); // constants will be replaced later
 							if(isConstant(d))
 							{
+								invalidateVar(d, KEEP_CONSTANT_INFO); // keep constants[d], we'll need it
 								if(isConstant(b))
 									constants.set(d, constants[d]*constants[b], getLabels(d, b));
 								else
 								{
+									DBG(color::BIRed() << "Untested case of operator MUL running!")
+									ASSERT(!UNTESTED_CRITICAL);
 									opd1 = new OperandVar(d);
 									opd2 = new OperandArithExpr(ARITHOPR_MUL, OperandConst(constants[d]), OperandVar(b));
-									constants.invalidate(d);
 									make_pred = true;
+									constants.invalidate(d);
 								}
 							}
 							else
 							{	// we add a predicate to say that d is now a multiple of b
+								DBG(color::BIRed() << "Untested case of operator MUL running!")
+								// ASSERT(!UNTESTED_CRITICAL);
+								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)), labels);
 								opd11 = new OperandVar(d);
-								opd12 = new OperandVar(b);
+								if(isConstant(b))
+									opd12 = new OperandConst(constants[b]);
+								else
+									opd12 = new OperandVar(b);
 								opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12); // d % b (%0 is to consider!)
 								opd2 = new OperandConst(0);
 								make_pred = true;
@@ -750,7 +753,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 		// all temporary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();
 	}
-	
+	// DBG(dumpEverything()); // TODO!!!
 	if(dbg_verbose == DBG_VERBOSE_ALL)
 	{
 		if(generated_preds_taken)
@@ -809,11 +812,10 @@ LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, Ope
 	return LabelledPredicate(p, labels);
 }
 
-// returns true if a variable has been invalidated
-bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_constant_info)
+// warning: if successful, removes a predicate
+bool Analysis::State::tryToKeepVar(const OperandVar& var)//, const Predicate*& removed_predicate)
 {
-	bool rtn = false;
-
+	// removed_predicate = NULL;
 	// try and identify a value for ?3 (look for a ?3 = X predicate)
 	for(PredIterator piter(*this); piter; piter++)
 	{
@@ -827,12 +829,12 @@ bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_const
 				if(p.leftOperand() == var) // left operand is exactly var (that is, predicate is "var = ???")
 				{
 					Operand* expr = p.rightOperand().copy(); // backup the "???" expr
+					// removed_predicate = &p;
 					removePredicate(piter); // remove current predicate
 					replaceVar(var, *expr); // [??? / var]
 					DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << Predicate(CONDOPR_EQ, var, *expr))
 					delete expr;
-					rtn = true;
-					break; // stop and move on
+					return true;
 				}
 			}
 			else if(left_involves_var == 0 && right_involves_var == 1) // var is in right operand
@@ -840,17 +842,24 @@ bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_const
 				if(p.rightOperand() == var) // right operand is exactly var (that is, predicate is "??? = var")
 				{
 					Operand* expr = p.leftOperand().copy(); // backup the "???" expr
+					// removed_predicate = &p;
 					removePredicate(piter); // remove current predicate
 					replaceVar(var, *expr); // [??? / var]
 					DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << Predicate(CONDOPR_EQ, *expr, var))
 					delete expr;
-					rtn = true;
-					break; // stop and move on
+					return true;
 				}
 			}
 		}
 	}
+	return false;
+}
 
+// returns true if a variable has been invalidated
+bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_constant_info)
+{
+	// const Predicate* removed_predicate; // throw this away
+	bool rtn = tryToKeepVar(var);//, removed_predicate);
 	if(!rtn) // no X expression has been found to match ?3 = X, thus we have to remove every occurence of ?3
 	{
 		for(PredIterator piter(*this); piter; )
@@ -1026,15 +1035,67 @@ int Analysis::State::invalidateStackBelow(const Constant& stack_limit)
 	int count = 0;
 	ASSERT(stack_limit.isRelative());
 	// do not try to replace everything unlike invalidateTempVars - the point is to get rid of useless obsolete data
-	for(PredIterator piter(*this); piter; )
+	// wait what... no we sometimes have A = B and B >= 5, gotta keep A >= 5 if B is irrelevant
+	for(PredIterator piter(*this); piter; piter++) //)
 	{
 		if(piter.pred().involvesStackBelow(stack_limit))
+		// while(const Option<Constant>& addr_involved = piter.pred().involvesStackBelow(stack_limit))
 		{
 			removePredicate(piter);
 			count++;
-			continue;
+			continue; }
+			/*
+			// const Predicate* removed_predicate = NULL;
+			bool replaced_predicates = false;
+			const OperandMem opd_to_remove(OperandConst(addr_involved));
+
+			// reparse the predicates to look for some way to keep this damned opd_to_remove operand
+			for(PredIterator ppiter(*this); ppiter; ppiter++)
+			{
+				const Predicate &p = ppiter.pred();
+				if(p.opr() == CONDOPR_EQ)
+				{
+					const int left_involves_opd = p.leftOperand().involvesOperand(opd_to_remove);
+					const int right_involves_opd = p.rightOperand().involvesOperand(opd_to_remove);
+					// This could really be improved with some basic arithmetic
+					if(left_involves_opd == 1 && right_involves_opd == 0) // var is in left operand
+					{
+						if(p.leftOperand() == opd_to_remove) // left operand is exactly var (that is, predicate is "var = ???")
+						{
+							Operand* expr = p.rightOperand().copy(); // backup the "???" expr
+							removePredicate(ppiter); // remove current predicate
+							replaceVar(opd_to_remove, *expr); // [??? / var]
+							DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << Predicate(CONDOPR_EQ, var, *expr))
+							delete expr;
+							replaced_predicates = true;
+							break;
+						}
+					}
+					else if(left_involves_opd == 0 && right_involves_opd == 1) // var is in right operand
+					{
+						if(p.rightOperand() == opd_to_remove) // right operand is exactly var (that is, predicate is "??? = var")
+						{
+							Operand* expr = p.leftOperand().copy(); // backup the "???" expr
+							removePredicate(ppiter); // remove current predicate
+							replaceVar(opd_to_remove, *expr); // [??? / var]
+							DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << Predicate(CONDOPR_EQ, *expr, var))
+							delete expr;
+							replaced_predicates = true;
+							break;
+						}
+					}
+				}
+			}
+
+			if(replaced_predicates)
+			{
+				count++;
+				qskldjsjklfjkdsfjksdlfs;
+				// recursive call... what's the use of the while actually? cause we could have removed the current predicate, fuck
+			}
 		}
-		piter++;
+		if(should_iterate)
+			piter++;*/
 	}
 	DBG(color::IYel() << "- " << count << " predicates")
 	return count;
@@ -1203,7 +1264,11 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd
 		opd_modifier_new = *opd_modifier_new_simplified;
 	}
 
-	DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [" << *opd_modifier_new << " / " << opd_to_update << "]")
+#	ifdef NO_UTF8
+		DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [" << opd_to_update << " -> " << *opd_modifier_new << "]")
+#	else
+		DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [" << opd_to_update << " → " << *opd_modifier_new << "]")
+#	endif
 	bool rtn = false;
 	
 	for(PredIterator piter(*this); piter; piter++)
@@ -1301,7 +1366,7 @@ Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& 
 			// else algorithm failed (for example var = -sp or var = sp+sp)
 		}
 	}
-	DBG(color::IRed() << "findStackRelativeValueOfVar failed!")
+	DBG(color::IRed() << "findStackRelativeValueOfVar failed! (store/load to T)")
 	// DBG(dumpEverything())
 	return none; // no matches found
 }

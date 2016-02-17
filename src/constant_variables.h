@@ -59,7 +59,7 @@ public:
 	inline void update(const OperandVar& opdv, const OperandConst& opdc, bool updated_flag = true) { update(opdv, opdc.value(), updated_flag); }
 	void invalidate(const OperandVar& opdv);
 	inline void invalidateOperand(const Operand& opd)
-		{ if(opd.kind() == OPERAND_VAR) invalidate((const OperandVar&)opd); }
+		{ if(opd.kind() == OPERAND_VAR) invalidate((const OperandVar&)opd); } // doesn't do anything in the case of OperandMem
 	bool invalidateTempVars();
 	void label(Edge* label);
 	void merge(const SLList<ConstantVariables>& cvl);

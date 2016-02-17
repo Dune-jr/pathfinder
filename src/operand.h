@@ -70,9 +70,9 @@ public:
 	virtual Operand* copy() const = 0;
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
 	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const = 0;
-	bool involvesOperand(const Operand& opd) const { return this->operator==(opd); }
+	int involvesOperand(const Operand& opd) const { return this->operator==(opd) ? 1 : 0; } // default case, to be overloaded for recursive classes
 	virtual int involvesVariable(const OperandVar& opdv) const = 0; // TODO! rewrite using involvesOperand, if the int return thing is not critical?
-	virtual bool involvesStackBelow(const Constant& stack_limit) const = 0;
+	virtual Option<Constant> involvesStackBelow(const Constant& stack_limit) const = 0;
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
 	virtual bool involvesMemory() const = 0;
 	virtual bool update(const Operand& opd, const Operand& opd_modifier) = 0;
@@ -106,9 +106,9 @@ public:
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
-	bool involvesOperand(const Operand& opd) const;
+	// int involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
-	bool involvesStackBelow(const Constant& stack_limit) const;
+	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
@@ -145,9 +145,9 @@ public:
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
-	bool involvesOperand(const Operand& opd) const;
+	// int involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
-	bool involvesStackBelow(const Constant& stack_limit) const;
+	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
@@ -182,9 +182,9 @@ public:
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
-	bool involvesOperand(const Operand& opd) const;
+	// int involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
-	bool involvesStackBelow(const Constant& stack_limit) const;
+	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
@@ -224,9 +224,9 @@ public:
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
-	bool involvesOperand(const Operand& opd) const;
+	int involvesOperand(const Operand& opd) const { return opd1->involvesOperand(opd) + opd2->involvesOperand(opd); }
 	int involvesVariable(const OperandVar& opdv) const;
-	bool involvesStackBelow(const Constant& stack_limit) const;
+	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
 	bool involvesMemory() const;
