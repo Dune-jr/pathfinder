@@ -230,6 +230,7 @@ void Analysis::processCFG(CFG* cfg)
 									sl_iter.item().onLoopExit(header);
 									header = ENCLOSING_LOOP_HEADER(header);
 								}
+								sl_iter.item().onLoopExit(header);
 							}
 							if(MOTHERLOOP_FIXPOINT_STATE.exists(*bb_outs))
 							{

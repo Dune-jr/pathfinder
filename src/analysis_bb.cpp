@@ -613,8 +613,6 @@ void Analysis::State::processBB(const BasicBlock *bb)
 									constants.set(d, (t::int64(constants[a].val())*t::int64(constants[d].val()))>>32, getLabels(d, a));
 								else
 								{
-									DBG(color::BIRed() << "Untested case of operator MULH running!")
-									ASSERT(!UNTESTED_CRITICAL);	
 									opd1 = new OperandVar(d);
 									opd2 = new OperandArithExpr(ARITHOPR_MULH, OperandVar(a), OperandConst(constants[d]));
 									make_pred = true;
@@ -626,8 +624,6 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						}
 						else // d <- a*b >>32
 						{
-							DBG(color::BIRed() << "Untested case of operator MULH running!")
-							ASSERT(!UNTESTED_CRITICAL);
 							invalidateVar(d);
 							if(isConstant(a) && isConstant(b))
 								constants.set(d, (t::int64(constants[a].val())*t::int64(constants[b].val()))>>32, getLabels(a, b));
