@@ -219,10 +219,18 @@ void Analysis::processCFG(CFG* cfg)
 					if(!BACK_EDGE(*bb_outs)) // take everything but back edges
 					{	// adds to PROCESSED_EDGE
 						enable_smt = true;
-						if(LOOP_EXIT_EDGE.exists(*bb_outs)) // exiting the loop
+						if(LOOP_EXIT_EDGE.exists(*bb_outs)) // exiting the loop // Warning: we may exit several loops!
 						{
+							BasicBlock* outerloop_header = LOOP_EXIT_EDGE.get(*bb_outs);
 							for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; sl_iter++)
-								sl_iter.item().onLoopExit(loop_header ? elm::some(bb) : ENCLOSING_LOOP_HEADER.get(bb)); 
+							{	// make sure to exit all loops until the outer loop of LOOP_EXIT_EDGE
+								BasicBlock *header = loop_header ? bb : ENCLOSING_LOOP_HEADER(bb);
+								while(header != outerloop_header) {
+									ASSERT(header);
+									sl_iter.item().onLoopExit(header);
+									header = ENCLOSING_LOOP_HEADER(header);
+								}
+							}
 							if(MOTHERLOOP_FIXPOINT_STATE.exists(*bb_outs))
 							{
 								bool new_fixpoint_state = MOTHERLOOP_FIXPOINT_STATE(*bb_outs);
