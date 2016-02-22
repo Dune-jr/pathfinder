@@ -490,10 +490,8 @@ void Analysis::State::processBB(const BasicBlock *bb)
 								invalidateVar(d, KEEP_CONSTANT_INFO); // keep constants[d], we'll need it
 								if(isConstant(b))
 									constants.set(d, constants[d]*constants[b], getLabels(d, b));
-								else
+								else // d <- #d * b
 								{
-									DBG(color::BIRed() << "Untested case of operator MUL running!")
-									ASSERT(!UNTESTED_CRITICAL);
 									opd1 = new OperandVar(d);
 									opd2 = new OperandArithExpr(ARITHOPR_MUL, OperandConst(constants[d]), OperandVar(b));
 									make_pred = true;
@@ -502,17 +500,15 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							}
 							else
 							{	// we add a predicate to say that d is now a multiple of b
-								DBG(color::BIRed() << "Untested case of operator MUL running!")
-								// ASSERT(!UNTESTED_CRITICAL);
 								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)), labels);
-								opd11 = new OperandVar(d);
 								if(isConstant(b))
+								{
+									opd11 = new OperandVar(d);
 									opd12 = new OperandConst(constants[b]);
-								else
-									opd12 = new OperandVar(b);
-								opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12); // d % b (%0 is to consider!)
-								opd2 = new OperandConst(0);
-								make_pred = true;
+									opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12); // d % b (%0 is to consider!)
+									opd2 = new OperandConst(0);
+									make_pred = true;
+								} // I don't think it's worth it to add this "b divides d" predicate if b is not constant... maybe I'm wrong
 							}
 						}
 					}
@@ -520,28 +516,30 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					{
 						if(d == b) // d <- a*d
 						{	// [d/a / d] // we will have to assume that 0/0 is scratch!
-							DBG(color::BIRed() << "Untested case of operator MUL running!")
-							ASSERT(!UNTESTED_CRITICAL);
-							update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)), labels); // constants will be replaced later
 							if(isConstant(d))
 							{
+								invalidateVar(d, KEEP_CONSTANT_INFO); // keep constants[d], we'll need it
 								if(isConstant(a))
 									constants.set(d, constants[d]*constants[a], getLabels(d, a));
 								else
 								{
 									opd1 = new OperandVar(d);
-									opd2 = new OperandArithExpr(ARITHOPR_MUL, OperandVar(a), OperandConst(constants[d]));
-									constants.invalidate(d);
+									opd2 = new OperandArithExpr(ARITHOPR_MUL, OperandConst(constants[d]), OperandVar(a));
 									make_pred = true;
+									constants.invalidate(d);
 								}
 							}
 							else
-							{ 	// we add a predicate to say that d is now a multiple of a
-								opd11 = new OperandVar(d);
-								opd12 = new OperandVar(a);
-								opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12); // d % a (%0 is to consider!)
-								opd2 = new OperandConst(0);
-								make_pred = true;
+							{	// we add a predicate to say that d is now a multiple of a
+								update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)), labels);
+								if(isConstant(a))
+								{
+									opd11 = new OperandVar(d);
+									opd12 = new OperandConst(constants[a]);
+									opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12); // d % a (%0 is to consider!)
+									opd2 = new OperandConst(0);
+									make_pred = true;
+								} // I don't think it's worth it to add this "a divides d" predicate if a is not constant... maybe I'm wrong
 							}
 						}
 						else // d <- a*b
@@ -651,17 +649,17 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					}
 					break;
 				case DIVU:
-					ASSERT(!UNTESTED_CRITICAL);
 					DBG(color::BIRed() << "Untested unsigned variant running!")
+					// ASSERT(!UNTESTED_CRITICAL);
 				case DIV:
-					ASSERT(!UNTESTED_CRITICAL);
-					DBG(color::BIRed() << "Untested operator running!")
 					if(d == a)
 					{
 						if(d == b) // d <- d / d
 						{	// [1 / d]
 							// TODO: this should be okay to assume d != 0, right? otherwise the program is faulty?
 							// or should we use a SMT solver mode that supports / 0?
+							DBG(color::BIRed() << "Untested operator running!")
+							ASSERT(!UNTESTED_CRITICAL);
 							invalidateVar(d);
 							opd1 = new OperandVar(d);
 							opd2 = new OperandConst(1);
@@ -684,7 +682,18 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							{
 								if(isConstant(b))
 									constants.set(d, constants[d]/constants[b], getLabels(d, b));
-								else constants.invalidate(d);
+								else
+								{
+									DBG(color::BIRed() << "Untested operator running!")
+									ASSERT(!UNTESTED_CRITICAL);
+									Constant d_val = constants[d]; // remember this value to use it in predicate
+									constants.invalidate(d);
+									opd1 = new OperandVar(d);
+									opd21 = new OperandConst(d_val);
+									opd22 = new OperandVar(b);
+									opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
+									make_pred = true;
+								}
 							}
 						}
 					}
@@ -697,7 +706,16 @@ void Analysis::State::processBB(const BasicBlock *bb)
 							{
 								if(isConstant(a))
 									constants.set(d, constants[a]/constants[d], getLabels(a, d));
-								else constants.invalidate(d);
+								else
+								{
+									Constant d_val = constants[d]; // remember this value to use it in predicate
+									constants.invalidate(d);
+									opd1 = new OperandVar(d);
+									opd21 = new OperandVar(a);
+									opd22 = new OperandConst(d_val);
+									opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
+									make_pred = true;
+								}
 							}
 						}
 						else // d <- a / b
