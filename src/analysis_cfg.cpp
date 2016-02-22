@@ -895,7 +895,9 @@ bool Analysis::isConditional(BasicBlock* bb) const
 		if(isAHandledEdgeKind(outs->kind()))
 		{
 			count++;
+			ASSERTP(!atLeastOneTaken || outs->kind() != Edge::TAKEN, "Multiple outgoing taken edges currently not supported by IP analysis (" << bb <<")");
 			atLeastOneTaken |= (outs->kind() == Edge::TAKEN);
+			// TODO!
 		}
 	}
 	return atLeastOneTaken && (count > 1);
