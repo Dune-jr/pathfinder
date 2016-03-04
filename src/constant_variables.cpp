@@ -343,7 +343,11 @@ io::Output& ConstantVariables::LabelledValue::print(io::Output& out) const
 				first_time = false;
 			else
 				out << ", ";
+#ifdef v1
 			out << (*iter)->source()->number() << "->" << (*iter)->target()->number();
+#else
+			out << (*iter)->source()->index() << "->" << (*iter)->target()->index(); // v2
+#endif
 		}
 		out << ")";
 	}

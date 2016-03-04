@@ -1,6 +1,7 @@
 #ifndef _LABELLED_PREDICATE_H
 #define _LABELLED_PREDICATE_H
 
+#include <elm/avl/Set.h>
 #include <otawa/cfg/Edge.h>
 #include "predicate.h"
 

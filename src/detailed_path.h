@@ -10,6 +10,7 @@
 using namespace elm;
 using namespace elm::genstruct;
 using otawa::Edge;
+using otawa::Block;
 using otawa::BasicBlock;
 
 class DetailedPath
@@ -32,14 +33,14 @@ public:
 	inline void removeLast() { _path.removeLast(); }
 	
 	// events
-	void onLoopEntry(BasicBlock* loop_header);
-	void onLoopExit(Option<BasicBlock*> new_loop_header);
+	void onLoopEntry(Block* loop_header);
+	void onLoopExit(Option<Block*> new_loop_header);
 	void onCall(Edge* e);
-	void onReturn(BasicBlock* bb); // TODO!
+	void onReturn(Block* b); // TODO!
 
 	// utility
 	bool weakEqualsTo(const DetailedPath& dp) const;
-	void addEnclosingLoop(BasicBlock* loop_header);
+	void addEnclosingLoop(Block* loop_header);
 	void merge(const Vector<DetailedPath>& detailed_paths);
 	void optimize();
 	bool hasAnEdge() const;

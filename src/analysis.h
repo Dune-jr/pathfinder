@@ -62,8 +62,8 @@ public:
 
 	public:
 		State(); // create an invalid (bottom) state
-		State(BasicBlock* entrybb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = true);
-		State(Edge* entry_edge, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = false);
+		State(Block* entryb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = true);
+		State(Edge* entry_edge,    const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = false);
 		State(const State& s);
 		// inline const OrderedPath& getPath() const { return path; }
 		inline const DetailedPath& getDetailedPath() const { return path; }
@@ -71,10 +71,10 @@ public:
 		inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
 		inline const ConstantVariables& getConstants() const { return constants; }
 		inline elm::String getPathString() const { return path.toString(); /*orderedPathToString(path.toOrderedPath());*/ }
-		inline void onLoopEntry(BasicBlock* loop_header) { path.onLoopEntry(loop_header); }
-		inline void onLoopExit(Option<BasicBlock*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }
+		inline void onLoopEntry(Block* loop_header) { path.onLoopEntry(loop_header); }
+		inline void onLoopExit(Option<Block*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }
 		inline void onCall(Edge* e) { path.onCall(e); }
-		inline void onReturn(BasicBlock* bb) { path.onReturn(bb); }
+		inline void onReturn(Block* b) { path.onReturn(b); }
 		inline bool isValid() const { return dfa_state != 0; }
 		inline bool fixpointState() const { return fixpoint; }
 		inline void setFixpointState(bool new_fixpoint) { fixpoint = new_fixpoint; }
@@ -205,7 +205,7 @@ public:
 	
 private:
 	// TODO: try using a Set or something more appropriate (we check if(contains) everytime we add an element...)
-	Vector<BasicBlock*> wl; // working list
+	Vector<Block*> wl; // working list
 
 	const dfa::State* dfa_state;
 	const OperandVar sp; // Stack Pointer
@@ -215,35 +215,37 @@ private:
 	int ip_count, unminimized_ip_count;
 
 	// analysis.cpp
-	void debugProgress(int bb_number, bool enable_smt) const;
+	void debugProgress(int block_id, bool enable_smt) const;
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
+	int processBlock(State& s, Block* b);
 	int processBB(State& s, BasicBlock *bb);
 	void processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt);
-	void processLoopHeader(BasicBlock* bb, SLList<Analysis::State>& sl);
-	void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional, bool is_call);
+	void processLoopHeader(Block* b, SLList<Analysis::State>& sl);
+	void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional);
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
 	void addDisorderedInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path, Edge* last_edge);
 	void addDetailedInfeasiblePath(const DetailedPath& infeasible_path);
 	void purgeStateList(SLList<Analysis::State>& sl) const;
 	bool mergeOversizedStateList(SLList<Analysis::State>& sl) const;
-	void placeboProcessCFG(CFG* cfg);
-	void placeboProcessBB(BasicBlock *bb);
+	void placeboProcessCFG(/*CFG* cfg*/) const;
 	void printResults(int exec_time_ms) const;
+	void printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const;
 	void removeDuplicateInfeasiblePaths();
 	void onPathEnd();
 	void onAnyInfeasiblePath();
-	bool isAHandledEdgeKind(Edge::kind_t kind) const;
+	// bool isAHandledEdgeKind(Edge::kind_t kind) const;
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
-	bool isConditional(BasicBlock* bb) const;
-	void cleanIncomingEdges(BasicBlock* bb) const;
-	void cleanIncomingBackEdges(BasicBlock* bb) const;
-	bool fixpointFoundOnAllMotherLoops(BasicBlock *bb) const;
+	bool isConditional(Block* b) const;
+	void cleanIncomingEdges(Block* b) const;
+	void cleanIncomingBackEdges(Block* b) const;
+	bool fixpointFoundOnAllMotherLoops(Block* b) const;
 	bool edgeIsExitingToLoopLevel0(const Edge* e) const;
 	bool shouldEnableSolver(const Edge* e);
-	bool allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
-	bool allIncomingEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
+	bool allRequiredInEdgesAreProcessed(Block* block) const;
+	bool allIncomingNonBackEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
+	bool allIncomingEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
 	elm::String wlToString() const;
 }; // Analysis class

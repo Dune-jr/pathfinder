@@ -5,6 +5,7 @@
 #include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
 #include <otawa/hard/Platform.h>
 #include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
+#include <otawa/prog/WorkSpace.h>
 #include "analysis.h"
 #include "ffx.h"
 #include "debug.h"
@@ -55,6 +56,7 @@ protected:
         const dfa::State *inital_state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
 		ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
 		CFG *cfg = cfgs->get(0); // then get the first CFG
+		// simpleCFGparse(cfg);
 		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
 		int max_registers = workspace()->platform()->regCount(); // retrieve the count of registers
 		int max_tempvars = workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
@@ -82,7 +84,7 @@ protected:
 		if(opt_preanalysis)
 			dbg_flags |= DBG_PREANALYSIS;
 		if(opt_avgiplength)
-			dbg_flags |= DBG_AVG_IP_LENGTH;
+			dbg_flags |= DBG_AVG_IP_LENGTH; 
 		if(! opt_nounminimized)
 			analysis_flags |= Analysis::UNMINIMIZED_PATHS;
 		if(opt_dry)
@@ -95,18 +97,19 @@ protected:
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::FOLLOW_CALLS;
 		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, merge_frequency, analysis_flags);
-
+		
+		/*
 		// outputing to .ffx
 		if(opt_output)
 		{
 			const Vector<DetailedPath>& infeasible_paths = analysis.infeasiblePaths();
 			FFX ffx_output(infeasible_paths);
-			const elm::String name = entry + ".ffx";
+			const elm::String name = entry + ".ffx"; // TODO: use args= arguments();
 			ffx_output.output(elm::String(entry), name);
 			if(dbg_verbose < DBG_VERBOSE_NONE)
 				cout << "output to " + name << endl;
 		}
-		// */
+		//*/
 	}
 
 private:
@@ -119,6 +122,27 @@ private:
 
 OTAWA_RUN(Display);
 
+void simpleCFGparse(CFG* cfg)
+{
+	Vector<Block*> todo;
+	todo.push(cfg->entry());
+	while(todo)
+	{
+		Block *b = todo.pop();
+		DBG(b << " (id: " << b->id() << ")")
+		for(Block::EdgeIter iter(b->outs()); iter; iter++)
+		{
+			if(! BACK_EDGE(*iter) )
+				todo.push(iter->target());
+		}
+		if(b->isSynth())
+		{
+			DBG(color::IPur() << "new call" << color::RCol())
+			todo.push(b->toSynth()->callee()->entry());
+		}
+	}
+}
+/*
 void testSimplify()
 {
 	OperandConst zero  = OperandConst(0);
@@ -185,3 +209,4 @@ void testOperands()
 	DBG("oae = oae3:\t" << DBG_TEST(oae == oae3, false))
 	DBG("oae = oae4:\t" << DBG_TEST(oae == oae4, false))
 }
+*/

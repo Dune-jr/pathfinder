@@ -30,7 +30,7 @@ void Analysis::State::throwInfo()
 void Analysis::State::processBB(const BasicBlock *bb)
 {
 #	ifdef DBGG
-		cout << color::Gre() << "Processing path " << getPathString() << color::RCol() << endl;
+		cout << color::Gre() << "\tProcessing path " << getPathString() << color::RCol() << endl;
 #	endif
 	SLList<LabelledPredicate> generated_preds_before_condition;
 	sem::inst condition;
@@ -38,13 +38,13 @@ void Analysis::State::processBB(const BasicBlock *bb)
 	generated_preds_taken.clear();
 	
 	// parse assembly instructions
-	for(BasicBlock::InstIterator insts(bb); insts; insts++)
+	for(BasicBlock::InstIter insts(bb); insts; insts++)
 	{
 		DBG(color::BIPur() << *insts)
-		Block block;
+		sem::Block block;
 		insts->semInsts(block);
 		
-	PathIter seminsts;
+		PathIter seminsts;
 		// parse semantical instructions with PathIter
 		for(seminsts.start(*insts); seminsts; seminsts++)
 		{

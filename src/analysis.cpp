@@ -16,7 +16,7 @@ void addIndents(io::Output& out, int n) { for(int i=0; i<n; i++) out << "\t"; }
  */
 Analysis::Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int state_size_limit, int flags)
 	: dfa_state(dfa_state), sp(sp), max_tempvars(max_tempvars), max_registers(max_registers), state_size_limit(state_size_limit), flags(flags)
-	, loop_header_count(0), bb_count(cfg->countBB()-1) // do not count ENTRY
+	, loop_header_count(0), bb_count(cfg->/*countBB*/count()-1) // do not count ENTRY
 	, ip_count(0), unminimized_ip_count(0)
 {
 	DBG("Stack pointer identified to r" << sp)
@@ -169,14 +169,14 @@ Vector<DetailedPath> Analysis::State::stateListToPathVector(const SLList<State>&
 	return rtn;
 }
 
-void Analysis::debugProgress(int bb_number, bool enable_smt) const
+void Analysis::debugProgress(int block_id, bool enable_smt) const
 {
 	if(dbg_verbose >= DBG_VERBOSE_RESULTS_ONLY && (dbg_flags&DBG_PROGRESS))
 	{
 		static int processed_bbs = 0;
 		if(enable_smt)
 			++processed_bbs; // only increase processed_bbs when we are in a state where we are no longer looking for a fixpoint
-		cout << "[" << processed_bbs*100/bb_count << "%] Processed BB #" << bb_number << " of " << bb_count << "        " << endl << "\e[1A";
+		cout << "[" << processed_bbs*100/bb_count << "%] Processed Block #" << block_id << " of " << bb_count << "        " << endl << "\e[1A";
 	}
 }
 
@@ -232,8 +232,10 @@ bool Analysis::listOfFixpoints(const SLList<Analysis::State>& sl)
 {
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
-		if(!(sl_iter->fixpointState()))
+		if( ! sl_iter->fixpointState()) {
+			// cout << "\tDBG: listOfFixpoints returns false because of " << *sl_iter << "\n"; // TODO!!!
 			return false;
+		}
 	}
 	return true;
 }

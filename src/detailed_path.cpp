@@ -93,33 +93,39 @@ void DetailedPath::removeCallsAtEndOfPath()
 /**
   * Add missing enclosing loop headers at the beginning of the path
   */
-void DetailedPath::addEnclosingLoop(BasicBlock* loop_header)
+void DetailedPath::addEnclosingLoop(Block* loop_header)
 {
-	if(!contains(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header)))
-		_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header));
+	ASSERT(loop_header->isBasic())	
+	if(!contains(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic())))
+		_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic()));
 }
 
-void DetailedPath::onLoopEntry(BasicBlock* loop_header)
+void DetailedPath::onLoopEntry(Block* loop_header)
 {
-	_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header));
+	ASSERT(loop_header->isBasic())
+	_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic())); // TODO! change this
 }
 
-void DetailedPath::onLoopExit(Option<BasicBlock*> new_loop_header)
+void DetailedPath::onLoopExit(Option<Block*> new_loop_header) // TODO: shouldn't this be old_loop_header?
 {
+	ASSERT(!new_loop_header || (*new_loop_header)->isBasic())
 	if(new_loop_header)
-		_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, new_loop_header));
+		_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, (*new_loop_header)->toBasic())); // TODO! change this
 	else _path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, (BasicBlock*)NULL));
 }
 
 void DetailedPath::onCall(Edge* e)
 {
 	return; // TODO!!
+	/*
 	_path.addLast(FlowInfo(FlowInfo::KIND_CALL, e));
+	*/
 }
 
-void DetailedPath::onReturn(BasicBlock* bb)
+void DetailedPath::onReturn(Block* b)
 {
-	return; // TODO!!
+	// TODO!!
+	/*
 	BasicBlock::InIterator ins(bb);
 	while(otawa::RECURSIVE_LOOP(ins))
 	{
@@ -129,6 +135,7 @@ void DetailedPath::onReturn(BasicBlock* bb)
 	_path.addLast(FlowInfo(FlowInfo::KIND_RETURN, ins->source()));
 	while(ins++)
 		ASSERTP(otawa::RECURSIVE_LOOP(ins), "First BB of function has several incoming non-recursive edges (e.g. it is called several times)");
+	*/
 }
 
 /**
@@ -299,7 +306,7 @@ elm::String DetailedPath::toString(bool colored) const
 				first = false;
 			else
 				str = str.concat(_ << ", ");
-			str = str.concat(_ << iter->source()->number() << "->" << iter->target()->number());
+			str = str.concat(_ << iter->source()->index() << "->" << iter->target()->index());
 		}
 	}
 	return str;
@@ -315,16 +322,16 @@ elm::String DetailedPath::FlowInfo::toString(bool colored) const
 	switch(_kind)
 	{
 		case KIND_EDGE:
-			return _ << getEdge()->source()->number() << "->" << getEdge()->target()->number();
+			return _ << getEdge()->source()->index() << "->" << getEdge()->target()->index();
 		case KIND_LOOP_ENTRY:
-			return _ << color::Dim() << "LEn#" << getLoopHeader()->number() << color::NoDim();
+			return _ << color::Dim() << "LEn#" << getLoopHeader()->index() << color::NoDim();
 		case KIND_LOOP_EXIT:
-			return _ << color::Dim() << "LEx#" << getLoopHeader()->number() << color::NoDim();
+			return _ << color::Dim() << "LEx#" << getLoopHeader()->index() << color::NoDim();
 		case KIND_CALL:
-			return _ << color::Dim() << "C#" << getEdge()->source()->number() << color::NoDim();
-			// return _ << color::Dim() << "C#" << getEdge()->source()->number() << "-" << getEdge()->target()->number() << color::NoDim();
+			return _ << color::Dim() << "C#" << getEdge()->source()->index() << color::NoDim();
+			// return _ << color::Dim() << "C#" << getEdge()->source()->index() << "-" << getEdge()->target()->index() << color::NoDim();
 		case KIND_RETURN:
-			return _ << color::Dim() << "R#" << getBasicBlock()->number() << color::NoDim();
+			return _ << color::Dim() << "R#" << getBasicBlock()->index() << color::NoDim();
 		default:
 			return _ << "[UKNOWN KIND " << (int)_kind << "]";
 	}

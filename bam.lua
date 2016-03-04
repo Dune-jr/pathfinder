@@ -22,8 +22,12 @@ config:Finalize("config.lua")
 -- Settings
 settings = NewSettings()
 settings.cc.flags:Add("-O0")
-otawa_config = "~/bin/otawa/otawa-config"
--- otawa_config = "otawa-config"
+
+if ScriptArgs["otawa"] and ScriptArgs["otawa"]~="1" then
+	otawa_config = "~/Documents/casse/otawa2/linux/bin/otawa-config" -- v2
+else
+	otawa_config = "~/bin/otawa/otawa-config" --v1
+end
 
 -- Wall option
 if ScriptArgs["wall"]=="true" or ScriptArgs["Wall"]=="true" then
@@ -44,6 +48,7 @@ if config.solver.value == "cvc4" then
 	-- set C++ macro
 	settings.cc.flags:Add("-D SMT_SOLVER_CVC4")
 	-- set sources
+	-- source = Collect("src/main.cpp")
 	source = Collect("src/*.cpp", "src/cvc4/*.cpp")
 -- Z3
 elseif config.solver.value == "z3" then

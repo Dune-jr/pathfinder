@@ -28,17 +28,24 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 	for(DetailedPath::Iterator iter(ip); iter; iter++)
 	{
 		if(iter->isEdge())
-		{
+		{	// TODO! test this
 			const Edge* e = iter->getEdge();
-			FFXFile << indent(  ) << "<edge src=\"0x" << e->source()->address() << "\" dst=\"0x" << e->target()->address()
-				//	<< "\" />" << " <!-- " << e->source()->number() << "->" << e->target()->number() << " -->" << endl;
-					<< "\" srcindex=\"" << e->source()->number() << "\" dstindex=\"" << e->target()->number() << "\" />" << endl;
+			ASSERT(e->source()->isBasic() || e->source()->isCall());
+			ASSERT(e->target()->isBasic() || e->target()->isCall());
+			const BasicBlock* source = e->source()->isBasic() ?
+				e->source()->toBasic() : 
+				e->source()->toSynth()->ins().item()->source()->toBasic(); // source is a call block: replace with caller
+			const BasicBlock* target = e->target()->isBasic() ?
+				e->target()->toBasic() : 
+				e->target()->toSynth()->outs().item()->target()->toBasic(); // target is a call block: replace with callee
+			FFXFile << indent(  ) << "<edge src=\"0x" << source->address() << "\" dst=\"0x" <<target->address()
+					<< "\" srcindex=\"" << source->id() << "\" dstindex=\"" << target->id() << "\" />" << endl;
 		}
 		else if(iter->isLoopEntry())
 		{
 			const BasicBlock* loop_header = iter->getLoopHeader();
-			FFXFile << indent(  ) << "<loop address=\"0x" << loop_header->address() << "\" index=\"" << loop_header->number() << "\">"
-					<< " <!-- loop " << loop_header->number() << " -->" << endl; indent(+1);
+			FFXFile << indent(  ) << "<loop address=\"0x" << loop_header->address() << "\" index=\"" << loop_header->index() << "\">"
+					<< " <!-- loop " << loop_header->index() << " -->" << endl; indent(+1);
 			FFXFile << indent(  ) << "<iteration number=\"n\">" << endl; indent(+1);
 			open_tags += FFX_TAG_LOOP;
 		}
@@ -56,17 +63,19 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			}
 			FFXFile << indent(-1) << "</iteration>" << endl;
 			if(const BasicBlock* loop_header = iter->getLoopHeader()) // if not NULL, we have info
-				FFXFile << indent(-1) << "</loop> <!-- loop " << loop_header->number() << "-->" << endl;
+				FFXFile << indent(-1) << "</loop> <!-- loop " << loop_header->index() << "-->" << endl;
 			else
 				FFXFile << indent(-1) << "</loop>" << endl;
 			open_tags.removeFirst();
 		}
+#ifdef v1
 		else if(iter->isCall())
 		{
 			const BasicBlock* source = iter->getEdge()->source();
-			FFXFile << indent( ) << "<call address=\"0x" << source->address() << "\"> <!-- call " << source->number() << " -->" << endl; indent(+1);
+			FFXFile << indent( ) << "<call address=\"0x" << source->address() << "\"> <!-- call " << source->index() << " -->" << endl; indent(+1);
 			open_tags += FFX_TAG_CALL;
 		}
+#endif
 		else assert(false); // we should handle all kinds
 	}
 	// close running <loop ... > environments
@@ -95,6 +104,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 
 void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const DetailedPath& ip)
 {
+#ifdef v1
 	// control-constraint header
 	FFXFile	<< "\t\t<control-constraint>" << endl
 			<< "\t\t\t<le>" << endl
@@ -109,7 +119,7 @@ void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const Detailed
 			first = false;
 		else
 			ip_str = _ << ip_str << ", ";
-		ip_str = ip_str.concat(_ << (*iter)->source()->number() << "->" << (*iter)->target()->number());
+		ip_str = ip_str.concat(_ << (*iter)->source()->index() << "->" << (*iter)->target()->index());
 
 		FFXFile << "\t\t\t\t\t<count src=\"0x" << (*iter)->source()->address() << "\" dst=\"0x" << (*iter)->target()->address() << "\" />" << endl;
 		edge_count++;
@@ -121,6 +131,7 @@ void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const Detailed
 			<< "\t\t\t\t<const int=\"" << edge_count-1 << "\" />" << endl
 			<< "\t\t\t</le>" << endl // <!-- @1->@3 + @5->@6 <= 1 -->
 			<< "\t\t</control-constraint> <!-- " << ip_str << " infeasible path -->" << endl;
+#endif
 }
 
 elm::String FFX::indent(int indent_increase)

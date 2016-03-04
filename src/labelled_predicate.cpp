@@ -19,7 +19,11 @@ io::Output& LabelledPredicate::print(io::Output &out) const
 			first_time = false;
 		else
 			out << ", ";
-		out << (*iter)->source()->number() << "->" << (*iter)->target()->number();
+#ifdef v1
+		out << (*iter)->source()->number() << "->" << (*iter)->target()->number(); // v1
+#else
+		out << (*iter)->source()->index() << "->" << (*iter)->target()->index(); // v2
+#endif
 	}
 	return (out << ")");
 }
