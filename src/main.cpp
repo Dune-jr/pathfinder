@@ -9,6 +9,7 @@
 #include "analysis.h"
 #include "ffx.h"
 #include "debug.h"
+#include "oracle.h"
 
 using namespace elm;
 using namespace otawa;
@@ -96,7 +97,7 @@ protected:
 		}
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::FOLLOW_CALLS;
-		Analysis analysis = Analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, merge_frequency, analysis_flags);
+		Analysis analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, merge_frequency, analysis_flags);
 		
 		/*
 		// outputing to .ffx

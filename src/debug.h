@@ -11,7 +11,7 @@
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 
-// #define DBGG // debug loop analysis and many other
+#define DBGG // debug loop analysis and many other
 // #define DBG_WARNINGS
 
 // #define DBG_NO_COLOR	   0b1 << 1

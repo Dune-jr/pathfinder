@@ -169,6 +169,15 @@ Vector<DetailedPath> Analysis::State::stateListToPathVector(const SLList<State>&
 	return rtn;
 }
 
+/**
+ * @fn inline Analysis::State topState(Block* entry) const;
+ * Returns a \top state
+ */ 
+
+/*
+ * @fn void Analysis::debugProgress(int block_id, bool enable_smt) const;
+ * Print progress of analysis
+ */
 void Analysis::debugProgress(int block_id, bool enable_smt) const
 {
 	if(dbg_verbose >= DBG_VERBOSE_RESULTS_ONLY && (dbg_flags&DBG_PROGRESS))
@@ -228,7 +237,7 @@ bool Analysis::State::isFixPoint(const Analysis::State& s) const
 /**
  * @brief Computes a conjunction over the fixpoint booleans of all the states
  */
-bool Analysis::listOfFixpoints(const SLList<Analysis::State>& sl)
+/*bool Analysis::listOfFixpoints(const SLList<Analysis::State>& sl)
 {
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
@@ -238,4 +247,43 @@ bool Analysis::listOfFixpoints(const SLList<Analysis::State>& sl)
 		}
 	}
 	return true;
+}*/
+
+/**
+ * @fn static Vector<Edge*> allIns (Block* h);
+ * @brief
+ * @rtn return the list of edges
+ */
+Vector<Edge*> Analysis::allIns(Block* h)
+{
+	Vector<Edge*> rtn(4);
+	for(Block::EdgeIter i(h->ins()); i; i++)
+		rtn.push(*i);
+	return rtn;
+}
+/**
+ * @fn static Vector<Edge*> backIns(Block* h);
+ * @brief
+ * @rtn return the list of edges
+ */
+Vector<Edge*> Analysis::backIns(Block* h)
+{
+	Vector<Edge*> rtn(4);
+	for(Block::EdgeIter i(h->ins()); i; i++)
+		if(BACK_EDGE(*i))
+			rtn.push(*i);
+		return rtn;
+}
+/**
+ * @fn static Vector<Edge*> nonBackIns(Block* h);
+ * @brief
+ * @rtn return the list of edges
+ */
+Vector<Edge*> Analysis::nonBackIns(Block* h)
+{
+	Vector<Edge*> rtn(4);
+	for(Block::EdgeIter i(h->ins()); i; i++)
+		if(!BACK_EDGE(*i))
+			rtn.push(*i);
+		return rtn;
 }

@@ -9,27 +9,27 @@
 #include <elm/io/Output.h>
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
-// #include <otawa/cfg/BasicBlock.h>
-#include <otawa/cfg/features.h> 
 // #include <elm/sys/Thread.h> // multithreading
-
 #include "analysis.h"
-// #include "smt_job.h"
-// #include "smt.h"
+#include "debug.h"
 #ifdef SMT_SOLVER_CVC4
 	#include "cvc4/cvc4_smt.h"
 #elif SMT_SOLVER_Z3
 	#include "z3/z3_smt.h"
 #endif
-#include "debug.h"
 
 using namespace elm::genstruct;
 using namespace elm::io;
 
-Identifier<SLList<Analysis::State> > Analysis::PROCESSED_EDGES("IP analysis processed incoming edges"); //, SLList<State>::null); //TODO! try vector
-Identifier<Analysis::State*> 		 Analysis::PROCESSED_LOOPHEADER_BB("IP analysis processed loop headers (for fixpoints)");
-Identifier<bool>			 		 Analysis::MOTHERLOOP_FIXPOINT_STATE("IP analysis fixpoint state info on loop exit edges");
-Identifier<bool>			 		 Analysis::FIXPOINT_REACHED("IP analysis fixpoint state info on loop headers"); // for enable_smt
+// Identifier<SLList<Analysis::State> >		Analysis::PROCESSED_EDGES("IP analysis processed incoming edges"); //, SLList<State>::null);
+// Identifier<Analysis::State*> 			Analysis::PROCESSED_LOOPHEADER_BB("IP analysis processed loop headers (for fixpoints)");
+// Identifier<bool>			 				Analysis::MOTHERLOOP_FIXPOINT_STATE("IP analysis fixpoint state info on loop exit edges");
+// Identifier<bool>							Analysis::FIXPOINT_REACHED("IP analysis fixpoint state info on loop headers"); // for enable_smt
+// Identifier<Analysis::loopheader_status_t>Analysis::LOOPHEADER_STATUS("On loop headers, status of the fixpoint analysis");
+// Identifier<Analysis::State>				Analysis::LOOPHEADER_STATE("On loop headers, current state we are working on to get a fixpoint");
+Identifier<SLList<Analysis::State> >		Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
+Identifier<Analysis::State>					Analysis::LH_S("Trace on a loop header"); // maybe change to vector
+Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a loop (on a loop header)");
 
 Analysis::State::State() : dfa_state(NULL), sp(0), constants(0, 0) { }
 
@@ -77,33 +77,105 @@ void Analysis::State::appendEdge(Edge* e, bool is_conditional)
 	constants.label(e); // label the constants as well
 }
 
-void Analysis::State::printFixPointState() const
-{
-	if(dbg_verbose > DBG_VERBOSE_ALL)
-		return; // save some time
-	if(!path.hasAnEdge())
-	{
-		DBG("Failed to print fixpoint state: the state path is empty")
-	}
-	else
-	{
-		Block *b = path.lastEdge()->target();
-		DBG("Printing fixpoint state of " << b)
-		if(LOOP_HEADER(b))
-			DBG("\t* loop#" << b->id() << " = " << DBG_TEST(FIXPOINT_REACHED.exists(b) && FIXPOINT_REACHED(b) == true, true))
-		while(ENCLOSING_LOOP_HEADER.exists(b))
-		{
-			b = ENCLOSING_LOOP_HEADER(b);
-			DBG("\t* loop#" << b->id() << " = " << DBG_TEST(FIXPOINT_REACHED.exists(b) && FIXPOINT_REACHED(b) == true, true))
-		}
-	}
-}
+/*void Analysis::State::printFixPointState() const
+{ }*/
 
 /**
  * @fn void Analysis::processCFG(CFG* cfg);
  * Runs the analysis on the CFG cfg
 */
 void Analysis::processCFG(CFG* cfg)
+{
+/* begin */
+	/* ips ← {} */
+	infeasible_paths.clear();
+	/* for e ∈ E(G) */
+		/* s_e ← nil */
+	/* for h ∈ H(G) */
+		/* s_h ← nil */
+		/* status_h ← ENTER */
+	/* for e ∈ entry.outs */
+	for(Block::EdgeIter entry_outs(cfg->entry()->outs()); entry_outs; entry_outs++)
+	{
+		/* s_e ← T */
+		SLList<Analysis::State> entry_s;
+		entry_s += topState(cfg->entry());
+		EDGE_S(*entry_outs) = entry_s;
+		/* wl ← sink(e) */
+		wl.push((*entry_outs)->target()); // only one outs, firstBB.
+	}
+
+	/* while wl ≠ {} do */
+	while(!wl.isEmpty())
+	{
+		/* b ← pop(wl) */
+		Block *b = wl.pop();
+		/* pred ← 	b.ins \ B(G) if b ∈ H(G) ∧ status_b = ENTER */
+		/* 			b.ins ∩ B(G) if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
+		/* 			b.ins 		 if b ∈/ H(G) */
+		const Vector<Edge*> pred(LOOP_HEADER(b) ? (loopStatusIsEnter(b)
+				? nonBackIns(b) /* if b ∈ H(G) ∧ status_b = ENTER */
+				: backIns(b) /* if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
+			) : b->ins() /* if b ∉ H(G) */
+		);
+
+		/* if ∀e ∈ pred, s_e ≠ nil then */
+		if(allEdgesHaveTrace(pred))
+		{
+			/* s ← |_|e∈pred s_e */
+			const Vector<State> s(narrowing(pred)); // TODO: def as Vector(1) if 
+			/* for e ∈ pred */
+			for(Vector<Edge*>::Iterator e(pred); e; e++)
+				/* s_e ← nil */
+				EDGE_S.remove(e);
+			
+			/* succ ← b.outs */
+			bool propagate = true;
+			/* if b ∈ H(G) then */
+			if(LOOP_HEADER(b))
+			{
+				/* if status b = LEAVE then */
+				if(loopStatusIsLeave(b))
+				{
+					/* if ∃e ∈ b.ins | s_e = nil then */
+					if(anyEdgeHasTrace(b->ins()))
+						/* wl ← wl ∪ {b} */
+						wl.push(b);
+					/* s_b ← nil */
+					LH_S.remove(b);
+					/* succ ← {} */
+					propagate = false;
+				}
+				else /* else s_b ← s */
+					LH_S(b) = s[0];
+				/* status_b ← FIX if status_b = ENTER */
+				if(LH_STATUS.get(b) == elm::none)
+					LH_STATUS(b) = FIX; 
+				/*			  LEAVE if status_b = FIX ∧ s ≡ s_b */
+				else if(LH_STATUS.get(b) == elm::some(FIX) && equiv(s[0], LH_S.use(b)))
+					LH_STATUS(b) = LEAVE; 
+				/*			  ENTER if status_b = LEAVE */
+				else if(LH_STATUS.get(b) == elm::some(LEAVE))
+					LH_STATUS(b).remove();
+			}
+			I(b, s);
+			/* for e ∈ succ \ {EX_h | b ∈ L_h ∧ status_h = LEAVE} */
+			if(propagate)
+				for(Block::EdgeIter e(outsWithoutUnallowedExits(b)); e; e++)
+				{
+					/* s_e ← I*[e](s) */
+					EDGE_S(e) = I(e, s);
+					/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
+					if(inD_ip(e))
+						ipcheck(EDGE_S(e), infeasible_paths);
+					/* wl ← wl ∪ {sink(e)} */
+					wl.push((*e)->target());
+				}
+		}
+	}
+/* end */
+}
+#if 1-1
 {
 	DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
 	DBG(color::Whi() << "Processing CFG " << cfg)
@@ -197,19 +269,12 @@ void Analysis::processCFG(CFG* cfg)
 		else // BasicBlock
 		{
 			ASSERT(b->isBasic());
-			bool fixpoint = true;
 			int state_count = 0;
 			/* For s in sl */
 			for(SLList<Analysis::State>::MutableIterator sl_iter(sl); sl_iter; )
 			{
 				state_count++;
-				if(dbg_verbose == DBG_VERBOSE_ALL)
-					DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
-				fixpoint = sl_iter.item().fixpointState();
-	#			ifdef DBGG
-					if(dbg_verbose <= DBG_VERBOSE_MINIMAL)
-						cout << "BB #" << b->index() << ", fixpoint=" << DBG_TEST(fixpoint, true) << endl;
-	#			endif
+				DBG(color::Whi() << "Processing path " << sl_iter.item().getPathString())
 				/* processBB(s, bb); */
 				if(processBB(sl_iter.item(), b->toBasic()) != 0)
 					sl.remove(sl_iter); // path ended
@@ -241,6 +306,7 @@ void Analysis::processCFG(CFG* cfg)
 				}*/
 				if(BACK_EDGE(*b_outs))
 					DBG(color::Whi() << "End of loop reached.")
+				bool inner_fixpoint = ; // inner loop fixpoint status
 				if(!fixpoint) // fixpoint not found
 				{
 					if(!LOOP_EXIT_EDGE.exists(*b_outs)) // take everything but loop exit edges
@@ -318,6 +384,7 @@ void Analysis::processCFG(CFG* cfg)
 	removeDuplicateInfeasiblePaths();
 	printResults((clock()-timestamp)*1000/CLOCKS_PER_SEC);
 }
+#endif
 
 /*
 	@fn int Analysis::processBB(State& s, BasicBlock* bb);
@@ -345,7 +412,7 @@ int Analysis::processBB(State& s, BasicBlock* bb)
 void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt)
 {
 	/* wl <- sl ⊙ e; */
-	PROCESSED_EDGES.remove(e); // cleaning
+	/*PROCESSED_EDGES.remove(e); // cleaning
 	if(sl.isEmpty())
 	{	// just propagate the {bottom}
 		State invalid_state;
@@ -379,7 +446,7 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool i
 			const Path& infeasible_path = **sl_paths_iter;
 			elm::String counterexample;
 			DBG("Path " << s.getPathString() << "->" << e->target()->index() << " minimized to " << pathToString(infeasible_path))
-			bool valid = /*false&&*/checkInfeasiblePathValidity(sl, sl_paths, e, infeasible_path, counterexample);
+			bool valid = checkInfeasiblePathValidity(sl, sl_paths, e, infeasible_path, counterexample);
 			DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
 			ip_count++;
 			if(valid)
@@ -411,12 +478,12 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool i
 			}
 			onAnyInfeasiblePath();
 		}
-	}
+	}*/
 }
 
 void Analysis::processLoopHeader(Block* b, SLList<Analysis::State>& sl)
 {
-	// ensure BasicBlock
+	/*n<// ensure BasicBlock
 	ASSERTP(b->isBasic(), "\tprocessLoopHeader called with non-0Basic Block " << b);
 	BasicBlock *bb = b->toBasic();
 
@@ -433,7 +500,7 @@ void Analysis::processLoopHeader(Block* b, SLList<Analysis::State>& sl)
 	{
 		if(s->fixpointState())
 		{
-			/* Stage 3 (final): the fixpoint has been found and we just re-iterated with it, looking for infeasible paths */
+			// Stage 3 (final): the fixpoint has been found and we just re-iterated with it, looking for infeasible paths
 			// don't compute anything, just extract the fixpoint we already know
 			delete s;
 			s = PROCESSED_LOOPHEADER_BB(bb);
@@ -448,8 +515,8 @@ void Analysis::processLoopHeader(Block* b, SLList<Analysis::State>& sl)
 			ASSERT(prev_s != NULL);
 			if(s->isFixPoint(*prev_s))
 			{
-				/* Stage 2a: we just iterated on this loop, and found the fixpoint. Iterating one last time to check for infeasible paths */
-				// TODO! don't iterate if we don't have the fixpoint of outerloops yet, since we won't activate the SMT anyway
+				// Stage 2a: we just iterated on this loop, and found the fixpoint. Iterating one last time to check for infeasible paths
+				// TO*DO! don't iterate if we don't have the fixpoint of outerloops yet, since we won't activate the SMT anyway
 				if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
 					cout << color::Bold() << "FIXPOINT on BB#" << bb->index() << color::RCol() << endl;
 				s->setFixpointState(true);
@@ -468,13 +535,13 @@ void Analysis::processLoopHeader(Block* b, SLList<Analysis::State>& sl)
 			else
 			{
 				ASSERT(!s->fixpointState())
-				/* Stage 2b: we just iterated on this loop, and haven't found a fixpoint yet. Trying again. */
+				// Stage 2b: we just iterated on this loop, and haven't found a fixpoint yet. Trying again.
 				PROCESSED_LOOPHEADER_BB.ref(bb) = s;
 				delete prev_s;
 			}
 		}
 	}
-	else /* Stage 1 (initial): we have never iterated on this loop. Initialize the annotation on the loop header with s */
+	else // Stage 1 (initial): we have never iterated on this loop. Initialize the annotation on the loop header with s
 	{
 		s->setFixpointState(false); // TODO! test this, 01/03/16
 		PROCESSED_LOOPHEADER_BB.ref(bb) = s;
@@ -492,12 +559,12 @@ void Analysis::processLoopHeader(Block* b, SLList<Analysis::State>& sl)
 		cout << color::IPur() << "\tend of processLoopHeader, s=" << *s << color::RCol() << io::endl;
 #	endif
 	if(delete_s)
-		delete s;
+		delete s;*/
 }
 
 void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional)
 {
-	//*
+	/*
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
 		State s = *sl_iter;
@@ -669,7 +736,7 @@ void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
  * @param sl List of states to process
  * @return Returns true iff a merge was done
  */
-bool Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl/*, int thresold*/) const
+/*bool Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl) const
 {
 	if(!(flags&MERGE))
 		return false;
@@ -686,7 +753,7 @@ bool Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl/*, int threso
 		return true;
 	}
 	return false;
-}
+}*/
 
 /**
  * @brief remove annotations from incoming edges to given BasicBlock
@@ -694,12 +761,12 @@ bool Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl/*, int threso
  * @param b Block to process
  * @param processed_edges_id Identifier for processed edges
  */
-void Analysis::cleanIncomingEdges(Block *b) const
+/*void Analysis::cleanIncomingEdges(Block *b) const
 {
 	for(Block::EdgeIter b_ins(b->ins()); b_ins; b_ins++)
 		PROCESSED_EDGES.remove(*b_ins);
 		//PROCESSED_EDGES.ref(*b_ins).clear();
-}
+}*/
 
 /**
  * @brief remove annotations from incoming back edges
@@ -707,18 +774,18 @@ void Analysis::cleanIncomingEdges(Block *b) const
  * @param b Block to process
  * @param processed_edges_id Identifier for processed (back) edges
  */
-void Analysis::cleanIncomingBackEdges(Block *b) const
+/*void Analysis::cleanIncomingBackEdges(Block *b) const
 {
 	for(Block::EdgeIter b_ins(b->ins()); b_ins; b_ins++)
 		if(BACK_EDGE(*b_ins))
 			PROCESSED_EDGES.remove(*b_ins);
 			// PROCESSED_EDGES.ref(*b_ins).clear();
-}
+}*/
 
 /**
  * @brief Checks if a fix point has been found on all parent loops
  */
-bool Analysis::fixpointFoundOnAllMotherLoops(Block *b) const
+/*bool Analysis::fixpointFoundOnAllMotherLoops(Block *b) const
 {
 	while(ENCLOSING_LOOP_HEADER.exists(b))
 	{
@@ -727,7 +794,7 @@ bool Analysis::fixpointFoundOnAllMotherLoops(Block *b) const
 			return false;
 	}
 	return true;
-}
+}*/
 
 /**
  * @brief Test if the edge target has no mother loop.
@@ -735,10 +802,10 @@ bool Analysis::fixpointFoundOnAllMotherLoops(Block *b) const
  * @param e Edge to test
  * @return True if no mother loop was found at the target of the Edge e.
  */
-bool Analysis::edgeIsExitingToLoopLevel0(const Edge* e) const
+/*bool Analysis::edgeIsExitingToLoopLevel0(const Edge* e) const
 {
 	return !LOOP_HEADER(e->target()) && !ENCLOSING_LOOP_HEADER.exists(e->target());
-}
+}*/
 
 /**
  * @brief Checks if solver should be enabled
@@ -746,7 +813,7 @@ bool Analysis::edgeIsExitingToLoopLevel0(const Edge* e) const
  * @param e Edge being processed
  * @return Returns true if solver should be enabled
  */
-bool Analysis::shouldEnableSolver(const Edge* e)
+/*bool Analysis::shouldEnableSolver(const Edge* e)
 {
 	// return true; // TODO!!
 	Block::EdgeIter src_outs(e->source()->outs());
@@ -756,7 +823,7 @@ bool Analysis::shouldEnableSolver(const Edge* e)
 		return true;
 	return false;
 	// TODO: improve, let's be smarter
-}
+}*/
 
 /**
  * @brief Dry run on the CFG to find properties on it (!no longer does anything!)
@@ -943,7 +1010,7 @@ bool Analysis::isConditional(Block* b) const
 		}
 	return atLeastOneTaken && (count > 1);
 }
-
+/*
 bool Analysis::allRequiredInEdgesAreProcessed(Block* block) const
 {
 	if(LOOP_HEADER(block))
@@ -970,7 +1037,7 @@ bool Analysis::allRequiredInEdgesAreProcessed(Block* block) const
 	}
 	else
 		return allIncomingEdgesAreAnnotated(block, PROCESSED_EDGES); // not loop h.: require every in edge to be annotated
-}
+}*/
 
 /**
 	@fn int Analysis::allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
@@ -978,7 +1045,7 @@ bool Analysis::allRequiredInEdgesAreProcessed(Block* block) const
 	@param bb BasicBlock to check
 	@param annotation_identifier the annotation id we test on the incoming edges
 */
-bool Analysis::allIncomingNonBackEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const
+/*bool Analysis::allIncomingNonBackEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const
 {
 	for(Block::EdgeIter b_ins(block->ins()); b_ins; b_ins++)
 		if(!BACK_EDGE(*b_ins))
@@ -993,7 +1060,7 @@ bool Analysis::allIncomingEdgesAreAnnotated(Block* block, const Identifier<SLLis
 		if(!annotation_identifier.exists(*b_ins))
 			return false;
 	return true;
-}
+}*/
 
 /**
  * @fn bool Analysis::isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
@@ -1082,4 +1149,60 @@ elm::String Analysis::orderedPathToString(const OrderedPath& path)
 	if(str.isEmpty())
 		return "(empty)";
 	return str;
+}
+
+/**
+ * @fn bool allEdgesHaveTrace(const Vector<Edge*>& edges) const;
+ * @brief Checks for all edges to have a trace annotation
+ * @param edges Vector of Block edges to inspect
+ * @rtn true iff all edges have a trace annotation
+ */
+bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const
+{
+	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
+		if(!EDGE_S.exists(*iter))
+			return false;
+	return true;
+}
+
+/**
+ * @fn bool allEdgesHaveTrace(const Block::EdgeIter& biter) const;
+ * @brief Checks for all edges to have a trace annotation
+ * @param biter Iterator over the list of Block edges to inspect
+ * @rtn true iff all edges have a trace annotation
+ */
+bool Analysis::allEdgesHaveTrace(Block::EdgeIter& biter) const
+{
+	for(; biter; biter++)
+		if(!EDGE_S.exists(*biter))
+			return false;
+	return true;
+}
+
+/**
+ * @fn bool anyEdgeHasTrace(const Vector<Edge*>& edges) const;
+ * @brief Checks for at least one edge to have a trace annotation
+ * @param edges Vector of Block edges to inspect
+ * @rtn true iff at least one edge has a trace annotation
+ */
+bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const
+{
+	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
+		if(EDGE_S.exists(*iter))
+			return true;
+	return false;
+}
+
+/**
+ * @fn bool anyEdgeHasTrace(const Block::EdgeIter& biter) const;
+ * @brief Checks for at least one edge to have a trace annotation
+ * @param biter Iterator over the list of Block edges to inspect
+ * @rtn true iff at least one edge has a trace annotation
+ */
+bool Analysis::anyEdgeHasTrace(Block::EdgeIter& biter) const
+{
+	for(; biter; biter++)
+		if(EDGE_S.exists(*biter))
+			return true;
+	return false;
 }

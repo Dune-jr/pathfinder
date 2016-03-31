@@ -1,12 +1,13 @@
 #ifndef _ANALYSIS_H
 #define _ANALYSIS_H
 
-#include <otawa/cfg/Edge.h>
-#include <otawa/dfa/State.h> // dfa::State: isInitialized(addr), get(addr, _)...
-#include <otawa/prop/Identifier.h>
 #include <elm/avl/Set.h>
 #include <elm/genstruct/SLList.h>
 #include <elm/compare.h>
+#include <otawa/cfg/Edge.h>
+#include <otawa/cfg/features.h>
+#include <otawa/dfa/State.h> // dfa::State: isInitialized(addr), get(addr, _)...
+#include <otawa/prop/Identifier.h>
 #include "constant_variables.h"
 #include "labelled_predicate.h"
 #include "detailed_path.h"
@@ -37,19 +38,14 @@ public:
 
 	Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int state_size_limit, int flags);
 	inline Vector<DetailedPath> infeasiblePaths() const { return infeasible_paths; }
-	static bool listOfFixpoints(const SLList<Analysis::State>& sl);
+	// static bool listOfFixpoints(const SLList<Analysis::State>& sl);
 	static elm::String pathToString(const Path& path);
 	static elm::String orderedPathToString(const OrderedPath& path);
 
-	static Identifier<SLList<Analysis::State> >	PROCESSED_EDGES;
-	static Identifier<Analysis::State*>			PROCESSED_LOOPHEADER_BB;
-	static Identifier<bool>						MOTHERLOOP_FIXPOINT_STATE;
-	static Identifier<bool>						FIXPOINT_REACHED;
-
 	class State {
-		private:
+	private:
 		const dfa::State* dfa_state;
-		const OperandVar& sp; // the Stack Pointer register
+		const OperandVar sp; // the Stack Pointer register
 		// OrderedPath path;
 		DetailedPath path;
 		ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
@@ -63,7 +59,7 @@ public:
 	public:
 		State(); // create an invalid (bottom) state
 		State(Block* entryb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = true);
-		State(Edge* entry_edge,    const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = false);
+		State(Edge* entry_edge, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init = false);
 		State(const State& s);
 		// inline const OrderedPath& getPath() const { return path; }
 		inline const DetailedPath& getDetailedPath() const { return path; }
@@ -76,8 +72,11 @@ public:
 		inline void onCall(Edge* e) { path.onCall(e); }
 		inline void onReturn(Block* b) { path.onReturn(b); }
 		inline bool isValid() const { return dfa_state != 0; }
-		inline bool fixpointState() const { return fixpoint; }
-		inline void setFixpointState(bool new_fixpoint) { fixpoint = new_fixpoint; }
+
+		// inline bool inALoop() const { return ; }
+		// inline bool fixpointState() const { return fixpoint; }
+		// inline void setFixpointState(bool new_fixpoint) { fixpoint = new_fixpoint; }
+
 		inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
 		friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 
@@ -203,7 +202,20 @@ public:
 		DRY_RUN				= 0b1 << 5,
 	};
 	
+	// Fixpoint status of the loop header, for annotation
+	typedef enum 
+	{	// ENTER represented by no annotation, when we haven't entered the loop yet
+		FIX,
+		LEAVE,
+	} loopheader_status_t;
+
 private:
+	// static Identifier<bool>					MOTHERLOOP_FIXPOINT_STATE;
+	// static Identifier<bool>					FIXPOINT_REACHED;
+	static Identifier<SLList<Analysis::State> >	EDGE_S; // Trace on an edge
+	static Identifier<Analysis::State>			LH_S; // Trace on a loop header
+	static Identifier<loopheader_status_t>		LH_STATUS; // Fixpt status of a loop header
+
 	// TODO: try using a Set or something more appropriate (we check if(contains) everytime we add an element...)
 	Vector<Block*> wl; // working list
 
@@ -216,6 +228,13 @@ private:
 
 	// analysis.cpp
 	void debugProgress(int block_id, bool enable_smt) const;
+	inline Analysis::State topState(Block* entry) const { return Analysis::State(entry, dfa_state, sp, max_tempvars, max_registers); }
+	inline static bool loopStatusIsEnter(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h) == elm::none; }
+	inline static bool loopStatusIsFix	(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h) == elm::some(FIX); }
+	inline static bool loopStatusIsLeave(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h) == elm::some(LEAVE); }
+	static Vector<Edge*> allIns    (Block* h);
+	static Vector<Edge*> backIns   (Block* h);
+	static Vector<Edge*> nonBackIns(Block* h);
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
@@ -238,16 +257,21 @@ private:
 	// bool isAHandledEdgeKind(Edge::kind_t kind) const;
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	bool isConditional(Block* b) const;
-	void cleanIncomingEdges(Block* b) const;
-	void cleanIncomingBackEdges(Block* b) const;
-	bool fixpointFoundOnAllMotherLoops(Block* b) const;
-	bool edgeIsExitingToLoopLevel0(const Edge* e) const;
-	bool shouldEnableSolver(const Edge* e);
-	bool allRequiredInEdgesAreProcessed(Block* block) const;
-	bool allIncomingNonBackEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
-	bool allIncomingEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
+	// void cleanIncomingEdges(Block* b) const;
+	// void cleanIncomingBackEdges(Block* b) const;
+	// bool fixpointFoundOnAllMotherLoops(Block* b) const;
+	// bool edgeIsExitingToLoopLevel0(const Edge* e) const;
+	// bool shouldEnableSolver(const Edge* e);
+	// bool allRequiredInEdgesAreProcessed(Block* block) const;
+	// bool allIncomingNonBackEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
+	// bool allIncomingEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
 	elm::String wlToString() const;
+
+	bool anyEdgeHasTrace(const Vector<Edge*>& edges) const;
+	bool anyEdgeHasTrace(Block::EdgeIter& biter) const;
+	bool allEdgesHaveTrace(const Vector<Edge*>& edges) const;
+	bool allEdgesHaveTrace(Block::EdgeIter& biter) const;
 }; // Analysis class
 
 template <class C> io::Output& printCollection(io::Output& out, const C& items)
