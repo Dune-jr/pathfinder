@@ -45,7 +45,7 @@ public:
 	class State {
 	private:
 		const dfa::State* dfa_state;
-		const OperandVar sp; // the Stack Pointer register
+		/*const*/ OperandVar sp; // the Stack Pointer register
 		// OrderedPath path;
 		DetailedPath path;
 		ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
@@ -53,7 +53,7 @@ public:
 		SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
 		SLList<LabelledPredicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
 			// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
-		bool fixpoint;
+		// bool fixpoint;
 		class PredIterator;
 
 	public:
@@ -84,8 +84,9 @@ public:
 		Vector<DetailedPath> stateListToPathVector(const SLList<State>& sl) const;
 		elm::String dumpEverything() const;
 		void merge(const SLList<State>& sl);
+		bool equiv(const State& s) const;
 		// void merge(const SLList<State>& sl, Edge* e);
-		bool isFixPoint(const Analysis::State& s) const;
+		// bool isFixPoint(const Analysis::State& s) const;
 
 		// analysis_cfg.cpp
 		void appendEdge(Edge* e, bool is_conditional);
@@ -95,7 +96,6 @@ public:
 		void processBB(const BasicBlock *bb);
 		void throwInfo();
 		int invalidateStackBelow(const Constant& stack_limit);
-
 
 		inline const State* operator->(void) const { return this; }
 
@@ -226,6 +226,11 @@ private:
 	int total_paths, loop_header_count, bb_count;
 	int ip_count, unminimized_ip_count;
 
+	// functions to implement
+	virtual Vector<State> narrowing(const Vector<Edge*>& edges) const = 0;
+	virtual bool inD_ip(const otawa::Edge* e) const = 0;
+	virtual void ipcheck(const elm::genstruct::SLList<Analysis::State>& s, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const = 0;
+
 	// analysis.cpp
 	void debugProgress(int block_id, bool enable_smt) const;
 	inline Analysis::State topState(Block* entry) const { return Analysis::State(entry, dfa_state, sp, max_tempvars, max_registers); }
@@ -235,11 +240,14 @@ private:
 	static Vector<Edge*> allIns    (Block* h);
 	static Vector<Edge*> backIns   (Block* h);
 	static Vector<Edge*> nonBackIns(Block* h);
+	static Vector<Edge*> outsWithoutUnallowedExits(Block* b);
+	static bool isAllowedExit(Edge* exit_edge);
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
-	int processBlock(State& s, Block* b);
-	int processBB(State& s, BasicBlock *bb);
+	Vector<State>& I(Block* b, Vector<State>& s);
+	Vector<State>& I(Edge* e, Vector<State>& s);
+	int processBB(BasicBlock *bb, State& s);
 	void processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt);
 	void processLoopHeader(Block* b, SLList<Analysis::State>& sl);
 	void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional);
@@ -269,9 +277,9 @@ private:
 	elm::String wlToString() const;
 
 	bool anyEdgeHasTrace(const Vector<Edge*>& edges) const;
-	bool anyEdgeHasTrace(Block::EdgeIter& biter) const;
+	bool anyEdgeHasTrace(const Block::EdgeIter& biter) const;
 	bool allEdgesHaveTrace(const Vector<Edge*>& edges) const;
-	bool allEdgesHaveTrace(Block::EdgeIter& biter) const;
+	bool allEdgesHaveTrace(const Block::EdgeIter& biter) const;
 }; // Analysis class
 
 template <class C> io::Output& printCollection(io::Output& out, const C& items)

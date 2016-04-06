@@ -34,7 +34,7 @@ Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a
 Analysis::State::State() : dfa_state(NULL), sp(0), constants(0, 0) { }
 
 Analysis::State::State(Block* entryb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init)
-	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers), fixpoint(false)
+	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers)//, fixpoint(false)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -48,7 +48,7 @@ Analysis::State::State(Block* entryb, const dfa::State* state, const OperandVar&
 }
 
 Analysis::State::State(Edge* entry_edge, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init)
-	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers), fixpoint(false)
+	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers)//, fixpoint(false)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -60,7 +60,7 @@ Analysis::State::State(Edge* entry_edge, const dfa::State* state, const OperandV
 }
 
 Analysis::State::State(const State& s)
-	: dfa_state(s.dfa_state), sp(s.sp), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken), fixpoint(s.fixpoint)
+	: dfa_state(s.dfa_state), sp(s.sp), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
 	{ }
 
 void Analysis::State::appendEdge(Edge* e, bool is_conditional)
@@ -123,7 +123,7 @@ void Analysis::processCFG(CFG* cfg)
 		if(allEdgesHaveTrace(pred))
 		{
 			/* s ← |_|e∈pred s_e */
-			const Vector<State> s(narrowing(pred)); // TODO: def as Vector(1) if 
+			Vector<State> s(narrowing(pred)); // TODO: def as Vector(1) if 
 			/* for e ∈ pred */
 			for(Vector<Edge*>::Iterator e(pred); e; e++)
 				/* s_e ← nil */
@@ -152,19 +152,21 @@ void Analysis::processCFG(CFG* cfg)
 				if(LH_STATUS.get(b) == elm::none)
 					LH_STATUS(b) = FIX; 
 				/*			  LEAVE if status_b = FIX ∧ s ≡ s_b */
-				else if(LH_STATUS.get(b) == elm::some(FIX) && equiv(s[0], LH_S.use(b)))
+				else if(LH_STATUS.get(b) == elm::some(FIX) && s[0].equiv(LH_S.use(b)))
 					LH_STATUS(b) = LEAVE; 
 				/*			  ENTER if status_b = LEAVE */
 				else if(LH_STATUS.get(b) == elm::some(LEAVE))
 					LH_STATUS(b).remove();
 			}
-			I(b, s);
-			/* for e ∈ succ \ {EX_h | b ∈ L_h ∧ status_h = LEAVE} */
+			I(b, s); // update s
+			/* for e ∈ succ \ {EX_h | b ∈ L_h ∧ status_h =/ LEAVE} */
 			if(propagate)
-				for(Block::EdgeIter e(outsWithoutUnallowedExits(b)); e; e++)
+				for(Vector<Edge*>::Iterator e(outsWithoutUnallowedExits(b)); e; e++)
 				{
 					/* s_e ← I*[e](s) */
-					EDGE_S(e) = I(e, s);
+					// EDGE_S(e) = I(e, s);  // temporary: convert Vector to SLList
+					EDGE_S.exists(e) ? EDGE_S.ref(e).clear() : EDGE_S.set(e, SLList<State>::null);
+					EDGE_S.ref(e).addAll(I(e, s));
 					/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 					if(inD_ip(e))
 						ipcheck(EDGE_S(e), infeasible_paths);
@@ -175,7 +177,7 @@ void Analysis::processCFG(CFG* cfg)
 	}
 /* end */
 }
-#if 1-1
+#if 0
 {
 	DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
 	DBG(color::Whi() << "Processing CFG " << cfg)
@@ -386,13 +388,28 @@ void Analysis::processCFG(CFG* cfg)
 }
 #endif
 
+Vector<Analysis::State>& Analysis::I(Block* b, Vector<State>& s)
+{
+	// TODO!!!
+	ASSERT(false);
+	return s;
+}
+
+Vector<Analysis::State>& Analysis::I(Edge* e, Vector<State>& s)
+{
+	// TODO!!!
+	ASSERT(false);
+	return s;
+}
+
 /*
 	@fn int Analysis::processBB(State& s, BasicBlock* bb);
+	@brief Process a basic block, for a given state
 	@param s Analysis state to update
 	@param bb BasicBlock to process
 	@return 0: continue, 1: stop analysis for this path
 */
-int Analysis::processBB(State& s, BasicBlock* bb)
+int Analysis::processBB(BasicBlock* bb, State& s)
 {
 	if(bb->isExit())
 	{
@@ -896,8 +913,10 @@ void Analysis::printCurrentlyProcessingBlock(Block* b, int progression_percentag
 {
 	if(b->isBasic())
 		cout << "[" << progression_percentage << "%] Processing BB  #" << IntFormat(b->id()).width(3) << " (" << b->cfg() << ":" << b->index() << ")";
-	else if(b->isSynth())
+	else if(b->isSynth()) {
+		ASSERTP(b->toSynth()->callee(), "CALL TO NULL")
 		cout << color::ICya() << "[" << progression_percentage << "%] Processing CALL#" << IntFormat(b->id()).width(3) << " (->" << b->toSynth()->callee() << ")";
+	}
 	else if(b->isExit())
 		cout << color::IBlu() << "[" << progression_percentage << "%] Processing EXIT#" << IntFormat(b->id()).width(3) << " (" << b->cfg() << "->)";
 	else ASSERT(false);
@@ -1171,10 +1190,10 @@ bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const
  * @param biter Iterator over the list of Block edges to inspect
  * @rtn true iff all edges have a trace annotation
  */
-bool Analysis::allEdgesHaveTrace(Block::EdgeIter& biter) const
+bool Analysis::allEdgesHaveTrace(const Block::EdgeIter& biter) const
 {
-	for(; biter; biter++)
-		if(!EDGE_S.exists(*biter))
+	for(Block::EdgeIter i(biter); i; i++)
+		if(!EDGE_S.exists(*i))
 			return false;
 	return true;
 }
@@ -1199,10 +1218,10 @@ bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const
  * @param biter Iterator over the list of Block edges to inspect
  * @rtn true iff at least one edge has a trace annotation
  */
-bool Analysis::anyEdgeHasTrace(Block::EdgeIter& biter) const
+bool Analysis::anyEdgeHasTrace(const Block::EdgeIter& biter) const
 {
-	for(; biter; biter++)
-		if(EDGE_S.exists(*biter))
+	for(Block::EdgeIter i(biter); i; i++)
+		if(EDGE_S.exists(*i))
 			return true;
 	return false;
 }

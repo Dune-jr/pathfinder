@@ -203,9 +203,9 @@ elm::String Analysis::State::dumpEverything() const
 
 // this is not Leibniz equality, but a test to check for a fixpoint!
 // <!> this compares labelled_preds only <!>
-bool Analysis::State::isFixPoint(const Analysis::State& s) const
+bool Analysis::State::equiv(const Analysis::State& s) const
 {
-	assert(this->sp == s.sp);
+	ASSERT(this->sp == s.sp);
 	// do not check the path or any of the edges!
 	/*if(generated_preds != generated_preds)
 		return false;
@@ -272,7 +272,7 @@ Vector<Edge*> Analysis::backIns(Block* h)
 	for(Block::EdgeIter i(h->ins()); i; i++)
 		if(BACK_EDGE(*i))
 			rtn.push(*i);
-		return rtn;
+	return rtn;
 }
 /**
  * @fn static Vector<Edge*> nonBackIns(Block* h);
@@ -285,5 +285,33 @@ Vector<Edge*> Analysis::nonBackIns(Block* h)
 	for(Block::EdgeIter i(h->ins()); i; i++)
 		if(!BACK_EDGE(*i))
 			rtn.push(*i);
-		return rtn;
+	return rtn;
+}
+
+/**
+  * @brief check that all the loops this exits from are "LEAVE" status
+  * aka e ∈ exits\{EX_h | src(e) ∈ L_h ∧ status_h ≠ LEAVE}
+*/
+bool Analysis::isAllowedExit(Edge* exit_edge)
+{
+	Block* outer_lh = LOOP_EXIT_EDGE(exit_edge);
+	Block* lh = LOOP_HEADER(exit_edge->source()) ? exit_edge->source() : ENCLOSING_LOOP_HEADER(exit_edge->source()); // initialize to the inner loop
+	while(ENCLOSING_LOOP_HEADER.exists(lh) && lh != outer_lh) // we will have to iterate one more time, either way
+	{
+		if(!loopStatusIsLeave(lh))
+			return false;
+		lh = ENCLOSING_LOOP_HEADER(lh); // enclosing loop header should always exist until we reach outer_lh!
+	}
+	return loopStatusIsLeave(lh); // do last check
+}
+
+/* for e ∈ outs \ {EX_h | b ∈ L_h ∧ status_h ≠ LEAVE} */
+Vector<Edge*> Analysis::outsWithoutUnallowedExits(Block* b)
+{
+	ASSERTP(b->isBasic(), "TODO");
+	Vector<Edge*> rtn(4);
+	for(Block::EdgeIter i(b->outs()); i; i++)
+		if(LOOP_EXIT_EDGE(*i) && isAllowedExit(*i))
+			rtn.push(*i);
+	return rtn;
 }

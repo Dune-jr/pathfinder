@@ -97,7 +97,7 @@ protected:
 		}
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::FOLLOW_CALLS;
-		Analysis analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, merge_frequency, analysis_flags);
+		DefaultAnalysis analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, merge_frequency, analysis_flags);
 		
 		/*
 		// outputing to .ffx

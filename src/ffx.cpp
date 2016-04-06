@@ -30,8 +30,8 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		if(iter->isEdge())
 		{	// TODO! test this
 			const Edge* e = iter->getEdge();
-			ASSERT(e->source()->isBasic() || e->source()->isCall());
-			ASSERT(e->target()->isBasic() || e->target()->isCall());
+			ASSERTP(e->source()->isBasic() || e->source()->isCall(), ": source not basic or call: " << e->source() << "->" << e->target());
+			ASSERTP(e->target()->isBasic() || e->target()->isCall(), ": target not basic or call: " << e->source() << "->" << e->target());
 			const BasicBlock* source = e->source()->isBasic() ?
 				e->source()->toBasic() : 
 				e->source()->toSynth()->ins().item()->source()->toBasic(); // source is a call block: replace with caller

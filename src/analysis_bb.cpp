@@ -975,9 +975,7 @@ bool Analysis::State::invalidateMem(const OperandVar& var)
  */
 bool Analysis::State::invalidateMem(const OperandMem& addr)
 {
-	Path labels;
-	return invalidate(addr);
-	/*
+	//return invalidate(addr); // TODO!! why was this here?
 	Path labels;
 	if(Option<OperandConst> maybe_val = findConstantValueOfMemCell(addr, labels))
 		return replaceMem(addr, *maybe_val, labels); // try to keep the info
@@ -993,7 +991,6 @@ bool Analysis::State::invalidateMem(const OperandMem& addr)
 		else piter++;
 	}
 	return rtn;
-	*/
 }
 
 // This function will try to keep the information contained in the tempvars 
