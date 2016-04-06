@@ -86,7 +86,7 @@ public:
 	virtual operand_kind_t kind() const = 0;
 	
 	virtual bool operator==(const Operand& o) const = 0;
-	friend io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
+	friend inline io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
 	
 private:
 	virtual io::Output& print(io::Output& out) const = 0;
