@@ -304,11 +304,11 @@ bool Analysis::isAllowedExit(Edge* exit_edge)
 	Block* lh = LOOP_HEADER(exit_edge->source()) ? exit_edge->source() : ENCLOSING_LOOP_HEADER(exit_edge->source()); // initialize to the inner loop
 	while(ENCLOSING_LOOP_HEADER.exists(lh) && lh != outer_lh) // we will have to iterate one more time, either way
 	{
-		if(!loopStatusIsLeave(lh))
+		if(loopStatus(lh) != LEAVE)
 			return false;
 		lh = ENCLOSING_LOOP_HEADER(lh); // enclosing loop header should always exist until we reach outer_lh!
 	}
-	return loopStatusIsLeave(lh); // do last check
+	return loopStatus(lh) == LEAVE; // do last check
 	//*/
 	/*
 	for(LoopHeaderIter lh(exit_edge->source()); lh; lh++)

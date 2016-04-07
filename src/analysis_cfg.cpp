@@ -120,7 +120,7 @@ void Analysis::processCFG(CFG* cfg)
 		/* 			b.ins ∩ B(G) if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
 		/* 			b.ins 		 if b ∈/ H(G) */
 		//const Vector<Edge*> pred1(b->ins()); // WTF
-		const Vector<Edge*> pred(LOOP_HEADER(b) ? (loopStatusIsEnter(b)
+		const Vector<Edge*> pred(LOOP_HEADER(b) ? (loopStatus(b) == ENTER
 				? nonBackIns(b) /* if b ∈ H(G) ∧ status_b = ENTER */
 				: backIns(b) /* if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
 			) : allIns(b) /* if b ∉ H(G) */
@@ -141,8 +141,8 @@ void Analysis::processCFG(CFG* cfg)
 			/* if b ∈ H(G) then */
 			if(LOOP_HEADER(b))
 			{
-				/* if status b = LEAVE then */
-				if(loopStatusIsLeave(b))
+				/* if status_b = LEAVE then */
+				if(loopStatus(b) == LEAVE)
 				{
 					/* if ∃e ∈ b.ins | s_e = nil then */
 					if(anyEdgeHasTrace(b->ins()))
@@ -156,13 +156,13 @@ void Analysis::processCFG(CFG* cfg)
 				else /* else s_b ← s */
 					LH_S(b) = s[0];
 				/* status_b ← FIX if status_b = ENTER */
-				if(LH_STATUS.get(b) == elm::none)
+				if(loopStatus(b) == ENTER)
 					LH_STATUS(b) = FIX; 
 				/*			  LEAVE if status_b = FIX ∧ s ≡ s_b */
-				else if(LH_STATUS.get(b) == elm::some(FIX) && s[0].equiv(LH_S.use(b)))
+				else if(loopStatus(b) == FIX && s[0].equiv(LH_S.use(b)))
 					LH_STATUS(b) = LEAVE; 
 				/*			  ENTER if status_b = LEAVE */
-				else if(LH_STATUS.get(b) == elm::some(LEAVE))
+				else if(loopStatus(b) == LEAVE)
 					LH_STATUS(b).remove();
 			}
 			I(b, s); // update s
