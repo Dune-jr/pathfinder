@@ -6,8 +6,6 @@
 #include "predicate.h"
 #include "debug.h"
 
-using namespace elm;
-
 Predicate::Predicate(condoperator_t opr, const Operand& opd1, const Operand& opd2) : _opr(opr)
 {
 	_opd1 = opd1.copy();

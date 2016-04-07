@@ -16,7 +16,7 @@
 #endif
 
 #include <elm/genstruct/SLList.h>
-#include "analysis.h"
+#include "analysis_state.h"
 
 using namespace elm::genstruct;
 

@@ -4,8 +4,6 @@
 #include <elm/io/Output.h>
 #include "operand.h"
 
-using namespace elm;
-
 // Conditional operator enum
 enum condoperator_t
 {

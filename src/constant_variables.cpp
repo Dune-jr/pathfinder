@@ -1,7 +1,8 @@
 #include "constant_variables.h"
 #include "debug.h"
 
-// ConstantVariables
+ConstantVariables::ConstantVariables() : tempvars(NULL), registers(NULL), _max_tempvars(0), _max_registers(0) { }
+
 ConstantVariables::ConstantVariables(unsigned int max_tempvars, unsigned int max_registers)
 	: _max_tempvars(max_tempvars), _max_registers(max_registers)
 {
@@ -46,12 +47,26 @@ bool ConstantVariables::LabelledValue::operator==(const LabelledValue& lv) const
 
 ConstantVariables& ConstantVariables::operator=(const ConstantVariables& cv)
 {
-	// the two ConstantVariables must have the same size!
-	assert(_max_tempvars == cv.maxTempVars() && _max_registers == cv.maxRegisters());
-	for(unsigned int i = 0; i < _max_tempvars; i++)
-		tempvars[i] = cv.tempvars[i];
-	for(unsigned int i = 0; i < _max_registers; i++)
-		registers[i] = cv.registers[i];
+	if(this->isValid())
+	{
+		// the two ConstantVariables must have the same size!
+		ASSERT(_max_tempvars == cv.maxTempVars() && _max_registers == cv.maxRegisters());
+		for(unsigned int i = 0; i < _max_tempvars; i++)
+			tempvars[i] = cv.tempvars[i];
+		for(unsigned int i = 0; i < _max_registers; i++)
+			registers[i] = cv.registers[i];
+	}
+	else if(cv.isValid())
+	{
+		_max_tempvars = cv.maxTempVars();
+		_max_registers = cv.maxRegisters();
+		tempvars = new Option<LabelledValue>[cv.maxTempVars()];
+		registers = new Option<LabelledValue>[cv.maxRegisters()];
+		for(unsigned int i = 0; i < _max_tempvars; i++) // TODOv2: do memcpy here
+			tempvars[i] = cv.tempvars[i];
+		for(unsigned int i = 0; i < _max_registers; i++)
+			registers[i] = cv.registers[i];
+	}
 	return *this;
 }
 

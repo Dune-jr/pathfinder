@@ -9,7 +9,7 @@
 #include "predicate.h"
 #include "operand.h"
 #include "debug.h"
-#include "analysis.h"
+#include "analysis_state.h"
 
 using namespace otawa::sem;
 

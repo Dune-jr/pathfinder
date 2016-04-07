@@ -9,11 +9,14 @@
 class DefaultAnalysis : public Analysis
 {
 public:
-	DefaultAnalysis(otawa::CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int state_size_limit, int flags);
+	DefaultAnalysis(const context_t& context, int state_size_limit, int flags);
 private:
-	Vector<Analysis::State> narrowing(const Vector<Edge*>& edges) const;
+	Vector<State> narrowing(const Vector<Edge*>& edges) const;
 	bool inD_ip(const otawa::Edge* e) const;
 	void ipcheck(const elm::genstruct::SLList<Analysis::State>& sl, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const;
+
+	SLList<State> listOfS(const Vector<Edge*>& ins) const;
+	Vector<State> vectorOfS(const Vector<Edge*>& ins) const;
 };
 
 #endif

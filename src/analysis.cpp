@@ -2,25 +2,26 @@
  * General analysis methods
  */
 
-#include "analysis.h"
+#include "analysis_state.h"
 #include <otawa/cfg/Edge.h>
-
-/**
- * Print n indents to the given output
- */
-void addIndents(io::Output& out, int n) { for(int i=0; i<n; i++) out << "\t"; }
 
 /**
  * @class Analysis
  * @brief Perform an infeasible path analysis on a CFG 
  */
-Analysis::Analysis(CFG *cfg, const dfa::State *dfa_state, int sp, unsigned int max_tempvars, unsigned int max_registers, int state_size_limit, int flags)
-	: dfa_state(dfa_state), sp(sp), max_tempvars(max_tempvars), max_registers(max_registers), state_size_limit(state_size_limit), flags(flags)
-	, loop_header_count(0), bb_count(cfg->/*countBB*/count()-1) // do not count ENTRY
+Analysis::Analysis(const context_t& context, int state_size_limit, int flags)
+	: context(context), state_size_limit(state_size_limit), flags(flags)
+	, loop_header_count(0), bb_count(-1)
 	, ip_count(0), unminimized_ip_count(0)
 {
-	DBG("Stack pointer identified to r" << sp)
+	DBG("Stack pointer identified to r" << context.sp)
+}
+
+const Vector<DetailedPath>& Analysis::run(CFG *cfg)
+{
+	bb_count = cfg->count()-1; // do not count ENTRY
 	processCFG(cfg);
+	return infeasiblePaths();
 }
 
 /**
@@ -83,7 +84,7 @@ SLList<LabelledPredicate> Analysis::State::labelPredicateList(const SLList<Label
 io::Output& Analysis::State::print(io::Output& out) const
 {
 	// out << ":" << labelled_preds << "/" << constants;
-	if(isValid())
+	if(isBottom())
 		// return (out << getPathString()); // TODO!
 		return (out << path);
 	else
@@ -170,9 +171,13 @@ Vector<DetailedPath> Analysis::State::stateListToPathVector(const SLList<State>&
 }
 
 /**
- * @fn inline Analysis::State topState(Block* entry) const;
+ * @fn inline Analysis::State Analysis::topState(Block* entry) const;
  * Returns a \top state
- */ 
+ */
+Analysis::State Analysis::topState(Block* entry) const
+{
+	return Analysis::State(entry, context);
+}
 
 /*
  * @fn void Analysis::debugProgress(int block_id, bool enable_smt) const;
@@ -295,6 +300,7 @@ Vector<Edge*> Analysis::nonBackIns(Block* h)
 bool Analysis::isAllowedExit(Edge* exit_edge)
 {
 	Block* outer_lh = LOOP_EXIT_EDGE(exit_edge);
+	//*
 	Block* lh = LOOP_HEADER(exit_edge->source()) ? exit_edge->source() : ENCLOSING_LOOP_HEADER(exit_edge->source()); // initialize to the inner loop
 	while(ENCLOSING_LOOP_HEADER.exists(lh) && lh != outer_lh) // we will have to iterate one more time, either way
 	{
@@ -303,6 +309,17 @@ bool Analysis::isAllowedExit(Edge* exit_edge)
 		lh = ENCLOSING_LOOP_HEADER(lh); // enclosing loop header should always exist until we reach outer_lh!
 	}
 	return loopStatusIsLeave(lh); // do last check
+	//*/
+	/*
+	for(LoopHeaderIter lh(exit_edge->source()); lh; lh++)
+	{
+		if(!loopStatusIsLeave(lh))
+			return false;
+		if(lh == outer_lh) // stop here
+			break;	
+	}
+	return true;
+	*/
 }
 
 /* for e ∈ outs \ {EX_h | b ∈ L_h ∧ status_h ≠ LEAVE} */

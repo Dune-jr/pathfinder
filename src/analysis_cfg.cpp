@@ -31,10 +31,13 @@ Identifier<SLList<Analysis::State> >		Analysis::EDGE_S("Trace on an edge"); // o
 Identifier<Analysis::State>					Analysis::LH_S("Trace on a loop header"); // maybe change to vector
 Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a loop (on a loop header)");
 
-Analysis::State::State() : dfa_state(NULL), sp(0), constants(0, 0) { }
+Analysis::State::State() : dfa_state(NULL), sp(0), bottom(false), constants() { }
 
-Analysis::State::State(Block* entryb, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init)
-	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers)//, fixpoint(false)
+Analysis::State::State(const context_t& context)
+	: dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
+
+Analysis::State::State(Block* entryb, const context_t& context, bool init)
+	: dfa_state(context.dfa_state), sp(context.sp), bottom(false), constants(context.max_tempvars, context.max_registers)//, fixpoint(false)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -47,8 +50,8 @@ Analysis::State::State(Block* entryb, const dfa::State* state, const OperandVar&
 	}
 }
 
-Analysis::State::State(Edge* entry_edge, const dfa::State* state, const OperandVar& sp, unsigned int max_tempvars, unsigned int max_registers, bool init)
-	: dfa_state(state), sp(sp), constants(max_tempvars, max_registers)//, fixpoint(false)
+Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
+	: dfa_state(context.dfa_state), sp(context.sp), bottom(false), constants(context.max_tempvars, context.max_registers)//, fixpoint(false)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -60,7 +63,7 @@ Analysis::State::State(Edge* entry_edge, const dfa::State* state, const OperandV
 }
 
 Analysis::State::State(const State& s)
-	: dfa_state(s.dfa_state), sp(s.sp), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
+	: dfa_state(s.dfa_state), sp(s.sp), bottom(s.bottom), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
 	{ }
 
 void Analysis::State::appendEdge(Edge* e, bool is_conditional)
@@ -104,6 +107,9 @@ void Analysis::processCFG(CFG* cfg)
 		/* wl ← sink(e) */
 		wl.push((*entry_outs)->target()); // only one outs, firstBB.
 	}
+	DBG(wl);
+	DBG(*wl[0]->ins())
+	DBG(EDGE_S.use(*wl[0]->ins()).first().dumpEverything())
 
 	/* while wl ≠ {} do */
 	while(!wl.isEmpty())
@@ -113,10 +119,11 @@ void Analysis::processCFG(CFG* cfg)
 		/* pred ← 	b.ins \ B(G) if b ∈ H(G) ∧ status_b = ENTER */
 		/* 			b.ins ∩ B(G) if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
 		/* 			b.ins 		 if b ∈/ H(G) */
+		//const Vector<Edge*> pred1(b->ins()); // WTF
 		const Vector<Edge*> pred(LOOP_HEADER(b) ? (loopStatusIsEnter(b)
 				? nonBackIns(b) /* if b ∈ H(G) ∧ status_b = ENTER */
 				: backIns(b) /* if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
-			) : b->ins() /* if b ∉ H(G) */
+			) : allIns(b) /* if b ∉ H(G) */
 		);
 
 		/* if ∀e ∈ pred, s_e ≠ nil then */
@@ -390,8 +397,7 @@ void Analysis::processCFG(CFG* cfg)
 
 Vector<Analysis::State>& Analysis::I(Block* b, Vector<State>& s)
 {
-	// TODO!!!
-	ASSERT(false);
+	DBG(color::Bold() << "I(b=" << b << ")" << color::NoBold())// TODO!!!
 	return s;
 }
 
@@ -732,7 +738,7 @@ void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip)
 }
 
 /**
- * @brief Remove all invalid states
+ * @brief Remove all bottom states
  * 
  * @param sl list to purge
  */
@@ -740,7 +746,7 @@ void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
 {
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; )
 	{
-		if(sl_iter->isValid())
+		if(sl_iter->isBottom())
 			sl_iter++;
 		else
 			sl.remove(sl_iter);
@@ -994,15 +1000,15 @@ Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>&
 	Option<Constant> rtn = elm::none; // also acts like a bool first = true
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
-		if(sl_iter->getConstants().isConstant(sp))
+		if(sl_iter->getConstants().isConstant(context.sp))
 		{
 			if(rtn)
 			{
-				if(*rtn != sl_iter->getConstants()[sp])
+				if(*rtn != sl_iter->getConstants()[context.sp])
 					return elm::none; // paths have different SP value
 			}
 			else
-				rtn = elm::some(sl_iter->getConstants()[sp]);
+				rtn = elm::some(sl_iter->getConstants()[context.sp]);
 		}
 		else
 			return elm::none; // one of the paths has invalidated SP

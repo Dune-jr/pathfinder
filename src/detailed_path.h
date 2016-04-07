@@ -7,8 +7,8 @@
 #include <otawa/cfg/Edge.h>
 #include <elm/util/Option.h>
 
-using namespace elm;
-using namespace elm::genstruct;
+using elm::genstruct::SLList;
+using elm::genstruct::Vector;
 using otawa::Edge;
 using otawa::Block;
 using otawa::BasicBlock;

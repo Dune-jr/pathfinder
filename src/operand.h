@@ -9,8 +9,8 @@
 #include "constant_variables_simplified.h" // reason for this is recursive inclusion of classes, using a visitor in constant_variables for toPredicates may be cleaner
 
 using otawa::Edge;
-using namespace elm;
-using namespace elm::genstruct;
+using elm::genstruct::SLList;
+using elm::genstruct::Vector;
 
 enum arithoperator_t
 {

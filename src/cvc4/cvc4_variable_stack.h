@@ -6,6 +6,7 @@
 #include "../operand.h"
 
 using CVC4::Expr;
+using elm::genstruct::AVLMap;
 
 class CVC4VariableStack
 {

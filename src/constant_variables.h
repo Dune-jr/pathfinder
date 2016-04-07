@@ -39,12 +39,14 @@ public:
 		io::Output& print(io::Output& out) const;
 	}; // LabelledValue class
 
+	ConstantVariables(); // invalid
 	ConstantVariables(unsigned int max_tempvars, unsigned int max_registers);
 	ConstantVariables(const ConstantVariables& cv);
 	~ConstantVariables();
 	void clear();
 	inline unsigned int maxTempVars() const { return _max_tempvars; }
 	inline unsigned int maxRegisters() const { return _max_registers; }
+	inline bool isValid() const { return _max_registers && _max_tempvars; }
 	bool isConstant(const OperandVar& opdv) const;
 	Constant getValue(const OperandVar& opdv) const; // this must not be called if !isConstant(opdv)...
 	Set<Edge*> getLabels(const OperandVar& opdv) const; // same

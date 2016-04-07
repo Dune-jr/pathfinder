@@ -59,8 +59,8 @@ protected:
 		CFG *cfg = cfgs->get(0); // then get the first CFG
 		// simpleCFGparse(cfg);
 		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
-		int max_registers = workspace()->platform()->regCount(); // retrieve the count of registers
-		int max_tempvars = workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
+		unsigned int max_registers = (unsigned int)workspace()->platform()->regCount(); // retrieve the count of registers
+		unsigned int max_tempvars = (unsigned int)workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
 		int analysis_flags = 0, merge_frequency = 0;
 
 		if(opt_s1)
@@ -97,7 +97,8 @@ protected:
 		}
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::FOLLOW_CALLS;
-		DefaultAnalysis analysis(cfg, inital_state, sp_id, max_tempvars, max_registers, merge_frequency, analysis_flags);
+		DefaultAnalysis analysis({inital_state, sp_id, max_tempvars, max_registers}, merge_frequency, analysis_flags);
+		analysis.run(cfg);
 		
 		/*
 		// outputing to .ffx
