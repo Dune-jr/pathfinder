@@ -1,6 +1,7 @@
 #ifndef _PRETTY_PRINTING_H
 #define _PRETTY_PRINTING_H
 
+#include <otawa/cfg.h> // Block
 #include <elm/genstruct/SLList.h>
 #include <elm/genstruct/Vector.h>
 #include <elm/io/Output.h>
@@ -14,6 +15,7 @@ void addIndents(Output& out, int n);
 template <class C> Output& printCollection(Output& out, const C& items);
 template <class T> inline Output& operator<<(Output& out, const SLList<T>& l) { return printCollection(out, l); }
 template <class T> inline Output& operator<<(Output& out, const Vector<T>& v) { return printCollection(out, v); }
+Output& otawa::operator<<(Output& out, otawa::Block* b);
 
 template <class C> elm::io::Output& printCollection(elm::io::Output& out, const C& items)
 {

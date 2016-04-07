@@ -300,7 +300,7 @@ Vector<Edge*> Analysis::nonBackIns(Block* h)
 bool Analysis::isAllowedExit(Edge* exit_edge)
 {
 	Block* outer_lh = LOOP_EXIT_EDGE(exit_edge);
-	//*
+	/*
 	Block* lh = LOOP_HEADER(exit_edge->source()) ? exit_edge->source() : ENCLOSING_LOOP_HEADER(exit_edge->source()); // initialize to the inner loop
 	while(ENCLOSING_LOOP_HEADER.exists(lh) && lh != outer_lh) // we will have to iterate one more time, either way
 	{
@@ -310,16 +310,16 @@ bool Analysis::isAllowedExit(Edge* exit_edge)
 	}
 	return loopStatus(lh) == LEAVE; // do last check
 	//*/
-	/*
+	//*
 	for(LoopHeaderIter lh(exit_edge->source()); lh; lh++)
 	{
-		if(!loopStatusIsLeave(lh))
+		if(loopStatus(lh) != LEAVE)
 			return false;
 		if(lh == outer_lh) // stop here
 			break;	
 	}
 	return true;
-	*/
+	//*/
 }
 
 /* for e ∈ outs \ {EX_h | b ∈ L_h ∧ status_h ≠ LEAVE} */

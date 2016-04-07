@@ -83,9 +83,6 @@ private:
 	void debugProgress(int block_id, bool enable_smt) const;
 	Analysis::State topState(Block* entry) const;
 	inline static loopheader_status_t loopStatus(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
-	// inline static bool loopStatusIsEnter(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER) == ENTER; }
-	// inline static bool loopStatusIsFix	(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER) == FIX; }
-	// inline static bool loopStatusIsLeave(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER) == LEAVE; }
 	static Vector<Edge*> ins 	   (Block* b);
 	static Vector<Edge*> allIns    (Block* h);
 	static Vector<Edge*> backIns   (Block* h);
