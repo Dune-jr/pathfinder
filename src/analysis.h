@@ -58,37 +58,39 @@ public:
 
 protected:
 	context_t context;
-	Vector<DetailedPath> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
 	int state_size_limit, flags;
 
-	static Identifier<SLList<Analysis::State> >	EDGE_S; // Trace on an edge
+	static Identifier<Vector<Analysis::State> >	EDGE_S; // Trace on an edge
 private:
 	static Identifier<Analysis::State>			LH_S; // Trace on a loop header
 	static Identifier<loopheader_status_t>		LH_STATUS; // Fixpt status of a loop header
 	// static Identifier<bool>					MOTHERLOOP_FIXPOINT_STATE;
 	// static Identifier<bool>					FIXPOINT_REACHED;
 
-	// TODO: try using a Set or something more appropriate (we check if(contains) everytime we add an element...)
 	Vector<Block*> wl; // working list
-
+	Vector<DetailedPath> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
 	int total_paths, loop_header_count, bb_count;
 	int ip_count, unminimized_ip_count;
 
-	// functions to implement
+	// virtual pure functions to implement
 	virtual Vector<State> narrowing(const Vector<Edge*>& edges) const = 0;
 	virtual bool inD_ip(const otawa::Edge* e) const = 0;
-	virtual void ipcheck(const elm::genstruct::SLList<Analysis::State>& s, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const = 0;
+	virtual void ipcheck(const elm::genstruct::Vector<Analysis::State>& s, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const = 0;
 
 	// analysis.cpp
 	void debugProgress(int block_id, bool enable_smt) const;
 	Analysis::State topState(Block* entry) const;
+	void wl_push(Block* b);
 	inline static loopheader_status_t loopStatus(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
+	static Block* insAlias		   (Block* b);
 	static Vector<Edge*> ins 	   (Block* b);
 	static Vector<Edge*> allIns    (Block* h);
 	static Vector<Edge*> backIns   (Block* h);
 	static Vector<Edge*> nonBackIns(Block* h);
 	static Vector<Edge*> outsWithoutUnallowedExits(Block* b);
 	static bool isAllowedExit(Edge* exit_edge);
+	static Option<Block*> getCaller(CFG* cfg);
+	static Block* getCaller(Block* exit);
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
@@ -102,7 +104,7 @@ private:
 	void addDisorderedInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path, Edge* last_edge);
 	void addDetailedInfeasiblePath(const DetailedPath& infeasible_path);
 	void purgeStateList(SLList<Analysis::State>& sl) const;
-	bool mergeOversizedStateList(SLList<Analysis::State>& sl) const;
+	// bool mergeOversizedStateList(SLList<Analysis::State>& sl) const;
 	void placeboProcessCFG(/*CFG* cfg*/) const;
 	void printResults(int exec_time_ms) const;
 	void printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const;

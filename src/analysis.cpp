@@ -99,9 +99,9 @@ io::Output& Analysis::State::print(io::Output& out) const
  * @fn void Analysis::State::merge(const SLList<State>& sl);
  * Modifies the current state to be the result of the merge of an (SL)list of states 
  */
-void Analysis::State::merge(const SLList<State>& sl)
+/*void Analysis::State::merge(const SLList<State>& sl)
 {
-	DBG("merging " << sl)
+	DBGG("-\tmerging " << sl)
 	// resetting stuff
 	generated_preds.clear();
 	generated_preds_taken.clear();
@@ -144,9 +144,9 @@ void Analysis::State::merge(const SLList<State>& sl)
 	this->constants.merge(cvl);
 	this->path.merge(stateListToPathVector(sl)); // merge paths as well while keeping some flow info and shrink that in this->path
 #ifdef DBGG
-	cout << color::Pur() << "result of merge, this->path=" << this->path.toString() << color::Pur() << ", *this=" << *this << color::RCol() << io::endl;
+	// cout << color::Pur() << "result of merge, this->path=" << this->path.toString() << color::Pur() << ", *this=" << *this << color::RCol() << io::endl;
 #endif
-}
+}*/
 
 /*
  * @fn void Analysis::State::merge(const SLList<State>& sl, Edge* e);
@@ -162,17 +162,9 @@ void Analysis::State::merge(const SLList<State>& sl)
 	DBG("Merged predicates: " << generated_preds << ", " << constants)
 }*/
 
-Vector<DetailedPath> Analysis::State::stateListToPathVector(const SLList<State>& sl) const
-{
-	Vector<DetailedPath> rtn;
-	for(SLList<State>::Iterator iter(sl); iter; iter++)
-		rtn.add(iter->getDetailedPath());
-	return rtn;
-}
-
 /**
  * @fn inline Analysis::State Analysis::topState(Block* entry) const;
- * Returns a \top state
+ * @brief Returns a \top state
  */
 Analysis::State Analysis::topState(Block* entry) const
 {
@@ -236,24 +228,45 @@ bool Analysis::State::equiv(const Analysis::State& s) const
 		if(!contains)
 			return false;
 	}
+	DBGG("-	fixpoint!")
 	return true;
 }
 
-/**
- * @brief Computes a conjunction over the fixpoint booleans of all the states
+/*
+ * @fn void Analysis::wl_push(Block* b);
+ * @brief push b in wl, ensuring unicity in wl
  */
-/*bool Analysis::listOfFixpoints(const SLList<Analysis::State>& sl)
+void Analysis::wl_push(Block* b)
 {
-	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
+	ASSERTP(!b->isUnknown(), "Block " << b << " is unknown, not supported by analysis.");
+	if(b->isCall()) 
+		b = b->toSynth()->callee()->entry(); // call becomes callee entry
+	if(b->isExit())
+		b = getCaller(b); // exit becomes caller (remains exit if no caller)
+	if(!wl.contains(b))
 	{
-		if( ! sl_iter->fixpointState()) {
-			// cout << "\tDBG: listOfFixpoints returns false because of " << *sl_iter << "\n"; // TODO!!!
-			return false;
-		}
+		wl.push(b);
+		// DBGG("-\twl ← wl ∪ " << b)
 	}
-	return true;
-}*/
+}
 
+/**
+ * @fn Block* Analysis::insAlias(Block* b);
+ * @brief Substitue a block with the appropriate block to get ingoing edges from
+ * @rtn Block to substitute b with (by default, b)
+ */
+Block* Analysis::insAlias(Block* b)
+{
+	if(b->isEntry()) // entry becomes caller
+	{
+		Option<Block*> rtn = getCaller(b->cfg());
+		ASSERTP(rtn, "insAlias called on main entry - no alias with ins exists")
+		return rtn;
+	}
+	else if(b->isCall()) // call becomes exit
+		return b->toSynth()->callee()->exit();
+	return b;
+}
 /**
  * @fn static Vector<Edge*> allIns (Block* h);
  * @brief
@@ -262,8 +275,9 @@ bool Analysis::State::equiv(const Analysis::State& s) const
 Vector<Edge*> Analysis::allIns(Block* h)
 {
 	Vector<Edge*> rtn(4);
-	for(Block::EdgeIter i(h->ins()); i; i++)
+	for(Block::EdgeIter i(insAlias(h)->ins()); i; i++)
 		rtn.push(*i);
+	DBGG("-" << h << ", collecting allIns...")
 	return rtn;
 }
 /**
@@ -274,9 +288,10 @@ Vector<Edge*> Analysis::allIns(Block* h)
 Vector<Edge*> Analysis::backIns(Block* h)
 {
 	Vector<Edge*> rtn(4);
-	for(Block::EdgeIter i(h->ins()); i; i++)
+	for(Block::EdgeIter i(insAlias(h)->ins()); i; i++)
 		if(BACK_EDGE(*i))
 			rtn.push(*i);
+	DBGG("-" << h << ", collecting backIns...")
 	return rtn;
 }
 /**
@@ -287,9 +302,10 @@ Vector<Edge*> Analysis::backIns(Block* h)
 Vector<Edge*> Analysis::nonBackIns(Block* h)
 {
 	Vector<Edge*> rtn(4);
-	for(Block::EdgeIter i(h->ins()); i; i++)
+	for(Block::EdgeIter i(insAlias(h)->ins()); i; i++)
 		if(!BACK_EDGE(*i))
 			rtn.push(*i);
+	DBGG("-" << h << ", collecting nonBackIns...")
 	return rtn;
 }
 
@@ -300,16 +316,6 @@ Vector<Edge*> Analysis::nonBackIns(Block* h)
 bool Analysis::isAllowedExit(Edge* exit_edge)
 {
 	Block* outer_lh = LOOP_EXIT_EDGE(exit_edge);
-	/*
-	Block* lh = LOOP_HEADER(exit_edge->source()) ? exit_edge->source() : ENCLOSING_LOOP_HEADER(exit_edge->source()); // initialize to the inner loop
-	while(ENCLOSING_LOOP_HEADER.exists(lh) && lh != outer_lh) // we will have to iterate one more time, either way
-	{
-		if(loopStatus(lh) != LEAVE)
-			return false;
-		lh = ENCLOSING_LOOP_HEADER(lh); // enclosing loop header should always exist until we reach outer_lh!
-	}
-	return loopStatus(lh) == LEAVE; // do last check
-	//*/
 	//*
 	for(LoopHeaderIter lh(exit_edge->source()); lh; lh++)
 	{
@@ -320,15 +326,75 @@ bool Analysis::isAllowedExit(Edge* exit_edge)
 	}
 	return true;
 	//*/
+	/*
+	Block* lh = LOOP_HEADER(exit_edge->source()) ? exit_edge->source() : ENCLOSING_LOOP_HEADER(exit_edge->source()); // initialize to the inner loop
+	while(ENCLOSING_LOOP_HEADER.exists(lh) && lh != outer_lh) // we will have to iterate one more time, either way
+	{
+		if(loopStatus(lh) != LEAVE)
+			return false;
+		lh = ENCLOSING_LOOP_HEADER(lh); // enclosing loop header should always exist until we reach outer_lh!
+	}
+	return loopStatus(lh) == LEAVE; // do last check
+	//*/
 }
 
 /* for e ∈ outs \ {EX_h | b ∈ L_h ∧ status_h ≠ LEAVE} */
 Vector<Edge*> Analysis::outsWithoutUnallowedExits(Block* b)
 {
-	ASSERTP(b->isBasic(), "TODO");
+	if(b->isExit()) {
+		DBGG(color::IGre() << "Reached end of program.")
+		return nullVector<Edge*>();
+	}
 	Vector<Edge*> rtn(4);
 	for(Block::EdgeIter i(b->outs()); i; i++)
-		if(LOOP_EXIT_EDGE(*i) && isAllowedExit(*i))
+		if(! LOOP_EXIT_EDGE.exists(*i) || isAllowedExit(*i))
 			rtn.push(*i);
+	ASSERTP(rtn, "outsWithoutUnallowedExits found no outs!")
+	if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
+	{
+		Vector<Edge*>::Iterator i(rtn);
+		DBGG("-\toutput to " << i->source())
+		for(; i; i++)
+			DBGG("\t\t  ->" << i->target())
+	}
 	return rtn;
+}
+
+/**
+ * Option<Block*> Analysis::getCaller(CFG* cfg);
+ * @brief return unique caller of CFG (none if no caller exists) in virtualized scenario
+ */
+Option<Block*> Analysis::getCaller(CFG* cfg)
+{
+	CFG::CallerIter citer(cfg->callers());
+	if(citer)
+	{
+		// Block::EdgeIter caller_exit_edges_iter(citer->outs());
+		// ASSERTP(caller_exit_edges_iter, "must be at least 1 outedge from caller (CFG not virtualized?)")
+		// // PROCESSED_EDGES(*caller_exit_edges_iter) = sl;
+		// Block* rtn = caller_exit_edges_iter->target();
+		// ASSERTP(!(++caller_exit_edges_iter), "must be max 1 outedge from caller (CFG not virtualized?)")
+		Block* rtn = citer;
+		ASSERTP(!(++citer), "must be max. 1 caller (CFG not virtualized?)");
+		return elm::some(rtn);
+	}
+	else // no caller: exiting main CFG
+		return elm::none;
+}
+
+/**
+ * get the call SynthBlock of the CFG corresponding to exit 
+ * @warning: only works for virtualized CFG
+ * @warning: returns parameter exit when no caller exists
+ */
+Block* Analysis::getCaller(Block* exit)
+{
+	ASSERT(exit->isExit());
+	if(Option<Block*> rtn = getCaller(exit->cfg()))
+		return *rtn;
+	else // no caller: exiting main CFG
+	{
+		// DBG(color::IGre() << "Reached end of program." << color::RCol());
+		return exit;
+	}
 }

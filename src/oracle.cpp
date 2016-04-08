@@ -7,18 +7,19 @@ DefaultAnalysis::DefaultAnalysis(const context_t& context, int state_size_limit,
 Vector<Analysis::State> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) const
 {
 	ASSERTP(ins, "narrowing given empty ingoing edges vector")
-	if(LOOP_HEADER(ins[0]->target()) || ((flags&MERGE) && ins.count() > state_size_limit))
+	const Vector<State> v(vectorOfS(ins));
+	if(LOOP_HEADER(ins[0]->target()) || ((flags&MERGE) && v.count() > state_size_limit))
 	{
 		State s((Edge*)NULL, context, false); // entry is cleared anyway
-		s.merge(listOfS(ins)); // TODOv2: change this into Vector
-		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
-			cout << " " << ins.count() << " states merged into 1." << endl; // TODOv2: talk about merging after the LH interpretation
-		Vector<State> v(1);
-		v.push(s);
-		return v;
+		s.merge(v); // TODOv2: change this into Vector
+		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v.count() > 50)
+			cout << " " << v.count() << " states merged into 1 (from " << ins.count() << " ins)." << endl; // TODOv2: talk about merging after the LH interpretation
+		Vector<State> rtnv(1);
+		rtnv.push(s);
+		return rtnv;
 	}
 	else
-		return vectorOfS(ins);
+		return v;
 }
 
 bool DefaultAnalysis::inD_ip(const otawa::Edge* e) const
@@ -27,7 +28,7 @@ bool DefaultAnalysis::inD_ip(const otawa::Edge* e) const
 	return true;
 }
 
-void DefaultAnalysis::ipcheck(const elm::genstruct::SLList<Analysis::State>& sl, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const
+void DefaultAnalysis::ipcheck(const elm::genstruct::Vector<Analysis::State>& sl, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const
 {
 	// TODOv2
 }
@@ -44,7 +45,8 @@ Vector<Analysis::State> DefaultAnalysis::vectorOfS(const Vector<Edge*>& ins) con
 {
 	Vector<State> vl;
 	for(Vector<Edge*>::Iterator i(ins); i; i++)
-		for(SLList<State>::Iterator j(EDGE_S.use(*i)); j; j++)
-			vl.push(j);
+		vl.addAll(EDGE_S.use(*i));
+		// for(Vector<State>::Iterator j(EDGE_S.use(*i)); j; j++)
+		// 	vl.push(j);
 	return vl;
 }

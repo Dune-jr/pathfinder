@@ -56,12 +56,10 @@ public:
 	friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 
 	// analysis.cpp
-	Vector<DetailedPath> stateListToPathVector(const SLList<State>& sl) const;
+	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
 	elm::String dumpEverything() const;
-	void merge(const SLList<State>& sl);
+	template <class C> void merge(const C& sl);
 	bool equiv(const State& s) const;
-	// void merge(const SLList<State>& sl, Edge* e);
-	// bool isFixPoint(const Analysis::State& s) const;
 
 	// analysis_cfg.cpp
 	void appendEdge(Edge* e, bool is_conditional);
@@ -159,5 +157,60 @@ private:
 		SLList<LabelledPredicate>::Iterator lp_iter; // Labelled predicates (previous BBs) iterator
 	}; // PredIterator class
 }; // State class
+
+// accepts SLList<State>, Vector<State>, ...
+template <class C> void Analysis::State::merge(const C& cl)
+{
+	DBGG("-\tmerging " << cl)
+	// resetting stuff
+	generated_preds.clear();
+	generated_preds_taken.clear();
+	labelled_preds.clear();
+	SLList<ConstantVariables> cvl;
+	// intialize to first element
+	ASSERTP(!cl.isEmpty(), "call to Analysis::State::merge with empty cl parameter"); // maybe just leave the state empty
+	constants = cl.first().constants;
+	// copy firstElement.labelled_preds into labelled_preds with empty labels
+	for(SLList<LabelledPredicate>::Iterator iter(cl.first().labelled_preds); iter; iter++)
+		labelled_preds += LabelledPredicate(iter->pred(), Path::null);
+	bool first = true;
+	for(typename C::Iterator sl_iter(cl); sl_iter; sl_iter++)
+	{
+		if(first) // the first element is s itself, it's useless to merge s with s
+		{
+			first = false;
+			continue;
+		}
+		// for each element of labelled_preds, we make sure it is in *sl_iter
+		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; )
+		{
+			// do not use 'if(s.labelled_preds.contains(*iter))' as we want to use Predicate::operator== and not LabelledPredicate::operator==
+			bool contains = false;
+			for(SLList<LabelledPredicate>::Iterator subiter((*sl_iter).labelled_preds); subiter; subiter++)
+			{
+				if((*subiter).pred() == iter->pred())
+				{
+					contains = true;
+					break;
+				}
+			}
+			if(contains)
+				iter++;
+			else
+				labelled_preds.remove(iter);
+		}
+		cvl += (*sl_iter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
+	}
+	this->constants.merge(cvl);
+	this->path.merge(stateListToPathVector(cl)); // merge paths as well while keeping some flow info and shrink that in this->path
+}
+
+template <class C> Vector<DetailedPath> Analysis::State::stateListToPathVector(const C& cl) const
+{
+	Vector<DetailedPath> rtn;
+	for(typename C::Iterator iter(cl); iter; iter++)
+		rtn.add(iter->getDetailedPath());
+	return rtn;
+}
 
 #endif

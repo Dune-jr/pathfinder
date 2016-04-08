@@ -168,7 +168,8 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 {
 	ASSERTP(paths, "merge called with empty paths vector")
 	_path.clear(); // do not take in account current path
-#ifdef DBGG
+// #ifdef DBGG
+#if 0
 	int merge_count = 0;
 	for(Vector<DetailedPath>::Iterator iter(paths); iter; iter++)
 		cout << color::IRed() << "\tmerge[" << merge_count++ << "]=" << *iter << io::endl;
@@ -241,7 +242,7 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 		}
 	}
 #	ifdef DBGG
-		cout << color::ICya() << "result: " << toString() << color::RCol() << io::endl;
+		// cout << color::ICya() << "result: " << toString() << color::RCol() << io::endl;
 #	endif
 }
 

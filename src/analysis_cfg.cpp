@@ -27,7 +27,7 @@ using namespace elm::io;
 // Identifier<bool>							Analysis::FIXPOINT_REACHED("IP analysis fixpoint state info on loop headers"); // for enable_smt
 // Identifier<Analysis::loopheader_status_t>Analysis::LOOPHEADER_STATUS("On loop headers, status of the fixpoint analysis");
 // Identifier<Analysis::State>				Analysis::LOOPHEADER_STATE("On loop headers, current state we are working on to get a fixpoint");
-Identifier<SLList<Analysis::State> >		Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
+Identifier<Vector<Analysis::State> >		Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
 Identifier<Analysis::State>					Analysis::LH_S("Trace on a loop header"); // maybe change to vector
 Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a loop (on a loop header)");
 
@@ -101,15 +101,12 @@ void Analysis::processCFG(CFG* cfg)
 	for(Block::EdgeIter entry_outs(cfg->entry()->outs()); entry_outs; entry_outs++)
 	{
 		/* s_e ← T */
-		SLList<Analysis::State> entry_s;
-		entry_s += topState(cfg->entry());
+		Vector<Analysis::State> entry_s;
+		entry_s.push(topState(cfg->entry()));
 		EDGE_S(*entry_outs) = entry_s;
 		/* wl ← sink(e) */
 		wl.push((*entry_outs)->target()); // only one outs, firstBB.
 	}
-	DBG(wl);
-	DBG(*wl[0]->ins())
-	DBG(EDGE_S.use(*wl[0]->ins()).first().dumpEverything())
 
 	/* while wl ≠ {} do */
 	while(!wl.isEmpty())
@@ -119,7 +116,6 @@ void Analysis::processCFG(CFG* cfg)
 		/* pred ← 	b.ins \ B(G) if b ∈ H(G) ∧ status_b = ENTER */
 		/* 			b.ins ∩ B(G) if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
 		/* 			b.ins 		 if b ∈/ H(G) */
-		//const Vector<Edge*> pred1(b->ins()); // WTF
 		const Vector<Edge*> pred(LOOP_HEADER(b) ? (loopStatus(b) == ENTER
 				? nonBackIns(b) /* if b ∈ H(G) ∧ status_b = ENTER */
 				: backIns(b) /* if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
@@ -130,7 +126,7 @@ void Analysis::processCFG(CFG* cfg)
 		if(allEdgesHaveTrace(pred))
 		{
 			/* s ← |_|e∈pred s_e */
-			Vector<State> s(narrowing(pred)); // TODO: def as Vector(1) if 
+			Vector<State> s(narrowing(pred));
 			/* for e ∈ pred */
 			for(Vector<Edge*>::Iterator e(pred); e; e++)
 				/* s_e ← nil */
@@ -155,31 +151,33 @@ void Analysis::processCFG(CFG* cfg)
 				}
 				else /* else s_b ← s */
 					LH_S(b) = s[0];
-				/* status_b ← FIX if status_b = ENTER */
-				if(loopStatus(b) == ENTER)
-					LH_STATUS(b) = FIX; 
-				/*			  LEAVE if status_b = FIX ∧ s ≡ s_b */
-				else if(loopStatus(b) == FIX && s[0].equiv(LH_S.use(b)))
-					LH_STATUS(b) = LEAVE; 
-				/*			  ENTER if status_b = LEAVE */
-				else if(loopStatus(b) == LEAVE)
-					LH_STATUS(b).remove();
+				switch(loopStatus(b)) {
+					/* status_b ← FIX if status_b = ENTER */
+					case ENTER: LH_STATUS(b) = FIX;
+						break;
+					/* status_b ← LEAVE if status_b = FIX ∧ s ≡ s_b */
+					case FIX: if(s[0].equiv(LH_S(b))) LH_STATUS(b) = LEAVE;
+						break;
+					/* status_b ← ENTER if status_b = LEAVE */
+					case LEAVE: LH_STATUS(b).remove();
+						break;
+				}
 			}
 			I(b, s); // update s
 			/* for e ∈ succ \ {EX_h | b ∈ L_h ∧ status_h =/ LEAVE} */
-			if(propagate)
-				for(Vector<Edge*>::Iterator e(outsWithoutUnallowedExits(b)); e; e++)
-				{
-					/* s_e ← I*[e](s) */
-					// EDGE_S(e) = I(e, s);  // temporary: convert Vector to SLList
-					EDGE_S.exists(e) ? EDGE_S.ref(e).clear() : EDGE_S.set(e, SLList<State>::null);
-					EDGE_S.ref(e).addAll(I(e, s));
-					/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
-					if(inD_ip(e))
-						ipcheck(EDGE_S(e), infeasible_paths);
-					/* wl ← wl ∪ {sink(e)} */
-					wl.push((*e)->target());
-				}
+			const Vector<Edge*> succ(propagate ? outsWithoutUnallowedExits(b) : nullVector<Edge*>());
+			for(Vector<Edge*>::Iterator e(succ); e; e++)
+			{
+				/* s_e ← I*[e](s) */
+				EDGE_S(e) = I(e, s); // temporary: convert Vector to SLList
+				// EDGE_S.exists(e) ? EDGE_S.ref(e).clear() : EDGE_S.set(e, SLList<State>::null);
+				// EDGE_S.ref(e).addAll(I(e, s));
+				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
+				if(inD_ip(e))
+					ipcheck(EDGE_S(e), infeasible_paths);
+				/* wl ← wl ∪ {sink(e)} */
+				wl_push(e->target());
+			}
 		}
 	}
 /* end */
@@ -397,14 +395,13 @@ void Analysis::processCFG(CFG* cfg)
 
 Vector<Analysis::State>& Analysis::I(Block* b, Vector<State>& s)
 {
-	DBG(color::Bold() << "I(b=" << b << ")" << color::NoBold())// TODO!!!
+	DBGG(color::Bold() << "-\tI(b= " << color::NoBold() << color::ICya() << "" << b << color::RCol() << color::Bold() << " )" << color::NoBold())// TODO!!!
 	return s;
 }
 
 Vector<Analysis::State>& Analysis::I(Edge* e, Vector<State>& s)
 {
-	// TODO!!!
-	ASSERT(false);
+	DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << "" << e << color::Bold() << " )" << color::NoBold()) // TODO!!!
 	return s;
 }
 
@@ -1187,6 +1184,7 @@ bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const
 	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
 		if(!EDGE_S.exists(*iter))
 			return false;
+	DBGG("-..." << edges)
 	return true;
 }
 

@@ -22,6 +22,7 @@ config:Finalize("config.lua")
 -- Settings
 settings = NewSettings()
 settings.cc.flags:Add("-O0")
+settings.cc.flags:Add("-std=c++11")
 
 if ScriptArgs["otawa"] and ScriptArgs["otawa"]~="1" then
 	otawa_config = "~/Documents/casse/otawa2/linux/bin/otawa-config" -- v2

@@ -17,6 +17,11 @@ template <class T> inline Output& operator<<(Output& out, const SLList<T>& l) { 
 template <class T> inline Output& operator<<(Output& out, const Vector<T>& v) { return printCollection(out, v); }
 Output& otawa::operator<<(Output& out, otawa::Block* b);
 
+template <class T> inline const Vector<T>& nullVector(void) {
+	static const Vector<T> _null;
+	return _null;
+}
+
 template <class C> elm::io::Output& printCollection(elm::io::Output& out, const C& items)
 {
 	int count = items.count();
