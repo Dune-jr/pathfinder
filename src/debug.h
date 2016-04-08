@@ -11,7 +11,9 @@
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 
-#define DBGG // debug loop analysis and many other
+// v1:debug loop analysis and many other
+// v2: macro debugs
+#define DBGG(str) { if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) elm::cout << elm::log::Debug::debugPrefix(__FILE__, __LINE__) << str << elm::color::RCol() << elm::io::endl; }
 // #define DBG_WARNINGS
 
 // #define DBG_NO_COLOR	   0b1 << 1
@@ -34,10 +36,9 @@
 extern int dbg_flags;
 extern int dbg_verbose;
 
-#define DBG_STD(str) { if(elm::color::flags&elm::color::DEBUG) std::cout << elm::color::Debug::debugPrefix(__FILE__, __LINE__).chars() << str << elm::color::RCol << std::endl; }
-#define DBG_TEST(tested_cond, expected_cond) \
-	((tested_cond) == (expected_cond) ? color::IGre() : color::IRed()) << \
-	((tested_cond) ? "true" : "false") << color::RCol()
+// #define DBG_STD(str) { if(elm::color::flags&elm::color::DEBUG) std::cout << elm::color::Debug::debugPrefix(__FILE__, __LINE__).chars() << str << elm::color::RCol << std::endl; }
+/* #define DBG_TEST(tested_cond, expected_cond) \
+ 	((tested_cond) == (expected_cond) ? color::IGre() : color::IRed()) << \
+ 	((tested_cond) ? "true" : "false") << color::RCol()*/
 
 #endif
-	
