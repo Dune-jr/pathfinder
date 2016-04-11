@@ -4,6 +4,54 @@
 
 #include "analysis_state.h"
 
+Analysis::State::State() : dfa_state(NULL), sp(0), bottom(false), constants() { }
+
+Analysis::State::State(const context_t& context)
+	: dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
+
+Analysis::State::State(Block* entryb, const context_t& context, bool init)
+	: dfa_state(context.dfa_state), sp(context.sp), bottom(false), constants(context.max_tempvars, context.max_registers)
+{
+	generated_preds.clear(); // generated_preds := [[]]
+	labelled_preds.clear(); // labelled_preds := [[]]
+	if(init)
+	{
+		Block::EdgeIter outs(entryb->outs());
+		ASSERT(outs);
+		path.addLast(*outs);
+		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+	}
+}
+
+Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
+	: dfa_state(context.dfa_state), sp(context.sp), bottom(false), constants(context.max_tempvars, context.max_registers)
+{
+	generated_preds.clear(); // generated_preds := [[]]
+	labelled_preds.clear(); // labelled_preds := [[]]
+	if(init)
+	{
+		path.addLast(entry_edge);
+		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+	}
+}
+
+Analysis::State::State(const State& s)
+	: dfa_state(s.dfa_state), sp(s.sp), bottom(s.bottom), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
+	{ }
+
+void Analysis::State::appendEdge(Edge* e, bool is_conditional)
+{
+	// add edge to the end of the path
+	this->path.addLast(e);
+	// we now need to label the correct list of predicates
+	const SLList<LabelledPredicate> &relevant_preds = (is_conditional && e->isTaken())
+		? generated_preds_taken // conditional TAKEN
+		: generated_preds;  // non-conditional, NOT TAKEN
+	labelled_preds += labelPredicateList(relevant_preds, e); // label our list of predicates with the current edge then append it
+	constants.label(e); // label the constants as well
+}
+
+
 // PredIterator
 void Analysis::State::setPredicate(PredIterator &iter, const LabelledPredicate &labelled_predicate)
 {

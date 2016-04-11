@@ -58,7 +58,14 @@ public:
 
 protected:
 	context_t context;
-	int state_size_limit, flags;
+	int state_size_limit, flags; // read by inherited class
+	int ip_count, unminimized_ip_count; // written by inherited class
+
+	static bool checkInfeasiblePathValidity(const Vector<State>& sv, const Vector<Option<Path> >& sv_paths, /*const Edge* e,*/ const Path& infeasible_path, elm::String& counterexample);
+	static void addDisorderedInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path, Vector<DetailedPath>& infeasible_paths);
+	static void addDetailedInfeasiblePath(const DetailedPath& infeasible_path, Vector<DetailedPath>& infeasible_paths);
+	static bool isSubPath(const OrderedPath& included_path, const Path& path_set);
+	static void onAnyInfeasiblePath();
 
 	inline static loopheader_status_t loopStatus(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
 	static Block* insAlias		   (Block* b);
@@ -82,12 +89,11 @@ private:
 	Vector<Block*> wl; // working list
 	Vector<DetailedPath> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
 	int total_paths, loop_header_count, bb_count;
-	int ip_count, unminimized_ip_count;
 
 	// virtual pure functions to implement
 	virtual Vector<State> narrowing(const Vector<Edge*>& edges) const = 0;
 	virtual bool inD_ip(const otawa::Edge* e) const = 0;
-	virtual void ipcheck(const elm::genstruct::Vector<Analysis::State>& s, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const = 0;
+	virtual void ipcheck(elm::genstruct::Vector<Analysis::State>& v, elm::genstruct::Vector<DetailedPath>& infeasible_paths) = 0;
 
 	// analysis.cpp
 	void debugProgress(int block_id, bool enable_smt) const;
@@ -102,17 +108,13 @@ private:
 	// void processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt);
 	// void processLoopHeader(Block* b, SLList<Analysis::State>& sl);
 	// void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional);
-	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
-	void addDisorderedInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path, Edge* last_edge);
-	void addDetailedInfeasiblePath(const DetailedPath& infeasible_path);
-	void purgeStateList(SLList<Analysis::State>& sl) const;
+	// void purgeStateList(SLList<Analysis::State>& sl) const;
 	// bool mergeOversizedStateList(SLList<Analysis::State>& sl) const;
 	// void placeboProcessCFG(/*CFG* cfg*/) const;
 	void printResults(int exec_time_ms) const;
 	void printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const;
 	void removeDuplicateInfeasiblePaths();
 	void onPathEnd();
-	void onAnyInfeasiblePath();
 	// bool isAHandledEdgeKind(Edge::kind_t kind) const;
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	bool isConditional(Block* b) const;
@@ -124,7 +126,6 @@ private:
 	// bool allRequiredInEdgesAreProcessed(Block* block) const;
 	// bool allIncomingNonBackEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	// bool allIncomingEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
-	bool isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
 	elm::String wlToString() const;
 
 	bool anyEdgeHasTrace(const Vector<Edge*>& edges) const;

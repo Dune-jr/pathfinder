@@ -55,15 +55,12 @@ public:
 	inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
 	friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 
-	// analysis.cpp
+	// analysis_state.cpp
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
 	elm::String dumpEverything() const;
 	template <class C> void merge(const C& sl);
 	bool equiv(const State& s) const;
-
-	// analysis_cfg.cpp
 	void appendEdge(Edge* e, bool is_conditional);
-	void printFixPointState() const;
 
 	// analysis_bb.cpp
 	void processBB(const BasicBlock *bb);
@@ -173,6 +170,9 @@ template <class C> void Analysis::State::merge(const C& cl)
 	SLList<ConstantVariables> cvl;
 	// intialize to first element
 	ASSERTP(!cl.isEmpty(), "call to Analysis::State::merge with empty cl parameter"); // maybe just leave the state empty
+	// TODOv2: need to do something here to either
+	//	* propagate a bottom state but that means we have to carefully merge it when it's in a list of states
+	//	* give feedback that we should propagate an empty list of states (to notify of the "bottom only" state)
 	constants = cl.first().constants;
 	// copy firstElement.labelled_preds into labelled_preds with empty labels
 	for(SLList<LabelledPredicate>::Iterator iter(cl.first().labelled_preds); iter; iter++)

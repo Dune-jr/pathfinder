@@ -11,8 +11,8 @@
  */
 Analysis::Analysis(const context_t& context, int state_size_limit, int flags)
 	: context(context), state_size_limit(state_size_limit), flags(flags)
-	, loop_header_count(0), bb_count(-1)
 	, ip_count(0), unminimized_ip_count(0)
+	, loop_header_count(0), bb_count(-1)
 {
 	DBG("Stack pointer identified to r" << context.sp)
 }

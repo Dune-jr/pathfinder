@@ -9,14 +9,7 @@
 #include <elm/io/Output.h>
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
-// #include <elm/sys/Thread.h> // multithreading
-#include "analysis.h"
-#include "debug.h"
-#ifdef SMT_SOLVER_CVC4
-	#include "cvc4/cvc4_smt.h"
-#elif SMT_SOLVER_Z3
-	#include "z3/z3_smt.h"
-#endif
+#include "analysis_state.h"
 
 using namespace elm::genstruct;
 using namespace elm::io;
@@ -30,58 +23,6 @@ using namespace elm::io;
 Identifier<Vector<Analysis::State> >		Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
 Identifier<Analysis::State>					Analysis::LH_S("Trace on a loop header"); // maybe change to vector
 Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a loop (on a loop header)");
-
-Analysis::State::State() : dfa_state(NULL), sp(0), bottom(false), constants() { }
-
-Analysis::State::State(const context_t& context)
-	: dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
-
-Analysis::State::State(Block* entryb, const context_t& context, bool init)
-	: dfa_state(context.dfa_state), sp(context.sp), bottom(false), constants(context.max_tempvars, context.max_registers)//, fixpoint(false)
-{
-	generated_preds.clear(); // generated_preds := [[]]
-	labelled_preds.clear(); // labelled_preds := [[]]
-	if(init)
-	{
-		Block::EdgeIter outs(entryb->outs());
-		ASSERT(outs);
-		path.addLast(*outs);
-		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
-	}
-}
-
-Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
-	: dfa_state(context.dfa_state), sp(context.sp), bottom(false), constants(context.max_tempvars, context.max_registers)//, fixpoint(false)
-{
-	generated_preds.clear(); // generated_preds := [[]]
-	labelled_preds.clear(); // labelled_preds := [[]]
-	if(init)
-	{
-		path.addLast(entry_edge);
-		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
-	}
-}
-
-Analysis::State::State(const State& s)
-	: dfa_state(s.dfa_state), sp(s.sp), bottom(s.bottom), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
-	{ }
-
-void Analysis::State::appendEdge(Edge* e, bool is_conditional)
-{
-	// add edge to the end of the path
-	this->path.addLast(e);
-	// we now need to label the correct list of predicates
-	const SLList<LabelledPredicate> &relevant_preds = (is_conditional && e->isTaken()/*e->kind() == Edge::TAKEN*/) ?
-		generated_preds_taken : // conditional TAKEN
-		generated_preds;  // NOT TAKEN, VIRTUAL, VIRTUAL RETURN, non-conditional TAKEN
-
-	// label our list of predicates with the current edge then append it
-	labelled_preds += labelPredicateList(relevant_preds, e);
-	constants.label(e); // label the constants as well
-}
-
-/*void Analysis::State::printFixPointState() const
-{ }*/
 
 /**
  * @fn void Analysis::processCFG(CFG* cfg);
@@ -177,7 +118,7 @@ void Analysis::processCFG(CFG* cfg)
 				// EDGE_S.ref(e).addAll(I(e, s));
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 				if(inD_ip(e))
-					ipcheck(EDGE_S(e), infeasible_paths);
+					ipcheck(EDGE_S.ref(e), infeasible_paths);
 				/* wl ← wl ∪ {sink(e)} */
 				wl_push(e->target());
 			}
@@ -185,6 +126,29 @@ void Analysis::processCFG(CFG* cfg)
 	}
 /* end */
 }
+
+Vector<Analysis::State>& Analysis::I(Block* b, Vector<Analysis::State>& s)
+{
+	if(b->isBasic())
+	{
+		DBGG(color::Bold() << "-\tI(b=" /*<< color::NoBold() << color::ICya()*/ << b << /*color::RCol() << color::Bold() <<*/ ") " << color::NoBold() << printFixPointStatus(b))
+		for(Vector<State>::MutableIterator si(s); si; si++)
+			si.item().processBB(b->toBasic());
+	}
+	else {
+		DBGG("TODO: not doing anything");
+	}
+	return s;
+}
+
+Vector<Analysis::State>& Analysis::I(Edge* e, Vector<Analysis::State>& s)
+{
+	DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold())
+	for(Vector<State>::MutableIterator si(s); si; si++)
+		si.item().appendEdge(e, isConditional(e->source()));
+	return s;
+}
+
 #if 0
 {
 	DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
@@ -396,26 +360,61 @@ void Analysis::processCFG(CFG* cfg)
 }
 #endif
 
-Vector<Analysis::State>& Analysis::I(Block* b, Vector<Analysis::State>& s)
+/**
+ * @fn bool allEdgesHaveTrace(const Vector<Edge*>& edges) const;
+ * @brief Checks for all edges to have a trace annotation
+ * @param edges Vector of Block edges to inspect
+ * @rtn true iff all edges have a trace annotation
+ */
+bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const
 {
-	if(b->isBasic())
-	{
-		DBGG(color::Bold() << "-\tI(b=" /*<< color::NoBold() << color::ICya()*/ << b << /*color::RCol() << color::Bold() <<*/ ") " << color::NoBold() << printFixPointStatus(b))
-		for(Vector<State>::MutableIterator si(s); si; si++)
-			si.item().processBB(b->toBasic());
-	}
-	else {
-		DBGG("TODO: not doing anything");
-	}
-	return s;
+	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
+		if(!EDGE_S.exists(*iter))
+			return false;
+	DBGG("-..." << edges)
+	return true;
 }
 
-Vector<Analysis::State>& Analysis::I(Edge* e, Vector<Analysis::State>& s)
+/**
+ * @fn bool allEdgesHaveTrace(const Block::EdgeIter& biter) const;
+ * @brief Checks for all edges to have a trace annotation
+ * @param biter Iterator over the list of Block edges to inspect
+ * @rtn true iff all edges have a trace annotation
+ */
+bool Analysis::allEdgesHaveTrace(const Block::EdgeIter& biter) const
 {
-	DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold())
-	for(Vector<State>::MutableIterator si(s); si; si++)
-		si.item().appendEdge(e, isConditional(e->source()));
-	return s;
+	for(Block::EdgeIter i(biter); i; i++)
+		if(!EDGE_S.exists(*i))
+			return false;
+	return true;
+}
+
+/**
+ * @fn bool anyEdgeHasTrace(const Vector<Edge*>& edges) const;
+ * @brief Checks for at least one edge to have a trace annotation
+ * @param edges Vector of Block edges to inspect
+ * @rtn true iff at least one edge has a trace annotation
+ */
+bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const
+{
+	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
+		if(EDGE_S.exists(*iter))
+			return true;
+	return false;
+}
+
+/**
+ * @fn bool anyEdgeHasTrace(const Block::EdgeIter& biter) const;
+ * @brief Checks for at least one edge to have a trace annotation
+ * @param biter Iterator over the list of Block edges to inspect
+ * @rtn true iff at least one edge has a trace annotation
+ */
+bool Analysis::anyEdgeHasTrace(const Block::EdgeIter& biter) const
+{
+	for(Block::EdgeIter i(biter); i; i++)
+		if(EDGE_S.exists(*i))
+			return true;
+	return false;
 }
 
 /*
@@ -674,28 +673,26 @@ void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, co
 // }
 
 /**
- * @fn bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample);
+ * @fn bool Analysis::checkInfeasiblePathValidity(const Vector<Analysis::State>& sl, const Vector<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample);
  * Checks if the minimized list of edges we found 'infeasible_path' is valid,
  * that is if all the paths it represents (all the 'sl[i]->e') are infeasible ('sl_paths[i]' is not 'elm::option::none')
  * If invalid, returns a counter-example in counterexample.
  * @return true if valid
 */
-bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const
+bool Analysis::checkInfeasiblePathValidity(const Vector<Analysis::State>& sv, const Vector<Option<Path> >& sv_paths, const Path& infeasible_path, elm::String& counterexample)
 {
-	bool valid = true;
 	// check that all the paths going to the current BB are sound with the minimized inf. path we just found
-	SLList<Option<Path> >::Iterator sl_paths_subiter(sl_paths);
-	for(SLList<Analysis::State>::Iterator sl_subiter(sl); sl_subiter; sl_subiter++, sl_paths_subiter++)
+	Vector<Option<Path> >::Iterator pi(sv_paths);
+	for(Vector<Analysis::State>::Iterator si(sv); si; si++, pi++) // iterate through paths at the same time
 	{
 		// if feasible path && contained in the minimized inf. path
-		if(!*sl_paths_subiter && isSubPath((*sl_subiter).getDetailedPath().toOrderedPath(), e, infeasible_path))
+		if((*pi).isNone() && isSubPath(si->getDetailedPath().toOrderedPath(), infeasible_path))
 		{
-			valid = false;
-			counterexample = _ << (*sl_subiter).getPathString() << "+" << e->source()->index() << "->" << e->target()->index();
-			break;
+			counterexample = _ << si->getPathString();
+			return false;
 		}
 	}
-	return valid;
+	return true;
 }
 
 /**
@@ -705,7 +702,7 @@ bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, co
  * @param full_path Full path it originates from (must include ip)
  * @param last_edge Edge to add at the end of full_path
  */
-void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& full_path, Edge* last_edge)
+void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& full_path, Vector<DetailedPath>& infeasible_paths)
 {
 	DetailedPath detailed_ip;
 	// parse the detailed path and add all the edges that match the Path ip and the loop entries
@@ -719,48 +716,24 @@ void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& f
 		else
 			detailed_ip.addLast(*full_path_iter);
 	}
-	if(ip.contains(last_edge)) // add the last edge too if in the infeasible path
-		detailed_ip.addLast(last_edge);
 #ifdef DBGG
-	detailed_ip.optimize();
 	DBG("addDisorderedInfeasiblePath(...), ip=" << pathToString(ip) << ", " 
 		<< color::ICya() << "full_path=[" << full_path << "]" << color::RCol() << ", result=" << detailed_ip); // TODO!
 #endif
-	addDetailedInfeasiblePath(detailed_ip);
+	addDetailedInfeasiblePath(detailed_ip, infeasible_paths);
 }
 
-void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip)
+void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<DetailedPath>& infeasible_paths)
 {
 	DetailedPath new_ip(ip);
-	assert(ip.hasAnEdge()); // maybe a strong assumption, we'll see
+	ASSERT(ip.hasAnEdge());
 	// first off, add loop entries for all missing loops
 	Block *b = ip.firstEdge()->source();
-	if(LOOP_HEADER(b))
-		new_ip.addEnclosingLoop(b);
-	while(ENCLOSING_LOOP_HEADER.exists(b))
-	{
-		b = ENCLOSING_LOOP_HEADER(b);
-		new_ip.addEnclosingLoop(b);
-	}
+	for(LoopHeaderIter i(b); i; i++)
+		new_ip.addEnclosingLoop(*i);
 	// optimize by removing redundancies
 	new_ip.optimize();
 	infeasible_paths.add(new_ip);
-}
-
-/**
- * @brief Remove all bottom states
- * 
- * @param sl list to purge
- */
-void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
-{
-	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; )
-	{
-		if(sl_iter->isBottom())
-			sl_iter++;
-		else
-			sl.remove(sl_iter);
-	}
 }
 
 /**
@@ -878,26 +851,6 @@ void Analysis::onAnyInfeasiblePath()
 	DBG(color::BIYel() << "Stopping current path analysis")
 }
 
-/*bool Analysis::isAHandledEdgeKind(Edge::kind_t kind) const
-{
-	switch(kind)
-	{
-		case Edge::VIRTUAL_CALL:
-			return flags&FOLLOW_CALLS;
-		case Edge::TAKEN:
-		case Edge::NOT_TAKEN:
-		case Edge::VIRTUAL:
-		case Edge::VIRTUAL_RETURN:
-			return true;
-		case Edge::NONE:
-		case Edge::CALL:
-		case Edge::EXN_CALL:
-		case Edge::EXN_RETURN:
-		default:
-			return false;
-	}
-}*/
-
 // either we find SP in all the paths we merge (and the same SP), either we return elm::none
 Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>& sl) const
 {
@@ -993,15 +946,15 @@ bool Analysis::allIncomingEdgesAreAnnotated(Block* block, const Identifier<SLLis
 }*/
 
 /**
- * @fn bool Analysis::isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const;
- * Checks if 'included_path->e' is a part of the set of paths "path_set",
+ * @fn static bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set);
+ * Checks if 'included_path' is a part of the set of paths "path_set",
  * that is if 'included_path' includes all the edges in the Edge set of path_set, except for e
  * @return true if it is a subpath
 */
-bool Analysis::isSubPath(const OrderedPath& included_path, const Edge* e, const Path& path_set) const
+bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set)
 {
 	for(Path::Iterator iter(path_set); iter; iter++)
-		if(*iter != e && !included_path.contains(*iter))
+		if(!included_path.contains(*iter))
 			return false;
 	return true;
 }
@@ -1079,61 +1032,4 @@ elm::String Analysis::orderedPathToString(const OrderedPath& path)
 	if(str.isEmpty())
 		return "(empty)";
 	return str;
-}
-
-/**
- * @fn bool allEdgesHaveTrace(const Vector<Edge*>& edges) const;
- * @brief Checks for all edges to have a trace annotation
- * @param edges Vector of Block edges to inspect
- * @rtn true iff all edges have a trace annotation
- */
-bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const
-{
-	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
-		if(!EDGE_S.exists(*iter))
-			return false;
-	DBGG("-..." << edges)
-	return true;
-}
-
-/**
- * @fn bool allEdgesHaveTrace(const Block::EdgeIter& biter) const;
- * @brief Checks for all edges to have a trace annotation
- * @param biter Iterator over the list of Block edges to inspect
- * @rtn true iff all edges have a trace annotation
- */
-bool Analysis::allEdgesHaveTrace(const Block::EdgeIter& biter) const
-{
-	for(Block::EdgeIter i(biter); i; i++)
-		if(!EDGE_S.exists(*i))
-			return false;
-	return true;
-}
-
-/**
- * @fn bool anyEdgeHasTrace(const Vector<Edge*>& edges) const;
- * @brief Checks for at least one edge to have a trace annotation
- * @param edges Vector of Block edges to inspect
- * @rtn true iff at least one edge has a trace annotation
- */
-bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const
-{
-	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
-		if(EDGE_S.exists(*iter))
-			return true;
-	return false;
-}
-
-/**
- * @fn bool anyEdgeHasTrace(const Block::EdgeIter& biter) const;
- * @brief Checks for at least one edge to have a trace annotation
- * @param biter Iterator over the list of Block edges to inspect
- * @rtn true iff at least one edge has a trace annotation
- */
-bool Analysis::anyEdgeHasTrace(const Block::EdgeIter& biter) const
-{
-	for(Block::EdgeIter i(biter); i; i++)
-		if(EDGE_S.exists(*i))
-			return true;
-	return false;
 }
