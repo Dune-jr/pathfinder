@@ -23,7 +23,7 @@ int dbg_verbose = 0; // global verbose level (higher = less verbose)
 	
 class Display: public Application {
 public:
-    Display(void): Application("display", Version(1, 0, 0)),
+	Display(void): Application("display", Version(1, 0, 0)),
 		// opt1(option::SwitchOption::Make(manager).cmd("-o").cmd("--com").description("option 1")) { }
 		opt_s1(option::SwitchOption::Make(*this).cmd("-s").cmd("--s1").cmd("--silent").description("run with minimal output")),
 		opt_s2(option::SwitchOption::Make(*this).cmd("--s2").description("only display results")),
@@ -52,8 +52,8 @@ protected:
 			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
 		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
-        const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
-        const dfa::State *inital_state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
+		const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
+		const dfa::State *inital_state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
 		ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
 		CFG *cfg = cfgs->get(0); // then get the first CFG
 		// simpleCFGparse(cfg);
@@ -76,7 +76,7 @@ protected:
 		if(opt_notime)
 			dbg_flags |= DBG_NO_TIME;
 		// if(opt_nopred)
-		 	// dbg_flags |= DBG_NO_PREDICATES;
+			// dbg_flags |= DBG_NO_PREDICATES;
 		if(! opt_noflowinfo)
 			dbg_flags |= DBG_PRINT_FLOWINFO;
 		if(opt_progress)

@@ -29,9 +29,6 @@ void Analysis::State::throwInfo()
 
 void Analysis::State::processBB(const BasicBlock *bb)
 {
-#	ifdef DBGG
-		cout << color::Gre() << "\tProcessing path " << getPathString() << color::RCol() << endl;
-#	endif
 	SLList<LabelledPredicate> generated_preds_before_condition;
 	sem::inst condition;
 	generated_preds.clear();
@@ -52,7 +49,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			
 			if(seminsts.isCond()) // IF
 			{	// backup the list of generated predicates before entering the condition
-				generated_preds_before_condition = generated_preds; // side effect: reverses the order of the list
+				generated_preds_before_condition.addAll(generated_preds); // side effect: reverses the order of the list
 				DBG(color::IBlu() << "(Parsing taken path)")
 			}
 			if(seminsts.pathEnd()) // CONT

@@ -60,6 +60,18 @@ protected:
 	context_t context;
 	int state_size_limit, flags;
 
+	inline static loopheader_status_t loopStatus(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
+	static Block* insAlias		   (Block* b);
+	static Vector<Edge*> ins 	   (Block* b);
+	static Vector<Edge*> allIns    (Block* h);
+	static Vector<Edge*> backIns   (Block* h);
+	static Vector<Edge*> nonBackIns(Block* h);
+	static Vector<Edge*> outsWithoutUnallowedExits(Block* b);
+	static bool isAllowedExit(Edge* exit_edge);
+	static Option<Block*> getCaller(CFG* cfg);
+	static Block* getCaller(Block* exit);
+	static elm::String printFixPointStatus(Block* b);
+
 	static Identifier<Vector<Analysis::State> >	EDGE_S; // Trace on an edge
 private:
 	static Identifier<Analysis::State>			LH_S; // Trace on a loop header
@@ -81,31 +93,21 @@ private:
 	void debugProgress(int block_id, bool enable_smt) const;
 	Analysis::State topState(Block* entry) const;
 	void wl_push(Block* b);
-	inline static loopheader_status_t loopStatus(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
-	static Block* insAlias		   (Block* b);
-	static Vector<Edge*> ins 	   (Block* b);
-	static Vector<Edge*> allIns    (Block* h);
-	static Vector<Edge*> backIns   (Block* h);
-	static Vector<Edge*> nonBackIns(Block* h);
-	static Vector<Edge*> outsWithoutUnallowedExits(Block* b);
-	static bool isAllowedExit(Edge* exit_edge);
-	static Option<Block*> getCaller(CFG* cfg);
-	static Block* getCaller(Block* exit);
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
 	Vector<State>& I(Block* b, Vector<State>& s);
 	Vector<State>& I(Edge* e, Vector<State>& s);
-	int processBB(BasicBlock *bb, State& s);
-	void processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt);
-	void processLoopHeader(Block* b, SLList<Analysis::State>& sl);
-	void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional);
+	// int processBB(BasicBlock *bb, State& s);
+	// void processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt);
+	// void processLoopHeader(Block* b, SLList<Analysis::State>& sl);
+	// void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional);
 	bool checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample) const;
 	void addDisorderedInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path, Edge* last_edge);
 	void addDetailedInfeasiblePath(const DetailedPath& infeasible_path);
 	void purgeStateList(SLList<Analysis::State>& sl) const;
 	// bool mergeOversizedStateList(SLList<Analysis::State>& sl) const;
-	void placeboProcessCFG(/*CFG* cfg*/) const;
+	// void placeboProcessCFG(/*CFG* cfg*/) const;
 	void printResults(int exec_time_ms) const;
 	void printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const;
 	void removeDuplicateInfeasiblePaths();

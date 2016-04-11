@@ -153,13 +153,16 @@ void Analysis::processCFG(CFG* cfg)
 					LH_S(b) = s[0];
 				switch(loopStatus(b)) {
 					/* status_b ← FIX if status_b = ENTER */
-					case ENTER: LH_STATUS(b) = FIX;
+					case ENTER:
+						LH_STATUS(b) = FIX;
 						break;
 					/* status_b ← LEAVE if status_b = FIX ∧ s ≡ s_b */
-					case FIX: if(s[0].equiv(LH_S(b))) LH_STATUS(b) = LEAVE;
+					case FIX: if(s[0].equiv(LH_S(b)))
+						LH_STATUS(b) = LEAVE;
 						break;
 					/* status_b ← ENTER if status_b = LEAVE */
-					case LEAVE: LH_STATUS(b).remove();
+					case LEAVE:
+						LH_STATUS(b).remove();
 						break;
 				}
 			}
@@ -393,15 +396,25 @@ void Analysis::processCFG(CFG* cfg)
 }
 #endif
 
-Vector<Analysis::State>& Analysis::I(Block* b, Vector<State>& s)
+Vector<Analysis::State>& Analysis::I(Block* b, Vector<Analysis::State>& s)
 {
-	DBGG(color::Bold() << "-\tI(b= " << color::NoBold() << color::ICya() << "" << b << color::RCol() << color::Bold() << " )" << color::NoBold())// TODO!!!
+	if(b->isBasic())
+	{
+		DBGG(color::Bold() << "-\tI(b=" /*<< color::NoBold() << color::ICya()*/ << b << /*color::RCol() << color::Bold() <<*/ ") " << color::NoBold() << printFixPointStatus(b))
+		for(Vector<State>::MutableIterator si(s); si; si++)
+			si.item().processBB(b->toBasic());
+	}
+	else {
+		DBGG("TODO: not doing anything");
+	}
 	return s;
 }
 
-Vector<Analysis::State>& Analysis::I(Edge* e, Vector<State>& s)
+Vector<Analysis::State>& Analysis::I(Edge* e, Vector<Analysis::State>& s)
 {
-	DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << "" << e << color::Bold() << " )" << color::NoBold()) // TODO!!!
+	DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold())
+	for(Vector<State>::MutableIterator si(s); si; si++)
+		si.item().appendEdge(e, isConditional(e->source()));
 	return s;
 }
 
@@ -412,7 +425,7 @@ Vector<Analysis::State>& Analysis::I(Edge* e, Vector<State>& s)
 	@param bb BasicBlock to process
 	@return 0: continue, 1: stop analysis for this path
 */
-int Analysis::processBB(BasicBlock* bb, State& s)
+/*int Analysis::processBB(BasicBlock* bb, State& s)
 {
 	if(bb->isExit())
 	{
@@ -423,14 +436,14 @@ int Analysis::processBB(BasicBlock* bb, State& s)
 	DBG(color::Whi() << "Processing " << (Block*)bb)
 	s.processBB(bb); // generates lists of predicates in generated_preds and generated_preds_taken	
 	return 0;
-}
+}*/
 
 /**
  * @fn SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl);
  * Processes outgoing Edge e from a BasicBlock for each element of sl
 */
-void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt)
-{
+// void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt)
+// {
 	/* wl <- sl ⊙ e; */
 	/*PROCESSED_EDGES.remove(e); // cleaning
 	if(sl.isEmpty())
@@ -498,13 +511,13 @@ void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool i
 			}
 			onAnyInfeasiblePath();
 		}
-	}*/
+	}
 }
 
 void Analysis::processLoopHeader(Block* b, SLList<Analysis::State>& sl)
 {
-	/*n<// ensure BasicBlock
-	ASSERTP(b->isBasic(), "\tprocessLoopHeader called with non-0Basic Block " << b);
+	// ensure BasicBlock
+	ASSERTP(b->isBasic(), "\tprocessLoopHeader called with non-Basic Block " << b);
 	BasicBlock *bb = b->toBasic();
 
 	State* s = new State((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
@@ -580,11 +593,11 @@ void Analysis::processLoopHeader(Block* b, SLList<Analysis::State>& sl)
 #	endif
 	if(delete_s)
 		delete s;*/
-}
+// }
 
+/*
 void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional)
 {
-	/*
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
 	{
 		State s = *sl_iter;
@@ -658,7 +671,7 @@ void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, co
 		delete *jobs_iter;
 	}
 	//*/
-}
+// }
 
 /**
  * @fn bool Analysis::checkInfeasiblePathValidity(const SLList<Analysis::State>& sl, const SLList<Option<Path> >& sl_paths, const Edge* e, const Path& infeasible_path, elm::String& counterexample);
@@ -748,112 +761,6 @@ void Analysis::purgeStateList(SLList<Analysis::State>& sl) const
 		else
 			sl.remove(sl_iter);
 	}
-}
-
-/**
- * @brief If the list is bigger than a thresold, merge all states into one (a bit brutal)
- * 
- * @param sl List of states to process
- * @return Returns true iff a merge was done
- */
-/*bool Analysis::mergeOversizedStateList(SLList<Analysis::State>& sl) const
-{
-	if(!(flags&MERGE))
-		return false;
-	int count = sl.count();
-	if(count >= state_size_limit)
-	{
-		State s((Edge*)NULL, dfa_state, sp, max_tempvars, max_registers, false); // entry is cleared anyway
-		s.merge(sl);
-		s.setFixpointState(Analysis::listOfFixpoints(sl));
-		sl.clear();
-		sl += s;
-		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
-			cout << " " << count << " states updated then merged into 1." << endl;
-		return true;
-	}
-	return false;
-}*/
-
-/**
- * @brief remove annotations from incoming edges to given BasicBlock
- * 
- * @param b Block to process
- * @param processed_edges_id Identifier for processed edges
- */
-/*void Analysis::cleanIncomingEdges(Block *b) const
-{
-	for(Block::EdgeIter b_ins(b->ins()); b_ins; b_ins++)
-		PROCESSED_EDGES.remove(*b_ins);
-		//PROCESSED_EDGES.ref(*b_ins).clear();
-}*/
-
-/**
- * @brief remove annotations from incoming back edges
- * 
- * @param b Block to process
- * @param processed_edges_id Identifier for processed (back) edges
- */
-/*void Analysis::cleanIncomingBackEdges(Block *b) const
-{
-	for(Block::EdgeIter b_ins(b->ins()); b_ins; b_ins++)
-		if(BACK_EDGE(*b_ins))
-			PROCESSED_EDGES.remove(*b_ins);
-			// PROCESSED_EDGES.ref(*b_ins).clear();
-}*/
-
-/**
- * @brief Checks if a fix point has been found on all parent loops
- */
-/*bool Analysis::fixpointFoundOnAllMotherLoops(Block *b) const
-{
-	while(ENCLOSING_LOOP_HEADER.exists(b))
-	{
-		b = ENCLOSING_LOOP_HEADER(b);
-		if(!FIXPOINT_REACHED.exists(b) || FIXPOINT_REACHED(b) != true)
-			return false;
-	}
-	return true;
-}*/
-
-/**
- * @brief Test if the edge target has no mother loop.
- * 
- * @param e Edge to test
- * @return True if no mother loop was found at the target of the Edge e.
- */
-/*bool Analysis::edgeIsExitingToLoopLevel0(const Edge* e) const
-{
-	return !LOOP_HEADER(e->target()) && !ENCLOSING_LOOP_HEADER.exists(e->target());
-}*/
-
-/**
- * @brief Checks if solver should be enabled
- * 
- * @param e Edge being processed
- * @return Returns true if solver should be enabled
- */
-/*bool Analysis::shouldEnableSolver(const Edge* e)
-{
-	// return true; // TODO!!
-	Block::EdgeIter src_outs(e->source()->outs());
-	if(src_outs && ++src_outs) // outs > 1
-		return true; // conditional edge, call...
-	if(LOOP_EXIT_EDGE.exists(*e))
-		return true;
-	return false;
-	// TODO: improve, let's be smarter
-}*/
-
-/**
- * @brief Dry run on the CFG to find properties on it (!no longer does anything!)
- */
-void Analysis::placeboProcessCFG(/*CFG* cfg*/) const
-{
-	if(dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_NONE)
-		cout << color::ICya() << bb_count << color::RCol() << " BBs found." << endl;
-	// else
-	// 	DBG(color::Whi() << total_paths << " paths found.")
 }
 
 /**
@@ -1020,7 +927,7 @@ Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>&
  */
 bool Analysis::isConditional(Block* b) const
 {
-	int count = 0;
+	/*int count = 0;
 	bool atLeastOneTaken = false;
 	for(Block::EdgeIter outs(b->outs()); outs; outs++)
 		//if(isAHandledEdgeKind(outs->kind()))
@@ -1028,9 +935,10 @@ bool Analysis::isConditional(Block* b) const
 			count++;
 			ASSERTP(!atLeastOneTaken || !outs->isTaken(), "Multiple outgoing taken edges currently not supported by IP analysis (" << b <<")");
 			ASSERTP(count <= 2, "3+ outgoing edges currently not supported by IP analysis (" << b << ")")
-			atLeastOneTaken |= outs->isTaken() /*(outs->kind() == Edge::TAKEN)*/;
+			atLeastOneTaken |= outs->isTaken(); // (outs->kind() == Edge::TAKEN)
 		}
-	return atLeastOneTaken && (count > 1);
+	return atLeastOneTaken && (count > 1);*/
+	return b->countOuts() > 1; // TODOv2: test this..
 }
 /*
 bool Analysis::allRequiredInEdgesAreProcessed(Block* block) const

@@ -11,9 +11,9 @@ Vector<Analysis::State> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) con
 	if(LOOP_HEADER(ins[0]->target()) || ((flags&MERGE) && v.count() > state_size_limit))
 	{
 		State s((Edge*)NULL, context, false); // entry is cleared anyway
-		s.merge(v); // TODOv2: change this into Vector
+		s.merge(v);
 		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v.count() > 50)
-			cout << " " << v.count() << " states merged into 1 (from " << ins.count() << " ins)." << endl; // TODOv2: talk about merging after the LH interpretation
+			cout << " " << v.count() << " states merged into 1 (from " << ins.count() << " ins)." << endl;
 		Vector<State> rtnv(1);
 		rtnv.push(s);
 		return rtnv;
@@ -24,8 +24,16 @@ Vector<Analysis::State> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) con
 
 bool DefaultAnalysis::inD_ip(const otawa::Edge* e) const
 {
-	// TODOv2
-	return true;
+	bool all_leave = true; // enable SMT when on sequential level
+	for(LoopHeaderIter lh(e->source()); lh; lh++)
+	{
+		if(loopStatus(lh) != LEAVE)
+		{
+			all_leave = false;
+			break;
+		}
+	}
+	return all_leave; //TODOv2: add condition: && isConditional(e->source())
 }
 
 void DefaultAnalysis::ipcheck(const elm::genstruct::Vector<Analysis::State>& sl, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const

@@ -158,10 +158,14 @@ private:
 	}; // PredIterator class
 }; // State class
 
-// accepts SLList<State>, Vector<State>, ...
+/**
+ * @brief merge all states into one (a bit brutal)
+ * 
+ * @param cl Collection of States to process (accepts SLList, Vector etc.)
+ */
 template <class C> void Analysis::State::merge(const C& cl)
 {
-	DBGG("-\tmerging " << cl)
+	DBGG("-\tmerging with " << cl.count() << " state(s).")
 	// resetting stuff
 	generated_preds.clear();
 	generated_preds_taken.clear();
