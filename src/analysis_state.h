@@ -45,7 +45,7 @@ public:
 	inline void onLoopExit(Option<Block*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }
 	inline void onCall(Edge* e) { path.onCall(e); }
 	inline void onReturn(Block* b) { path.onReturn(b); }
-	inline bool isBottom() const { return !bottom; }
+	inline bool isBottom() const { return bottom; }
 	inline bool isValid() const { return dfa_state != NULL && constants.isValid(); } // this is so that we can have empty states that do not use too much memory
 
 	// inline bool inALoop() const { return ; }
@@ -162,6 +162,12 @@ private:
  */
 template <class C> void Analysis::State::merge(const C& cl)
 {
+	ASSERTP(!cl.isEmpty(), "call to Analysis::State::merge with empty cl parameter"); // maybe just leave the state empty
+	if(cl.count() == 1)
+	{	// optimize: just copy
+		*this = cl.first();
+		return;
+	}
 	DBGG("-\tmerging with " << cl.count() << " state(s).")
 	// resetting stuff
 	generated_preds.clear();
@@ -169,7 +175,6 @@ template <class C> void Analysis::State::merge(const C& cl)
 	labelled_preds.clear();
 	SLList<ConstantVariables> cvl;
 	// intialize to first element
-	ASSERTP(!cl.isEmpty(), "call to Analysis::State::merge with empty cl parameter"); // maybe just leave the state empty
 	// TODOv2: need to do something here to either
 	//	* propagate a bottom state but that means we have to carefully merge it when it's in a list of states
 	//	* give feedback that we should propagate an empty list of states (to notify of the "bottom only" state)
@@ -215,6 +220,17 @@ template <class C> Vector<DetailedPath> Analysis::State::stateListToPathVector(c
 	for(typename C::Iterator iter(cl); iter; iter++)
 		rtn.add(iter->getDetailedPath());
 	return rtn;
+}
+
+template<template< class _ > class C>
+void Analysis::purgeBottomStates(C<Analysis::State>& sc) const
+{
+	for(typename C<Analysis::State>::MutableIterator i(sc); i; )
+	{
+		if(i.item().isBottom())
+			sc.remove(i);
+		else i++;
+	}
 }
 
 #endif

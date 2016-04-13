@@ -107,7 +107,7 @@ SLList<LabelledPredicate> Analysis::State::labelPredicateList(const SLList<Label
 io::Output& Analysis::State::print(io::Output& out) const
 {
 	// out << ":" << labelled_preds << "/" << constants;
-	if(isBottom())
+	if(!isBottom())
 		// return (out << getPathString()); // TODO!
 		return (out << path);
 	else

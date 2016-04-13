@@ -3,6 +3,7 @@
  */
 
 #include "analysis_state.h"
+#include "cfg_features.h"
 #include <otawa/cfg/Edge.h>
 
 /**
@@ -54,7 +55,7 @@ void Analysis::wl_push(Block* b)
 	if(b->isCall()) 
 		b = b->toSynth()->callee()->entry(); // call becomes callee entry
 	if(b->isExit())
-		b = getCaller(b); // exit becomes caller (remains exit if no caller)
+		b = getCaller(b, b); // exit becomes caller (remains exit if no caller)
 	if(!wl.contains(b))
 	{
 		wl.push(b);
@@ -173,45 +174,6 @@ Vector<Edge*> Analysis::outsWithoutUnallowedExits(Block* b)
 			DBGG("\t\t  ->" << i->target())
 	}
 	return rtn;
-}
-
-/**
- * Option<Block*> Analysis::getCaller(CFG* cfg);
- * @brief return unique caller of CFG (none if no caller exists) in virtualized scenario
- */
-Option<Block*> Analysis::getCaller(CFG* cfg)
-{
-	CFG::CallerIter citer(cfg->callers());
-	if(citer)
-	{
-		// Block::EdgeIter caller_exit_edges_iter(citer->outs());
-		// ASSERTP(caller_exit_edges_iter, "must be at least 1 outedge from caller (CFG not virtualized?)")
-		// // PROCESSED_EDGES(*caller_exit_edges_iter) = sl;
-		// Block* rtn = caller_exit_edges_iter->target();
-		// ASSERTP(!(++caller_exit_edges_iter), "must be max 1 outedge from caller (CFG not virtualized?)")
-		Block* rtn = citer;
-		ASSERTP(!(++citer), "must be max. 1 caller (CFG not virtualized?)");
-		return elm::some(rtn);
-	}
-	else // no caller: exiting main CFG
-		return elm::none;
-}
-
-/**
- * get the call SynthBlock of the CFG corresponding to exit 
- * @warning: only works for virtualized CFG
- * @warning: returns parameter exit when no caller exists
- */
-Block* Analysis::getCaller(Block* exit)
-{
-	ASSERT(exit->isExit());
-	if(Option<Block*> rtn = getCaller(exit->cfg()))
-		return *rtn;
-	else // no caller: exiting main CFG
-	{
-		// DBG(color::IGre() << "Reached end of program." << color::RCol());
-		return exit;
-	}
 }
 
 String Analysis::printFixPointStatus(Block* b)

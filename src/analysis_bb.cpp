@@ -1112,6 +1112,7 @@ int Analysis::State::invalidateStackBelow(const Constant& stack_limit)
 // this mindlessly replaces all occurences of var by expr
 bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 {
+	DBG(dumpEverything());
 	bool rtn = false;
 	for(PredIterator piter(*this); piter; )
 	{

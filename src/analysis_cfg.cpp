@@ -10,16 +10,11 @@
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include "analysis_state.h"
+#include "cfg_features.h"
 
 using namespace elm::genstruct;
 using namespace elm::io;
 
-// Identifier<SLList<Analysis::State> >		Analysis::PROCESSED_EDGES("IP analysis processed incoming edges"); //, SLList<State>::null);
-// Identifier<Analysis::State*> 			Analysis::PROCESSED_LOOPHEADER_BB("IP analysis processed loop headers (for fixpoints)");
-// Identifier<bool>			 				Analysis::MOTHERLOOP_FIXPOINT_STATE("IP analysis fixpoint state info on loop exit edges");
-// Identifier<bool>							Analysis::FIXPOINT_REACHED("IP analysis fixpoint state info on loop headers"); // for enable_smt
-// Identifier<Analysis::loopheader_status_t>Analysis::LOOPHEADER_STATUS("On loop headers, status of the fixpoint analysis");
-// Identifier<Analysis::State>				Analysis::LOOPHEADER_STATE("On loop headers, current state we are working on to get a fixpoint");
 Identifier<Vector<Analysis::State> >		Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
 Identifier<Analysis::State>					Analysis::LH_S("Trace on a loop header"); // maybe change to vector
 Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a loop (on a loop header)");
@@ -129,6 +124,7 @@ void Analysis::processCFG(CFG* cfg)
 
 Vector<Analysis::State>& Analysis::I(Block* b, Vector<Analysis::State>& s)
 {
+	purgeBottomStates(s);
 	if(b->isBasic())
 	{
 		DBGG(color::Bold() << "-\tI(b=" /*<< color::NoBold() << color::ICya()*/ << b << /*color::RCol() << color::Bold() <<*/ ") " << color::NoBold() << printFixPointStatus(b))
@@ -143,9 +139,12 @@ Vector<Analysis::State>& Analysis::I(Block* b, Vector<Analysis::State>& s)
 
 Vector<Analysis::State>& Analysis::I(Edge* e, Vector<Analysis::State>& s)
 {
-	DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold())
-	for(Vector<State>::MutableIterator si(s); si; si++)
-		si.item().appendEdge(e, isConditional(e->source()));
+	if(s.isEmpty())
+		DBGG("-\tpropagating bottom state")
+	DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
+	if(! e->source()->isEntry()) // do not process entry: no generated preds and uninteresting edge to add (everything comes from the entry)
+		for(Vector<State>::MutableIterator si(s); si; si++)
+			si.item().appendEdge(e, isConditional(e->source()));
 	return s;
 }
 
@@ -702,7 +701,7 @@ bool Analysis::checkInfeasiblePathValidity(const Vector<Analysis::State>& sv, co
  * @param full_path Full path it originates from (must include ip)
  * @param last_edge Edge to add at the end of full_path
  */
-void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& full_path, Vector<DetailedPath>& infeasible_paths)
+/*void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& full_path, Vector<DetailedPath>& infeasible_paths)
 {
 	DetailedPath detailed_ip;
 	// parse the detailed path and add all the edges that match the Path ip and the loop entries
@@ -716,12 +715,10 @@ void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& f
 		else
 			detailed_ip.addLast(*full_path_iter);
 	}
-#ifdef DBGG
 	DBG("addDisorderedInfeasiblePath(...), ip=" << pathToString(ip) << ", " 
-		<< color::ICya() << "full_path=[" << full_path << "]" << color::RCol() << ", result=" << detailed_ip); // TODO!
-#endif
+		<< color::ICya() << "full_path=[" << full_path << "]" << color::RCol() << ", result=" << detailed_ip);
 	addDetailedInfeasiblePath(detailed_ip, infeasible_paths);
-}
+}*/
 
 void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<DetailedPath>& infeasible_paths)
 {

@@ -66,6 +66,8 @@ protected:
 	static void addDetailedInfeasiblePath(const DetailedPath& infeasible_path, Vector<DetailedPath>& infeasible_paths);
 	static bool isSubPath(const OrderedPath& included_path, const Path& path_set);
 	static void onAnyInfeasiblePath();
+	template<template< class _ > class C>
+		void purgeBottomStates(C<Analysis::State>& sc) const;
 
 	inline static loopheader_status_t loopStatus(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
 	static Block* insAlias		   (Block* b);
@@ -75,8 +77,8 @@ protected:
 	static Vector<Edge*> nonBackIns(Block* h);
 	static Vector<Edge*> outsWithoutUnallowedExits(Block* b);
 	static bool isAllowedExit(Edge* exit_edge);
-	static Option<Block*> getCaller(CFG* cfg);
-	static Block* getCaller(Block* exit);
+	// static Option<Block*> getCaller(CFG* cfg);
+	// static Block* getCaller(Block* exit);
 	static elm::String printFixPointStatus(Block* b);
 
 	static Identifier<Vector<Analysis::State> >	EDGE_S; // Trace on an edge

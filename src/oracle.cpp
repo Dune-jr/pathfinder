@@ -3,8 +3,9 @@
  */
 
 // #include <elm/sys/Thread.h> // multithreading
-#include "oracle.h"
 #include "analysis_state.h"
+#include "cfg_features.h"
+#include "oracle.h"
 #include "debug.h"
 #ifdef SMT_SOLVER_CVC4
 	#include "cvc4/cvc4_smt.h"
@@ -20,9 +21,10 @@ DefaultAnalysis::DefaultAnalysis(const context_t& context, int state_size_limit,
 Vector<Analysis::State> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) const
 {
 	ASSERTP(ins, "narrowing given empty ingoing edges vector")
-	const Vector<State> v(vectorOfS(ins));
+	Vector<State> v(vectorOfS(ins));
 	if(LOOP_HEADER(ins[0]->target()) || ((flags&MERGE) && v.count() > state_size_limit))
 	{
+		ASSERTP(v, "Loop Header received only bottom state, case not handled yet. The main algorithm will use s[0] so...")
 		State s((Edge*)NULL, context, false); // entry is cleared anyway
 		s.merge(v);
 		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v.count() > 50)
