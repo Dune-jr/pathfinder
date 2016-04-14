@@ -58,7 +58,7 @@ public:
 	// analysis_state.cpp
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
 	elm::String dumpEverything() const;
-	template <class C> void merge(const C& sl);
+	template<template< class _ > class C> void merge(const C<Analysis::State>& cl);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e, bool is_conditional);
 
@@ -160,15 +160,10 @@ private:
  * 
  * @param cl Collection of States to process (accepts SLList, Vector etc.)
  */
-template <class C> void Analysis::State::merge(const C& cl)
+template<template< class _ > class C> void Analysis::State::merge(const C<Analysis::State>& cl)
 {
 	ASSERTP(!cl.isEmpty(), "call to Analysis::State::merge with empty cl parameter"); // maybe just leave the state empty
-	if(cl.count() == 1)
-	{	// optimize: just copy
-		*this = cl.first();
-		return;
-	}
-	DBGG("-\tmerging with " << cl.count() << " state(s).")
+	DBGG("-\tmerging from " << cl.count() << " state(s).")
 	// resetting stuff
 	generated_preds.clear();
 	generated_preds_taken.clear();
@@ -183,7 +178,7 @@ template <class C> void Analysis::State::merge(const C& cl)
 	for(SLList<LabelledPredicate>::Iterator iter(cl.first().labelled_preds); iter; iter++)
 		labelled_preds += LabelledPredicate(iter->pred(), Path::null);
 	bool first = true;
-	for(typename C::Iterator sl_iter(cl); sl_iter; sl_iter++)
+	for(typename C<State>::Iterator sl_iter(cl); sl_iter; sl_iter++)
 	{
 		if(first) // the first element is s itself, it's useless to merge s with s
 		{

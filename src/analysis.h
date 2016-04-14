@@ -62,7 +62,7 @@ protected:
 	int ip_count, unminimized_ip_count; // written by inherited class
 
 	static bool checkInfeasiblePathValidity(const Vector<State>& sv, const Vector<Option<Path> >& sv_paths, /*const Edge* e,*/ const Path& infeasible_path, elm::String& counterexample);
-	static void addDisorderedInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path, Vector<DetailedPath>& infeasible_paths);
+	static DetailedPath reorderInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path);
 	static void addDetailedInfeasiblePath(const DetailedPath& infeasible_path, Vector<DetailedPath>& infeasible_paths);
 	static bool isSubPath(const OrderedPath& included_path, const Path& path_set);
 	static void onAnyInfeasiblePath();
@@ -82,8 +82,8 @@ protected:
 	static elm::String printFixPointStatus(Block* b);
 
 	static Identifier<Vector<Analysis::State> >	EDGE_S; // Trace on an edge
-private:
 	static Identifier<Analysis::State>			LH_S; // Trace on a loop header
+private:
 	static Identifier<loopheader_status_t>		LH_STATUS; // Fixpt status of a loop header
 	// static Identifier<bool>					MOTHERLOOP_FIXPOINT_STATE;
 	// static Identifier<bool>					FIXPOINT_REACHED;
@@ -101,23 +101,15 @@ private:
 	void debugProgress(int block_id, bool enable_smt) const;
 	Analysis::State topState(Block* entry) const;
 	void wl_push(Block* b);
+	void printResults(int exec_time_ms) const;
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
 	Vector<State>& I(Block* b, Vector<State>& s);
-	Vector<State>& I(Edge* e, Vector<State>& s);
-	// int processBB(BasicBlock *bb, State& s);
-	// void processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt);
-	// void processLoopHeader(Block* b, SLList<Analysis::State>& sl);
-	// void stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional);
-	// void purgeStateList(SLList<Analysis::State>& sl) const;
-	// bool mergeOversizedStateList(SLList<Analysis::State>& sl) const;
-	// void placeboProcessCFG(/*CFG* cfg*/) const;
-	void printResults(int exec_time_ms) const;
+	Vector<State> I(Edge* e, const Vector<State>& s);
 	void printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const;
 	void removeDuplicateInfeasiblePaths();
 	void onPathEnd();
-	// bool isAHandledEdgeKind(Edge::kind_t kind) const;
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	bool isConditional(Block* b) const;
 	// void cleanIncomingEdges(Block* b) const;

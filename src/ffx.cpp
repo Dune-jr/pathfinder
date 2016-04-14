@@ -51,11 +51,12 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		}
 		else if(iter->isLoopExit())
 		{
-			if(open_tags.isEmpty()) {
+			ASSERT(false)
+			/*if(open_tags.isEmpty()) {
 				elm::cout << "WARNING: </loop> found when no context is open" << endl;
-				continue; // TODO!!! we should fix this LEx that doesn't have a previous LEn, that's a bug...
+				continue; // TODO! we should fix this LEx that doesn't have a previous LEn, that's a bug...
 			}
-			/*ASSERTP(open_tags.first() == FFX_TAG_LOOP, "</loop> found when not directly in loop context");*/
+			//ASSERTP(open_tags.first() == FFX_TAG_LOOP, "</loop> found when not directly in loop context");
 			while(open_tags.first() != FFX_TAG_LOOP)
 			{
 				FFXFile << indent(-1) << "</call>" << endl;
@@ -66,7 +67,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				FFXFile << indent(-1) << "</loop> <!-- loop " << loop_header->index() << "-->" << endl;
 			else
 				FFXFile << indent(-1) << "</loop>" << endl;
-			open_tags.removeFirst();
+			open_tags.removeFirst();*/
 		}
 #ifdef v1
 		else if(iter->isCall())

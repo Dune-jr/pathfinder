@@ -2,11 +2,6 @@
  * Macro analysis: skeleton of the analysis algorithm, defines the way we parse the CFG 
  */
 
-#include <ctime>
-#include <cmath>
-#include <iostream> // std::cout
-#include <iomanip> // std::setprecision
-#include <elm/io/Output.h>
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include "analysis_state.h"
@@ -108,7 +103,7 @@ void Analysis::processCFG(CFG* cfg)
 			for(Vector<Edge*>::Iterator e(succ); e; e++)
 			{
 				/* s_e ← I*[e](s) */
-				EDGE_S(e) = I(e, s); // temporary: convert Vector to SLList
+				EDGE_S(e) = I(e, s);
 				// EDGE_S.exists(e) ? EDGE_S.ref(e).clear() : EDGE_S.set(e, SLList<State>::null);
 				// EDGE_S.ref(e).addAll(I(e, s));
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
@@ -137,15 +132,16 @@ Vector<Analysis::State>& Analysis::I(Block* b, Vector<Analysis::State>& s)
 	return s;
 }
 
-Vector<Analysis::State>& Analysis::I(Edge* e, Vector<Analysis::State>& s)
+Vector<Analysis::State> Analysis::I(Edge* e, const Vector<Analysis::State>& s)
 {
 	if(s.isEmpty())
 		DBGG("-\tpropagating bottom state")
 	DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
+	Vector<State> rtns(s);
 	if(! e->source()->isEntry()) // do not process entry: no generated preds and uninteresting edge to add (everything comes from the entry)
-		for(Vector<State>::MutableIterator si(s); si; si++)
-			si.item().appendEdge(e, isConditional(e->source()));
-	return s;
+		for(Vector<State>::MutableIterator rtnsi(rtns); rtnsi; rtnsi++)
+			rtnsi.item().appendEdge(e, isConditional(e->source()));
+	return rtns;
 }
 
 #if 0
@@ -695,30 +691,29 @@ bool Analysis::checkInfeasiblePathValidity(const Vector<Analysis::State>& sv, co
 }
 
 /**
- * @brief Reorder the infeasible path then add it to the list of paths (no unicity check)
+ * @brief Reorder the infeasible path ip using the order path full_path
  * 
  * @param ip Infeasible path to add
  * @param full_path Full path it originates from (must include ip)
- * @param last_edge Edge to add at the end of full_path
  */
-/*void Analysis::addDisorderedInfeasiblePath(const Path& ip, const DetailedPath& full_path, Vector<DetailedPath>& infeasible_paths)
+DetailedPath Analysis::reorderInfeasiblePath(const Path& ip, const DetailedPath& full_path)
 {
-	DetailedPath detailed_ip;
+	DetailedPath ordered_ip;
 	// parse the detailed path and add all the edges that match the Path ip and the loop entries
 	for(DetailedPath::Iterator full_path_iter(full_path); full_path_iter; full_path_iter++)
 	{
 		if(full_path_iter->isEdge())
 		{
 			if(ip.contains(full_path_iter->getEdge()))
-				detailed_ip.addLast(*full_path_iter);
+				ordered_ip.addLast(*full_path_iter);
 		}
 		else
-			detailed_ip.addLast(*full_path_iter);
+			ordered_ip.addLast(*full_path_iter);
 	}
-	DBG("addDisorderedInfeasiblePath(...), ip=" << pathToString(ip) << ", " 
-		<< color::ICya() << "full_path=[" << full_path << "]" << color::RCol() << ", result=" << detailed_ip);
-	addDetailedInfeasiblePath(detailed_ip, infeasible_paths);
-}*/
+	DBG("reorderInfeasiblePath(...), ip=" << pathToString(ip) << ", " << color::ICya() << "full_path=[" << full_path << "]" 
+		<< color::RCol() << ", result=" << ordered_ip);
+	return ordered_ip;
+}
 
 void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<DetailedPath>& infeasible_paths)
 {
@@ -730,63 +725,10 @@ void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<Detailed
 		new_ip.addEnclosingLoop(*i);
 	// optimize by removing redundancies
 	new_ip.optimize();
-	infeasible_paths.add(new_ip);
-}
-
-/**
- * @brief Print results after a CFG analysis completes
- * 
- * @param exec_time_ms Measured execution time of the analysis (in ms)
- */
-void Analysis::printResults(int exec_time_ms) const
-{
-	if(dbg_verbose == DBG_VERBOSE_NONE)
-		return;
-	int infeasible_paths_count = infeasible_paths.count();
-	if(dbg_flags&DBG_NO_TIME)
-		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: ")
+	if(!infeasible_paths.contains(new_ip))
+		infeasible_paths.add(new_ip);
 	else
-		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
-			<< "(" << (exec_time_ms>=1000 ? ((float)exec_time_ms)/(float(100)) : exec_time_ms) << (exec_time_ms>=1000 ? "s" : "ms") << ")")
-	for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
-	{
-		if(dbg_verbose == DBG_VERBOSE_ALL)
-			DBG(color::IGre() << "    * [" << *iter << "]")
-		else if(dbg_verbose < DBG_VERBOSE_NONE)
-			cout << "    * [" << *iter << "]" << endl;
-	}
-	if(dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_NONE)
-	{
-		cout << color::BIGre() << infeasible_paths_count << color::RCol() << " infeasible path(s) found.";
-		if(!(dbg_flags&DBG_NO_TIME))
-		{
-		    std::ios_base::fmtflags oldflags = std::cout.flags();
-		    std::streamsize oldprecision = std::cout.precision();
-			std::cout << std::fixed << std::setprecision(3) << color::IYel().chars() << " (" << ((float)exec_time_ms)/1000.f << "s)" << color::RCol().chars() << std::endl;
-		    std::cout.flags(oldflags);
-		    std::cout.precision(oldprecision);
-		}
-		else
-			cout << endl;
-	}
-	cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << infeasible_paths_count-unminimized_ip_count << color::RCol() <<
-			"+" << color::Yel() << unminimized_ip_count << color::RCol() << " => " << color::IRed() << ip_count << color::RCol() << endl;
-	if(dbg_flags&DBG_AVG_IP_LENGTH && infeasible_paths_count > 0)
-	{
-		int sum_path_lengths = 0, squaredsum_path_lengths = 0;
-		for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
-		{
-			sum_path_lengths += iter->countEdges();
-			squaredsum_path_lengths += iter->countEdges() * iter->countEdges();
-		}
-		float average_length = (float)sum_path_lengths / (float)infeasible_paths_count;
-		float norm2 = sqrt((float)squaredsum_path_lengths / (float)infeasible_paths_count);
-	    std::ios_base::fmtflags oldflags = std::cout.flags();
-	    std::streamsize oldprecision = std::cout.precision();
-		std::cout << std::fixed << std::setprecision(2) << " (Average: " << average_length << ", Norm2: " << norm2 << ")" << endl;
-		std::cout.flags(oldflags);
-		std::cout.precision(oldprecision);
-	}
+		DBG("not adding redundant IP: " << new_ip)
 }
 
 void Analysis::printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const
@@ -948,85 +890,3 @@ bool Analysis::allIncomingEdgesAreAnnotated(Block* block, const Identifier<SLLis
  * that is if 'included_path' includes all the edges in the Edge set of path_set, except for e
  * @return true if it is a subpath
 */
-bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set)
-{
-	for(Path::Iterator iter(path_set); iter; iter++)
-		if(!included_path.contains(*iter))
-			return false;
-	return true;
-}
-
-elm::String Analysis::wlToString() const
-{
-	elm::String rtn = "[";
-	bool first = true;
-	for(Vector<Block*>::Iterator iter(wl); iter; iter++)
-	{
-		if(first) first = false; else
-			rtn = rtn.concat((CString)", ");
-		// rtn = _ << rtn << (*iter)->id();
-		rtn = _ << rtn << (*iter)->cfg() << ":" << (*iter)->index();
-	}
-	rtn = rtn.concat((CString)"]");
-	return rtn;
-}
-
-/**
- * @brief Get pretty printing for any unordered Path (Set of Edge*)
- * 
- * @param path Path to parse
- * @return String representing the path
- */
-elm::String Analysis::pathToString(const Path& path)
-{
-	elm::String str = "[";
-	bool first = true;
-	for(Analysis::Path::Iterator iter(path); iter; iter++)
-	{
-		if(first)
-			first = false;
-		else
-			str = str.concat(_ << ", ");
-		str = str.concat(_ << (*iter)->source()->cfg() << ":" << (*iter)->source()->index() << "->" << (*iter)->target()->cfg() << ":" << (*iter)->target()->index());
-	}
-	str = str.concat(_ << "]");
-	return str;
-}
-
-/**
- * @brief Get pretty printing for any OrderedPath (SLList of Edge*)
- * 
- * @param path OrderedPath to parse
- * @return String representing the path
- */
-elm::String Analysis::orderedPathToString(const OrderedPath& path)
-{
-	elm::String str;
-	bool first = true;
-	int lastid = 0; // -Wmaybe-uninitialized
-	for(OrderedPath::Iterator iter(path); iter; iter++)
-	{
-		// if(!first && (*iter)->source()->index() != lastid)
-		// {
-		// 	DBG("str=" << str)
-		// 	DBG("lastid=" << lastid << ", (*iter)->source->index()=" << (*iter))
-		// }
-		// when path is x->y and y'->z, there must be y=y'
-		ASSERTP(first || (*iter)->source()->index() == lastid, "OrderedPath previous target and current source do not match! ex: 1->2, 2->4, 3->5");
-		if(first)
-		{
-#			ifndef NO_UTF8
-				if((*iter)->source()->index() == 0)
-					str = _ << "ε";
-				else
-#			endif
-				str = _ << (*iter)->source()->index();
-			first = false;
-		}
-		str = _ << str << "->" << (*iter)->target()->index();
-		lastid = (*iter)->target()->index();
-	}
-	if(str.isEmpty())
-		return "(empty)";
-	return str;
-}

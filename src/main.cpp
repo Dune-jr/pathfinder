@@ -99,18 +99,17 @@ protected:
 		DefaultAnalysis analysis({inital_state, sp_id, max_tempvars, max_registers}, merge_frequency, analysis_flags);
 		analysis.run(cfg);
 		
-		/*
+		
 		// outputing to .ffx
 		if(opt_output)
 		{
 			const Vector<DetailedPath>& infeasible_paths = analysis.infeasiblePaths();
 			FFX ffx_output(infeasible_paths);
-			const elm::String name = entry + ".ffx"; // TODO: use args= arguments();
+			const elm::String name = entry + "_ips.ffx"; // TODO: use args= arguments();
 			ffx_output.output(elm::String(entry), name);
 			if(dbg_verbose < DBG_VERBOSE_NONE)
 				cout << "output to " + name << endl;
 		}
-		//*/
 	}
 
 private:

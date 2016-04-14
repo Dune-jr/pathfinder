@@ -22,15 +22,18 @@ Vector<Analysis::State> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) con
 {
 	ASSERTP(ins, "narrowing given empty ingoing edges vector")
 	Vector<State> v(vectorOfS(ins));
-	if(LOOP_HEADER(ins[0]->target()) || ((flags&MERGE) && v.count() > state_size_limit))
+	Block* b = ins[0]->target();
+	if(LOOP_HEADER(b) || ((flags&MERGE) && v.count() > state_size_limit))
 	{
+		if(LOOP_HEADER(b) && LH_S.exists(b))
+			v.push(LH_S(b));	
 		ASSERTP(v, "Loop Header received only bottom state, case not handled yet. The main algorithm will use s[0] so...")
 		State s((Edge*)NULL, context, false); // entry is cleared anyway
 		s.merge(v);
-		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v.count() > 50)
-			cout << " " << v.count() << " states merged into 1 (from " << ins.count() << " ins)." << endl;
 		Vector<State> rtnv(1);
 		rtnv.push(s);
+		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v.count() > 50)
+			cout << " " << v.count() << " states merged into 1 (from " << ins.count() << " ins)." << endl;
 		return rtnv;
 	}
 	else
@@ -93,8 +96,8 @@ void DefaultAnalysis::ipcheck(elm::genstruct::Vector<Analysis::State>& sv, elm::
 			ip_count++;
 			if(valid)
 			{
-				addDisorderedInfeasiblePath(ip, s.getDetailedPath(), infeasible_paths); // infeasible_paths += order(ip); to output proprer ffx!
-				DBG(color::On_IRed() << "Inf. path found: " << pathToString(ip))
+				addDetailedInfeasiblePath(reorderInfeasiblePath(ip, s.getDetailedPath()), infeasible_paths); // infeasible_paths += order(ip); to output proprer ffx!
+				DBG(color::On_IRed() << "Inf. path found: " << reorderInfeasiblePath(ip, s.getDetailedPath()))
 			}
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
 			{

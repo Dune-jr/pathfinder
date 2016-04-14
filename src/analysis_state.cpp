@@ -203,7 +203,7 @@ elm::String Analysis::State::dumpEverything() const
 		<< "  * SLList<LabelledPredicate> labelled_preds=" << labelled_preds << endl
 		<< "  * SLList<LabelledPredicate> generated_preds=" << generated_preds << endl
 		// << "  * SLList<LabelledPredicate> generated_preds_taken=" << generated_preds_taken << endl
-		<< "--- END OF DUMP ---" << endl;
+		<< "\t--- END OF DUMP ---";
 }
 
 // this is not Leibniz equality, but a test to check for a fixpoint!
@@ -237,5 +237,6 @@ bool Analysis::State::equiv(const Analysis::State& s) const
 			return false;
 	}
 	DBGG("-	" << color::IGre() << "FIXPOINT!")
+	DBG(s.dumpEverything())
 	return true;
 }

@@ -580,8 +580,6 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						}
 						else // d <- d*b >>32
 						{	// [d/b / d] // we will have to assume that 0/0 is scratch!
-							DBG(color::BIRed() << "Untested case of operator MULH running!")
-							ASSERT(!UNTESTED_CRITICAL);
 							invalidateVar(d, KEEP_CONSTANT_INFO);
 							if(isConstant(d))
 							{
@@ -589,6 +587,8 @@ void Analysis::State::processBB(const BasicBlock *bb)
 									constants.set(d, (t::int64(constants[d].val())*t::int64(constants[b].val()))>>32, getLabels(d, b));
 								else
 								{
+									DBG(color::BIRed() << "Untested case of operator MULH running!")
+									ASSERT(!UNTESTED_CRITICAL);
 									opd1 = new OperandVar(d);
 									opd2 = new OperandArithExpr(ARITHOPR_MULH, OperandConst(constants[d]), OperandVar(b));
 									make_pred = true;

@@ -22,6 +22,10 @@ void addIndents(elm::io::Output& out, int n)
 	#define UTF8_Block_start_delim "<"
 	#define UTF8_Block_end_delim ">"
 #endif
+
+/**
+  * Custom pretty printing of otawa::Block
+  */
 Output& otawa::operator<<(Output& out, otawa::Block* b)
 {
 	if(b->isBasic())

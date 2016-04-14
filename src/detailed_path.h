@@ -50,6 +50,7 @@ public:
 	SLList<Edge*> toOrderedPath() const;
 	elm::String toString(bool colored = true) const;
 	inline const SLList<FlowInfo>& path() const { return _path; }
+	inline bool operator==(const DetailedPath& dp) const { return _path == dp._path; }
 	inline const DetailedPath* operator->(void) const { return this; }
 	friend io::Output& operator<<(io::Output& out, const DetailedPath& dp) { return dp.print(out); }
 
@@ -83,13 +84,14 @@ public:
 		friend io::Output& operator<<(io::Output& out, const FlowInfo& fi) { return fi.print(out); }
 
 	private:
-		kind_t _kind;
-		void* _identifier; // BasicBlock*, Edge*
 		inline bool isBasicBlockKind(kind_t kind) const
 			{ return (kind == KIND_LOOP_ENTRY) || (kind == KIND_LOOP_EXIT) || (kind == KIND_RETURN); }
 		inline bool isEdgeKind(kind_t kind) const
 			{ return (kind == KIND_EDGE) || (kind == KIND_CALL); }
 		io::Output& print(io::Output& out) const;
+
+		kind_t _kind;
+		void* _identifier; // BasicBlock*, Edge*
 	}; // FlowInfo class
 
 
@@ -145,12 +147,12 @@ public:
 	*/
 
 private:
-	SLList<FlowInfo> _path;
-	
 	void removeDuplicates();
 	void removeAntagonists();
 	void removeCallsAtEndOfPath();
 	io::Output& print(io::Output& out) const;
+	
+	SLList<FlowInfo> _path;
 }; // DetailedPath class
 
 #endif

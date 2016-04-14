@@ -2,9 +2,13 @@
  * General analysis methods
  */
 
+#include <ctime> // clock
+#include <cmath> // sqrt
+#include <iostream> // std::cout
+#include <iomanip> // std::setprecision
+#include <otawa/cfg/Edge.h>
 #include "analysis_state.h"
 #include "cfg_features.h"
-#include <otawa/cfg/Edge.h>
 
 /**
  * @class Analysis
@@ -21,7 +25,9 @@ Analysis::Analysis(const context_t& context, int state_size_limit, int flags)
 const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 {
 	bb_count = cfg->count()-1; // do not count ENTRY
+	std::time_t timestamp = clock();
 	processCFG(cfg);
+	printResults((clock()-timestamp)*1000/CLOCKS_PER_SEC);
 	return infeasiblePaths();
 }
 
@@ -92,6 +98,7 @@ Vector<Edge*> Analysis::allIns(Block* h)
 		rtn.push(*i);
 	if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) cout << endl;
 	DBGG("-" << color::ICya() << h << color::RCol() << " " << printFixPointStatus(h))
+	DBG("collecting allIns...")
 	return rtn;
 }
 /**
@@ -107,6 +114,7 @@ Vector<Edge*> Analysis::backIns(Block* h)
 			rtn.push(*i);
 	if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) cout << endl;
 	DBGG("-" << color::ICya() << h << color::RCol() << " " << printFixPointStatus(h))
+	DBG("collecting backIns...")
 	return rtn;
 }
 /**
@@ -122,6 +130,7 @@ Vector<Edge*> Analysis::nonBackIns(Block* h)
 			rtn.push(*i);
 	if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) cout << endl;
 	DBGG("-" << color::ICya() << h << color::RCol() << " " << printFixPointStatus(h))
+	DBG("collecting nonBackIns...")
 	return rtn;
 }
 
@@ -195,4 +204,141 @@ String Analysis::printFixPointStatus(Block* b)
 		}
 	}
 	return rtn + color::RCol() + "]";
+}
+
+/**
+  * @fn Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set);
+  * @brief check if path_set contains included_path
+  */
+bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set) 
+{
+	for(Path::Iterator iter(path_set); iter; iter++)
+		if(!included_path.contains(*iter))
+			return false;
+	return true;
+}
+
+elm::String Analysis::wlToString() const
+{
+	elm::String rtn = "[";
+	bool first = true;
+	for(Vector<Block*>::Iterator iter(wl); iter; iter++)
+	{
+		if(first) first = false; else
+			rtn = rtn.concat((CString)", ");
+		// rtn = _ << rtn << (*iter)->id();
+		rtn = _ << rtn << (*iter)->cfg() << ":" << (*iter)->index();
+	}
+	rtn = rtn.concat((CString)"]");
+	return rtn;
+}
+
+/**
+ * @brief Get pretty printing for any unordered Path (Set of Edge*)
+ * 
+ * @param path Path to parse
+ * @return String representing the path
+ */
+elm::String Analysis::pathToString(const Path& path)
+{
+	elm::String str = "[";
+	bool first = true;
+	for(Analysis::Path::Iterator iter(path); iter; iter++)
+	{
+		if(first)
+			first = false;
+		else
+			str = str.concat(_ << ", ");
+		str = str.concat(_ << (*iter)->source()->cfg() << ":" << (*iter)->source()->index() << "->" << (*iter)->target()->cfg() << ":" << (*iter)->target()->index());
+	}
+	str = str.concat(_ << "]");
+	return str;
+}
+
+/**
+ * @brief Get pretty printing for any OrderedPath (SLList of Edge*)
+ * 
+ * @param path OrderedPath to parse
+ * @return String representing the path
+ */
+elm::String Analysis::orderedPathToString(const OrderedPath& path)
+{
+	elm::String str;
+	bool first = true;
+	int lastid = 0; // -Wmaybe-uninitialized
+	for(OrderedPath::Iterator iter(path); iter; iter++)
+	{
+		ASSERTP(first || (*iter)->source()->index() == lastid, "OrderedPath previous target and current source do not match! ex: 1->2, 2->4, 3->5");
+		if(first)
+		{
+#ifndef NO_UTF8
+			if((*iter)->source()->index() == 0)
+				str = _ << "ε";
+			else
+#endif
+				str = _ << (*iter)->source()->index();
+			first = false;
+		}
+		str = _ << str << "->" << (*iter)->target()->index();
+		lastid = (*iter)->target()->index();
+	}
+	if(str.isEmpty())
+		return "(empty)";
+	return str;
+}
+
+/**
+ * @brief Print results after a CFG analysis completes
+ * 
+ * @param exec_time_ms Measured execution time of the analysis (in ms)
+ */
+void Analysis::printResults(int exec_time_ms) const
+{
+	if(dbg_verbose == DBG_VERBOSE_NONE)
+		return;
+	int infeasible_paths_count = infeasible_paths.count();
+	if(dbg_flags&DBG_NO_TIME)
+		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: ")
+	else
+		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
+			<< "(" << (exec_time_ms>=1000 ? ((float)exec_time_ms)/(float(100)) : exec_time_ms) << (exec_time_ms>=1000 ? "s" : "ms") << ")")
+	for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
+	{
+		if(dbg_verbose == DBG_VERBOSE_ALL)
+			DBG(color::IGre() << "    * [" << *iter << "]")
+		else if(dbg_verbose < DBG_VERBOSE_NONE)
+			cout << "    * [" << *iter << "]" << endl;
+	}
+	if(dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_NONE)
+	{
+		cout << color::BIGre() << infeasible_paths_count << color::RCol() << " infeasible path(s) found.";
+		if(!(dbg_flags&DBG_NO_TIME))
+		{
+		    std::ios_base::fmtflags oldflags = std::cout.flags();
+		    std::streamsize oldprecision = std::cout.precision();
+			std::cout << std::fixed << std::setprecision(3) << color::IYel().chars() << " (" << ((float)exec_time_ms)/1000.f << "s)" << color::RCol().chars() << std::endl;
+		    std::cout.flags(oldflags);
+		    std::cout.precision(oldprecision);
+		}
+		else
+			cout << endl;
+	}
+	cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << infeasible_paths_count-unminimized_ip_count << color::RCol() <<
+			"+" << color::Yel() << unminimized_ip_count << color::RCol() << " => " << color::IRed() << ip_count << color::RCol() << endl;
+	if(dbg_flags&DBG_AVG_IP_LENGTH && infeasible_paths_count > 0)
+	{
+		int sum_path_lengths = 0, squaredsum_path_lengths = 0;
+		for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
+		{
+			sum_path_lengths += iter->countEdges();
+			squaredsum_path_lengths += iter->countEdges() * iter->countEdges();
+		}
+		float average_length = (float)sum_path_lengths / (float)infeasible_paths_count;
+		float norm2 = sqrt((float)squaredsum_path_lengths / (float)infeasible_paths_count);
+	    std::ios_base::fmtflags oldflags = std::cout.flags();
+	    std::streamsize oldprecision = std::cout.precision();
+		std::cout << std::fixed << std::setprecision(2) << " (Average: " << average_length << ", Norm2: " << norm2 << ")" << endl;
+		std::cout.flags(oldflags);
+		std::cout.precision(oldprecision);
+	}
 }
