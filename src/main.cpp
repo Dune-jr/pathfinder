@@ -28,7 +28,7 @@ public:
 		opt_s1(option::SwitchOption::Make(*this).cmd("-s").cmd("--s1").cmd("--silent").description("run with minimal output")),
 		opt_s2(option::SwitchOption::Make(*this).cmd("--s2").description("only display results")),
 		opt_s3(option::SwitchOption::Make(*this).cmd("--s3").cmd("--fullsilent").description("run with zero output")),
-		opt_output(option::SwitchOption::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file")),
+		opt_output(option::SwitchOption::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file")),		opt_graph_output(option::SwitchOption::Make(*this).cmd("-g").cmd("--graph-output").description("also output as a gnuplot .tsv graph file")),
 		opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").cmd("--no-colors").description("do not use colors")),
 		opt_src_info(option::SwitchOption::Make(*this).cmd("-i").cmd("--src-info").description("print file/line number info")),
 		opt_nolinenumbers(option::SwitchOption::Make(*this).cmd("--nl").cmd("--no-line-nb").description("do not number lines of the output")),
@@ -98,23 +98,27 @@ protected:
 			analysis_flags |= Analysis::FOLLOW_CALLS;
 		DefaultAnalysis analysis({inital_state, sp_id, max_tempvars, max_registers}, merge_frequency, analysis_flags);
 		analysis.run(cfg);
-		
-		
+
 		// outputing to .ffx
 		if(opt_output)
 		{
 			const Vector<DetailedPath>& infeasible_paths = analysis.infeasiblePaths();
 			FFX ffx_output(infeasible_paths);
 			const elm::String name = entry + "_ips.ffx"; // TODO: use args= arguments();
-			ffx_output.output(elm::String(entry), name);
+			const elm::String gname = opt_graph_output ? entry + "_ips.tsv" : "";
+			ffx_output.output(elm::String(entry), name, gname);
 			if(dbg_verbose < DBG_VERBOSE_NONE)
+			{
 				cout << "output to " + name << endl;
+				if(opt_graph_output)
+					cout << "graph output to " + gname << endl;
+			}
 		}
 	}
 
 private:
 	// option::Manager manager;
-	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_notime,// opt_nopred, 
+	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_notime,// opt_nopred, 
 		opt_noflowinfo, opt_progress, opt_preanalysis, opt_avgiplength, opt_nounminimized, opt_dry, opt_automerge; //, opt_virtualize;
 	option::ValueOption<bool> opt_virtualize;
 	option::ValueOption<int> opt_merge;

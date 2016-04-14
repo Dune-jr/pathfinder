@@ -1,10 +1,11 @@
 #include "ffx.h"
+#include "pretty_printing.h"
 
 // TODO! do so that when there is NO LEx after a LEn, we use iteration=*
 FFX::FFX(const Vector<DetailedPath>& ips) : infeasible_paths(ips), indent_level(0) { }
-void FFX::output(const elm::String& function_name, const elm::String& filename)
+void FFX::output(const elm::String& function_name, const elm::String& ffx_filename, const elm::String& graph_filename)
 {
-	io::OutFileStream FFXStream(filename);
+	io::OutFileStream FFXStream(ffx_filename);
 	io::Output FFXFile(FFXStream);
 
 	// header
@@ -18,6 +19,13 @@ void FFX::output(const elm::String& function_name, const elm::String& filename)
 	// footer
 	FFXFile << indent(-1) << "</function>" << endl;
 	FFXFile << indent(-1) << "</flowfacts>" << endl;
+	
+	if(! graph_filename.isEmpty())
+	{		
+		io::OutFileStream GraphStream(graph_filename);
+		io::Output GraphFile(GraphStream);
+		writeGraph(GraphFile, infeasible_paths);
+	}
 }
 
 void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
@@ -28,18 +36,53 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 	for(DetailedPath::Iterator iter(ip); iter; iter++)
 	{
 		if(iter->isEdge())
-		{	// TODO! test this
+		{
 			const Edge* e = iter->getEdge();
-			ASSERTP(e->source()->isBasic() || e->source()->isCall(), ": source not basic or call: " << e->source() << "->" << e->target());
-			ASSERTP(e->target()->isBasic() || e->target()->isCall(), ": target not basic or call: " << e->source() << "->" << e->target());
-			const BasicBlock* source = e->source()->isBasic() ?
-				e->source()->toBasic() : 
-				e->source()->toSynth()->ins().item()->source()->toBasic(); // source is a call block: replace with caller
-			const BasicBlock* target = e->target()->isBasic() ?
-				e->target()->toBasic() : 
-				e->target()->toSynth()->outs().item()->target()->toBasic(); // target is a call block: replace with callee
+			ASSERTP(e->source()->isBasic() || e->source()->isCall() || e->source()->isExit(), ": source not basic nor call nor exit: " << e->source() << "->" << e->target());
+			ASSERTP(e->target()->isBasic() || e->target()->isCall() || e->target()->isExit(), ": target not basic nor call nor exit: " << e->source() << "->" << e->target());
+			
+			BasicBlock *source, *target;
+			if(e->source()->isBasic())
+				source = e->source()->toBasic();
+			else if(e->source()->isSynth())
+			{
+				ASSERT(e->source()->isCall()) // otherwise would be virtual...
+				ASSERTP(false, "source is caller, we should replace with the exit or better, close a call context")
+				source = e->source()->toSynth()->ins().item()->source()->toBasic(); // source is a call block: replace with caller
+			}
+			else if(e->source()->isExit())
+			{
+				ASSERTP(false, "case requires testing, source is exit... I don't think it's possible?")
+				/*CFG::CallerIter citer(e->source()->cfg()->callers());
+				ASSERTP(citer, "exit from main in IP???");
+				Block::EdgeIter caller_exit_edges_iter(citer->outs());
+				ASSERT(caller_exit_edges_iter);
+				source = (*caller_exit_edges_iter)->target()->toBasic();
+				ASSERT(!(++caller_exit_edges_iter));
+				ASSERTP(!(++citer), "must be at max 1 outedge from caller")*/
+			}
+			if(e->target()->isBasic())
+				target = e->target()->toBasic();
+			else if(e->target()->isSynth())
+			{
+				ASSERT(e->target()->isCall()) // otherwise would be virtual...
+				// target is a call block: replace with callee entry (TODOv2 ffx: temporary! we should add <call> context!)
+				Block* callee_entry_target = e->target()->toSynth()->callee()->entry()->outs().item()->target();
+				ASSERTP(callee_entry_target->isBasic(), "entry does not point to a BasicBlock???")
+				target = callee_entry_target->toBasic();
+			}
+			else if(e->target()->isExit())
+			{
+				CFG::CallerIter citer(e->target()->cfg()->callers());
+				ASSERTP(citer, "exit from main in IP???");
+				Block::EdgeIter caller_exit_edges_iter(citer->outs());
+				ASSERT(caller_exit_edges_iter);
+				target = *caller_exit_edges_iter->target()->toBasic();
+				ASSERT(!(++caller_exit_edges_iter));
+				ASSERTP(!(++citer), "must be at max 1 outedge from caller")
+			}
 			FFXFile << indent(  ) << "<edge src=\"0x" << source->address() << "\" dst=\"0x" <<target->address()
-					<< "\" srcindex=\"" << source->id() << "\" dstindex=\"" << target->id() << "\" />" << endl;
+					<< "\" /> <!-- " << (Block*)source << " -> " << (Block*)target << " -->" << endl;
 		}
 		else if(iter->isLoopEntry())
 		{
@@ -51,8 +94,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		}
 		else if(iter->isLoopExit())
 		{
-			ASSERT(false)
-			/*if(open_tags.isEmpty()) {
+			if(open_tags.isEmpty()) {
 				elm::cout << "WARNING: </loop> found when no context is open" << endl;
 				continue; // TODO! we should fix this LEx that doesn't have a previous LEn, that's a bug...
 			}
@@ -67,7 +109,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				FFXFile << indent(-1) << "</loop> <!-- loop " << loop_header->index() << "-->" << endl;
 			else
 				FFXFile << indent(-1) << "</loop>" << endl;
-			open_tags.removeFirst();*/
+			open_tags.removeFirst();
 		}
 #ifdef v1
 		else if(iter->isCall())
@@ -102,6 +144,29 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		FFXFile << indent(-1) << "</call>" << endl;*/
 	FFXFile << indent(-1) << "</not-all>" << endl;
 }
+
+void FFX::writeGraph(io::Output& GFile, const Vector<DetailedPath>& ips)
+{
+	int max = 0;
+	for(Vector<DetailedPath>::Iterator i(ips); i; i++)
+	{
+		int c = i->countEdges();
+		if(c > max) max = c;
+	}
+	Vector<int> vals(max);
+	for(int i =0; i<max; i++)
+		vals.push(0);
+	GFile << "Length \tCount\n";
+	for(Vector<DetailedPath>::Iterator i(ips); i; i++)
+	{
+		int c = i->countEdges();
+		vals[c-1]++;
+	}
+	int i = 0;
+	for(Vector<int>::Iterator iter(vals); iter; iter++)
+		GFile << ++i << " \t" << *iter << endl; // output 24 1 and so on
+}
+
 
 void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const DetailedPath& ip)
 {
