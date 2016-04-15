@@ -12,6 +12,22 @@ using namespace elm;
  * @class Operand
  * @brief Abstract class for any operand of a Predicate
  */
+/**
+ * @class OperandConst
+ * @brief A constant operand, which can be relative to SP0
+ */
+/**
+ * @class OperandVar
+ * @brief A variable in the program analysis, which can be a register or a temporary variable
+ */
+/**
+ * @class OperandMem
+ * @brief A memory cell, identified by its address (absolute or relative to SP0)
+ */
+/**
+ * @class OperandArithExpr
+ * @brief An operand composed of (an)other operand(s) and a binary or unary operator
+ */
 
 /**
  * @fn Operand* Operand::copy() const;

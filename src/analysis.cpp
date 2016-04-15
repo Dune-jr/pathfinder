@@ -17,15 +17,14 @@
 Analysis::Analysis(const context_t& context, int state_size_limit, int flags)
 	: context(context), state_size_limit(state_size_limit), flags(flags)
 	, ip_count(0), unminimized_ip_count(0)
-	, loop_header_count(0), bb_count(-1)
-{
-	DBG("Stack pointer identified to r" << context.sp)
-}
+	, loop_header_count(0), bb_count(-1) { }
 
 const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 {
 	bb_count = cfg->count()-1; // do not count ENTRY
 	std::time_t timestamp = clock();
+	// DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
+	DBG("Stack pointer identified to " << context.sp)
 	processCFG(cfg);
 	printResults((clock()-timestamp)*1000/CLOCKS_PER_SEC);
 	return infeasiblePaths();
@@ -70,6 +69,13 @@ void Analysis::wl_push(Block* b)
 }
 
 /**
+  * @fn inline static loopheader_status_t Analysis::loopStatus(Block* h);
+  * @brief Give the loop status of a Block
+  * @param h Block to examinate
+  * @rtn The loop status
+  */
+
+/**
  * @fn Block* Analysis::insAlias(Block* b);
  * @brief Substitue a block with the appropriate block to get ingoing edges from
  * @rtn Block to substitute b with (by default, b)
@@ -87,9 +93,10 @@ Block* Analysis::insAlias(Block* b)
 	return b;
 }
 /**
- * @fn static Vector<Edge*> allIns (Block* h);
- * @brief
- * @rtn return the list of edges
+ * @fn static Vector<Edge*> Analysis::allIns (Block* h);
+ * @brief Collect all edges pointing to a block
+ * @param h Block to collect incoming edges from
+ * @rtn return the vector of selected edges
  */
 Vector<Edge*> Analysis::allIns(Block* h)
 {
@@ -102,9 +109,10 @@ Vector<Edge*> Analysis::allIns(Block* h)
 	return rtn;
 }
 /**
- * @fn static Vector<Edge*> backIns(Block* h);
- * @brief
- * @rtn return the list of edges
+ * @fn static Vector<Edge*> Analysis::backIns(Block* h);
+ * @brief Collect all back-edges pointing to a block
+ * @param h Block to collect incoming edges from
+ * @rtn return the vector of selected edges
  */
 Vector<Edge*> Analysis::backIns(Block* h)
 {
@@ -118,9 +126,10 @@ Vector<Edge*> Analysis::backIns(Block* h)
 	return rtn;
 }
 /**
- * @fn static Vector<Edge*> nonBackIns(Block* h);
- * @brief
- * @rtn return the list of edges
+ * @fn static Vector<Edge*> Analysis::nonBackIns(Block* h);
+ * @brief Collect all edges pointing to a block that are not back edges of a loop
+ * @param h Block to collect incoming edges from
+ * @rtn return the vector of selected edges
  */
 Vector<Edge*> Analysis::nonBackIns(Block* h)
 {
@@ -141,7 +150,6 @@ Vector<Edge*> Analysis::nonBackIns(Block* h)
 bool Analysis::isAllowedExit(Edge* exit_edge)
 {
 	Block* outer_lh = LOOP_EXIT_EDGE(exit_edge);
-	//*
 	for(LoopHeaderIter lh(exit_edge->source()); lh; lh++)
 	{
 		if(loopStatus(lh) != LEAVE)
@@ -150,17 +158,6 @@ bool Analysis::isAllowedExit(Edge* exit_edge)
 			break;	
 	}
 	return true;
-	//*/
-	/*
-	Block* lh = LOOP_HEADER(exit_edge->source()) ? exit_edge->source() : ENCLOSING_LOOP_HEADER(exit_edge->source()); // initialize to the inner loop
-	while(ENCLOSING_LOOP_HEADER.exists(lh) && lh != outer_lh) // we will have to iterate one more time, either way
-	{
-		if(loopStatus(lh) != LEAVE)
-			return false;
-		lh = ENCLOSING_LOOP_HEADER(lh); // enclosing loop header should always exist until we reach outer_lh!
-	}
-	return loopStatus(lh) == LEAVE; // do last check
-	//*/
 }
 
 /* for e ∈ outs \ {EX_h | b ∈ L_h ∧ status_h ≠ LEAVE} */
@@ -185,6 +182,11 @@ Vector<Edge*> Analysis::outsWithoutUnallowedExits(Block* b)
 	return rtn;
 }
 
+/**
+ * @brief Short display of the fixpoint status of the current and enclosing loops (including caller CFGs)
+ * @param b The block to process
+ * @rtn The String contain the output
+ */
 String Analysis::printFixPointStatus(Block* b)
 {
 	String rtn = "[";
@@ -206,10 +208,12 @@ String Analysis::printFixPointStatus(Block* b)
 	return rtn + color::RCol() + "]";
 }
 
+
 /**
-  * @fn Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set);
-  * @brief check if path_set contains included_path
-  */
+ * @fn static bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set);
+ * @brief Checks if 'included_path' is a part of the set of paths "path_set", that is if 'included_path' includes all the edges in the Edge set of path_set
+ * @return true if it is a subpath
+*/
 bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set) 
 {
 	for(Path::Iterator iter(path_set); iter; iter++)

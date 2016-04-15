@@ -1,5 +1,9 @@
 #include "labelled_predicate.h"
 
+/**
+ * @class LabelledPredicate
+ * @brief Predicate labelled with a list of CFG Edges
+ */
 LabelledPredicate::LabelledPredicate(const Predicate& pred, const Set<Edge*>& labels)
 	: _pred(pred), _labels(labels) { }
 

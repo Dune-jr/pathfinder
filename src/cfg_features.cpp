@@ -5,6 +5,10 @@
 #include "cfg_features.h"
 
 /**
+ * @class LoopHeaderIter
+ * @brief Iterates on the enclosing loops of a Block, including those of caller CFGs (only works with a virtualized CFG!)
+ */
+/**
  * @brief return unique caller of CFG (none if no caller exists) in virtualized scenario
  */
 Option<Block*> getCaller(CFG* cfg)

@@ -692,7 +692,6 @@ bool Analysis::checkInfeasiblePathValidity(const Vector<Analysis::State>& sv, co
 
 /**
  * @brief Reorder the infeasible path ip using the order path full_path
- * 
  * @param ip Infeasible path to add
  * @param full_path Full path it originates from (must include ip)
  */
@@ -731,23 +730,9 @@ void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<Detailed
 		DBG("not adding redundant IP: " << new_ip)
 }
 
-void Analysis::printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const
-{
-	if(b->isBasic())
-		cout << "[" << progression_percentage << "%] Processing BB  #" << IntFormat(b->id()).width(3) << " (" << b->cfg() << ":" << b->index() << ")";
-	else if(b->isSynth()) {
-		ASSERTP(b->toSynth()->callee(), "CALL TO NULL")
-		cout << color::ICya() << "[" << progression_percentage << "%] Processing CALL#" << IntFormat(b->id()).width(3) << " (->" << b->toSynth()->callee() << ")";
-	}
-	else if(b->isExit())
-		cout << color::IBlu() << "[" << progression_percentage << "%] Processing EXIT#" << IntFormat(b->id()).width(3) << " (" << b->cfg() << "->)";
-	else ASSERT(false);
-	cout << " of " << bb_count << (loop_header?" (loop header)":"") << color::RCol() << endl;
-}
-
 /**
  * @fn void Analysis::removeDuplicateInfeasiblePaths();
- * Look for infeasible paths that share the same ordered list of edges and remove duplicates 
+ * @brief Look for infeasible paths that share the same ordered list of edges and remove duplicates 
  */
 void Analysis::removeDuplicateInfeasiblePaths()
 {
@@ -772,25 +757,32 @@ void Analysis::removeDuplicateInfeasiblePaths()
 	infeasible_paths = new_ips;
 }
 
-/**
- * @fn void Analysis::onPathEnd();
- * Print debugs due on path end
- */
-void Analysis::onPathEnd()
+/*void Analysis::printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const
 {
-	DBG(color::BBla() << color::On_Yel() << "EXIT block reached")
-}
+	if(b->isBasic())
+		cout << "[" << progression_percentage << "%] Processing BB  #" << IntFormat(b->id()).width(3) << " (" << b->cfg() << ":" << b->index() << ")";
+	else if(b->isSynth()) {
+		ASSERTP(b->toSynth()->callee(), "CALL TO NULL")
+		cout << color::ICya() << "[" << progression_percentage << "%] Processing CALL#" << IntFormat(b->id()).width(3) << " (->" << b->toSynth()->callee() << ")";
+	}
+	else if(b->isExit())
+		cout << color::IBlu() << "[" << progression_percentage << "%] Processing EXIT#" << IntFormat(b->id()).width(3) << " (" << b->cfg() << "->)";
+	else ASSERT(false);
+	cout << " of " << bb_count << (loop_header?" (loop header)":"") << color::RCol() << endl;
+}*/
 
 /**
- * @fn void Analysis::onAnyInfeasiblePath();
- * Print debugs due on finding an infeasible path
+ * @fn static void Analysis::onAnyInfeasiblePath();
+ * @brief Debugs to do when detecting any infeasible path
  */
 void Analysis::onAnyInfeasiblePath()
 {
 	DBG(color::BIYel() << "Stopping current path analysis")
 }
 
-// either we find SP in all the paths we merge (and the same SP), either we return elm::none
+/**
+ * @brief either we find SP in all the paths we merge (and the same SP), either we return elm::none
+ */
 Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>& sl) const
 {
 	Option<Constant> rtn = elm::none; // also acts like a bool first = true
@@ -832,61 +824,3 @@ bool Analysis::isConditional(Block* b) const
 	return atLeastOneTaken && (count > 1);*/
 	return b->countOuts() > 1; // TODOv2: test this..
 }
-/*
-bool Analysis::allRequiredInEdgesAreProcessed(Block* block) const
-{
-	if(LOOP_HEADER(block))
-	{
-		if(PROCESSED_LOOPHEADER_BB.exists(block)) // TODO!!! we have to clean these now!... see vincent/edn
-		{
-#ifndef TOREMOVE
-			if(allIncomingNonBackEdgesAreAnnotated(block, PROCESSED_EDGES) && !allIncomingEdgesAreAnnotated(block, PROCESSED_EDGES)) {
-				cout << color::IYel() << "block " << block << ":" << block->cfg() << " has existing PROCESSED_LOOPHEADER_BB (=" << FIXPOINT_REACHED(block) << ") annotation, and some back edges are not annotated" << endl;
-			for(Block::EdgeIter b_ins(block->ins()); b_ins; b_ins++)
-				if(BACK_EDGE(*b_ins))
-					if(!PROCESSED_EDGES.exists(*b_ins))
-						cout << "For example, BACK_EDGE '" << *b_ins << "' is not annotated." << endl;
-#ifndef	NYU_BAD
-			// cout << "we say it's ok to continue even though it's (probably) not" << elm::color::RCol() << endl;
-			// return allIncomingNonBackEdgesAreAnnotated(block, PROCESSED_EDGES); // clean loop: only require for non-backedges to be annotated
-#endif
-			}
-#endif
-			return allIncomingEdgesAreAnnotated(block, PROCESSED_EDGES); // loop we are iterating on: require every in edge to be annotated
-		}
-		else
-			return allIncomingNonBackEdgesAreAnnotated(block, PROCESSED_EDGES); // clean loop: only require for non-backedges to be annotated
-	}
-	else
-		return allIncomingEdgesAreAnnotated(block, PROCESSED_EDGES); // not loop h.: require every in edge to be annotated
-}*/
-
-/**
-	@fn int Analysis::allIncomingNonBackEdgesAreAnnotated(BasicBlock* bb, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
-	Returns true when all incoming non-back edges (look edges) are annotated with the given annotation
-	@param bb BasicBlock to check
-	@param annotation_identifier the annotation id we test on the incoming edges
-*/
-/*bool Analysis::allIncomingNonBackEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const
-{
-	for(Block::EdgeIter b_ins(block->ins()); b_ins; b_ins++)
-		if(!BACK_EDGE(*b_ins))
-			if(!annotation_identifier.exists(*b_ins))
-				return false;
-	return true;
-}
-
-bool Analysis::allIncomingEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const
-{
-	for(Block::EdgeIter b_ins(block->ins()); b_ins; b_ins++)
-		if(!annotation_identifier.exists(*b_ins))
-			return false;
-	return true;
-}*/
-
-/**
- * @fn static bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set);
- * Checks if 'included_path' is a part of the set of paths "path_set",
- * that is if 'included_path' includes all the edges in the Edge set of path_set, except for e
- * @return true if it is a subpath
-*/

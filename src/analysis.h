@@ -19,6 +19,15 @@ public:
 	typedef elm::avl::Set<Edge*> Path;
 	class State;
 
+	enum // flags 
+	{
+		FOLLOW_CALLS		= 0b1 << 1,
+		//SUPERSILENT		= 0b1 << 2,
+		MERGE				= 0b1 << 3,
+		UNMINIMIZED_PATHS	= 0b1 << 4,
+		DRY_RUN				= 0b1 << 5,
+	};
+protected:
 	typedef struct
 	{
 		const dfa::State* dfa_state;
@@ -26,29 +35,8 @@ public:
 		unsigned int max_tempvars;
 		unsigned int max_registers;
 	} context_t;
-	// bool invalidate_constant_info 
-	enum
-	{
-		KEEP_CONSTANT_INFO = false,
-		INVALIDATE_CONSTANT_INFO = true,
-	};
-	// flags 
-	enum
-	{
-		FOLLOW_CALLS		= 0b1 << 1,
-		//SUPERSILENT		= 0b1 << 2,
-		MERGE				= 0b1 << 3,
-		UNMINIMIZED_PATHS	= 0b1 << 4,
-		DRY_RUN				= 0b1 << 5,
-	};	
-	// Fixpoint status of the loop header, for annotation
-	typedef enum 
-	{	
-		ENTER, // not used: represented by no annotation, when we haven't entered the loop yet
-		FIX,
-		LEAVE,
-	} loopheader_status_t;
 
+public:
 	Analysis(const context_t& context, int state_size_limit, int flags);
 	const Vector<DetailedPath>& run(CFG *cfg);
 	inline const Vector<DetailedPath>& infeasiblePaths() const { return infeasible_paths; }
@@ -69,16 +57,19 @@ protected:
 	template<template< class _ > class C>
 		void purgeBottomStates(C<Analysis::State>& sc) const;
 
+	typedef enum 
+	{	
+		ENTER, // not used: represented by no annotation, when we haven't entered the loop yet
+		FIX,
+		LEAVE,
+	} loopheader_status_t; // Fixpoint status of the loop header, for annotation
 	inline static loopheader_status_t loopStatus(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
 	static Block* insAlias		   (Block* b);
-	static Vector<Edge*> ins 	   (Block* b);
 	static Vector<Edge*> allIns    (Block* h);
 	static Vector<Edge*> backIns   (Block* h);
 	static Vector<Edge*> nonBackIns(Block* h);
 	static Vector<Edge*> outsWithoutUnallowedExits(Block* b);
 	static bool isAllowedExit(Edge* exit_edge);
-	// static Option<Block*> getCaller(CFG* cfg);
-	// static Block* getCaller(Block* exit);
 	static elm::String printFixPointStatus(Block* b);
 
 	static Identifier<Vector<Analysis::State> >	EDGE_S; // Trace on an edge
@@ -107,15 +98,12 @@ private:
 	void processCFG(CFG *cfg);
 	Vector<State>& I(Block* b, Vector<State>& s);
 	Vector<State> I(Edge* e, const Vector<State>& s);
-	void printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const;
 	void removeDuplicateInfeasiblePaths();
-	void onPathEnd();
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	bool isConditional(Block* b) const;
+	// void printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const;
 	// void cleanIncomingEdges(Block* b) const;
 	// void cleanIncomingBackEdges(Block* b) const;
-	// bool fixpointFoundOnAllMotherLoops(Block* b) const;
-	// bool edgeIsExitingToLoopLevel0(const Edge* e) const;
 	// bool shouldEnableSolver(const Edge* e);
 	// bool allRequiredInEdgesAreProcessed(Block* block) const;
 	// bool allIncomingNonBackEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
@@ -126,6 +114,13 @@ private:
 	bool anyEdgeHasTrace(const Block::EdgeIter& biter) const;
 	bool allEdgesHaveTrace(const Vector<Edge*>& edges) const;
 	bool allEdgesHaveTrace(const Block::EdgeIter& biter) const;
+
+	// bool invalidate_constant_info
+	enum
+	{
+		KEEP_CONSTANT_INFO = false,
+		INVALIDATE_CONSTANT_INFO = true,
+	};
 }; // Analysis class
 
 #endif

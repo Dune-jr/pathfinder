@@ -4,6 +4,10 @@
 
 #include "analysis_state.h"
 
+/**
+ * @class Analysis::State
+ * @brief Abstract state of a set of path of the program
+ */
 Analysis::State::State() : dfa_state(NULL), sp(0), bottom(false), constants() { }
 
 Analysis::State::State(const context_t& context)

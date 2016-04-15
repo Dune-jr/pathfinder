@@ -1,6 +1,14 @@
 #include "constant_variables.h"
 #include "debug.h"
 
+/**
+ * @class ConstantVariables
+ * @brief Contains accessible information on constant variables of the abstract interpretation analysis
+ */
+/**
+ * @class ConstantVariables::LabelledValue
+ * @brief Constant value labelled by a list of edges and an updated flag
+ */
 ConstantVariables::ConstantVariables() : tempvars(NULL), registers(NULL), _max_tempvars(0), _max_registers(0) { }
 
 ConstantVariables::ConstantVariables(unsigned int max_tempvars, unsigned int max_registers)

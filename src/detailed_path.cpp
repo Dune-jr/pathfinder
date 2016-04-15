@@ -2,6 +2,22 @@
 #include "debug.h"
 #include "otawa/cfg/features.h"
 
+/**
+ * @class DetailedPath
+ * @brief A path enriched with flowfact information such as loops, calls, etc.
+ */
+/**
+ * @class DetailedPath::Iterator
+ * @brief Iterator on all the compounds of the DetailedPath
+ */
+/**
+ * @class DetailedPath::FlowInfo
+ * @brief Flowfact information around the path, such as loops, calls, etc.
+ */
+/**
+ * @class DetailedPath::EdgeIterator
+ * @brief Iterator only on the actual edges of the DetailedPath
+ */
 DetailedPath::FlowInfo::FlowInfo(kind_t kind, BasicBlock* bb) : _kind(kind), _identifier(bb) { assert(isBasicBlockKind(kind)); }
 DetailedPath::FlowInfo::FlowInfo(kind_t kind, Edge* e) : _kind(kind), _identifier(e) { assert(isEdgeKind(kind)); }
 // DetailedPath::FlowInfo::FlowInfo(const FlowInfo& fi) : _kind(fi._kind), _identifier(fi._identifier) { }
@@ -20,10 +36,13 @@ DetailedPath::DetailedPath(const DetailedPath& dp) : _path(dp._path) { }
  * @brief Reset the detailed path
  */
 
+/**
+ * @fn void DetailedPath::addLast(Edge* e);
+ * @brief add Edge at the end of the DetailedPath
+ * @param e Edge to add
+ */
 void DetailedPath::addLast(Edge* e)
-{
-	_path.addLast(FlowInfo(FlowInfo::KIND_EDGE, e));
-}
+	{ _path.addLast(FlowInfo(FlowInfo::KIND_EDGE, e)); }
 
 /**
  * @fn void SLList::removeLast(void);

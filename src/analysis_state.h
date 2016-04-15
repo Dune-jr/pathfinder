@@ -217,6 +217,9 @@ template <class C> Vector<DetailedPath> Analysis::State::stateListToPathVector(c
 	return rtn;
 }
 
+/**
+ * @brief Remove all bottom states from a Collection of States
+ */
 template<template< class _ > class C>
 void Analysis::purgeBottomStates(C<Analysis::State>& sc) const
 {

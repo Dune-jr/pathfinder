@@ -6,6 +6,10 @@
 #include "predicate.h"
 #include "debug.h"
 
+/**
+ * @class Predicate
+ * @brief A predicate of the abstract analysis
+ */
 Predicate::Predicate(condoperator_t opr, const Operand& opd1, const Operand& opd2) : _opr(opr)
 {
 	_opd1 = opd1.copy();

@@ -2,7 +2,24 @@
 #include "pretty_printing.h"
 
 // TODO! do so that when there is NO LEx after a LEn, we use iteration=*
+/**
+ * @class FFX
+ * @brief File output module of the infeasible path analysis 
+ */
+/**
+ * @fn FFX::FFX(const Vector<DetailedPath>& ips);
+ * @brief Initialize the FFX output module with the result of an Infeasible Path analysis
+ * @param ips The Vector of infeasible paths returned by the analysis
+ */
 FFX::FFX(const Vector<DetailedPath>& ips) : infeasible_paths(ips), indent_level(0) { }
+
+/**
+ * @fn void FFX::output(const elm::String& function_name, const elm::String& ffx_filename, const elm::String& graph_filename);
+ * @brief Output the result of the analysis in FFX format, and optionally in graph format
+ * @param function_name Name of the function analysed
+ * @param ffx_filename Full name of the FFX file to output to
+ * @param graph_filename Full name of the Graph file to output to. Do not set or set to empty string if no graph output is desired
+ */
 void FFX::output(const elm::String& function_name, const elm::String& ffx_filename, const elm::String& graph_filename)
 {
 	io::OutFileStream FFXStream(ffx_filename);
@@ -28,6 +45,11 @@ void FFX::output(const elm::String& function_name, const elm::String& ffx_filena
 	}
 }
 
+/**
+ * @brief Print a single infeasible path
+ * @param FFXFile file to print the path in
+ * @param ip path to print
+ */
 void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 {
 	SLList<ffx_tag_t> open_tags;
@@ -145,6 +167,9 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 	FFXFile << indent(-1) << "</not-all>" << endl;
 }
 
+/**
+ * @brief write graph data in a .tsv file
+ */
 void FFX::writeGraph(io::Output& GFile, const Vector<DetailedPath>& ips)
 {
 	int max = 0;
@@ -167,7 +192,9 @@ void FFX::writeGraph(io::Output& GFile, const Vector<DetailedPath>& ips)
 		GFile << ++i << " \t" << *iter << endl; // output 24 1 and so on
 }
 
-
+/**
+ * @brief Old FFX output (obsolete)
+ */
 void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const DetailedPath& ip)
 {
 #ifdef v1
@@ -200,6 +227,10 @@ void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const Detailed
 #endif
 }
 
+/**
+ * elm::String FFX::indent(int indent_increase);
+ * @brief Change the indent level, and return a string corresponding to the (new) indent level
+ */
 elm::String FFX::indent(int indent_increase)
 {
 	elm::String str;

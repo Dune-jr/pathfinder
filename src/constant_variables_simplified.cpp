@@ -1,6 +1,10 @@
 #include "constant_variables_simplified.h"
 
-ConstantVariablesSimplified::ConstantVariablesSimplified(unsigned int max_tempvars, unsigned int max_registers)
+/**
+ * @class ConstantVariablesSimplified
+ * @brief ConstantVariables without the labels
+ */
+ ConstantVariablesSimplified::ConstantVariablesSimplified(unsigned int max_tempvars, unsigned int max_registers)
 	: _max_tempvars(max_tempvars), _max_registers(max_registers)
 {
 	tempvars = new Option<Constant>[max_tempvars];

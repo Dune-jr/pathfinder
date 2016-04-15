@@ -24,7 +24,8 @@ void addIndents(elm::io::Output& out, int n)
 #endif
 
 /**
-  * Custom pretty printing of otawa::Block
+  * @fn Output& otawa::operator<<(Output& out, otawa::Block* b)
+  * @brief Custom pretty printing of otawa::Block
   */
 Output& otawa::operator<<(Output& out, otawa::Block* b)
 {
