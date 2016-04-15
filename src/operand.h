@@ -84,7 +84,6 @@ public:
 	virtual Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars) = 0;
 	virtual bool accept(OperandVisitor& visitor) const = 0;
 	virtual operand_kind_t kind() const = 0;
-	
 	virtual bool operator==(const Operand& o) const = 0;
 	friend inline io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
 	
@@ -120,14 +119,13 @@ public:
 	inline bool isAffine(const OperandVar& opdv) const { return true; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
-
 	OperandConst& operator=(const OperandConst& opd);
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
-	
 private:
-	Constant _value;
 	io::Output& print(io::Output& out) const;
+
+	Constant _value;
 };
 
 // Variables
@@ -159,14 +157,13 @@ public:
 	inline bool isAffine(const OperandVar& opdv) const { return _addr == opdv.addr(); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
-	
 	OperandVar& operator=(const OperandVar& opd);
 	bool operator==(const Operand& o) const;
-	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
-	
+	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }	
 private:
-	t::int32 _addr;
 	io::Output& print(io::Output& out) const;
+
+	t::int32 _addr;
 };
 
 class OperandMem : public Operand
@@ -196,14 +193,13 @@ public:
 	inline bool isAffine(const OperandVar& opdv) const { return false; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_MEM; }
-	
 	OperandMem& operator=(const OperandMem& opd);
 	bool operator==(const Operand& o) const;
-	friend inline io::Output& operator<<(io::Output& out, const OperandMem& o) { return o.print(out); }
-	
+	friend inline io::Output& operator<<(io::Output& out, const OperandMem& o) { return o.print(out); }	
 private:
-	OperandConst* _opdc;
 	io::Output& print(io::Output& out) const;
+
+	OperandConst* _opdc;
 };
 
 // Arithmetic Expressions
@@ -240,17 +236,15 @@ public:
 		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv) && opd2->isAffine(opdv); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
-	
 	OperandArithExpr& operator=(const OperandArithExpr& opd);
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
-
 private:
+	io::Output& print(io::Output& out) const;
+	
 	arithoperator_t _opr;
 	Operand* opd1;
 	Operand* opd2; // unused if operator is unary
-		
-	io::Output& print(io::Output& out) const;
 };
 
 
@@ -265,7 +259,6 @@ public:
 	inline void addToDelta(int d) { _delta += d; }
 	inline void onVarFound(const OperandVar& var) { _var_counter++; if(_var) assert(*_var == var); else _var = elm::some(var); }
 	inline void onSpFound(bool sign = SIGN_POSITIVE) { if(sign == SIGN_POSITIVE) _sp_counter++; else _sp_counter--; }
-
 private:
 	inline int sign() const { if(_is_negative) return -1; else return +1; }
 

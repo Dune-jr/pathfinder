@@ -292,15 +292,15 @@ elm::String Analysis::orderedPathToString(const OrderedPath& path)
 }
 
 /**
+ * @fn void Analysis::printResults(int exec_time_ms) const;
  * @brief Print results after a CFG analysis completes
- * 
  * @param exec_time_ms Measured execution time of the analysis (in ms)
  */
 void Analysis::printResults(int exec_time_ms) const
 {
 	if(dbg_verbose == DBG_VERBOSE_NONE)
 		return;
-	int infeasible_paths_count = infeasible_paths.count();
+	const int infeasible_paths_count = infeasible_paths.count();
 	if(dbg_flags&DBG_NO_TIME)
 		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: ")
 	else

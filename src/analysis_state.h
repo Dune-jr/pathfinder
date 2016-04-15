@@ -13,6 +13,7 @@
 
 using namespace otawa;
 using elm::genstruct::SLList;
+using elm::genstruct::Vector;
 
 class Analysis::State {
 private:

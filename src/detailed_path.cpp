@@ -342,7 +342,10 @@ elm::String DetailedPath::FlowInfo::toString(bool colored) const
 	switch(_kind)
 	{
 		case KIND_EDGE:
-			return _ << getEdge()->source()->index() << "->" << getEdge()->target()->index();
+			if((getEdge()->source()->cfg() == getEdge()->target()->cfg()) && !getEdge()->source()->isSynth() && !getEdge()->target()->isSynth()) // same cfg
+				return _ << getEdge()->source()->cfg() << "(" << getEdge()->source()->index() << "->" << getEdge()->target()->index() << ")";
+			else
+				return _ << getEdge();
 		case KIND_LOOP_ENTRY:
 			return _ << color::Dim() << "LEn#" << getLoopHeader()->index() << color::NoDim();
 		case KIND_LOOP_EXIT:

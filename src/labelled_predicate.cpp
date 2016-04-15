@@ -9,7 +9,26 @@ LabelledPredicate::LabelledPredicate(const Predicate& pred, const Set<Edge*>& la
 
 LabelledPredicate::LabelledPredicate(const LabelledPredicate& lp)
 	: _pred(lp._pred), _labels(lp._labels) { }
-	
+
+/**
+ * @fn inline void LabelledPredicate::addLabel(Edge* label);
+ * @brief Add a label
+ * @param label label to add
+ */
+
+/**
+ * @fn inline void LabelledPredicate::addLabels(const Set<Edge*>& labels);
+ * @brief Add a set of labels
+ * @param labels set of labels to add
+ */
+
+/**
+ * @fn inline bool LabelledPredicate::updatePred(const Operand& opd, const Operand& expr);
+ * @brief Update a Predicate by replacing all occurences of an operand by another one
+ * @param opd Operand to replace
+ * @param expr Operand to replace with
+ */
+
 io::Output& LabelledPredicate::print(io::Output &out) const
 {
 	if(_labels.isEmpty())

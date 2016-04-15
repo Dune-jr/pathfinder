@@ -24,11 +24,11 @@ public:
 	bool operator==(const LabelledPredicate& lp) const;
 	friend io::Output& operator<<(io::Output& out, const LabelledPredicate& lv) { return lv.print(out); }
 	inline const LabelledPredicate* operator->(void) const { return this; }
-
 private:
+	io::Output& print(io::Output& out) const;
+
 	Predicate _pred;
 	Set<Edge*> _labels; // Analysis::Path
-	io::Output& print(io::Output& out) const;
 };
 
 #endif
