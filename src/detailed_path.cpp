@@ -45,7 +45,7 @@ void DetailedPath::addLast(Edge* e)
 	{ _path.addLast(FlowInfo(FlowInfo::KIND_EDGE, e)); }
 
 /**
- * @fn void SLList::removeLast(void);
+ * @fn void DetailedPath::removeLast(void);
  * Remove the last item from the list.
  * @warning It is an error to call this method if the list is empty.
  */

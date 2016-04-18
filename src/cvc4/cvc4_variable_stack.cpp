@@ -29,10 +29,10 @@ Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o)
 Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, const Expr& expr_addr)
 {
 	const Constant& addr = o.getConst().value();
-	assert(addr.isValid());
+	ASSERT(addr.isValid());
 	int sp_factor = 0;
 	if(addr.isRelative())
-		sp_factor += (addr.isPositive()) ? 1 : -1;
+		sp_factor += (addr.isRelativePositive()) ? 1 : -1;
 
 	if(Option<Expr> opt_expr = memmap.get(addr))
 		return *opt_expr; // already in the stack
@@ -51,7 +51,7 @@ Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, 
 				label = _ << "[SP+" << addr.val() << "]";
 				break;
 			default:
-				assert(false);
+				ASSERT(false);
 		}
 		Expr expr = em.mkVar(label.chars(), integer);
 		memmap.put(addr, expr);

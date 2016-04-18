@@ -356,10 +356,10 @@ Vector<Analysis::State> Analysis::I(Edge* e, const Vector<Analysis::State>& s)
 #endif
 
 /**
- * @fn bool allEdgesHaveTrace(const Vector<Edge*>& edges) const;
+ * @fn bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const;
  * @brief Checks for all edges to have a trace annotation
  * @param edges Vector of Block edges to inspect
- * @rtn true iff all edges have a trace annotation
+ * @return true iff all edges have a trace annotation
  */
 bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const
 {
@@ -371,10 +371,10 @@ bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const
 }
 
 /**
- * @fn bool allEdgesHaveTrace(const Block::EdgeIter& biter) const;
+ * @fn bool Analysis::allEdgesHaveTrace(const Block::EdgeIter& biter) const;
  * @brief Checks for all edges to have a trace annotation
  * @param biter Iterator over the list of Block edges to inspect
- * @rtn true iff all edges have a trace annotation
+ * @return true iff all edges have a trace annotation
  */
 bool Analysis::allEdgesHaveTrace(const Block::EdgeIter& biter) const
 {
@@ -385,10 +385,10 @@ bool Analysis::allEdgesHaveTrace(const Block::EdgeIter& biter) const
 }
 
 /**
- * @fn bool anyEdgeHasTrace(const Vector<Edge*>& edges) const;
+ * @fn bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const;
  * @brief Checks for at least one edge to have a trace annotation
  * @param edges Vector of Block edges to inspect
- * @rtn true iff at least one edge has a trace annotation
+ * @return true iff at least one edge has a trace annotation
  */
 bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const
 {
@@ -399,10 +399,10 @@ bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const
 }
 
 /**
- * @fn bool anyEdgeHasTrace(const Block::EdgeIter& biter) const;
+ * @fn bool Analysis::anyEdgeHasTrace(const Block::EdgeIter& biter) const;
  * @brief Checks for at least one edge to have a trace annotation
  * @param biter Iterator over the list of Block edges to inspect
- * @rtn true iff at least one edge has a trace annotation
+ * @return true iff at least one edge has a trace annotation
  */
 bool Analysis::anyEdgeHasTrace(const Block::EdgeIter& biter) const
 {
@@ -432,10 +432,10 @@ bool Analysis::anyEdgeHasTrace(const Block::EdgeIter& biter) const
 	return 0;
 }*/
 
-/**
- * @fn SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl);
- * Processes outgoing Edge e from a BasicBlock for each element of sl
-*/
+//**
+ // * @fn SLList<Analysis::State> Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl);
+ // * Processes outgoing Edge e from a BasicBlock for each element of sl
+// */
 // void Analysis::processOutEdge(Edge* e, const SLList<Analysis::State>& sl, bool is_conditional, bool enable_smt)
 // {
 	/* wl <- sl ⊙ e; */

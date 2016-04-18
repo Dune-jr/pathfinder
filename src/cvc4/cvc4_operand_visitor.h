@@ -10,10 +10,10 @@ class CVC4OperandVisitor : public OperandVisitor
 public:
 	CVC4OperandVisitor(CVC4::ExprManager &em, CVC4VariableStack &variables);
 	CVC4::Expr result();		
-	bool visit(const OperandConst& o);
-	bool visit(const OperandVar& o);
-	bool visit(const OperandMem &o);
-	bool visit(const OperandArithExpr& o);
+	bool visit(const class OperandConst& o);
+	bool visit(const class OperandVar& o);
+	bool visit(const class OperandMem &o);
+	bool visit(const class OperandArithExpr& o);
 	
 private:
 		   Kind_t getKind(arithoperator_t opr);

@@ -17,13 +17,10 @@ bool Z3OperandVisitor::visit(const class OperandConst& o)
 		return false; // fail
 	if((o.value().isAbsolute()))
 		e = c.int_val(o.value().val());
-	else // isRelative
-	{
-		if(o.value().isPositive())
-			e = c.int_val(o.value().val()) + sp_expr;
-		else
-			e = c.int_val(o.value().val()) - sp_expr;
-	}
+	else if(o.value().isRelativePositive())
+		e = c.int_val(o.value().val()) + sp_expr;
+	else if(o.value().isRelativeNegative())
+		e = c.int_val(o.value().val()) - sp_expr;
 	visited = true;
 	return true;
 }
@@ -46,7 +43,7 @@ bool Z3OperandVisitor::visit(const class OperandMem& o)
 	assert(addr.isValid());
 	int sp_factor = 0;
 	if(addr.isRelative())
-		sp_factor += (addr.isPositive()) ? 1 : -1;
+		sp_factor = (addr.isRelativePositive()) ? 1 : -1;
 	elm::String label;
 	switch(sp_factor)
 	{	// these must be unique labels

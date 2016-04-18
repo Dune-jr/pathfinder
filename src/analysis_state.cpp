@@ -191,7 +191,7 @@ io::Output& Analysis::State::print(io::Output& out) const
 
 /**
  * @fn inline Analysis::State Analysis::topState(Block* entry) const;
- * @brief Returns a \top state
+ * @brief Returns a Top state
  */
 Analysis::State Analysis::topState(Block* entry) const
 {

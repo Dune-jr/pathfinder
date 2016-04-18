@@ -9,10 +9,10 @@ class Z3OperandVisitor : public OperandVisitor
 public:
 	Z3OperandVisitor(z3::context& c, const z3::expr& sp);
 	z3::expr result();		
-	bool visit(const OperandConst& o);
-	bool visit(const OperandVar& o);
-	bool visit(const OperandMem& o);
-	bool visit(const OperandArithExpr& o);
+	bool visit(const class OperandConst& o);
+	bool visit(const class OperandVar& o);
+	bool visit(const class OperandMem& o);
+	bool visit(const class OperandArithExpr& o);
 	
 private:
 	bool visited;

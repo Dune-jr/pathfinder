@@ -33,8 +33,8 @@ extern int dbg_flags;
 extern int dbg_verbose;
 
 // #define DBG_STD(str) { if(elm::color::flags&elm::color::DEBUG) std::cout << elm::color::Debug::debugPrefix(__FILE__, __LINE__).chars() << str << elm::color::RCol << std::endl; }
-/* #define DBG_TEST(tested_cond, expected_cond) \
+ #define DBG_TEST(tested_cond, expected_cond) \
  	((tested_cond) == (expected_cond) ? color::IGre() : color::IRed()) << \
- 	((tested_cond) ? "true" : "false") << color::RCol()*/
+ 	((tested_cond) ? "true" : "false") << color::RCol()
 
 #endif

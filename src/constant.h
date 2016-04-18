@@ -1,6 +1,7 @@
 #ifndef _CONSTANT_H
 #define _CONSTANT_H
 
+#include <elm/assert.h>
 #include <elm/int.h> // elm::t::int32
 #include <elm/io.h> // elm::io
 
@@ -10,7 +11,9 @@ enum constant_kind_t
 {
 	CONSTANT_INVALID=0,
 	CONSTANT_ABSOLUTE,
-	CONSTANT_RELATIVE,
+	// CONSTANT_RELATIVE,
+	CONSTANT_PLUS_SP,
+	CONSTANT_MINUS_SP,
 };
 
 enum
@@ -23,17 +26,17 @@ class Constant
 {
 public:
 	Constant();
-	Constant(t::int32 val, bool relative, bool sign = SIGN_POSITIVE);
-	Constant(t::int32 val, constant_kind_t _kind = CONSTANT_ABSOLUTE, bool sign = SIGN_POSITIVE);
+	// Constant(t::int32 val, bool relative, bool sign = SIGN_POSITIVE);
+	Constant(t::int32 val, constant_kind_t _kind = CONSTANT_ABSOLUTE); //, bool sign = SIGN_POSITIVE);
 	Constant(const Constant& c);
 	inline t::int32 val() const { return _val; }
-	inline constant_kind_t kind() const { return _kind; }
-	inline bool sign() const { return _sign; }
-	inline bool isRelative() const { return _kind == CONSTANT_RELATIVE; }
+	// inline constant_kind_t kind() const { return constant_kind_t(_kind); }
+	inline bool sign() const { ASSERT(isRelative()); return _kind == CONSTANT_PLUS_SP ? SIGN_POSITIVE : SIGN_NEGATIVE; }
+	inline bool isRelative() const { return _kind > CONSTANT_ABSOLUTE; }
 	inline bool isAbsolute() const { return _kind == CONSTANT_ABSOLUTE; }
 	inline bool isValid()    const { return _kind != CONSTANT_INVALID;  }
-	inline bool isPositive() const { return _sign == SIGN_POSITIVE; }
-	inline bool isNegative() const { return _sign == SIGN_NEGATIVE; }
+	inline bool isRelativePositive() const { return _kind == CONSTANT_PLUS_SP; }
+	inline bool isRelativeNegative() const { return _kind == CONSTANT_MINUS_SP; }
 
 	Constant& operator=(const Constant& c);
 	Constant& operator=(t::int32 val);
@@ -67,12 +70,12 @@ public:
 
 private:
 	t::int32 _val;
-	constant_kind_t _kind;
-	bool _sign;
+	char _kind; // saving space with 1 bye. will be casted to constant_kind_t
+	// bool _sign;
 
 	io::Output& print(io::Output& out) const;
 };
 
-static const Constant SP(0, CONSTANT_RELATIVE); // SP + 0
+static const Constant SP(0, CONSTANT_PLUS_SP); // SP + 0
 
 #endif

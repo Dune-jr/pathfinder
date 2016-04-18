@@ -72,14 +72,14 @@ void Analysis::wl_push(Block* b)
   * @fn inline static loopheader_status_t Analysis::loopStatus(Block* h);
   * @brief Give the loop status of a Block
   * @param h Block to examinate
-  * @rtn The loop status
-  */
+  * @return The loop status
+*/
 
 /**
- * @fn Block* Analysis::insAlias(Block* b);
- * @brief Substitue a block with the appropriate block to get ingoing edges from
- * @rtn Block to substitute b with (by default, b)
- */
+  * @fn Block* Analysis::insAlias(Block* b);
+  * @brief Substitue a block with the appropriate block to get ingoing edges from
+  * @return The Block to substitute b with (by default, b)
+*/
 Block* Analysis::insAlias(Block* b)
 {
 	if(b->isEntry()) // entry becomes caller
@@ -96,7 +96,7 @@ Block* Analysis::insAlias(Block* b)
  * @fn static Vector<Edge*> Analysis::allIns (Block* h);
  * @brief Collect all edges pointing to a block
  * @param h Block to collect incoming edges from
- * @rtn return the vector of selected edges
+ * @return return the vector of selected edges
  */
 Vector<Edge*> Analysis::allIns(Block* h)
 {
@@ -112,7 +112,7 @@ Vector<Edge*> Analysis::allIns(Block* h)
  * @fn static Vector<Edge*> Analysis::backIns(Block* h);
  * @brief Collect all back-edges pointing to a block
  * @param h Block to collect incoming edges from
- * @rtn return the vector of selected edges
+ * @return return the vector of selected edges
  */
 Vector<Edge*> Analysis::backIns(Block* h)
 {
@@ -129,7 +129,7 @@ Vector<Edge*> Analysis::backIns(Block* h)
  * @fn static Vector<Edge*> Analysis::nonBackIns(Block* h);
  * @brief Collect all edges pointing to a block that are not back edges of a loop
  * @param h Block to collect incoming edges from
- * @rtn return the vector of selected edges
+ * @return return the vector of selected edges
  */
 Vector<Edge*> Analysis::nonBackIns(Block* h)
 {
@@ -183,10 +183,11 @@ Vector<Edge*> Analysis::outsWithoutUnallowedExits(Block* b)
 }
 
 /**
- * @brief Short display of the fixpoint status of the current and enclosing loops (including caller CFGs)
- * @param b The block to process
- * @rtn The String contain the output
- */
+ * @fn String Analysis::printFixPointStatus(Block* b);
+  * @brief Short display of the fixpoint status of the current and enclosing loops (including caller CFGs)
+  * @param b The block to process
+  * @return The String contain the output
+  */
 String Analysis::printFixPointStatus(Block* b)
 {
 	String rtn = "[";

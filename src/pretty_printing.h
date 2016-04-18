@@ -10,6 +10,9 @@ using elm::io::Output;
 using elm::genstruct::SLList;
 using elm::genstruct::Vector;
 
+// utils
+template <class T> T *null(void) { return static_cast<T *>(0); }
+
 // pretty printing
 void addIndents(Output& out, int n);
 template <class C> Output& printCollection(Output& out, const C& items);
