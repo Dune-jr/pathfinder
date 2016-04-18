@@ -24,7 +24,7 @@ public:
 	Predicate(const Predicate& p);
 	~Predicate();
 	
-	inline condoperator_t opr() const { return _opr; }
+	inline condoperator_t opr() const { return (condoperator_t)_opr; }
 	inline Operand& leftOperand() const { return *_opd1; }
 	inline Operand& rightOperand() const { return *_opd2; }
 	
@@ -47,7 +47,7 @@ public:
 	friend io::Output& operator<<(io::Output& out, const Predicate& p);
 	
 private:
-	condoperator_t _opr; // operator
+	char _opr; // operator, on one byte to save memory
 	Operand *_opd1; // left operand
 	Operand *_opd2; // right operand
 };

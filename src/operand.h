@@ -37,7 +37,7 @@ enum operand_kind_t
 	OPERAND_CONST,     // Constant value
 	OPERAND_VAR,       // Variable (register or temporary variable, for now)
 	OPERAND_ARITHEXPR, // Arithmetic Expression
-	OPERAND_MEM, // Arithmetic Expression
+	OPERAND_MEM, 	   // Arithmetic Expression
 };
 
 enum operandmem_kind_t
