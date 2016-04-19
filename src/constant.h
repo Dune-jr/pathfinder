@@ -2,6 +2,7 @@
 #define _CONSTANT_H
 
 #include <elm/assert.h>
+#include <elm/util/HashKey.h>
 #include <elm/int.h> // elm::t::int32
 #include <elm/io.h> // elm::io
 
@@ -37,6 +38,7 @@ public:
 	inline bool isValid()    const { return _kind != CONSTANT_INVALID;  }
 	inline bool isRelativePositive() const { return _kind == CONSTANT_PLUS_SP; }
 	inline bool isRelativeNegative() const { return _kind == CONSTANT_MINUS_SP; }
+	inline t::hash hash() const { return elm::Hasher() << _kind << _val; }
 
 	Constant& operator=(const Constant& c);
 	Constant& operator=(t::int32 val);
