@@ -38,7 +38,10 @@ end
 -- OTAWA
 settings.cc.flags:Add("`" .. otawa_config .. " --cflags`")
 settings.link.flags:Add("`" .. otawa_config .." --libs --rpath`")
-	
+
+-- OSLICE
+settings.link.flags:Add("~/Documents/casse/otawa2/linux/lib/oslice.so")
+
 -- SMT choice
 -- CVC4
 if config.solver.value == "cvc4" then

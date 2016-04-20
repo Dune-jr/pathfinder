@@ -13,7 +13,7 @@ public:
 private:
 	Vector<State> narrowing(const Vector<Edge*>& edges) const;
 	bool inD_ip(const otawa::Edge* e) const;
-	void ipcheck(elm::genstruct::Vector<Analysis::State>& vl, elm::genstruct::Vector<DetailedPath>& infeasible_paths);
+	void ipcheck(Analysis::States& ss, elm::genstruct::Vector<DetailedPath>& infeasible_paths);
 
 	SLList<State> listOfS(const Vector<Edge*>& ins) const;
 	Vector<State> vectorOfS(const Vector<Edge*>& ins) const;

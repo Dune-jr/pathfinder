@@ -10,7 +10,7 @@
 using namespace elm::genstruct;
 using namespace elm::io;
 
-Identifier<Vector<Analysis::State> >		Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
+Identifier<Analysis::States>				Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
 Identifier<Analysis::State>					Analysis::LH_S("Trace on a loop header"); // maybe change to vector
 Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a loop (on a loop header)");
 
@@ -32,7 +32,7 @@ void Analysis::processCFG(CFG* cfg)
 	for(Block::EdgeIter entry_outs(cfg->entry()->outs()); entry_outs; entry_outs++)
 	{
 		/* s_e ← T */
-		Vector<Analysis::State> entry_s;
+		Vector<Analysis::State> entry_s; // TODOv2: States::top()
 		entry_s.push(topState(cfg->entry()));
 		EDGE_S(*entry_outs) = entry_s;
 		/* wl ← sink(e) */
@@ -57,7 +57,7 @@ void Analysis::processCFG(CFG* cfg)
 		if(allEdgesHaveTrace(pred))
 		{
 			/* s ← |_|e∈pred s_e */
-			Vector<State> s(narrowing(pred));
+			States s(narrowing(pred));
 			/* for e ∈ pred */
 			for(Vector<Edge*>::Iterator e(pred); e; e++)
 				/* s_e ← nil */
@@ -68,6 +68,7 @@ void Analysis::processCFG(CFG* cfg)
 			/* if b ∈ H(G) then */
 			if(LOOP_HEADER(b))
 			{
+				ASSERT(s.count() <= 1)
 				/* if status_b = LEAVE then */
 				if(loopStatus(b) == LEAVE)
 				{
@@ -81,14 +82,14 @@ void Analysis::processCFG(CFG* cfg)
 					propagate = false;
 				}
 				else /* else s_b ← s */
-					LH_S(b) = s[0];
+					LH_S(b) = s.one();
 				switch(loopStatus(b)) {
 					/* status_b ← FIX if status_b = ENTER */
 					case ENTER:
 						LH_STATUS(b) = FIX;
 						break;
 					/* status_b ← LEAVE if status_b = FIX ∧ s ≡ s_b */
-					case FIX: if(s[0].equiv(LH_S(b)))
+					case FIX: if(s.one().equiv(LH_S(b)))
 						LH_STATUS(b) = LEAVE;
 						break;
 					/* status_b ← ENTER if status_b = LEAVE */
@@ -117,13 +118,13 @@ void Analysis::processCFG(CFG* cfg)
 /* end */
 }
 
-Vector<Analysis::State>& Analysis::I(Block* b, Vector<Analysis::State>& s)
+Analysis::States& Analysis::I(Block* b, States& s)
 {
-	purgeBottomStates(s);
+	// purgeBottomStates(s.states()); // this may empty the states
 	if(b->isBasic())
 	{
 		DBGG(color::Bold() << "-\tI(b=" /*<< color::NoBold() << color::ICya()*/ << b << /*color::RCol() << color::Bold() <<*/ ") " << color::NoBold() << printFixPointStatus(b))
-		for(Vector<State>::MutableIterator si(s); si; si++)
+		for(States::MutableIterator si(s.states()); si; si++)
 			si.item().processBB(b->toBasic());
 	}
 	else {
@@ -132,14 +133,14 @@ Vector<Analysis::State>& Analysis::I(Block* b, Vector<Analysis::State>& s)
 	return s;
 }
 
-Vector<Analysis::State> Analysis::I(Edge* e, const Vector<Analysis::State>& s)
+Analysis::States Analysis::I(Edge* e, const States& s)
 {
 	if(s.isEmpty())
 		DBGG("-\tpropagating bottom state")
 	DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
-	Vector<State> rtns(s);
+	States rtns(s);
 	if(! e->source()->isEntry()) // do not process entry: no generated preds and uninteresting edge to add (everything comes from the entry)
-		for(Vector<State>::MutableIterator rtnsi(rtns); rtnsi; rtnsi++)
+		for(States::MutableIterator rtnsi(rtns.states()); rtnsi; rtnsi++)
 			rtnsi.item().appendEdge(e, isConditional(e->source()));
 	return rtns;
 }

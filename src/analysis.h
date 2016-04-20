@@ -17,7 +17,8 @@ class Analysis {
 public:
 	typedef SLList<Edge*> OrderedPath;
 	typedef elm::avl::Set<Edge*> Path;
-	class State;
+	class State; // Abstract state corresponding to a set of paths at one point of the program
+	class States; // Collection of State representing an abstract state at one point of the program
 
 	enum // flags 
 	{
@@ -72,7 +73,7 @@ protected:
 	static bool isAllowedExit(Edge* exit_edge);
 	static elm::String printFixPointStatus(Block* b);
 
-	static Identifier<Vector<Analysis::State> >	EDGE_S; // Trace on an edge
+	static Identifier<Analysis::States >		EDGE_S; // Trace on an edge
 	static Identifier<Analysis::State>			LH_S; // Trace on a loop header
 private:
 	static Identifier<loopheader_status_t>		LH_STATUS; // Fixpt status of a loop header
@@ -86,7 +87,7 @@ private:
 	// virtual pure functions to implement
 	virtual Vector<State> narrowing(const Vector<Edge*>& edges) const = 0;
 	virtual bool inD_ip(const otawa::Edge* e) const = 0;
-	virtual void ipcheck(elm::genstruct::Vector<Analysis::State>& v, elm::genstruct::Vector<DetailedPath>& infeasible_paths) = 0;
+	virtual void ipcheck(States& s, elm::genstruct::Vector<DetailedPath>& infeasible_paths) = 0;
 
 	// analysis.cpp
 	void debugProgress(int block_id, bool enable_smt) const;
@@ -96,8 +97,8 @@ private:
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
-	Vector<State>& I(Block* b, Vector<State>& s);
-	Vector<State> I(Edge* e, const Vector<State>& s);
+	States& I(Block* b, States& s);
+	States I(Edge* e, const States& s);
 	void removeDuplicateInfeasiblePaths();
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	bool isConditional(Block* b) const;

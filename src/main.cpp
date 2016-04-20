@@ -6,6 +6,8 @@
 #include <otawa/hard/Platform.h>
 #include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
 #include <otawa/prog/WorkSpace.h>
+#include <otawa/app/Application.h>
+#include "/home/jruiz/Documents/oslice/blockBased/cfg_v2_plugin/oslice_features.h"
 #include "analysis.h"
 #include "ffx.h"
 #include "debug.h"
@@ -34,11 +36,13 @@ public:
 		opt_nolinenumbers(option::SwitchOption::Make(*this).cmd("--nl").cmd("--no-line-nb").description("do not number lines of the output")),
 		opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
 		// opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")), // no longer working
+		opt_noipresults(option::SwitchOption::Make(*this).cmd("--no-ip-results").description("do not print the list of IPs found")),
 		opt_noflowinfo(option::SwitchOption::Make(*this).cmd("--no-flowinfo").description("do not print context flowinfo in path debugs")),
 		opt_progress(option::SwitchOption::Make(*this).cmd("--show-progress").description("display analysis progress")),
 		opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis (obsolete)")),
 		opt_avgiplength(option::SwitchOption::Make(*this).cmd("--average-ip-length").description("display average length of infeasible_paths found")),
 		opt_nounminimized(option::SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
+		opt_slice(option::SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
 		opt_dry(option::SwitchOption::Make(*this).cmd("--dry").description("dry run (no solver calls)")),
 		opt_automerge(option::SwitchOption::Make(*this).cmd("--automerge").description("let the algorithm decide when to merge")),
 		opt_virtualize(option::ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
@@ -52,6 +56,12 @@ protected:
 			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
 		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
+		if(opt_slice) {
+			otawa::oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
+			otawa::oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
+			workspace()->require(otawa::oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
+			workspace()->require(otawa::oslice::SLICER_FEATURE, props);
+		}
 		const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
 		const dfa::State *inital_state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
 		ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
@@ -68,7 +78,8 @@ protected:
 			dbg_verbose = 2;
 		if(opt_s3)
 			dbg_verbose = 3; // high verbose numbers are more silent. TODO: that is counterintuitive
-		elm::log::Debug::setDebugFlag(dbg_verbose == DBG_VERBOSE_ALL);
+		elm::log::Debug::setDebugFlag(dbg_verbose == DBG_VERBOSE_ALL || dbg_verbose == DBG_VERBOSE_MINIMAL);
+		elm::log::Debug::setVerboseLevel(dbg_verbose == DBG_VERBOSE_ALL ? 1 : 0);
 		elm::log::Debug::setColorFlag(! opt_nocolor);
 		elm::log::Debug::setSourceInfoFlag(opt_src_info);
 		elm::log::Debug::setNumberingFlag(! opt_nolinenumbers);
@@ -77,6 +88,8 @@ protected:
 			dbg_flags |= DBG_NO_TIME;
 		// if(opt_nopred)
 			// dbg_flags |= DBG_NO_PREDICATES;
+		if(! opt_noipresults)
+			dbg_flags |= DBG_RESULT_IPS;
 		if(! opt_noflowinfo)
 			dbg_flags |= DBG_PRINT_FLOWINFO;
 		if(opt_progress)
@@ -119,7 +132,7 @@ protected:
 private:
 	// option::Manager manager;
 	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_notime,// opt_nopred, 
-		opt_noflowinfo, opt_progress, opt_preanalysis, opt_avgiplength, opt_nounminimized, opt_dry, opt_automerge; //, opt_virtualize;
+		opt_noipresults, opt_noflowinfo, opt_progress, opt_preanalysis, opt_avgiplength, opt_nounminimized, opt_slice, opt_dry, opt_automerge; //, opt_virtualize;
 	option::ValueOption<bool> opt_virtualize;
 	option::ValueOption<int> opt_merge;
 };

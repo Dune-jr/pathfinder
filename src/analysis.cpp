@@ -307,13 +307,14 @@ void Analysis::printResults(int exec_time_ms) const
 	else
 		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
 			<< "(" << (exec_time_ms>=1000 ? ((float)exec_time_ms)/(float(100)) : exec_time_ms) << (exec_time_ms>=1000 ? "s" : "ms") << ")")
-	for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
-	{
-		if(dbg_verbose == DBG_VERBOSE_ALL)
-			DBG(color::IGre() << "    * [" << *iter << "]")
-		else if(dbg_verbose < DBG_VERBOSE_NONE)
-			cout << "    * [" << *iter << "]" << endl;
-	}
+	if(dbg_flags&DBG_RESULT_IPS)
+		for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
+		{
+			if(dbg_verbose == DBG_VERBOSE_ALL)
+				DBG(color::IGre() << "    * [" << *iter << "]")
+			else if(dbg_verbose < DBG_VERBOSE_NONE)
+				cout << "    * [" << *iter << "]" << endl;
+		}
 	if(dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_NONE)
 	{
 		cout << color::BIGre() << infeasible_paths_count << color::RCol() << " infeasible path(s) found.";

@@ -18,18 +18,27 @@
 DefaultAnalysis::DefaultAnalysis(const context_t& context, int state_size_limit, int flags)
 	: Analysis(context, state_size_limit, flags) { }
 
+/**
+ * actually... this may be widening
+ */
 Vector<Analysis::State> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) const
 {
 	ASSERTP(ins, "narrowing given empty ingoing edges vector")
 	Vector<State> v(vectorOfS(ins));
 	Block* b = ins[0]->target();
+	// loop header or too big state
 	if(LOOP_HEADER(b) || ((flags&MERGE) && v.count() > state_size_limit))
 	{
-		if(LOOP_HEADER(b) && LH_S.exists(b))
-			v.push(LH_S(b));	
-		ASSERTP(v, "Loop Header received only bottom state, case not handled yet. The main algorithm will use s[0] so...")
+		if(LOOP_HEADER(b) && LH_S.exists(b)) // also merge with the state on the loop header if it exists
+			v.push(LH_S(b));
+		purgeBottomStates(v);
+		// ASSERTP(v, "Loop Header received only bottom state, case not handled yet. The main algorithm will use s[0] so...")
+		if(!v) {
+			DBGG("narrowing returns null vector")
+			return v;
+		}
 		State s((Edge*)NULL, context, false); // entry is cleared anyway
-		s.merge(v);
+		s.merge(v); // s <- widening(s0, s1, ..., sn)
 		Vector<State> rtnv(1);
 		rtnv.push(s);
 		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v.count() > 50)
@@ -37,9 +46,14 @@ Vector<Analysis::State> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) con
 		return rtnv;
 	}
 	else
-		return v;
+		return v; // no widening
 }
 
+/**
+ * @brief Checks if a path ending with a certain edge is within the domain D of path we test the (in)feasibility of
+ * @param e Edge the path ends with
+ * @return true if the path is in D
+ */
 bool DefaultAnalysis::inD_ip(const otawa::Edge* e) const
 {
 	bool all_leave = true; // enable SMT when on sequential level
@@ -55,35 +69,35 @@ bool DefaultAnalysis::inD_ip(const otawa::Edge* e) const
 }
 
 //TODOv2: make this method const
-// look for infeasible paths, add them to infeasible_paths, and removes the states from sv
-void DefaultAnalysis::ipcheck(elm::genstruct::Vector<Analysis::State>& sv, elm::genstruct::Vector<DetailedPath>& infeasible_paths) //const
+// look for infeasible paths, add them to infeasible_paths, and removes the states from ss
+void DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<DetailedPath>& infeasible_paths) //const
 // void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional)
 {
 	if(flags&DRY_RUN) // no SMT call
 		return;
 	// find the conflicts
 	Vector<Option<Path> > vl_paths;
-	Vector<Analysis::State> new_sv(sv.count()); // safer :)
-	for(Vector<Analysis::State>::Iterator si(sv); si; si++)
+	Vector<Analysis::State> new_sv(ss.count()); // safer to do it this way than remove on the fly (i think more convenient later too)
+	for(States::Iterator si(ss.states()); si; si++)
 	{
 		// SMT call
 		chosen_smt_t smt;
 		const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(*si);
 		vl_paths.addLast(infeasible_path);
 		if(infeasible_path)
-		{	//TODOv2: test this: we remove state instead of bottomizing it
+		{
 #			ifdef DBG_WARNINGS
 				if(! infeasible_path->contains(s.lastEdge())) // make sure the last edge was relevant in this path
 					cerr << "WARNING: !infeasible_path->contains(s.lastEdge())" << endl;
 #			endif
 		}
 		else
-			new_sv.addLast(*si);
+			new_sv.addLast(*si); // only add feasible states to new_sv
 	}
 	// analyse the conflicts found
-	ASSERTP(sv.count() == vl_paths.count(), "different size of sv and vl_paths")
+	ASSERTP(ss.count() == vl_paths.count(), "different size of ss and vl_paths")
 	Vector<Option<Path> >::Iterator pi(vl_paths);
-	for(Vector<Analysis::State>::Iterator si(sv); si; si++, pi++) // iterate on paths and states simultaneously
+	for(States::Iterator si(ss.states()); si; si++, pi++) // iterate on paths and states simultaneously
 	{
 		const State& s = *si;
 		if(*pi) // is infeasible?
@@ -91,7 +105,7 @@ void DefaultAnalysis::ipcheck(elm::genstruct::Vector<Analysis::State>& sv, elm::
 			const Path& ip = **pi;
 			elm::String counterexample;
 			DBG("Path " << s.getPathString() << " minimized to " << pathToString(ip))
-			bool valid = checkInfeasiblePathValidity(sv, vl_paths, ip, counterexample);
+			bool valid = checkInfeasiblePathValidity(ss.states(), vl_paths, ip, counterexample);
 			DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
 			ip_count++;
 			if(valid)
@@ -122,14 +136,14 @@ void DefaultAnalysis::ipcheck(elm::genstruct::Vector<Analysis::State>& sv, elm::
 			onAnyInfeasiblePath();
 		}
 	}
-	sv = new_sv;
+	ss = new_sv;
 }
 
 SLList<Analysis::State> DefaultAnalysis::listOfS(const Vector<Edge*>& ins) const
 {
 	SLList<State> sl;
 	for(Vector<Edge*>::Iterator i(ins); i; i++)
-		sl.addAll(EDGE_S.use(*i));
+		sl.addAll(EDGE_S.use(*i).states());
 	return sl;
 }
 
@@ -137,7 +151,7 @@ Vector<Analysis::State> DefaultAnalysis::vectorOfS(const Vector<Edge*>& ins) con
 {
 	Vector<State> vl;
 	for(Vector<Edge*>::Iterator i(ins); i; i++)
-		vl.addAll(EDGE_S.use(*i));
+		vl.addAll(EDGE_S.use(*i).states());
 		// for(Vector<State>::Iterator j(EDGE_S.use(*i)); j; j++)
 		// 	vl.push(j);
 	return vl;

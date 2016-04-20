@@ -6,16 +6,19 @@
 
 #define ELM_NO_DBG // do not use standard macro names
 #include <elm/log/Log.h>
-#define DBG ELM_DBGLN // default DBG to ELM_DBGLN. If we want to get the no-newline behavior, we have to use ELM_DBG (or elm::cout)
+#define DBG(str) { ELM_DBGV(1, str << elm::io::endl) }
+#define DBGG ELM_DBGLN
+
 #include <ostream>
 #include <elm/string/String.h>
 #include <elm/string/AutoString.h>
 
 // v1:debug loop analysis and many other
 // v2: macro debugs
-#define DBGG(str) { if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) elm::cout << elm::log::Debug::debugPrefix(__FILE__, __LINE__) << str << elm::color::RCol() << elm::io::endl; }
+// #define DBGG(str) { if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) elm::cout << elm::log::Debug::debugPrefix(__FILE__, __LINE__) << str << elm::color::RCol() << elm::io::endl; }
 // #define DBG_WARNINGS
 
+#define DBG_RESULT_IPS	   1 << 3
 #define DBG_NO_TIME		   1 << 4
 #define DBG_PREANALYSIS	   1 << 6
 #define DBG_PROGRESS	   1 << 7

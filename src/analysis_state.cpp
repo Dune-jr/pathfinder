@@ -8,10 +8,10 @@
  * @class Analysis::State
  * @brief Abstract state of a set of path of the program
  */
-Analysis::State::State() : dfa_state(NULL), sp(0), bottom(false), constants() { }
+Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), bottom(bottom), constants() { }
 
-Analysis::State::State(const context_t& context)
-	: dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
+// Analysis::State::State(const context_t& context)
+	// : dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
 
 Analysis::State::State(Block* entryb, const context_t& context, bool init)
 	: dfa_state(context.dfa_state), sp(context.sp), bottom(false), constants(context.max_tempvars, context.max_registers)
@@ -214,6 +214,8 @@ elm::String Analysis::State::dumpEverything() const
 // <!> this compares labelled_preds only <!>
 bool Analysis::State::equiv(const Analysis::State& s) const
 {
+	if(s.isBottom())
+		return this->isBottom();
 	ASSERT(this->sp == s.sp);
 	// do not check the path or any of the edges!
 	/*if(generated_preds != generated_preds)

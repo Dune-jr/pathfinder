@@ -31,12 +31,10 @@ private:
 	class PredIterator;
 
 public:
-	State(); // create an invalid state
-	State(const context_t& context); // create a bottom state
+	State(bool bottom = false); // false: create an invalid state, true: create a bottom state
 	State(Block* entryb, const context_t& context, bool init = true);
 	State(Edge* entry_edge, const context_t& context, bool init = false);
 	State(const State& s);
-	// inline const OrderedPath& getPath() const { return path; }
 	inline const DetailedPath& getDetailedPath() const { return path; }
 	inline Edge* lastEdge() const { return path.lastEdge(); }
 	inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
@@ -49,12 +47,6 @@ public:
 	inline bool isBottom() const { return bottom; }
 	inline bool isValid() const { return dfa_state != NULL && constants.isValid(); } // this is so that we can have empty states that do not use too much memory
 
-	// inline bool inALoop() const { return ; }
-	// inline bool fixpointState() const { return fixpoint; }
-	// inline void setFixpointState(bool new_fixpoint) { fixpoint = new_fixpoint; }
-
-	inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
-	friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 
 	// analysis_state.cpp
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
@@ -68,7 +60,9 @@ public:
 	void throwInfo();
 	int invalidateStackBelow(const Constant& stack_limit);
 
+	inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
 	inline const State* operator->(void) const { return this; }
+	friend io::Output& operator<<(io::Output& out, const State& s) { return s.print(out); }
 
 private:
 	// Private methods
@@ -156,6 +150,31 @@ private:
 	}; // PredIterator class
 }; // State class
 
+const static Analysis::State bottom(true);
+
+class Analysis::States {
+public:
+	States() { }
+	States(const Vector<Analysis::State>& state_vector) : s(state_vector) { }
+	States(const States& ss) : s(ss.s) { }
+	// return the unique state, or bottom if none. it is an error to call this when s.count() > 1
+	inline State one() const { ASSERTP(s.count() <= 1, "multiple states available"); return s ? s.first() : bottom; }
+	inline bool isEmpty() const { return s.isEmpty(); }
+	inline int count() const { return s.count(); }
+	inline const Vector<State>& states() const { return s; }
+	inline Vector<State>& states() { return s; }
+
+	inline operator Vector<State>() { return s; }
+	inline States& operator=(const Vector<State>& sv) { s = sv; return *this; }
+	inline States& operator=(const States& ss) { s = ss.s; return *this; }
+	inline friend io::Output& operator<<(io::Output& out, const States& ss) { return out << ss.s; }
+
+	typedef Vector<State>::Iterator Iterator;
+	typedef Vector<State>::MutableIterator MutableIterator;
+private:
+	Vector<State> s;
+};
+
 /**
  * @brief merge all states into one (a bit brutal)
  * 
@@ -186,6 +205,8 @@ template<template< class _ > class C> void Analysis::State::merge(const C<Analys
 			first = false;
 			continue;
 		}
+		// else //TODOv2
+			cvl += (*sl_iter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
 		// for each element of labelled_preds, we make sure it is in *sl_iter
 		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; )
 		{
@@ -204,7 +225,6 @@ template<template< class _ > class C> void Analysis::State::merge(const C<Analys
 			else
 				labelled_preds.remove(iter);
 		}
-		cvl += (*sl_iter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
 	}
 	this->constants.merge(cvl);
 	this->path.merge(stateListToPathVector(cl)); // merge paths as well while keeping some flow info and shrink that in this->path
