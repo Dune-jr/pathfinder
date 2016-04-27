@@ -29,6 +29,7 @@ void Analysis::State::throwInfo()
 
 void Analysis::State::processBB(const BasicBlock *bb)
 {
+	DBG("Processing " << (otawa::Block*)bb << " (" << bb->address() << ") of path " << getPathString())
 	SLList<LabelledPredicate> generated_preds_before_condition;
 	sem::inst condition;
 	generated_preds.clear();
@@ -1112,7 +1113,6 @@ int Analysis::State::invalidateStackBelow(const Constant& stack_limit)
 // this mindlessly replaces all occurences of var by expr
 bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 {
-	DBG(dumpEverything());
 	bool rtn = false;
 	for(PredIterator piter(*this); piter; )
 	{

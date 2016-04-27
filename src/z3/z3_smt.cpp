@@ -12,8 +12,7 @@ Z3SMT::Z3SMT(): s(c), p(c), sp(c.int_const("SP"))
 	s.set(p);
 }
 
-// check predicates satisfiability
-bool Z3SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds)
+void Z3SMT::initialize(const SLList<LabelledPredicate>& labelled_preds)
 {
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
 	{
@@ -25,7 +24,12 @@ bool Z3SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds)
 			labels_hash.push(label.hash());
 			s.add(e, label);
 		}
-	}
+	}	
+}
+
+// check predicates satisfiability
+bool Z3SMT::checkPredSat()
+{
 	return s.check();
 }
 

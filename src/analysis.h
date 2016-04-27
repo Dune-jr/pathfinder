@@ -22,11 +22,12 @@ public:
 
 	enum // flags 
 	{
-		FOLLOW_CALLS		= 0b1 << 1,
+		// FOLLOW_CALLS		= 0b1 << 1,
 		//SUPERSILENT		= 0b1 << 2,
 		MERGE				= 0b1 << 3,
 		UNMINIMIZED_PATHS	= 0b1 << 4,
 		DRY_RUN				= 0b1 << 5,
+		SMT_CHECK_LINEAR	= 0b1 << 6,
 	};
 protected:
 	typedef struct
@@ -65,6 +66,7 @@ protected:
 		LEAVE,
 	} loopheader_status_t; // Fixpoint status of the loop header, for annotation
 	inline static loopheader_status_t loopStatus(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
+	static bool isConditional(Block* b);
 	static Block* insAlias		   (Block* b);
 	static Vector<Edge*> allIns    (Block* h);
 	static Vector<Edge*> backIns   (Block* h);
@@ -101,7 +103,6 @@ private:
 	States I(Edge* e, const States& s);
 	void removeDuplicateInfeasiblePaths();
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
-	bool isConditional(Block* b) const;
 	// void printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const;
 	// void cleanIncomingEdges(Block* b) const;
 	// void cleanIncomingBackEdges(Block* b) const;

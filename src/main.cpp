@@ -16,6 +16,7 @@
 using namespace elm;
 using namespace otawa;
 
+void dumpOptions(int dbg_flags, int dbg_verbose, int analysis_flags, int merge_thresold);
 void testPredicates();
 void testOperands();
 void testSimplify();	
@@ -30,17 +31,20 @@ public:
 		opt_s1(option::SwitchOption::Make(*this).cmd("-s").cmd("--s1").cmd("--silent").description("run with minimal output")),
 		opt_s2(option::SwitchOption::Make(*this).cmd("--s2").description("only display results")),
 		opt_s3(option::SwitchOption::Make(*this).cmd("--s3").cmd("--fullsilent").description("run with zero output")),
-		opt_output(option::SwitchOption::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file")),		opt_graph_output(option::SwitchOption::Make(*this).cmd("-g").cmd("--graph-output").description("also output as a gnuplot .tsv graph file")),
+		opt_output(option::ValueOption<bool>::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file").def(true)),
+		opt_graph_output(option::SwitchOption::Make(*this).cmd("-g").cmd("--graph-output").description("also output as a gnuplot .tsv graph file (requires -o)")),
 		opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").cmd("--no-colors").description("do not use colors")),
 		opt_src_info(option::SwitchOption::Make(*this).cmd("-i").cmd("--src-info").description("print file/line number info")),
 		opt_nolinenumbers(option::SwitchOption::Make(*this).cmd("--nl").cmd("--no-line-nb").description("do not number lines of the output")),
+		opt_dumpoptions(option::SwitchOption::Make(*this).cmd("--dump-options").description("print the selected options for the analysis")),
 		opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
 		// opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")), // no longer working
 		opt_noipresults(option::SwitchOption::Make(*this).cmd("--no-ip-results").description("do not print the list of IPs found")),
 		opt_noflowinfo(option::SwitchOption::Make(*this).cmd("--no-flowinfo").description("do not print context flowinfo in path debugs")),
-		opt_progress(option::SwitchOption::Make(*this).cmd("--show-progress").description("display analysis progress")),
-		opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis (obsolete)")),
+		// opt_progress(option::SwitchOption::Make(*this).cmd("--show-progress").description("display analysis progress")),
+		// opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis (obsolete)")),
 		opt_avgiplength(option::SwitchOption::Make(*this).cmd("--average-ip-length").description("display average length of infeasible_paths found")),
+		opt_nolinearcheck(option::SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
 		opt_nounminimized(option::SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
 		opt_slice(option::SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
 		opt_dry(option::SwitchOption::Make(*this).cmd("--dry").description("dry run (no solver calls)")),
@@ -70,7 +74,7 @@ protected:
 		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
 		unsigned int max_registers = (unsigned int)workspace()->platform()->regCount(); // retrieve the count of registers
 		unsigned int max_tempvars = (unsigned int)workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
-		int analysis_flags = 0, merge_frequency = 0;
+		int analysis_flags = 0, merge_thresold = 0;
 
 		if(opt_s1)
 			dbg_verbose = 1;
@@ -92,12 +96,14 @@ protected:
 			dbg_flags |= DBG_RESULT_IPS;
 		if(! opt_noflowinfo)
 			dbg_flags |= DBG_PRINT_FLOWINFO;
-		if(opt_progress)
-			dbg_flags |= DBG_PROGRESS;
-		if(opt_preanalysis)
-			dbg_flags |= DBG_PREANALYSIS;
+		// if(opt_progress)
+		// 	dbg_flags |= DBG_PROGRESS;
+		// if(opt_preanalysis)
+		// 	dbg_flags |= DBG_PREANALYSIS;
 		if(opt_avgiplength)
 			dbg_flags |= DBG_AVG_IP_LENGTH; 
+		if(! opt_nolinearcheck)
+			analysis_flags |= Analysis::SMT_CHECK_LINEAR;
 		if(! opt_nounminimized)
 			analysis_flags |= Analysis::UNMINIMIZED_PATHS;
 		if(opt_dry)
@@ -105,15 +111,17 @@ protected:
 		if(opt_merge || opt_automerge)
 		{
 			analysis_flags |= Analysis::MERGE;
-			merge_frequency = opt_automerge ? 250 : opt_merge.get(); // 250 is good 
+			merge_thresold = opt_automerge ? 250 : opt_merge.get(); // 250 is good 
 		}
-		if(opt_virtualize.get())
-			analysis_flags |= Analysis::FOLLOW_CALLS;
-		DefaultAnalysis analysis({inital_state, sp_id, max_tempvars, max_registers}, merge_frequency, analysis_flags);
+		// if(opt_virtualize.get())
+		// 	analysis_flags |= Analysis::FOLLOW_CALLS;
+		if(opt_dumpoptions)
+			dumpOptions(dbg_flags, dbg_verbose, analysis_flags, merge_thresold);
+		DefaultAnalysis analysis({inital_state, sp_id, max_tempvars, max_registers}, merge_thresold, analysis_flags);
 		analysis.run(cfg);
 
 		// outputing to .ffx
-		if(opt_output)
+		if(opt_output.get())
 		{
 			const Vector<DetailedPath>& infeasible_paths = analysis.infeasiblePaths();
 			FFX ffx_output(infeasible_paths);
@@ -131,13 +139,49 @@ protected:
 
 private:
 	// option::Manager manager;
-	option::SwitchOption opt_s1, opt_s2, opt_s3, opt_output, opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_notime,// opt_nopred, 
-		opt_noipresults, opt_noflowinfo, opt_progress, opt_preanalysis, opt_avgiplength, opt_nounminimized, opt_slice, opt_dry, opt_automerge; //, opt_virtualize;
+	option::SwitchOption opt_s1, opt_s2, opt_s3;
+	option::ValueOption<bool> opt_output;
+	option::SwitchOption opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_dumpoptions, opt_notime, opt_noipresults, opt_noflowinfo,
+		/*opt_progress, opt_preanalysis,*/ opt_avgiplength, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_dry, opt_automerge; //, opt_virtualize;
 	option::ValueOption<bool> opt_virtualize;
 	option::ValueOption<int> opt_merge;
 };
 
 OTAWA_RUN(Display);
+
+void dumpOptions(int dbg_flags, int dbg_verbose, int analysis_flags, int merge_thresold)
+{
+	#define DBGPREFIX(str) "\t-" << elm::io::StringFormat(str).width(30) << ": " 
+	#define DBGOPT(str, val, normal) cout << DBGPREFIX(str) << (bool(val)==normal?color::IGre():color::IRed()) << ((val) ? "YES" : "NO") << color::RCol() << endl;
+	cout << "============== DUMPING OPTIONS ==============" << endl;
+	cout << "Logging:" << endl;
+	DBGOPT("LOGGING", elm::log::Debug::getDebugFlag(), true)
+	DBGOPT("COLOR", elm::log::Debug::getColorFlag(), true)
+	DBGOPT("SOURCEINFO", elm::log::Debug::getSourceInfoFlag(), false)
+	DBGOPT("NUMBERING", elm::log::Debug::getNumberingFlag(), true)
+	cout << DBGPREFIX("PREFIX COLOR") << elm::log::Debug::getPrefixColor() << "THIS" << color::RCol() << endl;
+	cout << DBGPREFIX("LOG VERBOSE MASK") << (elm::log::Debug::getVerboseLevel()?color::IGre():color::IRed()) << elm::log::Debug::getVerboseLevel() << color::RCol() << endl;
+	cout << "Debugging:" << endl;
+	cout << DBGPREFIX("VERBOSE LEVEL") << color::ICya() << "[";
+	for(int i = 3; i > 0; i--)
+		cout << (i>dbg_verbose ? "=" : " ");
+	cout << "]" << color::RCol() << endl;
+	DBGOPT("DISPLAY TIME", !(dbg_flags&DBG_NO_TIME), true)
+	DBGOPT("DISPLAY RESULT INF. PATHS", dbg_flags&DBG_RESULT_IPS, true)
+	DBGOPT("DISPLAY FLOWINFO", dbg_flags&DBG_PRINT_FLOWINFO, true)
+	DBGOPT("DISPLAY AVERAGE IP LENGTH", dbg_flags&DBG_AVG_IP_LENGTH, false)
+	cout << "Analysis:" << endl;
+	DBGOPT("CHECK LINEARITY BEFORE SMT CALL", analysis_flags&Analysis::SMT_CHECK_LINEAR, true)
+	DBGOPT("KEEP UNMINIMIZED PATHS", analysis_flags&Analysis::UNMINIMIZED_PATHS, true)
+	DBGOPT("RUN DRY (NO SMT SOLVER)", analysis_flags&Analysis::DRY_RUN, false)
+	cout << DBGPREFIX("MERGING THRESOLD");
+	if(analysis_flags&Analysis::MERGE)
+		cout << color::IRed() << merge_thresold << color::RCol() << endl;
+	else
+		cout << color::IGre() << "NONE" << color::RCol() << endl;
+	cout << "=============================================" << endl;
+	#undef DBGOPT
+}
 
 void simpleCFGparse(CFG* cfg)
 {

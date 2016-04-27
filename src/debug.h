@@ -16,7 +16,7 @@
 // v1:debug loop analysis and many other
 // v2: macro debugs
 // #define DBGG(str) { if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) elm::cout << elm::log::Debug::debugPrefix(__FILE__, __LINE__) << str << elm::color::RCol() << elm::io::endl; }
-// #define DBG_WARNINGS
+#define DBG_WARNINGS
 
 #define DBG_RESULT_IPS	   1 << 3
 #define DBG_NO_TIME		   1 << 4
@@ -39,5 +39,12 @@ extern int dbg_verbose;
  #define DBG_TEST(tested_cond, expected_cond) \
  	((tested_cond) == (expected_cond) ? color::IGre() : color::IRed()) << \
  	((tested_cond) ? "true" : "false") << color::RCol()
+
+// DBG a warning
+#ifdef DBG_WARNINGS
+	#define DBGW(str) elm::cout << color::IYel() << "WARNING: " << str << color::RCol() << endl;
+#else
+	#define DBGW(str) DBGG(color::IYel() << "WARNING: " << str)
+#endif
 
 #endif

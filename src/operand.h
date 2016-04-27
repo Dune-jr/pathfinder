@@ -77,6 +77,8 @@ public:
 	virtual bool involvesMemory() const = 0;
 	virtual bool update(const Operand& opd, const Operand& opd_modifier) = 0;
 	virtual bool isComplete() const = 0;
+	virtual bool isConstant() const = 0;
+	virtual bool isLinear() const = 0;
 	virtual bool isAffine(const OperandVar& opdv) const = 0;
 	virtual void parseAffineEquation(AffineEquationState& state) const = 0;
 	virtual Option<OperandConst> evalConstantOperand() const = 0; // all uses commented out?
@@ -116,6 +118,8 @@ public:
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
+	inline bool isConstant()   const { return true; }
+	inline bool isLinear()   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return true; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_CONST; }
@@ -154,6 +158,8 @@ public:
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
+	inline bool isConstant() const { return false; }
+	inline bool isLinear()   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return _addr == opdv.addr(); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_VAR; }
@@ -190,6 +196,8 @@ public:
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
+	inline bool isConstant() const { return false; }
+	inline bool isLinear()   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return false; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return OPERAND_MEM; }
@@ -232,6 +240,8 @@ public:
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
+	inline bool isConstant() const { return opd1->isConstant() && (isUnary() || opd2->isConstant()); }
+	bool isLinear() const;
 	inline bool isAffine(const OperandVar& opdv) const
 		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv) && opd2->isAffine(opdv); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }

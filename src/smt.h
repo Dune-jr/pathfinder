@@ -23,13 +23,17 @@ using namespace elm::genstruct;
 class SMT
 {
 public:
-	SMT();
+	SMT(int flags);
 	Option<Analysis::Path> seekInfeasiblePaths(const Analysis::State& s);
 	static const elm::String printChosenSolverInfo();
 	
 private:
-	virtual bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds) = 0;
+	virtual void initialize(const SLList<LabelledPredicate>& labelled_preds) = 0;
+	virtual bool checkPredSat() = 0;
 	virtual bool retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredicate>& labelled_preds, std::basic_string<char>& unsat_core_output) = 0;
+
+protected:
+	int flags;
 };
 
 #endif

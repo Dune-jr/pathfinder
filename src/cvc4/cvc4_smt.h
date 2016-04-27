@@ -18,7 +18,7 @@ using CVC4::Expr;
 class CVC4SMT : public SMT
 {
 public:
-	CVC4SMT();
+	CVC4SMT(int flags);
 	
 private:
 	CVC4::ExprManager em;
@@ -27,7 +27,8 @@ private:
 	SLList<Option<Expr> > exprs;
 
 	// SMT virtual pure methods
-	bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds);
+	void initialize(const SLList<LabelledPredicate>& labelled_preds);
+	bool checkPredSat();
 	bool retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredicate>& labelled_preds, std::basic_string<char>& unsat_core_output);
 	// bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds);
 	Option<Expr> getExpr(const Predicate& p);

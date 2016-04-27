@@ -732,6 +732,33 @@ Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesSimpl
 	return none;
 }
 
+bool OperandArithExpr::isLinear() const
+{
+	switch(_opr)
+	{
+		// linear iff all operands are linear
+		case ARITHOPR_NEG:
+		case ARITHOPR_ADD:
+		case ARITHOPR_SUB:
+			return opd1->isLinear() && (isUnary() || opd2->isLinear());
+
+		// linear iff any operand is constant
+		case ARITHOPR_MUL:
+			return opd1->isConstant() || opd2->isConstant();
+
+		// linear iff right operand is constant
+		case ARITHOPR_DIV:
+		case ARITHOPR_MOD:
+			return opd2->isConstant();
+
+		// hopeless
+		case ARITHOPR_MULH:
+		case ARITHOPR_CMP:
+		default:
+			return false;
+	}
+}
+
 /**
  * @class AffineEquationState
  * @brief Provide tools to analyse affine equations.

@@ -21,7 +21,7 @@ config:Finalize("config.lua")
 
 -- Settings
 settings = NewSettings()
-settings.cc.flags:Add("-O0")
+settings.cc.flags:Add("-O1")
 settings.cc.flags:Add("-std=c++11")
 
 if ScriptArgs["otawa"] and ScriptArgs["otawa"]~="1" then
@@ -32,7 +32,7 @@ end
 
 -- Wall option
 if ScriptArgs["wall"]=="true" or ScriptArgs["Wall"]=="true" then
-	settings.cc.flags:Add("-Wall")
+	settings.cc.flags:Add("-Wall -Wno-maybe-uninitialized")
 end
 
 -- OTAWA

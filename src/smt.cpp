@@ -11,7 +11,7 @@ using namespace elm::genstruct;
  * @class SMT
  * @brief Interface with the SMT solver
  */
-SMT::SMT() { }
+SMT::SMT(int flags) : flags(flags) { }
 
 /**
  * @fn Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s);
@@ -25,7 +25,8 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	SLList<LabelledPredicate> labelled_preds = s.getLabelledPreds(); // implicit copy
 	labelled_preds += s.getConstants().toPredicates();
 	
-	if(checkPredSat(labelled_preds))
+	initialize(labelled_preds);
+	if(checkPredSat())
 	{
 		DBG("Checking path " << s.getPathString() << ": " << color::BGre() << "SAT")
 		return elm::none;
@@ -59,20 +60,6 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	if(path == Analysis::Path::null)
 		return elm::none;
 	return elm::some(path);
-
-/*
-	removeIncompletePredicates(labelled_preds); // optimization: incomplete predicates are not sent to the SMT therefore they cannot play a role in the UNSAT
-	SLList<Analysis::Path> paths = getAllInfeasiblePaths(labelled_preds); // exhaustive list of paths
-		cout << labelled_preds.count() << " " << paths.count() << endl;
-	AVLMap<const Edge*, unsigned int> map_pathpoint_to_bit;
-	Vector<const Edge*> map_bit_to_pathpoint;
-	genPathPointBitMaps(paths, map_pathpoint_to_bit, map_bit_to_pathpoint); // generate maps to convert Path <-> BitVector
-	// const Vector<BitVector>& bitcode_vector = genBitCodes(paths, map_pathpoint_to_bit, map_bit_to_pathpoint.length()); // generate the list of BitVectors corresponding to the list of paths
-	const SLList<BitVector>& bitcode_list = genBitCodes(paths, map_pathpoint_to_bit, map_bit_to_pathpoint.length()); // generate the list of BitVectors corresponding to the list of paths
-	const BitVector& paths_to_keep = getListOfPathsToKeep(bitcode_list); // get the list of relevant paths (removes redundant bitcode such as 101 in {101, 100})
-	
-	return elm::some(filterPaths(bitcode_list, map_bit_to_pathpoint, paths_to_keep, true)); // generate the list of non-redundant paths and return it
-*/
 }
 
 /**

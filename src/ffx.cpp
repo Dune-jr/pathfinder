@@ -63,7 +63,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			ASSERTP(e->source()->isBasic() || e->source()->isCall() || e->source()->isExit(), ": source not basic nor call nor exit: " << e->source() << "->" << e->target());
 			ASSERTP(e->target()->isBasic() || e->target()->isCall() || e->target()->isExit(), ": target not basic nor call nor exit: " << e->source() << "->" << e->target());
 			
-			BasicBlock *source, *target;
+			BasicBlock *source = NULL, *target = NULL;
 			if(e->source()->isBasic())
 				source = e->source()->toBasic();
 			else if(e->source()->isSynth())

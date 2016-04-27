@@ -33,7 +33,8 @@ Vector<Analysis::State> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) con
 			v.push(LH_S(b));
 		purgeBottomStates(v);
 		// ASSERTP(v, "Loop Header received only bottom state, case not handled yet. The main algorithm will use s[0] so...")
-		if(!v) {
+		if(!v)
+		{
 			DBGG("narrowing returns null vector")
 			return v;
 		}
@@ -65,7 +66,7 @@ bool DefaultAnalysis::inD_ip(const otawa::Edge* e) const
 			break;
 		}
 	}
-	return all_leave; //TODOv2: add condition: && isConditional(e->source())
+	return all_leave && isConditional(e->source()); //TODOv2: add condition: && isConditional(e->source())
 }
 
 //TODOv2: make this method const
@@ -81,13 +82,13 @@ void DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<DetailedPath>& 
 	for(States::Iterator si(ss.states()); si; si++)
 	{
 		// SMT call
-		chosen_smt_t smt;
+		chosen_smt_t smt(flags);
 		const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(*si);
 		vl_paths.addLast(infeasible_path);
 		if(infeasible_path)
 		{
 #			ifdef DBG_WARNINGS
-				if(! infeasible_path->contains(s.lastEdge())) // make sure the last edge was relevant in this path
+				if(! (*infeasible_path).contains(si->lastEdge())) // make sure the last edge was relevant in this path
 					cerr << "WARNING: !infeasible_path->contains(s.lastEdge())" << endl;
 #			endif
 		}
@@ -139,13 +140,13 @@ void DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<DetailedPath>& 
 	ss = new_sv;
 }
 
-SLList<Analysis::State> DefaultAnalysis::listOfS(const Vector<Edge*>& ins) const
+/*SLList<Analysis::State> DefaultAnalysis::listOfS(const Vector<Edge*>& ins) const
 {
 	SLList<State> sl;
 	for(Vector<Edge*>::Iterator i(ins); i; i++)
 		sl.addAll(EDGE_S.use(*i).states());
 	return sl;
-}
+}*/
 
 Vector<Analysis::State> DefaultAnalysis::vectorOfS(const Vector<Edge*>& ins) const
 {

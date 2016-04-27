@@ -24,7 +24,8 @@ private:
     Vector<unsigned int> labels_hash;
 
     // SMT virtual pure methods
-    bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds);
+    void initialize(const SLList<LabelledPredicate>& labelled_preds);
+    bool checkPredSat();
     bool retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredicate>& labelled_preds, std::basic_string<char>& unsat_core_output);
     z3::expr getExpr(const Predicate& p);
     z3::expr getExpr(const Operand& o);

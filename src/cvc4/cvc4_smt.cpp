@@ -13,7 +13,7 @@ using namespace CVC4::kind;
 using elm::BitVector;
 using CVC4::Expr;
 
-CVC4SMT::CVC4SMT(): smt(&em), variables(em)
+CVC4SMT::CVC4SMT(int flags): SMT(flags), smt(&em), variables(em)
 {
 	smt.setLogic("QF_LIA"); // Quantifier-Free (no forall, exists...) Linear Integer Arithmetic
 	smt.setOption("incremental", CVC4::SExpr("false")); // non incremental
@@ -25,29 +25,38 @@ CVC4SMT::CVC4SMT(): smt(&em), variables(em)
 	// smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
 }
 
-// check predicates satisfiability
-bool CVC4SMT::checkPredSat(const SLList<LabelledPredicate>& labelled_preds)
+void CVC4SMT::initialize(const SLList<LabelledPredicate>& labelled_preds)
 {
-	// get a SLList<Option<Expr> > out of a SLList<LabelledPredicate> in order to know which LP matches which expr // TODO: this is superfluous with Z3
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
 		exprs.addLast(getExpr(iter->pred()));
-// elm::cout << "labelled_preds=" << labelled_preds << endl;
-	try
-	{
-		for(SLList<Option<Expr> >::Iterator iter(exprs); iter; iter++)
-			if(*iter) {
-				smt.assertFormula(**iter, true); // second parameter to true for unsat cores
-				// std::cout << "\tassertFormula(" << **iter << ")\n"; // TODO!!!
-			}
+}
 
+// check predicates satisfiability
+bool CVC4SMT::checkPredSat()
+{
+	try {
+std::time_t timestamp = clock(); // Timestamp before analysis
+		for(SLList<Option<Expr> >::Iterator iter(exprs); iter; iter++)
+			if(*iter)
+				smt.assertFormula(**iter, true); // second parameter to true for unsat cores
 		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
+
+timestamp = (clock()-timestamp)*1000*1000/CLOCKS_PER_SEC;
+		// smt.getStatistics().flushInformation((std::ostream&)std::cout);
+		/*
+		std::cerr << "DEBUG:\t" <<
+			exprs.count() << "\t" <<
+			smt.getStatistic("smt::SmtEngine::processAssertionsTime").getValue() << "\t" <<
+			smt.getStatistic("smt::SmtEngine::theoryPreprocessTime").getValue() << "\t" <<
+			smt.getStatistic("smt::SmtEngine::solveTime").getValue() << "\t" <<
+			timestamp <<
+		endl;
+		//*/
 		return isSat;
 	}
 	catch(CVC4::LogicException e)
 	{
-		#ifdef DBG_WARNINGS
-			cout << "WARNING: non-linear call to CVC4, defaulted to SAT." << endl;
-		#endif
+		DBGW("non-linear call to CVC4, defaulting to SAT.")
 		return true;
 	}
 }
@@ -65,9 +74,9 @@ bool CVC4SMT::retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredi
 			unsat_core_output += ", ";	
 		unsat_core_output += (*unsat_core_iter).toString();
 		empty = false;
+
 		SLList<LabelledPredicate>::Iterator lp_iter(labelled_preds);
 		SLList<Option<Expr> >::Iterator expr_iter(exprs);
-
 		for(; lp_iter; lp_iter++, expr_iter++)
 			if(*expr_iter && **expr_iter == *unsat_core_iter)
 				path += (*lp_iter).labels();
@@ -79,15 +88,15 @@ bool CVC4SMT::retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredi
 
 Option<Expr> CVC4SMT::getExpr(const Predicate& p)
 {
-	if(!p.isComplete())
+	if(!p.isComplete() || (flags&Analysis::SMT_CHECK_LINEAR && !p.isLinear()))
 		return elm::none;
 	return em.mkExpr(getKind(p), getExpr(p.leftOperand()), getExpr(p.rightOperand()));
 }
 
 Option<Expr> CVC4SMT::getExpr(const Operand& o)
 {
-	if(!o.isComplete())
-		return elm::none; // this could cause a crash
+	// if(!o.isComplete())
+	// 	return elm::none; // this could cause a crash
 		
 	CVC4OperandVisitor visitor(em, variables);
 	if(!o.accept(visitor))

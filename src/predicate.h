@@ -28,8 +28,9 @@ public:
 	inline Operand& leftOperand() const { return *_opd1; }
 	inline Operand& rightOperand() const { return *_opd2; }
 	
-	inline bool isIdent() const { return (*_opd1 == *_opd2) && _opr == CONDOPR_EQ; }
+	inline bool isIdent() const    { return (*_opd1 == *_opd2) && _opr == CONDOPR_EQ; }
 	inline bool isComplete() const { return _opd1->isComplete() && _opd2->isComplete(); }
+	inline bool isLinear() const   { return _opd1->isLinear() && _opd2->isLinear(); }
 	Predicate* copy() const;
 	int involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;

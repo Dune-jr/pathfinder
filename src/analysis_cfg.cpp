@@ -32,7 +32,7 @@ void Analysis::processCFG(CFG* cfg)
 	for(Block::EdgeIter entry_outs(cfg->entry()->outs()); entry_outs; entry_outs++)
 	{
 		/* s_e ← T */
-		Vector<Analysis::State> entry_s; // TODOv2: States::top()
+		Vector<Analysis::State> entry_s;
 		entry_s.push(topState(cfg->entry()));
 		EDGE_S(*entry_outs) = entry_s;
 		/* wl ← sink(e) */
@@ -810,7 +810,7 @@ Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>&
  * A BasicBlock is conditional if and only if it has more than one outgoing edge, including a taken edge
  * @param BasicBlock to test
  */
-bool Analysis::isConditional(Block* b) const
+bool Analysis::isConditional(Block* b)
 {
 	/*int count = 0;
 	bool atLeastOneTaken = false;
@@ -823,5 +823,5 @@ bool Analysis::isConditional(Block* b) const
 			atLeastOneTaken |= outs->isTaken(); // (outs->kind() == Edge::TAKEN)
 		}
 	return atLeastOneTaken && (count > 1);*/
-	return b->countOuts() > 1; // TODOv2: test this..
+	return b->countOuts() > 1;
 }
