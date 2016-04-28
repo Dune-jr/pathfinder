@@ -16,7 +16,7 @@
  */
 Analysis::Analysis(const context_t& context, int state_size_limit, int flags)
 	: context(context), state_size_limit(state_size_limit), flags(flags)
-	, ip_count(0), unminimized_ip_count(0)
+	// , ip_count(0), unminimized_ip_count(0)
 	, loop_header_count(0), bb_count(-1) { }
 
 const Vector<DetailedPath>& Analysis::run(CFG *cfg)
@@ -329,8 +329,8 @@ void Analysis::printResults(int exec_time_ms) const
 		else
 			cout << endl;
 	}
-	cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << infeasible_paths_count-unminimized_ip_count << color::RCol() <<
-			"+" << color::Yel() << unminimized_ip_count << color::RCol() << " => " << color::IRed() << ip_count << color::RCol() << endl;
+	cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << ip_stats.getMinimizedIPCount() << color::RCol() <<
+			"+" << color::Yel() << ip_stats.getUnminimizedIPCount() << color::RCol() << " => " << color::IRed() << ip_stats.getIPCount() << color::RCol() << endl;
 	if(dbg_flags&DBG_AVG_IP_LENGTH && infeasible_paths_count > 0)
 	{
 		int sum_path_lengths = 0, squaredsum_path_lengths = 0;

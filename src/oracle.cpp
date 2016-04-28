@@ -69,13 +69,13 @@ bool DefaultAnalysis::inD_ip(const otawa::Edge* e) const
 	return all_leave && isConditional(e->source()); //TODOv2: add condition: && isConditional(e->source())
 }
 
-//TODOv2: make this method const
 // look for infeasible paths, add them to infeasible_paths, and removes the states from ss
-void DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<DetailedPath>& infeasible_paths) //const
+Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const
 // void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional)
 {
+	IPStats stats;
 	if(flags&DRY_RUN) // no SMT call
-		return;
+		return stats;
 	// find the conflicts
 	Vector<Option<Path> > vl_paths;
 	Vector<Analysis::State> new_sv(ss.count()); // safer to do it this way than remove on the fly (i think more convenient later too)
@@ -108,7 +108,7 @@ void DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<DetailedPath>& 
 			DBG("Path " << s.getPathString() << " minimized to " << pathToString(ip))
 			bool valid = checkInfeasiblePathValidity(ss.states(), vl_paths, ip, counterexample);
 			DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
-			ip_count++;
+			stats.onAnyInfeasiblePath();
 			if(valid)
 			{
 				addDetailedInfeasiblePath(reorderInfeasiblePath(ip, s.getDetailedPath()), infeasible_paths); // infeasible_paths += order(ip); to output proprer ffx!
@@ -117,7 +117,7 @@ void DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<DetailedPath>& 
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
 			{
 				DBG("   counterexample: " << counterexample)
-				unminimized_ip_count++;
+				stats.onUnminimizedInfeasiblePath();
 				if(flags&UNMINIMIZED_PATHS)
 				{	// falling back on full path (not as useful as a result, but still something)
 					DetailedPath full_path = s.getDetailedPath();
@@ -138,6 +138,7 @@ void DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<DetailedPath>& 
 		}
 	}
 	ss = new_sv;
+	return stats;
 }
 
 /*SLList<Analysis::State> DefaultAnalysis::listOfS(const Vector<Edge*>& ins) const

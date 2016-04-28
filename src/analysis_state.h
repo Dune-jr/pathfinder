@@ -190,9 +190,6 @@ template<template< class _ > class C> void Analysis::State::merge(const C<Analys
 	labelled_preds.clear();
 	SLList<ConstantVariables> cvl;
 	// intialize to first element
-	// TODOv2: need to do something here to either
-	//	* propagate a bottom state but that means we have to carefully merge it when it's in a list of states
-	//	* give feedback that we should propagate an empty list of states (to notify of the "bottom only" state)
 	constants = cl.first().constants;
 	// copy firstElement.labelled_preds into labelled_preds with empty labels
 	for(SLList<LabelledPredicate>::Iterator iter(cl.first().labelled_preds); iter; iter++)

@@ -109,7 +109,7 @@ void Analysis::processCFG(CFG* cfg)
 				// EDGE_S.ref(e).addAll(I(e, s));
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 				if(inD_ip(e))
-					ipcheck(EDGE_S.ref(e), infeasible_paths);
+					ip_stats += ipcheck(EDGE_S.ref(e), infeasible_paths);
 				/* wl ← wl ∪ {sink(e)} */
 				wl_push(e->target());
 			}

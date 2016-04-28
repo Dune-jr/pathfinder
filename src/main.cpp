@@ -31,7 +31,7 @@ public:
 		opt_s1(option::SwitchOption::Make(*this).cmd("-s").cmd("--s1").cmd("--silent").description("run with minimal output")),
 		opt_s2(option::SwitchOption::Make(*this).cmd("--s2").description("only display results")),
 		opt_s3(option::SwitchOption::Make(*this).cmd("--s3").cmd("--fullsilent").description("run with zero output")),
-		opt_output(option::ValueOption<bool>::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file").def(true)),
+		opt_output(option::ValueOption<bool>::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file").def(false)),
 		opt_graph_output(option::SwitchOption::Make(*this).cmd("-g").cmd("--graph-output").description("also output as a gnuplot .tsv graph file (requires -o)")),
 		opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").cmd("--no-colors").description("do not use colors")),
 		opt_src_info(option::SwitchOption::Make(*this).cmd("-i").cmd("--src-info").description("print file/line number info")),
@@ -61,8 +61,8 @@ protected:
 		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
 		if(opt_slice) {
-			otawa::oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
-			otawa::oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
+			// otawa::oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
+			// otawa::oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
 			workspace()->require(otawa::oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
 			workspace()->require(otawa::oslice::SLICER_FEATURE, props);
 		}
