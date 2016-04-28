@@ -38,8 +38,27 @@ protected:
 		unsigned int max_registers;
 	} context_t;
 
+	class IPStats
+	{
+	public:
+		IPStats() : ip_count(0), unminimized_ip_count(0) { }
+		IPStats(int ip_count, int unminimized_ip_count) : ip_count(ip_count), unminimized_ip_count(unminimized_ip_count) { }
+		inline void onAnyInfeasiblePath() { ip_count++; }
+		inline void onUnminimizedInfeasiblePath() { unminimized_ip_count++; }
+		inline int getIPCount() const { return ip_count; }
+		inline int getMinimizedIPCount() const { return ip_count - unminimized_ip_count; }
+		inline int getUnminimizedIPCount() const { return unminimized_ip_count; }
+		inline IPStats operator+(const IPStats& st) const { return IPStats(ip_count+st.ip_count, unminimized_ip_count+st.unminimized_ip_count); }
+  		inline IPStats& operator+=(const IPStats& st) { ip_count += st.ip_count; unminimized_ip_count += st.unminimized_ip_count; return *this; }
+		inline IPStats& operator=(const IPStats& st) { ip_count = st.ip_count; unminimized_ip_count = st.unminimized_ip_count; return *this; }
+	private:
+		int ip_count;
+		int unminimized_ip_count;
+	};
+
 public:
 	Analysis(const context_t& context, int state_size_limit, int flags);
+	~Analysis();
 	const Vector<DetailedPath>& run(CFG *cfg);
 	inline const Vector<DetailedPath>& infeasiblePaths() const { return infeasible_paths; }
 	// static bool listOfFixpoints(const SLList<Analysis::State>& sl);
@@ -47,9 +66,11 @@ public:
 	static elm::String orderedPathToString(const OrderedPath& path);
 
 protected:
+	class Progress;
 	context_t context;
+	IPStats ip_stats;
+	Analysis::Progress* progress;
 	int state_size_limit, flags; // read by inherited class
-	int ip_count, unminimized_ip_count; // written by inherited class
 
 	static bool checkInfeasiblePathValidity(const Vector<State>& sv, const Vector<Option<Path> >& sv_paths, /*const Edge* e,*/ const Path& infeasible_path, elm::String& counterexample);
 	static DetailedPath reorderInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path);
@@ -66,7 +87,7 @@ protected:
 		LEAVE,
 	} loopheader_status_t; // Fixpoint status of the loop header, for annotation
 	inline static loopheader_status_t loopStatus(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
-	static bool isConditional(Block* b);
+	inline static bool isConditional(Block* b) { return b->countOuts() > 1; }
 	static Block* insAlias		   (Block* b);
 	static Vector<Edge*> allIns    (Block* h);
 	static Vector<Edge*> backIns   (Block* h);
@@ -89,10 +110,10 @@ private:
 	// virtual pure functions to implement
 	virtual Vector<State> narrowing(const Vector<Edge*>& edges) const = 0;
 	virtual bool inD_ip(const otawa::Edge* e) const = 0;
-	virtual void ipcheck(States& s, elm::genstruct::Vector<DetailedPath>& infeasible_paths) = 0;
+	virtual IPStats ipcheck(States& s, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const = 0;
 
 	// analysis.cpp
-	void debugProgress(int block_id, bool enable_smt) const;
+	// void debugProgress(int block_id, bool enable_smt) const;
 	Analysis::State topState(Block* entry) const;
 	void wl_push(Block* b);
 	void printResults(int exec_time_ms) const;

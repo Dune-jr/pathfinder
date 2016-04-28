@@ -31,17 +31,17 @@ public:
 		opt_s1(option::SwitchOption::Make(*this).cmd("-s").cmd("--s1").cmd("--silent").description("run with minimal output")),
 		opt_s2(option::SwitchOption::Make(*this).cmd("--s2").description("only display results")),
 		opt_s3(option::SwitchOption::Make(*this).cmd("--s3").cmd("--fullsilent").description("run with zero output")),
-		opt_output(option::ValueOption<bool>::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file").def(true)),
+		opt_output(option::ValueOption<bool>::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file").def(false)),
 		opt_graph_output(option::SwitchOption::Make(*this).cmd("-g").cmd("--graph-output").description("also output as a gnuplot .tsv graph file (requires -o)")),
 		opt_nocolor(option::SwitchOption::Make(*this).cmd("--no-color").cmd("--no-colors").description("do not use colors")),
 		opt_src_info(option::SwitchOption::Make(*this).cmd("-i").cmd("--src-info").description("print file/line number info")),
 		opt_nolinenumbers(option::SwitchOption::Make(*this).cmd("--nl").cmd("--no-line-nb").description("do not number lines of the output")),
+		opt_progress(option::SwitchOption::Make(*this).cmd("--progress").description("display analysis progress (best used with --s2+)")),
 		opt_dumpoptions(option::SwitchOption::Make(*this).cmd("--dump-options").description("print the selected options for the analysis")),
 		opt_notime(option::SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
 		// opt_nopred(option::SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")), // no longer working
 		opt_noipresults(option::SwitchOption::Make(*this).cmd("--no-ip-results").description("do not print the list of IPs found")),
 		opt_noflowinfo(option::SwitchOption::Make(*this).cmd("--no-flowinfo").description("do not print context flowinfo in path debugs")),
-		// opt_progress(option::SwitchOption::Make(*this).cmd("--show-progress").description("display analysis progress")),
 		// opt_preanalysis(option::SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis (obsolete)")),
 		opt_avgiplength(option::SwitchOption::Make(*this).cmd("--average-ip-length").description("display average length of infeasible_paths found")),
 		opt_nolinearcheck(option::SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
@@ -61,8 +61,8 @@ protected:
 		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
 		if(opt_slice) {
-			otawa::oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
-			otawa::oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
+			// otawa::oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
+			// otawa::oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
 			workspace()->require(otawa::oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
 			workspace()->require(otawa::oslice::SLICER_FEATURE, props);
 		}
@@ -76,12 +76,10 @@ protected:
 		unsigned int max_tempvars = (unsigned int)workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
 		int analysis_flags = 0, merge_thresold = 0;
 
-		if(opt_s1)
-			dbg_verbose = 1;
-		if(opt_s2)
-			dbg_verbose = 2;
-		if(opt_s3)
-			dbg_verbose = 3; // high verbose numbers are more silent. TODO: that is counterintuitive
+		// high verbose numbers are more silent. TODO: that is counterintuitive
+		if(opt_s1) dbg_verbose = 1;
+		if(opt_s2) dbg_verbose = 2;
+		if(opt_s3) dbg_verbose = 3;
 		elm::log::Debug::setDebugFlag(dbg_verbose == DBG_VERBOSE_ALL || dbg_verbose == DBG_VERBOSE_MINIMAL);
 		elm::log::Debug::setVerboseLevel(dbg_verbose == DBG_VERBOSE_ALL ? 1 : 0);
 		elm::log::Debug::setColorFlag(! opt_nocolor);
@@ -96,8 +94,8 @@ protected:
 			dbg_flags |= DBG_RESULT_IPS;
 		if(! opt_noflowinfo)
 			dbg_flags |= DBG_PRINT_FLOWINFO;
-		// if(opt_progress)
-		// 	dbg_flags |= DBG_PROGRESS;
+		if(opt_progress)
+			dbg_flags |= DBG_PROGRESS;
 		// if(opt_preanalysis)
 		// 	dbg_flags |= DBG_PREANALYSIS;
 		if(opt_avgiplength)
@@ -141,8 +139,8 @@ private:
 	// option::Manager manager;
 	option::SwitchOption opt_s1, opt_s2, opt_s3;
 	option::ValueOption<bool> opt_output;
-	option::SwitchOption opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_dumpoptions, opt_notime, opt_noipresults, opt_noflowinfo,
-		/*opt_progress, opt_preanalysis,*/ opt_avgiplength, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_dry, opt_automerge; //, opt_virtualize;
+	option::SwitchOption opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_progress, opt_dumpoptions, opt_notime, opt_noipresults, opt_noflowinfo,
+		/*opt_preanalysis,*/ opt_avgiplength, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_dry, opt_automerge; //, opt_virtualize;
 	option::ValueOption<bool> opt_virtualize;
 	option::ValueOption<int> opt_merge;
 };
@@ -166,6 +164,7 @@ void dumpOptions(int dbg_flags, int dbg_verbose, int analysis_flags, int merge_t
 	for(int i = 3; i > 0; i--)
 		cout << (i>dbg_verbose ? "=" : " ");
 	cout << "]" << color::RCol() << endl;
+	DBGOPT("DISPLAY PROGRESS", dbg_flags&DBG_PROGRESS, false)
 	DBGOPT("DISPLAY TIME", !(dbg_flags&DBG_NO_TIME), true)
 	DBGOPT("DISPLAY RESULT INF. PATHS", dbg_flags&DBG_RESULT_IPS, true)
 	DBGOPT("DISPLAY FLOWINFO", dbg_flags&DBG_PRINT_FLOWINFO, true)

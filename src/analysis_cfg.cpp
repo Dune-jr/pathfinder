@@ -5,6 +5,7 @@
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include "analysis_state.h"
+#include "progress.h"
 #include "cfg_features.h"
 
 using namespace elm::genstruct;
@@ -109,7 +110,7 @@ void Analysis::processCFG(CFG* cfg)
 				// EDGE_S.ref(e).addAll(I(e, s));
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 				if(inD_ip(e))
-					ipcheck(EDGE_S.ref(e), infeasible_paths);
+					ip_stats += ipcheck(EDGE_S.ref(e), infeasible_paths);
 				/* wl ← wl ∪ {sink(e)} */
 				wl_push(e->target());
 			}
@@ -120,16 +121,16 @@ void Analysis::processCFG(CFG* cfg)
 
 Analysis::States& Analysis::I(Block* b, States& s)
 {
-	// purgeBottomStates(s.states()); // this may empty the states
+	if(flags&DBG_PROGRESS)
+		progress->onBlock(b);
 	if(b->isBasic())
 	{
 		DBGG(color::Bold() << "-\tI(b=" /*<< color::NoBold() << color::ICya()*/ << b << /*color::RCol() << color::Bold() <<*/ ") " << color::NoBold() << printFixPointStatus(b))
 		for(States::MutableIterator si(s.states()); si; si++)
 			si.item().processBB(b->toBasic());
 	}
-	else {
+	else
 		DBGG("TODO: not doing anything");
-	}
 	return s;
 }
 
@@ -806,22 +807,7 @@ Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>&
 }
 
 /**
- * @brief Test if a BasicBlock is conditional
- * A BasicBlock is conditional if and only if it has more than one outgoing edge, including a taken edge
+ * @fn inline static bool Analysis::isConditional(Block* b);
+ * @brief Test if a BasicBlock is conditional, i.e. has more than one edge
  * @param BasicBlock to test
  */
-bool Analysis::isConditional(Block* b)
-{
-	/*int count = 0;
-	bool atLeastOneTaken = false;
-	for(Block::EdgeIter outs(b->outs()); outs; outs++)
-		//if(isAHandledEdgeKind(outs->kind()))
-		{
-			count++;
-			ASSERTP(!atLeastOneTaken || !outs->isTaken(), "Multiple outgoing taken edges currently not supported by IP analysis (" << b <<")");
-			ASSERTP(count <= 2, "3+ outgoing edges currently not supported by IP analysis (" << b << ")")
-			atLeastOneTaken |= outs->isTaken(); // (outs->kind() == Edge::TAKEN)
-		}
-	return atLeastOneTaken && (count > 1);*/
-	return b->countOuts() > 1;
-}

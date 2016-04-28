@@ -9,6 +9,7 @@
 #include <otawa/cfg/Edge.h>
 #include "analysis_state.h"
 #include "cfg_features.h"
+#include "progress.h"
 
 /**
  * @class Analysis
@@ -16,11 +17,16 @@
  */
 Analysis::Analysis(const context_t& context, int state_size_limit, int flags)
 	: context(context), state_size_limit(state_size_limit), flags(flags)
-	, ip_count(0), unminimized_ip_count(0)
-	, loop_header_count(0), bb_count(-1) { }
+	// , ip_count(0), unminimized_ip_count(0)
+	, loop_header_count(0), bb_count(-1)
+	{ }
+
+Analysis::~Analysis() { if(flags&DBG_PROGRESS) delete progress; }
 
 const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 {
+	if(flags&DBG_PROGRESS)
+		progress = new Progress(cfg);
 	bb_count = cfg->count()-1; // do not count ENTRY
 	std::time_t timestamp = clock();
 	// DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
@@ -39,7 +45,7 @@ const Vector<DetailedPath>& Analysis::run(CFG *cfg)
  * @fn void Analysis::debugProgress(int block_id, bool enable_smt) const;
  * Print progress of analysis
  */
-void Analysis::debugProgress(int block_id, bool enable_smt) const
+/*void Analysis::debugProgress(int block_id, bool enable_smt) const
 {
 	if(dbg_verbose >= DBG_VERBOSE_RESULTS_ONLY && (dbg_flags&DBG_PROGRESS))
 	{
@@ -48,7 +54,7 @@ void Analysis::debugProgress(int block_id, bool enable_smt) const
 			++processed_bbs; // only increase processed_bbs when we are in a state where we are no longer looking for a fixpoint
 		cout << "[" << processed_bbs*100/bb_count << "%] Processed Block #" << block_id << " of " << bb_count << "        " << endl << "\e[1A";
 	}
-}
+}*/
 
 /*
  * @fn void Analysis::wl_push(Block* b);
@@ -329,8 +335,8 @@ void Analysis::printResults(int exec_time_ms) const
 		else
 			cout << endl;
 	}
-	cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << infeasible_paths_count-unminimized_ip_count << color::RCol() <<
-			"+" << color::Yel() << unminimized_ip_count << color::RCol() << " => " << color::IRed() << ip_count << color::RCol() << endl;
+	cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << infeasible_paths_count-ip_stats.getUnminimizedIPCount() << color::RCol() <<
+			"+" << color::Yel() << ip_stats.getUnminimizedIPCount() << color::RCol() << " => " << color::IRed() << ip_stats.getIPCount() << color::RCol() << endl;
 	if(dbg_flags&DBG_AVG_IP_LENGTH && infeasible_paths_count > 0)
 	{
 		int sum_path_lengths = 0, squaredsum_path_lengths = 0;
