@@ -121,7 +121,7 @@ void Analysis::processCFG(CFG* cfg)
 
 Analysis::States& Analysis::I(Block* b, States& s)
 {
-	if(flags&DBG_PROGRESS)
+	if(flags&SHOW_PROGRESS)
 		progress->onBlock(b);
 	if(b->isBasic())
 	{

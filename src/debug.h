@@ -21,7 +21,7 @@
 #define DBG_RESULT_IPS	   1 << 3
 #define DBG_NO_TIME		   1 << 4
 #define DBG_PREANALYSIS	   1 << 6
-#define DBG_PROGRESS	   1 << 7
+// #define DBG_PROGRESS	   1 << 7
 #define DBG_PRINT_FLOWINFO 1 << 8
 #define DBG_AVG_IP_LENGTH  1 << 9
 #define UNTESTED_CRITICAL true // Raise exceptions when executing untested code

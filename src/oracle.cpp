@@ -5,8 +5,9 @@
 // #include <elm/sys/Thread.h> // multithreading
 #include "analysis_state.h"
 #include "cfg_features.h"
-#include "oracle.h"
 #include "debug.h"
+#include "oracle.h"
+#include "progress.h"
 #ifdef SMT_SOLVER_CVC4
 	#include "cvc4/cvc4_smt.h"
  	typedef CVC4SMT chosen_smt_t;
@@ -77,8 +78,12 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 	if(flags&DRY_RUN) // no SMT call
 		return stats;
 	// find the conflicts
+	const int state_count = ss.count();
 	Vector<Option<Path> > vl_paths;
-	Vector<Analysis::State> new_sv(ss.count()); // safer to do it this way than remove on the fly (i think more convenient later too)
+	Vector<Analysis::State> new_sv(state_count); // safer to do it this way than remove on the fly (i think more convenient later too)
+	SolverProgress* sprogress;
+	if(flags&SHOW_PROGRESS)
+		sprogress = new SolverProgress(state_count);
 	for(States::Iterator si(ss.states()); si; si++)
 	{
 		// SMT call
@@ -94,7 +99,11 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 		}
 		else
 			new_sv.addLast(*si); // only add feasible states to new_sv
+		if(flags&SHOW_PROGRESS)
+			sprogress->onSolving(infeasible_path);
 	}
+	if(flags&SHOW_PROGRESS)
+		delete sprogress;
 	// analyse the conflicts found
 	ASSERTP(ss.count() == vl_paths.count(), "different size of ss and vl_paths")
 	Vector<Option<Path> >::Iterator pi(vl_paths);

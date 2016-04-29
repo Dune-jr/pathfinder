@@ -21,11 +21,11 @@ Analysis::Analysis(const context_t& context, int state_size_limit, int flags)
 	, loop_header_count(0), bb_count(-1)
 	{ }
 
-Analysis::~Analysis() { if(flags&DBG_PROGRESS) delete progress; }
+Analysis::~Analysis() { if(flags&SHOW_PROGRESS) delete progress; }
 
 const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 {
-	if(flags&DBG_PROGRESS)
+	if(flags&SHOW_PROGRESS)
 		progress = new Progress(cfg);
 	bb_count = cfg->count()-1; // do not count ENTRY
 	std::time_t timestamp = clock();

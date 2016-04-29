@@ -22,12 +22,13 @@ public:
 
 	enum // flags 
 	{
-		// FOLLOW_CALLS		= 0b1 << 1,
-		//SUPERSILENT		= 0b1 << 2,
-		MERGE				= 0b1 << 3,
-		UNMINIMIZED_PATHS	= 0b1 << 4,
-		DRY_RUN				= 0b1 << 5,
-		SMT_CHECK_LINEAR	= 0b1 << 6,
+		// FOLLOW_CALLS		  = 0b1 << 1,
+		//SUPERSILENT		  = 0b1 << 2,
+		MERGE				  = 0b1 << 3,
+		UNMINIMIZED_PATHS	  = 0b1 << 4,
+		DRY_RUN				  = 0b1 << 5,
+		SMT_CHECK_LINEAR	  = 0b1 << 6,
+		SHOW_PROGRESS		  = 0b1 << 7,
 	};
 protected:
 	typedef struct
@@ -67,6 +68,7 @@ public:
 
 protected:
 	class Progress;
+	class SolverProgress;
 	context_t context;
 	IPStats ip_stats;
 	Analysis::Progress* progress;
