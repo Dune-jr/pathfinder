@@ -324,7 +324,7 @@ void Analysis::printResults(int exec_time_ms) const
 	if(dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_NONE)
 	{
 		cout << color::BIGre() << infeasible_paths_count << color::RCol() << " infeasible path(s) found.";
-		if(!(dbg_flags&DBG_NO_TIME))
+		if(! (dbg_flags&DBG_NO_TIME))
 		{
 		    std::ios_base::fmtflags oldflags = std::cout.flags();
 		    std::streamsize oldprecision = std::cout.precision();

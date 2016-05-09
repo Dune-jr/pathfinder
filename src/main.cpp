@@ -81,6 +81,8 @@ protected:
 		if(opt_s1) dbg_verbose = 1;
 		if(opt_s2) dbg_verbose = 2;
 		if(opt_s3) dbg_verbose = 3;
+		if(opt_progress)
+			dbg_verbose = max(dbg_verbose, 2); // minimum 2
 		elm::log::Debug::setDebugFlag(dbg_verbose == DBG_VERBOSE_ALL || dbg_verbose == DBG_VERBOSE_MINIMAL);
 		elm::log::Debug::setVerboseLevel(dbg_verbose == DBG_VERBOSE_ALL ? 1 : 0);
 		elm::log::Debug::setColorFlag(! opt_nocolor);
@@ -98,12 +100,9 @@ protected:
 		// if(opt_preanalysis)
 		// 	dbg_flags |= DBG_PREANALYSIS;
 		if(opt_avgiplength)
-			dbg_flags |= DBG_AVG_IP_LENGTH; 
-
-		if(opt_progress) {
+			dbg_flags |= DBG_AVG_IP_LENGTH;
+		if(opt_progress)
 			analysis_flags |= Analysis::SHOW_PROGRESS;
-			dbg_verbose = max(dbg_verbose, 2); // minimum 2
-		}
 		if(! opt_nolinearcheck)
 			analysis_flags |= Analysis::SMT_CHECK_LINEAR;
 		if(! opt_nounminimized)

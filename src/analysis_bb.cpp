@@ -17,7 +17,7 @@ using namespace otawa::sem;
  * @fn void Analysis::State::throwInfo();
  * throw all gathered info on current state
  */
-void Analysis::State::throwInfo()
+/*void Analysis::State::throwInfo()
 {
 	DBG(color::IRed() << "throwing info from path " << getPathString())
 	path.clear();
@@ -25,7 +25,7 @@ void Analysis::State::throwInfo()
 	labelled_preds.clear();
 	generated_preds.clear();
 	generated_preds_taken.clear();
-}
+}*/
 
 void Analysis::State::processBB(const BasicBlock *bb)
 {
@@ -62,8 +62,8 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			}
 			
 			Operand *opd1 = NULL, *opd2 = NULL, *opd11 = NULL, *opd12 = NULL, *opd21 = NULL, *opd22 = NULL;
-			condoperator_t opr = CONDOPR_EQ; // Default is =
-			Path labels; // empty by default
+			condoperator_t opr = CONDOPR_EQ; // default is =
+			Path labels; // default is {}
 			bool make_pred = false;
 			
 			// some shortcuts (the seminsts.F functions are not called at this point)

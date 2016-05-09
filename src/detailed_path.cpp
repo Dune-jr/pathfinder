@@ -18,10 +18,6 @@
  * @class DetailedPath::EdgeIterator
  * @brief Iterator only on the actual edges of the DetailedPath
  */
-DetailedPath::FlowInfo::FlowInfo(kind_t kind, BasicBlock* bb) : _kind(kind), _identifier(bb) { assert(isBasicBlockKind(kind)); }
-DetailedPath::FlowInfo::FlowInfo(kind_t kind, Edge* e) : _kind(kind), _identifier(e) { assert(isEdgeKind(kind)); }
-// DetailedPath::FlowInfo::FlowInfo(const FlowInfo& fi) : _kind(fi._kind), _identifier(fi._identifier) { }
-DetailedPath::FlowInfo::FlowInfo(const FlowInfo& fi) { _kind = fi._kind; _identifier = fi._identifier; }
 
 DetailedPath::DetailedPath() { }
 DetailedPath::DetailedPath(const SLList<Edge*>& edge_list)
@@ -72,6 +68,7 @@ void DetailedPath::removeDuplicates()
 			&& (iter->getLoopHeader() == prev->getLoopHeader()))
 		{
 			remove(iter);
+			ASSERTP(false, "curious assert false on removeDuplicates because i think it's useless... " << *iter); // TODO!! remove if it does not occur
 			return removeDuplicates(); // parse again
 		}
 	}
@@ -84,7 +81,8 @@ void DetailedPath::removeAntagonists()
 		return;
 	for(iter++; iter; prev++, iter++)
 	{
-		if(iter->isLoopExit() && prev->isLoopEntry() && (iter->getLoopHeader() == prev->getLoopHeader()))
+		if( (iter->isLoopExit() && prev->isLoopEntry() && iter->getLoopHeader() == prev->getLoopHeader())
+		 || (iter->isReturn()	&& prev->isCall()	   && iter->getCaller()		== prev->getCaller()	))
 		{
 			// Be careful, do not call prev before iter, because remove(prev) does NOT update info in iter.
 			remove(iter);
@@ -133,17 +131,22 @@ void DetailedPath::onLoopExit(Option<Block*> new_loop_header) // TODO: shouldn't
 	else _path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, (BasicBlock*)NULL));
 }
 
-void DetailedPath::onCall(Edge* e)
+/**
+ * @param sb Call block
+ */
+void DetailedPath::onCall(SynthBlock* sb)
 {
-	return; // TODO!!
-	/*
-	_path.addLast(FlowInfo(FlowInfo::KIND_CALL, e));
-	*/
+	ASSERT(sb->isCall())
+	_path.addLast(FlowInfo(FlowInfo::KIND_CALL, sb));
 }
 
-void DetailedPath::onReturn(Block* b)
+/**
+ * @param sb Call block
+ */
+void DetailedPath::onReturn(SynthBlock* sb)
 {
-	// TODO!!
+	ASSERT(sb->isCall())
+	_path.addLast(FlowInfo(FlowInfo::KIND_RETURN, sb));
 	/*
 	BasicBlock::InIterator ins(bb);
 	while(otawa::RECURSIVE_LOOP(ins))
@@ -237,9 +240,10 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 			// this->_path initialized with all calls contained in paths[0]
 			for(DetailedPath::Iterator p_flowinfo_iter(p); p_flowinfo_iter; p_flowinfo_iter++)
 			{
-				if(p_flowinfo_iter->isCall())
+				if(p_flowinfo_iter->isCall() || p_flowinfo_iter->isReturn())
 					this->_path.addLast(*p_flowinfo_iter); // use addLast instead of addFirst to preserve order of calls
 			}
+			removeAntagonists();
 		}
 		else
 		{
@@ -247,8 +251,8 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 			{
 				if(!p.contains(this_iter)) // if it is not in p
 				{
-					#ifdef DBGG
-						cout << color::ICya() << "!p.contains(this_iter);" << color::RCol() << io::endl;
+					#ifdef DBGG // this is due to flowinfo...
+						cout << color::IYel() << "!p.contains(this_iter);" << color::RCol() << io::endl;
 						cout << "\t* p=" << p << io::endl;
 						cout << "\t* this=" << *this << io::endl;
 						cout << "\t* this_iter=" << *this_iter << io::endl;
@@ -342,19 +346,21 @@ elm::String DetailedPath::FlowInfo::toString(bool colored) const
 	switch(_kind)
 	{
 		case KIND_EDGE:
-			if((getEdge()->source()->cfg() == getEdge()->target()->cfg()) && !getEdge()->source()->isSynth() && !getEdge()->target()->isSynth()) // same cfg
-				return _ << getEdge()->source()->cfg() << "(" << getEdge()->source()->index() << "->" << getEdge()->target()->index() << ")";
-			else
-				return _ << getEdge();
+			// if((getEdge()->source()->cfg() == getEdge()->target()->cfg()) && !getEdge()->source()->isSynth() && !getEdge()->target()->isSynth()) // same cfg
+			// 	return _ << getEdge()->source()->cfg() << "(" << getEdge()->source()->index() << "->" << getEdge()->target()->index() << ")";
+			// else
+			// 	return _ << getEdge();
+			ASSERT(getEdge()->source()->cfg() == getEdge()->target()->cfg());
+			return _ << getEdge()->source()->cfg() << "(" << getEdge()->source()->index() << "->" << getEdge()->target()->index() << ")";
 		case KIND_LOOP_ENTRY:
 			return _ << color::Dim() << "LEn#" << getLoopHeader()->index() << color::NoDim();
 		case KIND_LOOP_EXIT:
 			return _ << color::Dim() << "LEx#" << getLoopHeader()->index() << color::NoDim();
 		case KIND_CALL:
-			return _ << color::Dim() << "C#" << getEdge()->source()->index() << color::NoDim();
+			return _ << color::Dim() << "C#" << getCaller()->callee() << color::NoDim();
 			// return _ << color::Dim() << "C#" << getEdge()->source()->index() << "-" << getEdge()->target()->index() << color::NoDim();
 		case KIND_RETURN:
-			return _ << color::Dim() << "R#" << getBasicBlock()->index() << color::NoDim();
+			return _ << color::Dim() << "R#" << getCaller()->callee() << color::NoDim();
 		default:
 			return _ << "[UKNOWN KIND " << (int)_kind << "]";
 	}
@@ -362,7 +368,7 @@ elm::String DetailedPath::FlowInfo::toString(bool colored) const
 
 io::Output& DetailedPath::FlowInfo::print(io::Output& out) const
 {
-	return(out << toString());
+	return (out << toString());
 }
 
 

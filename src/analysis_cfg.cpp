@@ -106,8 +106,6 @@ void Analysis::processCFG(CFG* cfg)
 			{
 				/* s_e ← I*[e](s) */
 				EDGE_S(e) = I(e, s);
-				// EDGE_S.exists(e) ? EDGE_S.ref(e).clear() : EDGE_S.set(e, SLList<State>::null);
-				// EDGE_S.ref(e).addAll(I(e, s));
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 				if(inD_ip(e))
 					ip_stats += ipcheck(EDGE_S.ref(e), infeasible_paths);
@@ -125,12 +123,18 @@ Analysis::States& Analysis::I(Block* b, States& s)
 		progress->onBlock(b);
 	if(b->isBasic())
 	{
-		DBGG(color::Bold() << "-\tI(b=" /*<< color::NoBold() << color::ICya()*/ << b << /*color::RCol() << color::Bold() <<*/ ") " << color::NoBold() << printFixPointStatus(b))
+		DBGG(color::Bold() << "-\tI(b=" << b << ") " << color::NoBold() << printFixPointStatus(b))
 		for(States::MutableIterator si(s.states()); si; si++)
 			si.item().processBB(b->toBasic());
 	}
+	else if(b->isEntry())
+		s.onCall((*getCaller(b->cfg()))->toSynth());
+	else if(b->isCall())
+		s.onReturn(b->toSynth());
+	else if(b->isExit()) // main
+		{ }
 	else
-		DBGG("TODO: not doing anything");
+		DBGG("WARNING: not doing anything");
 	return s;
 }
 

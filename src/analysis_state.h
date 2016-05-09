@@ -42,8 +42,8 @@ public:
 	inline elm::String getPathString() const { return path.toString(); /*orderedPathToString(path.toOrderedPath());*/ }
 	inline void onLoopEntry(Block* loop_header) { path.onLoopEntry(loop_header); }
 	inline void onLoopExit(Option<Block*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }
-	inline void onCall(Edge* e) { path.onCall(e); }
-	inline void onReturn(Block* b) { path.onReturn(b); }
+	inline void onCall(SynthBlock* sb)   { path.onCall(sb); }
+	inline void onReturn(SynthBlock* sb) { path.onReturn(sb); }
 	inline bool isBottom() const { return bottom; }
 	inline bool isValid() const { return dfa_state != NULL && constants.isValid(); } // this is so that we can have empty states that do not use too much memory
 
@@ -57,7 +57,7 @@ public:
 
 	// analysis_bb.cpp
 	void processBB(const BasicBlock *bb);
-	void throwInfo();
+	// void throwInfo();
 	int invalidateStackBelow(const Constant& stack_limit);
 
 	inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
@@ -163,6 +163,9 @@ public:
 	inline int count() const { return s.count(); }
 	inline const Vector<State>& states() const { return s; }
 	inline Vector<State>& states() { return s; }
+
+	inline void onCall(SynthBlock* sb)   { for(MutableIterator iter(this->s); iter; iter++) iter.item().onCall(sb); }
+	inline void onReturn(SynthBlock* sb) { for(MutableIterator iter(this->s); iter; iter++) iter.item().onReturn(sb); }
 
 	inline operator Vector<State>() { return s; }
 	inline States& operator=(const Vector<State>& sv) { s = sv; return *this; }

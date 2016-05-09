@@ -7,11 +7,12 @@
 #include "analysis.h"
 #include "debug.h"
 #include "cfg_features.h"
-// #include "debug.h"
 
 using elm::genstruct::HashTable;
 using otawa::CFG;
 
+// progress bar
+/* example: [■■        ] 4 states */
 class Analysis::SolverProgress {
 public:
 	SolverProgress(int state_count) : i(0), n(state_count) { }
@@ -34,6 +35,12 @@ private:
 	const int n;
 };
 
+// call tree with progress.
+/* example:
+	getbit         :   5/9   (55 %)
+	des            :  18/40  (45 %)
+	main           :   1/3   (33 %)
+*/
 class Analysis::Progress
 {
 private:
@@ -96,12 +103,11 @@ private:
 		{
 			CFG* k = b->cfg();
 			ASSERTP(tab.get(k), "parsing callee after caller has exited!")
-			elm::cout /*<< lines+1 << "/" << n << indent(n-lines)*/ << StringFormat(k->name()).width(15)
-			 << ": " << IntFormat((*tab.get(k)).curr).width(3).right() << "/" << IntFormat((*tab.get(k)).tot).width(3)
-			 << " (" << IntFormat((*tab.get(k)).curr * 100/ (*tab.get(k)).tot).width(3) << "%)" << endl;
+			elm::cout << StringFormat(k->name()).width(15)
+				<< ": " << IntFormat((*tab.get(k)).curr).width(3).right() << "/" << IntFormat((*tab.get(k)).tot).width(3)
+				<< " (" << IntFormat((*tab.get(k)).curr * 100/ (*tab.get(k)).tot).width(3) << "%)" << endl;
 			lines++;
 		}
-		ASSERT(lines==n)
 		maxlines = max(maxlines, lines);	
 	}
 	inline elm::String indent(int n) const { String str; for(int i = 0; i < n; i++) str=str+"\t"; return str; }

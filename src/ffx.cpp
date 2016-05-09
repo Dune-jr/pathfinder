@@ -27,15 +27,15 @@ void FFX::output(const elm::String& function_name, const elm::String& ffx_filena
 
 	// header
 	FFXFile << indent(  ) << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" << endl;
-	FFXFile << indent(  ) << "<flowfacts>" << endl;
-	FFXFile << indent(+1) << "<function name=\"" << function_name << "\">" << endl; indent(+1);
+	FFXFile << indent(  ) << "<flowfacts> <!-- pathfinder, " << __DATE__ << " -->" << endl;
+	FFXFile << indent(  ) << "<function name=\"" << function_name << "\">" << endl; indent(+1);
 
 	for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
 		printInfeasiblePath(FFXFile, *iter);
 
 	// footer
 	FFXFile << indent(-1) << "</function>" << endl;
-	FFXFile << indent(-1) << "</flowfacts>" << endl;
+	FFXFile << indent(  ) << "</flowfacts>" << endl;
 	
 	if(! graph_filename.isEmpty())
 	{		
@@ -60,6 +60,10 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		if(iter->isEdge())
 		{
 			const Edge* e = iter->getEdge();
+			if(e->source()->isEntry()) { // main program pt 
+				cerr << "WARNING: ignoring " << e->source() << "->" << e->target() << ", assuming program entry edge!" << endl;
+				continue;
+			}
 			ASSERTP(e->source()->isBasic() || e->source()->isCall() || e->source()->isExit(), ": source not basic nor call nor exit: " << e->source() << "->" << e->target());
 			ASSERTP(e->target()->isBasic() || e->target()->isCall() || e->target()->isExit(), ": target not basic nor call nor exit: " << e->source() << "->" << e->target());
 			
@@ -111,7 +115,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			const BasicBlock* loop_header = iter->getLoopHeader();
 			FFXFile << indent(  ) << "<loop address=\"0x" << loop_header->address() << "\" index=\"" << loop_header->index() << "\">"
 					<< " <!-- loop " << loop_header->index() << " -->" << endl; indent(+1);
-			FFXFile << indent(  ) << "<iteration number=\"n\">" << endl; indent(+1);
+			FFXFile << indent(  ) << "<iteration number=\"*\">" << endl; indent(+1);
 			open_tags += FFX_TAG_LOOP;
 		}
 		else if(iter->isLoopExit())
@@ -123,6 +127,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			//ASSERTP(open_tags.first() == FFX_TAG_LOOP, "</loop> found when not directly in loop context");
 			while(open_tags.first() != FFX_TAG_LOOP)
 			{
+				ASSERT(false); // this shouldn't happen actually!! 05/2016
 				FFXFile << indent(-1) << "</call>" << endl;
 				open_tags.removeFirst();
 			}
@@ -133,15 +138,23 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				FFXFile << indent(-1) << "</loop>" << endl;
 			open_tags.removeFirst();
 		}
-#ifdef v1
 		else if(iter->isCall())
 		{
-			const BasicBlock* source = iter->getEdge()->source();
-			FFXFile << indent( ) << "<call address=\"0x" << source->address() << "\"> <!-- call " << source->index() << " -->" << endl; indent(+1);
+			const SynthBlock* caller = iter->getCaller();
+			FFXFile << indent( ) << "<call address=\"0x" << caller->address() << "\">"
+				" <!-- call " << caller->cfg() << ":" << caller->index() << " -> " << caller->callee() << " -->" << endl; indent(+1);
 			open_tags += FFX_TAG_CALL;
 		}
-#endif
-		else assert(false); // we should handle all kinds
+		else if(iter->isReturn())
+		{
+			const SynthBlock* caller = iter->getCaller();
+			FFXFile << indent(-1) << "</call>"
+				" <!-- return " << caller->cfg() << ":" << caller->index() << " <- " << caller->callee() << " -->" << endl;
+			ASSERTP(open_tags.first() == FFX_TAG_CALL, "return found when call is not the most recent open tag")
+			open_tags.removeFirst();
+		}
+		else 
+			ASSERT(false); // we should handle all kinds
 	}
 	// close running <loop ... > environments
 	for(SLList<ffx_tag_t>::Iterator open_tags_iter(open_tags); !open_tags_iter.ended(); open_tags_iter++)
