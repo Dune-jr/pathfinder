@@ -9,6 +9,7 @@
 #include "detailed_path.h"
 #include "operand.h"
 #include "pretty_printing.h"
+#include "working_list.h"
 
 using namespace otawa;
 using elm::genstruct::SLList;
@@ -88,7 +89,7 @@ protected:
 		FIX,
 		LEAVE,
 	} loopheader_status_t; // Fixpoint status of the loop header, for annotation
-	inline static loopheader_status_t loopStatus(Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
+	inline static loopheader_status_t loopStatus(const Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
 	inline static bool isConditional(Block* b) { return b->countOuts() > 1; }
 	static Block* insAlias		   (Block* b);
 	static Vector<Edge*> allIns    (Block* h);
@@ -104,7 +105,7 @@ protected:
 private:
 	static Identifier<loopheader_status_t>		  LH_STATUS; // Fixpt status of a loop header
 
-	Vector<Block*> wl; // working list
+	WorkingList wl; // working list
 	Vector<DetailedPath> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
 	int total_paths, loop_header_count, bb_count;
 
@@ -125,7 +126,7 @@ private:
 	LockPtr<States> I(Edge* e, const States& s); // creates new states
 	void removeDuplicateInfeasiblePaths();
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
-	elm::String wlToString() const;
+	// elm::String wlToString() const;
 
 	bool anyEdgeHasTrace(const Vector<Edge*>& edges) const;
 	bool anyEdgeHasTrace(const Block::EdgeIter& biter) const;

@@ -154,10 +154,10 @@ const static Analysis::State bottom(true);
 
 class Analysis::States : public elm::Lock {
 public:
-	States() { }
-	States(int cap) : s(cap) { }
-	States(const Vector<Analysis::State>& state_vector) : s(state_vector) { }
-	States(const States& ss) : s(ss.s) { }
+	inline States() { }
+	inline States(int cap) : s(cap) { }
+	inline States(const Vector<Analysis::State>& state_vector) : s(state_vector) { }
+	inline States(const States& ss) : s(ss.s) { }
 	// return the unique state, or bottom if none. it is an error to call this when s.count() > 1
 	inline State one() const { ASSERTP(s.count() <= 1, "multiple states available"); return s ? s.first() : bottom; }
 	inline bool isEmpty() const { return s.isEmpty(); }

@@ -160,8 +160,8 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 
 LockPtr<Analysis::States> DefaultAnalysis::vectorOfS(const Vector<Edge*>& ins) const
 {
-	// if(ins.count() == 1) // opti TODO! should work now with the LockPtr
-	// 	return EDGE_S.use(ins[0]).states();
+	if(ins.count() == 1) // opti TODO! should work now with the LockPtr
+		return EDGE_S.use(ins[0]);
 	LockPtr<States> s(new States());
 	for(Vector<Edge*>::Iterator i(ins); i; i++)
 		s->states().addAll(EDGE_S.use(*i)->states());

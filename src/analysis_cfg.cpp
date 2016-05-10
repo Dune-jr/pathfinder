@@ -84,7 +84,7 @@ void Analysis::processCFG(CFG* cfg)
 				}
 				else /* else s_b ← s */
 					LH_S(b) = s->one();
-				switch(loopStatus(b)) {
+				switch(loopStatus(b)){
 					/* status_b ← FIX if status_b = ENTER */
 					case ENTER:
 						LH_STATUS(b) = FIX;

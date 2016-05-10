@@ -67,11 +67,11 @@ void Analysis::wl_push(Block* b)
 		b = b->toSynth()->callee()->entry(); // call becomes callee entry
 	if(b->isExit())
 		b = getCaller(b, b); // exit becomes caller (remains exit if no caller)
-	if(!wl.contains(b))
-	{
+	// if(!wl.contains(b))
+	// {
 		wl.push(b);
 		// DBGG("-\twl ← wl ∪ " << b)
-	}
+	// }
 }
 
 /**
@@ -227,21 +227,6 @@ bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set)
 		if(!included_path.contains(*iter))
 			return false;
 	return true;
-}
-
-elm::String Analysis::wlToString() const
-{
-	elm::String rtn = "[";
-	bool first = true;
-	for(Vector<Block*>::Iterator iter(wl); iter; iter++)
-	{
-		if(first) first = false; else
-			rtn = rtn.concat((CString)", ");
-		// rtn = _ << rtn << (*iter)->id();
-		rtn = _ << rtn << (*iter)->cfg() << ":" << (*iter)->index();
-	}
-	rtn = rtn.concat((CString)"]");
-	return rtn;
 }
 
 /**

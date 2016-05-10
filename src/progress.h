@@ -12,12 +12,12 @@ using elm::genstruct::HashTable;
 using otawa::CFG;
 
 // progress bar
-/* example: [■■        ] 4 states */
+/* example: [■■       ] 4 states */
 class Analysis::SolverProgress {
 public:
 	SolverProgress(int state_count) : i(0), n(state_count) { }
 	~SolverProgress() { onFinish(); }
-	inline void onSolving(bool ip) { elm::cout << "\e[1A\n\e[K" << percentBar(i++*10/n,10,ip) << " " << n << " states"; }
+	inline void onSolving(bool ip) { elm::cout << "\e[1A\n\e[K" << percentBar(i++*10/n,9,ip) << " " << n << " states"; }
 
 private:
 	inline void onFinish() { elm::cout << "\e[1A\n\e[K"; }
