@@ -152,9 +152,10 @@ private:
 
 const static Analysis::State bottom(true);
 
-class Analysis::States {
+class Analysis::States : public elm::Lock {
 public:
 	States() { }
+	States(int cap) : s(cap) { }
 	States(const Vector<Analysis::State>& state_vector) : s(state_vector) { }
 	States(const States& ss) : s(ss.s) { }
 	// return the unique state, or bottom if none. it is an error to call this when s.count() > 1
@@ -163,6 +164,7 @@ public:
 	inline int count() const { return s.count(); }
 	inline const Vector<State>& states() const { return s; }
 	inline Vector<State>& states() { return s; }
+	inline void push(const Analysis::State& state) { return s.push(state); }
 
 	inline void onCall(SynthBlock* sb)   { for(MutableIterator iter(this->s); iter; iter++) iter.item().onCall(sb); }
 	inline void onReturn(SynthBlock* sb) { for(MutableIterator iter(this->s); iter; iter++) iter.item().onReturn(sb); }

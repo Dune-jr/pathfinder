@@ -142,7 +142,6 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		{
 			SynthBlock* caller = iter->getCaller();
 			BasicBlock* callpoint = caller->ins().item()->source()->toBasic(); // TODO add asserts
-			cout << "call: " << (Block*)caller << ", address=" << callpoint->last()->address() << endl;
 			// FFXFile << indent( ) << "<call address=\"0x" << caller->address() << "\">"
 			FFXFile << indent( ) << "<call address=\"0x" << callpoint->control()->address() << "\">"
 				" <!-- call " << caller->cfg() << ":" << caller->index() << " -> " << caller->callee() << " -->" << endl; indent(+1);

@@ -20,31 +20,31 @@ DefaultAnalysis::DefaultAnalysis(const context_t& context, int state_size_limit,
 	: Analysis(context, state_size_limit, flags) { }
 
 /**
- * actually... this may be widening
+ * actually... this is widening
  */
-Vector<Analysis::State> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) const
+LockPtr<Analysis::States> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) const
 {
 	ASSERTP(ins, "narrowing given empty ingoing edges vector")
-	Vector<State> v(vectorOfS(ins));
+	LockPtr<States> v = vectorOfS(ins);
 	Block* b = ins[0]->target();
 	// loop header or too big state
-	if(LOOP_HEADER(b) || ((flags&MERGE) && v.count() > state_size_limit))
+	if(LOOP_HEADER(b) || ((flags&MERGE) && v->count() > state_size_limit))
 	{
 		if(LOOP_HEADER(b) && LH_S.exists(b)) // also merge with the state on the loop header if it exists
-			v.push(LH_S(b));
-		purgeBottomStates(v);
+			v->push(LH_S(b));
+		purgeBottomStates(v->states());
 		// ASSERTP(v, "Loop Header received only bottom state, case not handled yet. The main algorithm will use s[0] so...")
-		if(!v)
+		if(v->isEmpty())
 		{
 			DBGG("narrowing returns null vector")
 			return v;
 		}
 		State s((Edge*)NULL, context, false); // entry is cleared anyway
-		s.merge(v); // s <- widening(s0, s1, ..., sn)
-		Vector<State> rtnv(1);
-		rtnv.push(s);
-		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v.count() > 50)
-			cout << " " << v.count() << " states merged into 1 (from " << ins.count() << " ins)." << endl;
+		s.merge(v->states()); // s <- widening(s0, s1, ..., sn)
+		LockPtr<States> rtnv(new States(1));
+		rtnv->push(s);
+		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v->count() > 50)
+			cout << " " << v->count() << " states merged into 1 (from " << ins.count() << " ins)." << endl;
 		return rtnv;
 	}
 	else
@@ -158,12 +158,12 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 	return sl;
 }*/
 
-Vector<Analysis::State> DefaultAnalysis::vectorOfS(const Vector<Edge*>& ins) const
+LockPtr<Analysis::States> DefaultAnalysis::vectorOfS(const Vector<Edge*>& ins) const
 {
-	Vector<State> vl;
+	// if(ins.count() == 1) // opti TODO! should work now with the LockPtr
+	// 	return EDGE_S.use(ins[0]).states();
+	LockPtr<States> s(new States());
 	for(Vector<Edge*>::Iterator i(ins); i; i++)
-		vl.addAll(EDGE_S.use(*i).states());
-		// for(Vector<State>::Iterator j(EDGE_S.use(*i)); j; j++)
-		// 	vl.push(j);
-	return vl;
+		s->states().addAll(EDGE_S.use(*i)->states());
+	return s;
 }

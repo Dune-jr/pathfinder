@@ -11,7 +11,7 @@
 using namespace elm::genstruct;
 using namespace elm::io;
 
-Identifier<Analysis::States>				Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
+Identifier<LockPtr<Analysis::States> >		Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
 Identifier<Analysis::State>					Analysis::LH_S("Trace on a loop header"); // maybe change to vector
 Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a loop (on a loop header)");
 
@@ -33,8 +33,8 @@ void Analysis::processCFG(CFG* cfg)
 	for(Block::EdgeIter entry_outs(cfg->entry()->outs()); entry_outs; entry_outs++)
 	{
 		/* s_e ← T */
-		Vector<Analysis::State> entry_s;
-		entry_s.push(topState(cfg->entry()));
+		LockPtr<States> entry_s(new States());
+		entry_s->push(topState(cfg->entry()));
 		EDGE_S(*entry_outs) = entry_s;
 		/* wl ← sink(e) */
 		wl.push((*entry_outs)->target()); // only one outs, firstBB.
@@ -58,7 +58,7 @@ void Analysis::processCFG(CFG* cfg)
 		if(allEdgesHaveTrace(pred))
 		{
 			/* s ← |_|e∈pred s_e */
-			States s(narrowing(pred));
+			LockPtr<States> s = narrowing(pred);
 			/* for e ∈ pred */
 			for(Vector<Edge*>::Iterator e(pred); e; e++)
 				/* s_e ← nil */
@@ -69,7 +69,7 @@ void Analysis::processCFG(CFG* cfg)
 			/* if b ∈ H(G) then */
 			if(LOOP_HEADER(b))
 			{
-				ASSERT(s.count() <= 1)
+				ASSERT(s->count() <= 1)
 				/* if status_b = LEAVE then */
 				if(loopStatus(b) == LEAVE)
 				{
@@ -83,14 +83,14 @@ void Analysis::processCFG(CFG* cfg)
 					propagate = false;
 				}
 				else /* else s_b ← s */
-					LH_S(b) = s.one();
+					LH_S(b) = s->one();
 				switch(loopStatus(b)) {
 					/* status_b ← FIX if status_b = ENTER */
 					case ENTER:
 						LH_STATUS(b) = FIX;
 						break;
 					/* status_b ← LEAVE if status_b = FIX ∧ s ≡ s_b */
-					case FIX: if(s.one().equiv(LH_S(b)))
+					case FIX: if(s->one().equiv(LH_S(b)))
 						LH_STATUS(b) = LEAVE;
 						break;
 					/* status_b ← ENTER if status_b = LEAVE */
@@ -99,16 +99,16 @@ void Analysis::processCFG(CFG* cfg)
 						break;
 				}
 			}
-			I(b, s); // update s
+			I(b, *s); // update s
 			/* for e ∈ succ \ {EX_h | b ∈ L_h ∧ status_h =/ LEAVE} */
 			const Vector<Edge*> succ(propagate ? outsWithoutUnallowedExits(b) : nullVector<Edge*>());
 			for(Vector<Edge*>::Iterator e(succ); e; e++)
 			{
 				/* s_e ← I*[e](s) */
-				EDGE_S(e) = I(e, s);
+				EDGE_S(e) = I(e, *s);
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 				if(inD_ip(e))
-					ip_stats += ipcheck(EDGE_S.ref(e), infeasible_paths);
+					ip_stats += ipcheck(*EDGE_S.ref(e), infeasible_paths);
 				/* wl ← wl ∪ {sink(e)} */
 				wl_push(e->target());
 			}
@@ -138,16 +138,73 @@ Analysis::States& Analysis::I(Block* b, States& s)
 	return s;
 }
 
-Analysis::States Analysis::I(Edge* e, const States& s)
+LockPtr<Analysis::States> Analysis::I(Edge* e, const States& s)
 {
 	if(s.isEmpty())
 		DBGG("-\tpropagating bottom state")
 	DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
-	States rtns(s);
+	LockPtr<States> rtns(new States(s));
 	if(! e->source()->isEntry()) // do not process entry: no generated preds and uninteresting edge to add (everything comes from the entry)
-		for(States::MutableIterator rtnsi(rtns.states()); rtnsi; rtnsi++)
+		for(States::MutableIterator rtnsi(rtns->states()); rtnsi; rtnsi++)
 			rtnsi.item().appendEdge(e, isConditional(e->source()));
 	return rtns;
+}
+
+/**
+ * @fn bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const;
+ * @brief Checks for all edges to have a trace annotation
+ * @param edges Vector of Block edges to inspect
+ * @return true iff all edges have a trace annotation
+ */
+bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const
+{
+	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
+		if(!EDGE_S.exists(*iter))
+			return false;
+	DBGG("-..." << edges)
+	return true;
+}
+
+/**
+ * @fn bool Analysis::allEdgesHaveTrace(const Block::EdgeIter& biter) const;
+ * @brief Checks for all edges to have a trace annotation
+ * @param biter Iterator over the list of Block edges to inspect
+ * @return true iff all edges have a trace annotation
+ */
+bool Analysis::allEdgesHaveTrace(const Block::EdgeIter& biter) const
+{
+	for(Block::EdgeIter i(biter); i; i++)
+		if(!EDGE_S.exists(*i))
+			return false;
+	return true;
+}
+
+/**
+ * @fn bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const;
+ * @brief Checks for at least one edge to have a trace annotation
+ * @param edges Vector of Block edges to inspect
+ * @return true iff at least one edge has a trace annotation
+ */
+bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const
+{
+	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
+		if(EDGE_S.exists(*iter))
+			return true;
+	return false;
+}
+
+/**
+ * @fn bool Analysis::anyEdgeHasTrace(const Block::EdgeIter& biter) const;
+ * @brief Checks for at least one edge to have a trace annotation
+ * @param biter Iterator over the list of Block edges to inspect
+ * @return true iff at least one edge has a trace annotation
+ */
+bool Analysis::anyEdgeHasTrace(const Block::EdgeIter& biter) const
+{
+	for(Block::EdgeIter i(biter); i; i++)
+		if(EDGE_S.exists(*i))
+			return true;
+	return false;
 }
 
 #if 0
@@ -360,63 +417,6 @@ Analysis::States Analysis::I(Edge* e, const States& s)
 	printResults((clock()-timestamp)*1000/CLOCKS_PER_SEC);
 }
 #endif
-
-/**
- * @fn bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const;
- * @brief Checks for all edges to have a trace annotation
- * @param edges Vector of Block edges to inspect
- * @return true iff all edges have a trace annotation
- */
-bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const
-{
-	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
-		if(!EDGE_S.exists(*iter))
-			return false;
-	DBGG("-..." << edges)
-	return true;
-}
-
-/**
- * @fn bool Analysis::allEdgesHaveTrace(const Block::EdgeIter& biter) const;
- * @brief Checks for all edges to have a trace annotation
- * @param biter Iterator over the list of Block edges to inspect
- * @return true iff all edges have a trace annotation
- */
-bool Analysis::allEdgesHaveTrace(const Block::EdgeIter& biter) const
-{
-	for(Block::EdgeIter i(biter); i; i++)
-		if(!EDGE_S.exists(*i))
-			return false;
-	return true;
-}
-
-/**
- * @fn bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const;
- * @brief Checks for at least one edge to have a trace annotation
- * @param edges Vector of Block edges to inspect
- * @return true iff at least one edge has a trace annotation
- */
-bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const
-{
-	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
-		if(EDGE_S.exists(*iter))
-			return true;
-	return false;
-}
-
-/**
- * @fn bool Analysis::anyEdgeHasTrace(const Block::EdgeIter& biter) const;
- * @brief Checks for at least one edge to have a trace annotation
- * @param biter Iterator over the list of Block edges to inspect
- * @return true iff at least one edge has a trace annotation
- */
-bool Analysis::anyEdgeHasTrace(const Block::EdgeIter& biter) const
-{
-	for(Block::EdgeIter i(biter); i; i++)
-		if(EDGE_S.exists(*i))
-			return true;
-	return false;
-}
 
 /*
 	@fn int Analysis::processBB(State& s, BasicBlock* bb);
@@ -762,20 +762,6 @@ void Analysis::removeDuplicateInfeasiblePaths()
 	infeasible_paths.clear();
 	infeasible_paths = new_ips;
 }
-
-/*void Analysis::printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const
-{
-	if(b->isBasic())
-		cout << "[" << progression_percentage << "%] Processing BB  #" << IntFormat(b->id()).width(3) << " (" << b->cfg() << ":" << b->index() << ")";
-	else if(b->isSynth()) {
-		ASSERTP(b->toSynth()->callee(), "CALL TO NULL")
-		cout << color::ICya() << "[" << progression_percentage << "%] Processing CALL#" << IntFormat(b->id()).width(3) << " (->" << b->toSynth()->callee() << ")";
-	}
-	else if(b->isExit())
-		cout << color::IBlu() << "[" << progression_percentage << "%] Processing EXIT#" << IntFormat(b->id()).width(3) << " (" << b->cfg() << "->)";
-	else ASSERT(false);
-	cout << " of " << bb_count << (loop_header?" (loop header)":"") << color::RCol() << endl;
-}*/
 
 /**
  * @fn static void Analysis::onAnyInfeasiblePath();

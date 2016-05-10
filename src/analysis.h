@@ -98,19 +98,18 @@ protected:
 	static bool isAllowedExit(Edge* exit_edge);
 	static elm::String printFixPointStatus(Block* b);
 
-	static Identifier<Analysis::States >		EDGE_S; // Trace on an edge
-	static Identifier<Analysis::State>			LH_S; // Trace on a loop header
+	// static Identifier<Analysis::States> EDGE_S; // Trace on an edge
+	static Identifier<LockPtr<Analysis::States> > EDGE_S; // Trace on an edge
+	static Identifier<Analysis::State>			  LH_S; // Trace on a loop header
 private:
-	static Identifier<loopheader_status_t>		LH_STATUS; // Fixpt status of a loop header
-	// static Identifier<bool>					MOTHERLOOP_FIXPOINT_STATE;
-	// static Identifier<bool>					FIXPOINT_REACHED;
+	static Identifier<loopheader_status_t>		  LH_STATUS; // Fixpt status of a loop header
 
 	Vector<Block*> wl; // working list
 	Vector<DetailedPath> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
 	int total_paths, loop_header_count, bb_count;
 
 	// virtual pure functions to implement
-	virtual Vector<State> narrowing(const Vector<Edge*>& edges) const = 0;
+	virtual LockPtr<States> narrowing(const Vector<Edge*>& edges) const = 0;
 	virtual bool inD_ip(const otawa::Edge* e) const = 0;
 	virtual IPStats ipcheck(States& s, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const = 0;
 
@@ -122,17 +121,10 @@ private:
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
-	States& I(Block* b, States& s);
-	States I(Edge* e, const States& s);
+	States& I(Block* b, States& s); // modifies existing states
+	LockPtr<States> I(Edge* e, const States& s); // creates new states
 	void removeDuplicateInfeasiblePaths();
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
-	// void printCurrentlyProcessingBlock(Block* b, int progression_percentage, bool loop_header) const;
-	// void cleanIncomingEdges(Block* b) const;
-	// void cleanIncomingBackEdges(Block* b) const;
-	// bool shouldEnableSolver(const Edge* e);
-	// bool allRequiredInEdgesAreProcessed(Block* block) const;
-	// bool allIncomingNonBackEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
-	// bool allIncomingEdgesAreAnnotated(Block* block, const Identifier<SLList<Analysis::State> >& annotation_identifier) const;
 	elm::String wlToString() const;
 
 	bool anyEdgeHasTrace(const Vector<Edge*>& edges) const;

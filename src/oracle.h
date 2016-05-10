@@ -11,12 +11,12 @@ class DefaultAnalysis : public Analysis
 public:
 	DefaultAnalysis(const context_t& context, int state_size_limit, int flags);
 private:
-	Vector<State> narrowing(const Vector<Edge*>& edges) const;
+	LockPtr<States> narrowing(const Vector<Edge*>& edges) const;
 	bool inD_ip(const otawa::Edge* e) const;
-	IPStats ipcheck(Analysis::States& ss, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const;
+	IPStats ipcheck(States& ss, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const;
 
-	SLList<State> listOfS(const Vector<Edge*>& ins) const;
-	Vector<State> vectorOfS(const Vector<Edge*>& ins) const;
+	// SLList<State> listOfS(const Vector<Edge*>& ins) const;
+	LockPtr<States> vectorOfS(const Vector<Edge*>& ins) const;
 };
 
 #endif

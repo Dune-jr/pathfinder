@@ -41,7 +41,7 @@ public:
 		opt_dumpoptions(SwitchOption::Make(*this).cmd("--dump-options").description("print the selected options for the analysis")),
 		opt_notime(SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
 		// opt_nopred(SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")), // no longer working
-		opt_noipresults(SwitchOption::Make(*this).cmd("--no-ip-results").description("do not print the list of IPs found")),
+		opt_noipresults(SwitchOption::Make(*this).cmd("--nir").cmd("--no-ip-results").description("do not print the list of IPs found")),
 		opt_noflowinfo(SwitchOption::Make(*this).cmd("--no-flowinfo").description("do not print context flowinfo in path debugs")),
 		// opt_preanalysis(SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis (obsolete)")),
 		opt_avgiplength(SwitchOption::Make(*this).cmd("--average-ip-length").description("display average length of infeasible_paths found")),
