@@ -51,7 +51,7 @@ public:
 	// analysis_state.cpp
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
 	elm::String dumpEverything() const;
-	template<template< class _ > class C> void merge(const C<Analysis::State>& cl);
+	template<template< class _ > class C> void merge(const C<Analysis::State>& cl, Block* b);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e, bool is_conditional);
 
@@ -168,6 +168,10 @@ public:
 
 	inline void onCall(SynthBlock* sb)   { for(MutableIterator iter(this->s); iter; iter++) iter.item().onCall(sb); }
 	inline void onReturn(SynthBlock* sb) { for(MutableIterator iter(this->s); iter; iter++) iter.item().onReturn(sb); }
+	inline void onLoopEntry(Block* b)    { for(MutableIterator iter(this->s); iter; iter++) iter.item().onLoopEntry(b); }
+	inline void onLoopExit (Block* b)    { for(MutableIterator iter(this->s); iter; iter++) iter.item().onLoopExit(b); }
+	inline void onLoopExit (Edge* e)
+		{ Block* h = LOOP_EXIT_EDGE(e); for(LoopHeaderIter i(e->source()); i.item() != h; i++) onLoopExit(*i); onLoopExit(h); }
 
 	inline operator Vector<State>() { return s; }
 	inline States& operator=(const Vector<State>& sv) { s = sv; return *this; }
@@ -185,7 +189,7 @@ private:
  * 
  * @param cl Collection of States to process (accepts SLList, Vector etc.)
  */
-template<template< class _ > class C> void Analysis::State::merge(const C<Analysis::State>& cl)
+template<template< class _ > class C> void Analysis::State::merge(const C<Analysis::State>& cl, Block* b)
 {
 	ASSERTP(!cl.isEmpty(), "call to Analysis::State::merge with empty cl parameter"); // maybe just leave the state empty
 	DBGG("-\tmerging from " << cl.count() << " state(s).")
@@ -229,7 +233,11 @@ template<template< class _ > class C> void Analysis::State::merge(const C<Analys
 		}
 	}
 	this->constants.merge(cvl);
-	this->path.merge(stateListToPathVector(cl)); // merge paths as well while keeping some flow info and shrink that in this->path
+	// this->path.merge(stateListToPathVector(cl)); // merge paths as well while keeping some flow info and shrink that in this->path
+	// this-path = DetailedPath(cl.first().lastEdge()->target()->toBasic());
+	this->path.clear();
+	// this->path.fromContext(cl.first().lastEdge()->target()->toBasic());
+	this->path.fromContext(b);
 }
 
 template <class C> Vector<DetailedPath> Analysis::State::stateListToPathVector(const C& cl) const

@@ -6,7 +6,7 @@
 #include "../debug.h"
 #include "z3_smt.h"
 
-Z3SMT::Z3SMT(): s(c), p(c), sp(c.int_const("SP"))
+Z3SMT::Z3SMT(int flags): SMT(flags), s(c), p(c), sp(c.int_const("SP"))
 {
 	p.set("unsat_core", true);
 	s.set(p);

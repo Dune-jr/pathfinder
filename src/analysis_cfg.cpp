@@ -84,10 +84,11 @@ void Analysis::processCFG(CFG* cfg)
 				}
 				else /* else s_b ← s */
 					LH_S(b) = s->one();
-				switch(loopStatus(b)){
+				switch(loopStatus(b)) {
 					/* status_b ← FIX if status_b = ENTER */
 					case ENTER:
 						LH_STATUS(b) = FIX;
+						s->onLoopEntry(b);
 						break;
 					/* status_b ← LEAVE if status_b = FIX ∧ s ≡ s_b */
 					case FIX: if(s->one().equiv(LH_S(b)))
@@ -147,6 +148,8 @@ LockPtr<Analysis::States> Analysis::I(Edge* e, const States& s)
 	if(! e->source()->isEntry()) // do not process entry: no generated preds and uninteresting edge to add (everything comes from the entry)
 		for(States::MutableIterator rtnsi(rtns->states()); rtnsi; rtnsi++)
 			rtnsi.item().appendEdge(e, isConditional(e->source()));
+	if(LOOP_EXIT_EDGE(e))
+		rtns->onLoopExit(e);
 	return rtns;
 }
 
@@ -725,9 +728,9 @@ void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<Detailed
 	DetailedPath new_ip(ip);
 	ASSERT(ip.hasAnEdge());
 	// first off, add loop entries for all missing loops
-	Block *b = ip.firstEdge()->source();
-	for(LoopHeaderIter i(b); i; i++)
-		new_ip.addEnclosingLoop(*i);
+	// Block *b = ip.firstEdge()->source();
+	// for(LoopHeaderIter i(b); i; i++)
+	// 	new_ip.addEnclosingLoop(*i);
 	// optimize by removing redundancies
 	new_ip.optimize();
 	if(!infeasible_paths.contains(new_ip))

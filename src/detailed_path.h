@@ -5,8 +5,10 @@
 #include <elm/genstruct/Vector.h>
 #include <elm/string/String.h>
 #include <otawa/cfg/CFG.h>
+#include <otawa/cfg/features.h>
 #include <otawa/cfg/Edge.h>
 #include <elm/util/Option.h>
+#include "cfg_features.h"
 
 using elm::genstruct::SLList;
 using elm::genstruct::Vector;
@@ -22,6 +24,7 @@ public:
 	class Iterator;
 
 	DetailedPath();
+	DetailedPath(BasicBlock* bb); // initializes with LEn and CALL from context of b
 	DetailedPath(const SLList<Edge*>& edge_list);
 	DetailedPath(const DetailedPath& dp);
 	
@@ -30,6 +33,7 @@ public:
 	void addLast(Edge* e);
 	inline void addLast(const FlowInfo& fi) { _path.addLast(fi); }
 	inline bool contains(const FlowInfo &fi) const { return _path.contains(fi); }
+	inline SLList<FlowInfo>::Iterator find(const FlowInfo &fi) const { return _path.find(fi); }
 	inline void remove(Iterator &iter) { _path.remove(iter); }
 	// inline void remove(Iterator &iter) { _path.remove(iter.getFlowInfoIter()); }
 	inline void removeLast() { _path.removeLast(); }
@@ -42,6 +46,7 @@ public:
 
 	// utility
 	bool weakEqualsTo(const DetailedPath& dp) const;
+	void fromContext(Block* b);
 	void addEnclosingLoop(Block* loop_header);
 	void merge(const Vector<DetailedPath>& detailed_paths);
 	void optimize();
@@ -72,6 +77,7 @@ public:
 		FlowInfo(kind_t kind, SynthBlock* sb) : _kind(kind), _identifier(sb) { ASSERT(isSynthBlockKind(kind)); }
 		FlowInfo(kind_t kind, Edge* e) : _kind(kind), _identifier(e) { ASSERT(isEdgeKind(kind)); }
 		FlowInfo(const FlowInfo& fi) { _kind = fi._kind; _identifier = fi._identifier; }
+		inline kind_t kind() const { return _kind; }
 		inline bool isEdge() const { return _kind == KIND_EDGE; }
 		inline bool isLoopEntry() const { return _kind == KIND_LOOP_ENTRY; }
 		inline bool isLoopExit() const { return _kind == KIND_LOOP_EXIT; }
@@ -134,24 +140,6 @@ public:
 	public:
 		inline Iterator(const DetailedPath& dpath) : SLList<FlowInfo>::Iterator(dpath._path) { }
 	};
-
-	/*
-	// old Iterator class
-	class Iterator: public PreIterator<Iterator, const FlowInfo&> {
-	public:
-		// inline Iterator() { }
-		inline Iterator(const DetailedPath& dpath) : _iter(dpath._path) { }
-		inline Iterator(const Iterator& iter) : _iter(iter._iter) { }
-
-		inline bool ended(void) const { return _iter.ended(); }
-		inline const FlowInfo& item(void) const { return _iter.item(); }
-		inline void next(void) { _iter.next(); }
-
-		// inline const SLList<FlowInfo>::Iterator& getFlowInfoIter(void) { return _iter; }
-	private:
-		SLList<FlowInfo>::Iterator _iter;
-	}; // Iterator class
-	*/
 
 private:
 	void removeDuplicates();

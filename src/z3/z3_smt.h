@@ -13,7 +13,7 @@ using namespace elm::genstruct;
 class Z3SMT : public SMT
 {
 public:
-    Z3SMT();
+    Z3SMT(int flags);
     
 private:
     z3::context c;

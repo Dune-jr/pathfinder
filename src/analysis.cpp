@@ -68,10 +68,8 @@ void Analysis::wl_push(Block* b)
 	if(b->isExit())
 		b = getCaller(b, b); // exit becomes caller (remains exit if no caller)
 	// if(!wl.contains(b))
-	// {
 		wl.push(b);
 		// DBGG("-\twl ← wl ∪ " << b)
-	// }
 }
 
 /**

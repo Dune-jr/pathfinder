@@ -2,36 +2,6 @@
 #define _WORKING_LIST_H
 
 #include "cfg_features.h"
-/*
-#include <elm/genstruct/Vector.h>
-using elm::genstruct::Vector;
-
-class WorkingList
-{
-public:
-	WorkingList() { }
-	WorkingList(const WorkingList& wl) : v(wl.v) { }
-	inline Block* pop(void) { return v.pop(); }
-	inline void push(Block* b) { if(!v.contains(b)) v.push(b); }
-	inline bool isEmpty(void) const { return v.isEmpty(); }
-
-	elm::String toString(void) const {
-		elm::String rtn = "[";
-		bool first = true;
-		for(Vector<Block*>::Iterator iter(v); iter; iter++)
-		{
-			if(first) first = false; else
-				rtn = rtn.concat(CString(", "));
-			// rtn = _ << rtn << (*iter)->cfg() << ":" << (*iter)->index();
-			rtn = _ << rtn << *iter;
-		}
-		rtn = rtn.concat(CString("]"));
-		return rtn;
-	}
-private:
-	Vector<Block*> v;
-};
-//*/
 
 #include <elm/data/SortedList.h>
 using elm::SortedList;
@@ -43,6 +13,8 @@ public:
 		{ return b1 > b2 ? +1 : -1; }
 	// says < when b1 is at a deeper loop level (so should be read first)
 	static int compare(Block* const& b1, Block* const& b2) {
+		if(b1 == b2)
+			return 0; // ==
 		LoopHeaderIter i1(b1), i2(b2);
 		if( (!i1 && !i2) // both at seq level (no loop)
 		 || (i1 && i2 && i1.item() == i2.item()) ) // same inmost loop
@@ -68,7 +40,6 @@ public:
 		{ return compare(v1, v2); } // TODO!!! why do we have to explicit this??? 
 };
 
-// TODO: now we need a comparator
 class WorkingList
 {
 	typedef SortedList<Block*,BlockLoopComparator> wl_t;
@@ -92,6 +63,9 @@ public:
 		rtn = rtn.concat(CString("]"));
 		return rtn;
 	}
+
+	friend io::Output& operator<<(io::Output &out, const WorkingList& wl)
+		{ return out << wl.toString(); }
 private:
 	wl_t sl;
 };

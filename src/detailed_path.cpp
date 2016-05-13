@@ -20,6 +20,7 @@
  */
 
 DetailedPath::DetailedPath() { }
+DetailedPath::DetailedPath(BasicBlock* bb) { fromContext(bb); }
 DetailedPath::DetailedPath(const SLList<Edge*>& edge_list)
 {
 	for(SLList<Edge*>::Iterator iter(edge_list); iter; iter++)
@@ -107,14 +108,34 @@ void DetailedPath::removeCallsAtEndOfPath()
 		else last_edge_iter++;
 }
 
+void DetailedPath::fromContext(Block* b)
+{
+	do
+	{
+		if(b->isCall()) // always executed except the first time
+			this->_path.addFirst(FlowInfo(FlowInfo::KIND_CALL, b->toSynth()));
+		if(otawa::LOOP_HEADER(b))
+			this->_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, b->toBasic()));
+		while(otawa::ENCLOSING_LOOP_HEADER(b))
+		{
+			b = otawa::ENCLOSING_LOOP_HEADER(b);
+			this->_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, b->toBasic()));
+		}
+	} while((b = getCaller(b->cfg(), NULL)) != NULL);
+}
+
 /**
   * Add missing enclosing loop headers at the beginning of the path
   */
 void DetailedPath::addEnclosingLoop(Block* loop_header)
 {
+	// TODO: I don't think this should actually be used... onLoopEntry/onLoopExit + preserving this stuff on merges should be enough // 11may2016
 	ASSERT(loop_header->isBasic())	
 	if(!contains(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic())))
 		_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic()));
+	if(!contains(FlowInfo(FlowInfo::KIND_LOOP_EXIT, loop_header->toBasic())))
+		_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, loop_header->toBasic()));
+
 }
 
 void DetailedPath::onLoopEntry(Block* loop_header)
@@ -265,7 +286,7 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 		}
 	}
 #	ifdef DBGG
-		// cout << color::ICya() << "result: " << toString() << color::RCol() << io::endl;
+		// DBGG(color::IYel() << "result: " << toString())
 #	endif
 }
 

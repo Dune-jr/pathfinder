@@ -26,7 +26,7 @@ public:
 	inline LoopHeaderIter& operator=(const LoopHeaderIter& i) { lh = i.lh; return *this; }
 
 	inline bool ended(void) const { return lh == NULL; }
-	Block* item(void) const { return lh; }
+	Block* item(void) const { return lh; } // works even when ended()
 	inline void next(void) {
 		while(lh && !(tmp = ENCLOSING_LOOP_HEADER.get(lh, NULL))) {
 			lh = getCaller(lh->cfg(), NULL);

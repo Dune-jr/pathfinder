@@ -40,7 +40,7 @@ LockPtr<Analysis::States> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) c
 			return v;
 		}
 		State s((Edge*)NULL, context, false); // entry is cleared anyway
-		s.merge(v->states()); // s <- widening(s0, s1, ..., sn)
+		s.merge(v->states(), b); // s <- widening(s0, s1, ..., sn)
 		LockPtr<States> rtnv(new States(1));
 		rtnv->push(s);
 		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v->count() > 50)
