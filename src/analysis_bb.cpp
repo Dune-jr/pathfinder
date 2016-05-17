@@ -858,7 +858,7 @@ bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_const
 {
 	// const Predicate* removed_predicate; // throw this away
 	bool rtn = tryToKeepVar(var);//, removed_predicate);
-	if(!rtn) // no X expression has been found to match ?3 = X, thus we have to remove every occurence of ?3
+	if(!rtn) // no X expression has been found to match ?3 = X, thus we have to remove every occurrence of ?3
 	{
 		for(PredIterator piter(*this); piter; )
 		{
@@ -920,7 +920,7 @@ bool Analysis::State::invalidate(const Operand& var, bool invalidate_constant_in
 		}
 	}
 
-	if(!rtn) // no X expression has been found to match ?3 = X, thus we have to remove every occurence of ?3
+	if(!rtn) // no X expression has been found to match ?3 = X, thus we have to remove every occurrence of ?3
 	{
 		for(PredIterator piter(*this); piter; )
 		{
@@ -955,7 +955,7 @@ bool Analysis::State::invalidateMem(const OperandVar& var)
 }
 
 /**
- * Replace every occurence of the OperandMem parameter by a constant value if possible, removes the occurences from the predicate lists otherwise
+ * Replace every occurrence of the OperandMem parameter by a constant value if possible, removes the occurrences from the predicate lists otherwise
  */
 bool Analysis::State::invalidateMem(const OperandMem& addr)
 {
@@ -1096,7 +1096,7 @@ int Analysis::State::invalidateStackBelow(const Constant& stack_limit)
 	return count;
 }
 
-// this mindlessly replaces all occurences of var by expr
+// this mindlessly replaces all occurrences of var by expr
 bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 {
 	bool rtn = false;
@@ -1125,7 +1125,7 @@ bool Analysis::State::replaceVar(const OperandVar& var, const Operand& expr)
 	return rtn;
 }
 
-// this mindlessly replaces all occurences of var by expr
+// this mindlessly replaces all occurrences of var by expr
 bool Analysis::State::replaceOperand(const Operand& opd, const Operand& expr)
 {
 	bool rtn = false;
@@ -1180,7 +1180,7 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& 
 	return rtn;
 }
 
-// replaces all occurences of opdm in all predicates by expr + append "labels"
+// replaces all occurrences of opdm in all predicates by expr + append "labels"
 bool Analysis::State::replaceMem(const OperandMem& opdm, const Operand& expr, const Path& labels)
 {
 	bool rtn = false;

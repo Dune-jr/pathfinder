@@ -265,7 +265,7 @@ void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
 			registers[i] = some(LabelledValue((*registers[i]).val(), Set<Edge*>::null, true));
 }
 
-// returns a one-line string with pretty printing of changes that occured in the constants during the current block (updated flag)
+// returns a one-line string with pretty printing of changes that occurred in the constants during the current block (updated flag)
 elm::String ConstantVariables::printChanges() const
 {
 	elm::String rtn = "[";

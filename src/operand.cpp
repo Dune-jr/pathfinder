@@ -553,7 +553,7 @@ pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_o
 				case ARITHOPR_SUB:
 					if(opd_result->kind() == OPERAND_CONST)
 					{
-						opd_result = new OperandConst(-((OperandConst*)opd_result)->value()); // we have to take opposite of the value everytime
+						opd_result = new OperandConst(-((OperandConst*)opd_result)->value()); // we have to take opposite of the value every time
 						return POPRESULT_CONTINUE;
 					}
 					// example of why we had  to do this: if we have (...) - (t1 + 2)

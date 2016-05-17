@@ -20,7 +20,7 @@ enum arithoperator_t
 	
 	// Binary
 	ARITHOPR_ADD, // (+)   Addition
-	ARITHOPR_SUB, // (-)   Substraction
+	ARITHOPR_SUB, // (-)   Subtraction
 	ARITHOPR_MUL, // (*)   Multiplication
 	ARITHOPR_MULH,// (*H)  32 Most significant bits from 64-bit multiplication
 	ARITHOPR_DIV, // (/)   Division

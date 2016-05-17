@@ -48,10 +48,10 @@ int Predicate::involvesOperand(const Operand& opd) const
 
 /**
  * @brief Test if the predicate contains a variable
- * @details Count (recursively) the occurences of the variable operand opdv in the predicate.
+ * @details Count (recursively) the occurrences of the variable operand opdv in the predicate.
  * 
  * @param opdv Variable to look for.
- * @return Number of occurences found.
+ * @return Number of occurrences found.
  */
 int Predicate::involvesVariable(const OperandVar& opdv) const
 {
@@ -75,8 +75,8 @@ bool Predicate::involvesMemory() const
 
 /**
  * @fn inline bool Predicate::isAffine(const OperandVar& opdv, const OperandVar& sp);
- * Test if the predicate only contains + or - operations, only occurences of opdv, and no memory cells.
- * This does not check that there is only one occurence of opdv.
+ * Test if the predicate only contains + or - operations, only occurrences of opdv, and no memory cells.
+ * This does not check that there is only one occurrence of opdv.
  * @param opdv Variable with respect to which the Predicate is relative to.
  */
 bool Predicate::isAffine(const OperandVar& opdv) const
@@ -152,7 +152,7 @@ Predicate& Predicate::operator=(const Predicate& p)
 
 /**
   * @fn bool Predicate::operator==(const Predicate& p) const;
-  * Not a Leibnitz equality: (x == y) is considered to be the same as (y == x)
+  * Not a Leibniz equality: (x == y) is considered to be the same as (y == x)
   */
 bool Predicate::operator==(const Predicate& p) const
 {
