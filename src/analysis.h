@@ -106,8 +106,7 @@ private:
 	static Identifier<loopheader_status_t>		  LH_STATUS; // Fixpt status of a loop header
 
 	WorkingList wl; // working list
-	Vector<DetailedPath> infeasible_paths; // TODO: Set<Path, PathComparator<Path> > path; to make Set useful
-	int total_paths, loop_header_count, bb_count;
+	Vector<DetailedPath> infeasible_paths;
 
 	// virtual pure functions to implement
 	virtual LockPtr<States> narrowing(const Vector<Edge*>& edges) const = 0;
@@ -119,12 +118,13 @@ private:
 	Analysis::State topState(Block* entry) const;
 	void wl_push(Block* b);
 	void printResults(int exec_time_ms) const;
+	void postProcessResults();
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
 	States& I(Block* b, States& s); // modifies existing states
 	LockPtr<States> I(Edge* e, const States& s); // creates new states
-	void removeDuplicateInfeasiblePaths();
+	// void removeDuplicateInfeasiblePaths();
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	// elm::String wlToString() const;
 

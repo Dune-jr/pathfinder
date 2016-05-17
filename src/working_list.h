@@ -45,7 +45,6 @@ class WorkingList
 	typedef SortedList<Block*,BlockLoopComparator> wl_t;
 public:
 	WorkingList() { }
-	// WorkingList(const WorkingList& wl) : sl(wl.sl) { } // doesn't work...
 	inline Block* pop(void) { Block* b = sl.first(); sl.removeFirst(); return b; }
 	inline void push(Block* b) { if(!sl.contains(b)) sl.add(b); } // WARNING: sortedList seems to remove duplicates!!
 	inline bool isEmpty(void) const { return sl.isEmpty(); }

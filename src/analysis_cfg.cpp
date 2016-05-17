@@ -743,7 +743,7 @@ void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<Detailed
  * @fn void Analysis::removeDuplicateInfeasiblePaths();
  * @brief Look for infeasible paths that share the same ordered list of edges and remove duplicates 
  */
-void Analysis::removeDuplicateInfeasiblePaths()
+/*void Analysis::removeDuplicateInfeasiblePaths()
 {
 	Vector<DetailedPath> new_ips;
 	for(Vector<DetailedPath>::Iterator dp_iter(infeasible_paths); dp_iter; )
@@ -764,7 +764,7 @@ void Analysis::removeDuplicateInfeasiblePaths()
 	}
 	infeasible_paths.clear();
 	infeasible_paths = new_ips;
-}
+}*/
 
 /**
  * @fn static void Analysis::onAnyInfeasiblePath();

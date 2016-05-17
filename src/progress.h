@@ -11,7 +11,7 @@
 using elm::genstruct::HashTable;
 using otawa::CFG;
 
-// progress bar
+// solver progress bar
 /* example: [■■       ] 4 states */
 class Analysis::SolverProgress {
 public:
@@ -35,11 +35,13 @@ private:
 	const int n;
 };
 
-// call tree with progress.
-/* example:
-	getbit         :   5/9   (55 %)
-	des            :  18/40  (45 %)
-	main           :   1/3   (33 %)
+/**
+  * @class Analysis::Progress
+  * @brief call tree with progress.
+  * example:
+  *	getbit         :   5/9   (55 %)
+  *	des            :  18/40  (45 %)
+  *	main           :   1/3   (33 %)
 */
 class Analysis::Progress
 {
@@ -60,6 +62,7 @@ public:
 		if(b->isEntry())
 			onEntry(b->cfg());
 		else if(b->isCall()){
+			incrementStat(b->cfg());
 			onExit(b->toSynth()->callee());
 			// b = b->toSynth()->callee()->exit();
 		}
@@ -85,7 +88,7 @@ private:
 			}
 		if(all_leave){
 			ASSERTP(tab.exists(bb->cfg()), "reading block in CFG " << bb->cfg() << " after exiting (or before entering)")
-			tab.put(bb->cfg(), *tab.get(bb->cfg()) + Stats(1, 0));
+			incrementStat(bb->cfg());
 		}
 	}
 	inline void onFinish() { moveUp(maxlines); maxlines = 0; }
@@ -110,6 +113,7 @@ private:
 		}
 		maxlines = max(maxlines, lines);	
 	}
+	inline void incrementStat(CFG* cfg) { tab.put(cfg, *tab.get(cfg) + Stats(1, 0)); }
 	inline elm::String indent(int n) const { String str; for(int i = 0; i < n; i++) str=str+"\t"; return str; }
 	inline void moveUp(int n) const { elm::cout << "\e[" << n << "A"; }
 	inline void newLines(int n) const { for(int i = 0; i < n; i++) elm::cout << endl; }

@@ -190,6 +190,20 @@ io::Output& Analysis::State::print(io::Output& out) const
 }*/
 
 /**
+ * @fn void Analysis::State::throwInfo();
+ * throw all gathered info on current state
+ */
+/*void Analysis::State::throwInfo()
+{
+	DBG(color::IRed() << "throwing info from path " << getPathString())
+	path.clear();
+	constants.clear();
+	labelled_preds.clear();
+	generated_preds.clear();
+	generated_preds_taken.clear();
+}*/
+
+/**
  * @fn inline Analysis::State Analysis::topState(Block* entry) const;
  * @brief Returns a Top state
  */

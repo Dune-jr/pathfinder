@@ -70,14 +70,15 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			ASSERTP(e->source()->isBasic() || e->source()->isCall() || e->source()->isExit(), ": source not basic nor call nor exit: " << e->source() << "->" << e->target());
 			ASSERTP(e->target()->isBasic() || e->target()->isCall() || e->target()->isExit(), ": target not basic nor call nor exit: " << e->source() << "->" << e->target());
 			
-			BasicBlock *source = NULL, *target = NULL;
+			Block *source = NULL, *target = NULL;
 			if(e->source()->isBasic())
-				source = e->source()->toBasic();
+				source = e->source();
 			else if(e->source()->isSynth())
 			{
 				ASSERT(e->source()->isCall()) // otherwise would be virtual...
-				ASSERTP(false, "ip: [" << ip << "], e: " << e->source() << "->" << e->target() << ", source is caller, we should replace with the exit or better, close a call context")
-				source = e->source()->toSynth()->ins().item()->source()->toBasic(); // source is a call block: replace with caller
+				// ASSERTP(false, "ip: [" << ip << "], e: " << e->source() << "->" << e->target() << ", source is caller, we should replace with the exit or better, close a call context")
+				// source = e->source()->toSynth()->ins().item()->source()->toBasic(); // source is a call block: replace with caller
+				source = e->source()->toSynth();
 			}
 			else if(e->source()->isExit())
 			{
@@ -91,14 +92,14 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				ASSERTP(!(++citer), "must be at max 1 outedge from caller")*/
 			}
 			if(e->target()->isBasic())
-				target = e->target()->toBasic();
+				target = e->target();
 			else if(e->target()->isSynth())
 			{
 				ASSERT(e->target()->isCall()) // otherwise would be virtual...
 				// target is a call block: replace with callee entry (TODOv2 ffx: temporary! we should add <call> context!)
 				Block* callee_entry_target = e->target()->toSynth()->callee()->entry()->outs().item()->target();
 				ASSERTP(callee_entry_target->isBasic(), "entry does not point to a BasicBlock???")
-				target = callee_entry_target->toBasic();
+				target = callee_entry_target;
 			}
 			else if(e->target()->isExit())
 			{
@@ -106,11 +107,11 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				ASSERTP(citer, "exit from main in IP???");
 				Block::EdgeIter caller_exit_edges_iter(citer->outs());
 				ASSERT(caller_exit_edges_iter);
-				target = *caller_exit_edges_iter->target()->toBasic();
+				target = caller_exit_edges_iter->target();
 				ASSERT(!(++caller_exit_edges_iter));
 				ASSERTP(!(++citer), "must be at max 1 outedge from caller")
 			}
-			FFXFile << indent(  ) << "<edge src=\"0x" << source->address() << "\" dst=\"0x" <<target->address()
+			FFXFile << indent(  ) << "<edge src=\"0x" << source->address() << "\" dst=\"0x" << target->address()
 					<< "\" /> <!-- " << (Block*)source << " -> " << (Block*)target << " -->" << endl;
 		}
 		else if(iter->isLoopEntry())

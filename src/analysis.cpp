@@ -10,6 +10,7 @@
 #include "analysis_state.h"
 #include "cfg_features.h"
 #include "progress.h"
+#include "smt.h"
 
 /**
  * @class Analysis
@@ -17,22 +18,25 @@
  */
 Analysis::Analysis(const context_t& context, int state_size_limit, int flags)
 	: context(context), state_size_limit(state_size_limit), flags(flags)
-	// , ip_count(0), unminimized_ip_count(0)
-	, loop_header_count(0), bb_count(-1)
 	{ }
 
-Analysis::~Analysis() { if(flags&SHOW_PROGRESS) delete progress; }
+Analysis::~Analysis() { }
 
+/**
+  * @fn const Vector<DetailedPath>& Analysis::run(CFG *cfg);
+  * @brief Run the analysis
+  */
 const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 {
-	if(flags&SHOW_PROGRESS)
-		progress = new Progress(cfg);
-	bb_count = cfg->count()-1; // do not count ENTRY
-	std::time_t timestamp = clock();
-	// DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
+	if(flags&SHOW_PROGRESS) progress = new Progress(cfg); 
+	DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
 	DBG("Stack pointer identified to " << context.sp)
+	std::time_t start = clock();
 	processCFG(cfg);
-	printResults((clock()-timestamp)*1000/CLOCKS_PER_SEC);
+	std::time_t end = clock();
+	postProcessResults();
+	printResults((end-start)*1000/CLOCKS_PER_SEC);
+	if(flags&SHOW_PROGRESS) delete progress;
 	return infeasiblePaths();
 }
 
@@ -67,9 +71,8 @@ void Analysis::wl_push(Block* b)
 		b = b->toSynth()->callee()->entry(); // call becomes callee entry
 	if(b->isExit())
 		b = getCaller(b, b); // exit becomes caller (remains exit if no caller)
-	// if(!wl.contains(b))
-		wl.push(b);
-		// DBGG("-\twl ← wl ∪ " << b)
+	wl.push(b);
+	// DBGG("-\twl ← wl ∪ " << b)
 }
 
 /**
@@ -336,4 +339,9 @@ void Analysis::printResults(int exec_time_ms) const
 		std::cout.flags(oldflags);
 		std::cout.precision(oldprecision);
 	}
+}
+
+void Analysis::postProcessResults(void)
+{
+	// TODO
 }
