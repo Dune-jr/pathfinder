@@ -34,6 +34,7 @@ public:
 	inline void addLast(const FlowInfo& fi) { _path.addLast(fi); }
 	inline bool contains(const FlowInfo &fi) const { return _path.contains(fi); }
 	inline SLList<FlowInfo>::Iterator find(const FlowInfo &fi) const { return _path.find(fi); }
+	inline void remove(Edge* e) { _path.remove(FlowInfo(e)); }
 	inline void remove(Iterator &iter) { _path.remove(iter); }
 	// inline void remove(Iterator &iter) { _path.remove(iter.getFlowInfoIter()); }
 	inline void removeLast() { _path.removeLast(); }
@@ -76,6 +77,7 @@ public:
 		FlowInfo(kind_t kind, BasicBlock* bb) : _kind(kind), _identifier(bb) { ASSERT(isBasicBlockKind(kind)); }
 		FlowInfo(kind_t kind, SynthBlock* sb) : _kind(kind), _identifier(sb) { ASSERT(isSynthBlockKind(kind)); }
 		FlowInfo(kind_t kind, Edge* e) : _kind(kind), _identifier(e) { ASSERT(isEdgeKind(kind)); }
+		FlowInfo(Edge* e) : _kind(KIND_EDGE), _identifier(e) { }
 		FlowInfo(const FlowInfo& fi) { _kind = fi._kind; _identifier = fi._identifier; }
 		inline kind_t kind() const { return _kind; }
 		inline bool isEdge() const { return _kind == KIND_EDGE; }

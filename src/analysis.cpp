@@ -34,7 +34,7 @@ const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 	std::time_t start = clock();
 	processCFG(cfg);
 	std::time_t end = clock();
-	postProcessResults();
+	postProcessResults(cfg);
 	printResults((end-start)*1000/CLOCKS_PER_SEC);
 	if(flags&SHOW_PROGRESS) delete progress;
 	return infeasiblePaths();
@@ -341,7 +341,9 @@ void Analysis::printResults(int exec_time_ms) const
 	}
 }
 
-void Analysis::postProcessResults(void)
+void Analysis::postProcessResults(CFG *cfg)
 {
-	// TODO
+	Block::EdgeIter entry_outs(cfg->entry()->outs());
+	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
+		(*dpiter).remove(*entry_outs); // remove program entry edge from all IPs
 }

@@ -118,7 +118,7 @@ private:
 	Analysis::State topState(Block* entry) const;
 	void wl_push(Block* b);
 	void printResults(int exec_time_ms) const;
-	void postProcessResults();
+	void postProcessResults(CFG *cfg);
 	
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
