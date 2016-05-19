@@ -341,9 +341,26 @@ void Analysis::printResults(int exec_time_ms) const
 	}
 }
 
+extern DomInfo* dom;
 void Analysis::postProcessResults(CFG *cfg)
 {
+	return;
 	Block::EdgeIter entry_outs(cfg->entry()->outs());
 	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
+	{
 		(*dpiter).remove(*entry_outs); // remove program entry edge from all IPs
+		Block* last = NULL;
+		for(DetailedPath::Iterator i(*dpiter); i; i++)
+		{
+			if(i->isEdge())
+			{
+				if(last)
+				{
+					if(dom->dominates(i->getEdge()->target(), last)) 
+						cout << color::ICya() << "" << i->getEdge()->target() << " dominates " << last << " (remove dominated edge)" << color::RCol() << endl;
+				}
+				last = i->getEdge()->source();
+			}
+		}
+	}
 }

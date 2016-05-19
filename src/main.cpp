@@ -24,6 +24,7 @@ void testSimplify();
 
 int dbg_flags = 0b00000000; // global analysis flags for debugging
 int dbg_verbose = 0; // global verbose level (higher = less verbose)
+DomInfo* dom;
 	
 class Display: public Application {
 public:
@@ -42,7 +43,7 @@ public:
 		opt_notime(SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
 		// opt_nopred(SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")), // no longer working
 		opt_noipresults(SwitchOption::Make(*this).cmd("--nir").cmd("--no-ip-results").description("do not print the list of IPs found")),
-		opt_noflowinfo(SwitchOption::Make(*this).cmd("--no-flowinfo").description("do not print context flowinfo in path debugs")),
+		opt_noformattedflowinfo(SwitchOption::Make(*this).cmd("--nffi").cmd("--no-formatted-flowinfo").description("format flowinfo in paths like a list of items instead of pretty-printing it")),
 		// opt_preanalysis(SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis (obsolete)")),
 		opt_avgiplength(SwitchOption::Make(*this).cmd("--average-ip-length").description("display average length of infeasible_paths found")),
 		opt_nolinearcheck(SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
@@ -61,17 +62,20 @@ protected:
 			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
 		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
+		if(0) {
+			workspace()->require(DOMINANCE_FEATURE, props);
+			dom = otawa::DOM_INFO(workspace());
+		}
 		if(opt_slice) {
-			// otawa::oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
-			// otawa::oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
-			workspace()->require(otawa::oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
-			workspace()->require(otawa::oslice::SLICER_FEATURE, props);
+			// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
+			// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
+			workspace()->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
+			workspace()->require(oslice::SLICER_FEATURE, props);
 		}
 		const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
 		const dfa::State *inital_state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
 		ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
 		CFG *cfg = cfgs->get(0); // then get the first CFG
-		// simpleCFGparse(cfg);
 		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
 		unsigned int max_registers = (unsigned int)workspace()->platform()->regCount(); // retrieve the count of registers
 		unsigned int max_tempvars = (unsigned int)workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
@@ -95,8 +99,8 @@ protected:
 			// dbg_flags |= DBG_NO_PREDICATES;
 		if(! opt_noipresults)
 			dbg_flags |= DBG_RESULT_IPS;
-		if(! opt_noflowinfo)
-			dbg_flags |= DBG_PRINT_FLOWINFO;
+		if(! opt_noformattedflowinfo)
+			dbg_flags |= DBG_FORMAT_FLOWINFO;
 		// if(opt_preanalysis)
 		// 	dbg_flags |= DBG_PREANALYSIS;
 		if(opt_avgiplength)
@@ -142,7 +146,7 @@ private:
 	// option::Manager manager;
 	SwitchOption opt_s1, opt_s2, opt_s3;
 	ValueOption<bool> opt_output;
-	SwitchOption opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_progress, opt_dumpoptions, opt_notime, opt_noipresults, opt_noflowinfo,
+	SwitchOption opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_progress, opt_dumpoptions, opt_notime, opt_noipresults, opt_noformattedflowinfo,
 		/*opt_preanalysis,*/ opt_avgiplength, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_dry, opt_automerge; //, opt_virtualize;
 	ValueOption<bool> opt_virtualize;
 	ValueOption<int> opt_merge;
@@ -169,7 +173,7 @@ void dumpOptions(int dbg_flags, int dbg_verbose, int analysis_flags, int merge_t
 	cout << "]" << color::RCol() << endl;
 	DBGOPT("DISPLAY TIME", !(dbg_flags&DBG_NO_TIME), true)
 	DBGOPT("DISPLAY RESULT INF. PATHS", dbg_flags&DBG_RESULT_IPS, true)
-	DBGOPT("DISPLAY FLOWINFO", dbg_flags&DBG_PRINT_FLOWINFO, true)
+	DBGOPT("PRETTY PRINTING FOR FLOWINFO", (dbg_flags&DBG_FORMAT_FLOWINFO), true)
 	DBGOPT("DISPLAY AVERAGE IP LENGTH", dbg_flags&DBG_AVG_IP_LENGTH, false)
 	cout << "Analysis:" << endl;
 	DBGOPT("DISPLAY PROGRESS", analysis_flags&Analysis::SHOW_PROGRESS, false)

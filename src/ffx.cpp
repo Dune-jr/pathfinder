@@ -76,9 +76,23 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			else if(e->source()->isSynth())
 			{
 				ASSERT(e->source()->isCall()) // otherwise would be virtual...
-				// ASSERTP(false, "ip: [" << ip << "], e: " << e->source() << "->" << e->target() << ", source is caller, we should replace with the exit or better, close a call context")
-				// source = e->source()->toSynth()->ins().item()->source()->toBasic(); // source is a call block: replace with caller
-				source = e->source()->toSynth();
+				// here problem: we have to include the returning edgeS in the infeasible path. What does this mean? simply that we have called A.
+				// But we don't want to include the call to A because we would lose sequentiality... so let's just assert that we already have at least one edge from that sub-CFG we're returning from
+				CFG* subcfg = e->source()->toSynth()->callee();
+				cerr << "WARNING: infeasible path includes return edge of sub-CFG \"" << subcfg->name() 
+					 << "\" called from \"" << e->source()->toSynth()->caller() << "\"" << endl;
+				bool includes_edge_in_subCFG = false;
+				for(DetailedPath::Iterator new_iter(ip); *new_iter != *iter; new_iter++)
+					if(new_iter->isEdge() && new_iter->getEdge()->source()->cfg() == subcfg) {
+						includes_edge_in_subCFG = true;
+						cerr << "\tfound edge in subCFG: " << new_iter->getEdge() << ", skipping edge" << endl;
+						break;
+					}
+				if(!includes_edge_in_subCFG)
+					ASSERTP(false, "ERROR: infeasible path includes return edge of sub-CFG" << subcfg->name() << ", but no edge from that CFG!")
+				continue;
+				// ASSERTP(false, "ip: [" << ip << "], e: " << e->source() << "->" << e->target() << ", source is caller, '" << e->source() << ", " << e->source()->address())
+				// source = e->source()->toSynth();
 			}
 			else if(e->source()->isExit())
 			{
@@ -90,7 +104,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				source = (*caller_exit_edges_iter)->target()->toBasic();
 				ASSERT(!(++caller_exit_edges_iter));
 				ASSERTP(!(++citer), "must be at max 1 outedge from caller")*/
-			}
+			} else assert(false);
 			if(e->target()->isBasic())
 				target = e->target();
 			else if(e->target()->isSynth())
@@ -111,8 +125,10 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				ASSERT(!(++caller_exit_edges_iter));
 				ASSERTP(!(++citer), "must be at max 1 outedge from caller")
 			}
+
 			FFXFile << indent(  ) << "<edge src=\"0x" << source->address() << "\" dst=\"0x" << target->address()
 					<< "\" /> <!-- " << (Block*)source << " -> " << (Block*)target << " -->" << endl;
+
 		}
 		else if(iter->isLoopEntry())
 		{
@@ -123,8 +139,9 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				FFXFile << indent(  ) << "<iteration number=\"n\">" << endl; indent(+1);
 				// cout <<"detected iteration=n on ip:" << ip << color::RCol() << endl;
 			}
-			else
+			else {
 				FFXFile << indent(  ) << "<iteration number=\"*\">" << endl; indent(+1);
+			}
 			open_tags += FFX_TAG_LOOP;
 		}
 		else if(iter->isLoopExit())

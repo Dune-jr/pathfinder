@@ -718,8 +718,8 @@ DetailedPath Analysis::reorderInfeasiblePath(const Path& ip, const DetailedPath&
 		else
 			ordered_ip.addLast(*full_path_iter);
 	}
-	DBG("reorderInfeasiblePath(...), ip=" << pathToString(ip) << ", " << color::ICya() << "full_path=[" << full_path << "]" 
-		<< color::RCol() << ", result=" << ordered_ip);
+	// DBG("reorderInfeasiblePath(...), ip=" << pathToString(ip) << ", " << color::ICya() << "full_path=[" << full_path << "]" 
+		// << color::RCol() << ", result=" << ordered_ip);
 	return ordered_ip;
 }
 
@@ -731,8 +731,6 @@ void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<Detailed
 	// Block *b = ip.firstEdge()->source();
 	// for(LoopHeaderIter i(b); i; i++)
 	// 	new_ip.addEnclosingLoop(*i);
-	// optimize by removing redundancies
-	new_ip.optimize();
 	if(!infeasible_paths.contains(new_ip))
 		infeasible_paths.add(new_ip);
 	else

@@ -114,31 +114,32 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 		{
 			const Path& ip = **pi;
 			elm::String counterexample;
-			DBG("Path " << s.getPathString() << " minimized to " << pathToString(ip))
+			DBG("Path " << s.getPathString() << color::Bold() << " minimized to " << color::NoBold() << pathToString(ip))
 			bool valid = checkInfeasiblePathValidity(ss.states(), vl_paths, ip, counterexample);
 			DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
 			stats.onAnyInfeasiblePath();
 			if(valid)
 			{
-				addDetailedInfeasiblePath(reorderInfeasiblePath(ip, s.getDetailedPath()), infeasible_paths); // infeasible_paths += order(ip); to output proprer ffx!
-				DBG(color::On_IRed() << "Inf. path found: " << reorderInfeasiblePath(ip, s.getDetailedPath()))
+				DetailedPath reordered_path = reorderInfeasiblePath(ip, s.getDetailedPath());
+				reordered_path.optimize();
+				addDetailedInfeasiblePath(reordered_path, infeasible_paths); // infeasible_paths += order(ip); to output proprer ffx!
+				DBG(color::On_IRed() << "Inf. path found: " << reordered_path)
 			}
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
 			{
+				DetailedPath full_path = s.getDetailedPath();
+				full_path.optimize();
 				DBG("   counterexample: " << counterexample)
 				stats.onUnminimizedInfeasiblePath();
 				if(flags&UNMINIMIZED_PATHS)
 				{	// falling back on full path (not as useful as a result, but still something)
-					DetailedPath full_path = s.getDetailedPath();
 					addDetailedInfeasiblePath(full_path, infeasible_paths);
-					if(dbg_verbose == DBG_VERBOSE_ALL)
-					{
+					if(dbg_verbose == DBG_VERBOSE_ALL) {
 						Path fp;
 						for(DetailedPath::EdgeIterator fpi(full_path); fpi; fpi++)
 							fp += *fpi;
 						DBG(color::On_IRed() << "Inf. path found: " << pathToString(fp) << color::RCol() << " (unrefined)")
 					}
-					// TODO: do a C) where we still try to refine this infeasible path?
 				}
 				else
 					DBG(color::IRed() << "Ignored infeasible path that could not be minimized")

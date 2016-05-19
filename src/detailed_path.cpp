@@ -329,30 +329,57 @@ SLList<Edge*> DetailedPath::toOrderedPath() const
 elm::String DetailedPath::toString(bool colored) const
 {
 	elm::String str;
-	bool first = true;
-	if(dbg_flags&DBG_PRINT_FLOWINFO)
+	if(! dbg_flags&DBG_FORMAT_FLOWINFO)
 	{
-		// iterate on everything
+		// show the list of flowinfo and edges
+		bool first = true;
 		for(Iterator iter(*this); iter; iter++)
 		{
-			if(first)
-				first = false;
-			else
+			if(first) first = false; else
 				str = str.concat(_ << ", ");
 			str = str.concat(iter->toString(colored));
 		}
 	}
 	else
 	{
-		// print limited info, iterate only on edges
-		for(EdgeIterator iter(*this); iter; iter++)
+		// prettier print
+		bool comma = false;
+		// if(countEdges() > 0)
+		// 	str = _ << color::Dim() << firstEdge()->source()->cfg() << "(" << color::NoDim();
+		for(Iterator iter(*this); iter; iter++)
 		{
-			if(first)
-				first = false;
-			else
-				str = str.concat(_ << ", ");
-			str = str.concat(_ << iter->source()->index() << "->" << iter->target()->index());
+			switch(iter->kind())
+			{
+				case FlowInfo::KIND_EDGE:
+					if(comma) str = str.concat(_ << ", ");
+					str = str.concat(iter->toString(colored));
+					comma = true;
+					break;
+				case FlowInfo::KIND_LOOP_ENTRY:
+					if(comma) str = str.concat(_ << ", ");
+					str = str.concat(_ << color::Dim() << "L#" << iter->getLoopHeader()->index() << "{" << color::NoDim());
+					comma = false;
+					break;
+				case FlowInfo::KIND_LOOP_EXIT:
+					str = str.concat( _ << color::Dim() << "}" << color::NoDim());
+					comma = true;
+					break;
+				case FlowInfo::KIND_CALL:
+					if(comma) str = str.concat(_ << ", ");
+					str = str.concat( _ << color::Dim() << iter->getCaller()->callee() << "(" << color::NoDim());
+					comma = false;
+					break;
+				case FlowInfo::KIND_RETURN:
+					str = str.concat(_ << color::Dim() << ")" << color::NoDim());
+					comma = true;
+					break;
+				default:
+					str = str.concat( _ << "[UKNOWN KIND " << (int)iter->kind() << "]");
+					break;
+			}
 		}
+		// if(_path)
+		// 	str = str.concat(_ << color::Dim() << ")" << color::NoDim());
 	}
 	return str;
 }
@@ -367,12 +394,26 @@ elm::String DetailedPath::FlowInfo::toString(bool colored) const
 	switch(_kind)
 	{
 		case KIND_EDGE:
-			// if((getEdge()->source()->cfg() == getEdge()->target()->cfg()) && !getEdge()->source()->isSynth() && !getEdge()->target()->isSynth()) // same cfg
-			// 	return _ << getEdge()->source()->cfg() << "(" << getEdge()->source()->index() << "->" << getEdge()->target()->index() << ")";
-			// else
-			// 	return _ << getEdge();
-			ASSERT(getEdge()->source()->cfg() == getEdge()->target()->cfg());
-			return _ << getEdge()->source()->cfg() << "(" << getEdge()->source()->index() << "->" << getEdge()->target()->index() << ")";
+			{
+				ASSERT(getEdge()->source()->cfg() == getEdge()->target()->cfg());
+				elm::String prefix, suffix;
+				if(! dbg_flags&DBG_FORMAT_FLOWINFO) {
+					prefix = _ << getEdge()->source()->cfg() << "(";
+					suffix = ")";
+				}
+				if(getEdge()->source()->isBasic() && getEdge()->target()->isBasic())
+					return _ << prefix << getEdge()->source()->index() << "->" << getEdge()->target()->index() << suffix;
+				else if(getEdge()->source()->isBasic() && getEdge()->target()->isExit())
+					return _ << prefix << getEdge()->source()->index() << "->" << getEdge()->target()->index() << "$" << suffix;
+				else if(getEdge()->source()->isCall() && getEdge()->target()->isBasic())
+					return _ << prefix << "@" << getEdge()->source()->toSynth()->callee() << "->" << getEdge()->target()->index() << suffix;
+				else if(getEdge()->source()->isBasic() && getEdge()->target()->isCall())
+					return _ << prefix << getEdge()->source()->index() << "->@" << getEdge()->target()->toSynth()->callee() << suffix;
+				else if(getEdge()->source()->isEntry() && getEdge()->target()->isBasic())
+					return _ << prefix << "^" << getEdge()->source()->cfg() << "->" << getEdge()->target()->index() << suffix;
+				else
+					return _ << getEdge();
+			}
 		case KIND_LOOP_ENTRY:
 			return _ << color::Dim() << "LEn#" << getLoopHeader()->index() << color::NoDim();
 		case KIND_LOOP_EXIT:

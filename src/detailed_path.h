@@ -92,6 +92,7 @@ public:
 		inline SynthBlock* getCaller() const { return getSynthBlock(); }
 		elm::String toString(bool colored = true) const;
 		inline bool operator==(const FlowInfo& fi) const { return (_kind == fi._kind) && (_identifier == fi._identifier); }
+		inline bool operator!=(const FlowInfo& fi) const { return !this->operator==(fi); }
 		inline FlowInfo& operator=(const FlowInfo& fi) { _kind = fi._kind; _identifier = fi._identifier; return *this; }
 		inline const FlowInfo* operator->(void) const { return this; }
 		friend io::Output& operator<<(io::Output& out, const FlowInfo& fi) { return fi.print(out); }
