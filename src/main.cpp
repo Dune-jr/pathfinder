@@ -21,6 +21,7 @@ void dumpOptions(int dbg_flags, int dbg_verbose, int analysis_flags, int merge_t
 void testPredicates();
 void testOperands();
 void testSimplify();	
+#include "EdgeDominance.h"
 
 int dbg_flags = 0b00000000; // global analysis flags for debugging
 int dbg_verbose = 0; // global verbose level (higher = less verbose)
@@ -29,13 +30,12 @@ DomInfo* dom;
 class Display: public Application {
 public:
 	Display(void): Application("display", Version(1, 0, 0)),
-		// opt1(SwitchOption::Make(manager).cmd("-o").cmd("--com").description("option 1")) { }
 		opt_s1(SwitchOption::Make(*this).cmd("-s").cmd("--s1").cmd("--silent").description("run with minimal output")),
 		opt_s2(SwitchOption::Make(*this).cmd("--s2").description("only display results")),
 		opt_s3(SwitchOption::Make(*this).cmd("--s3").cmd("--fullsilent").description("run with zero output")),
 		opt_output(ValueOption<bool>::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file").def(false)),
 		opt_graph_output(SwitchOption::Make(*this).cmd("-g").cmd("--graph-output").description("also output as a gnuplot .tsv graph file (requires -o)")),
-		opt_nocolor(SwitchOption::Make(*this).cmd("--no-color").cmd("--no-colors").description("do not use colors")),
+		opt_nocolor(SwitchOption::Make(*this).cmd("--nc").cmd("--no-color").cmd("--no-colors").description("do not use colors")),
 		opt_src_info(SwitchOption::Make(*this).cmd("-i").cmd("--src-info").description("print file/line number info")),
 		opt_nolinenumbers(SwitchOption::Make(*this).cmd("--nl").cmd("--no-line-nb").description("do not number lines of the output")),
 		opt_progress(SwitchOption::Make(*this).cmd("-p").cmd("--progress").description("display analysis progress (forces --s2+)")),
@@ -44,7 +44,6 @@ public:
 		// opt_nopred(SwitchOption::Make(*this).cmd("--no-predicates").description("do not print debug info about predicates")), // no longer working
 		opt_noipresults(SwitchOption::Make(*this).cmd("--nir").cmd("--no-ip-results").description("do not print the list of IPs found")),
 		opt_noformattedflowinfo(SwitchOption::Make(*this).cmd("--nffi").cmd("--no-formatted-flowinfo").description("format flowinfo in paths like a list of items instead of pretty-printing it")),
-		// opt_preanalysis(SwitchOption::Make(*this).cmd("--preanalysis").description("run pre-analysis (obsolete)")),
 		opt_avgiplength(SwitchOption::Make(*this).cmd("--average-ip-length").description("display average length of infeasible_paths found")),
 		opt_nolinearcheck(SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
 		opt_nounminimized(SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
@@ -81,6 +80,7 @@ protected:
 		unsigned int max_tempvars = (unsigned int)workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
 		int analysis_flags = 0, merge_thresold = 0;
 
+EdgeDominance ed(cfg); return;
 		// high verbose numbers are more silent. TODO: that is counterintuitive
 		if(opt_s1) dbg_verbose = 1;
 		if(opt_s2) dbg_verbose = 2;
