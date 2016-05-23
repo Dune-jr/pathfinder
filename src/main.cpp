@@ -12,6 +12,10 @@
 #include "ffx.h"
 #include "debug.h"
 #include "oracle.h"
+//TODO
+#include "EdgeDominance.h"
+#include <otawa/pcg/PCGBuilder.h>
+#include <otawa/pcg/PCG.h>
 
 using namespace elm;
 using namespace otawa;
@@ -21,7 +25,6 @@ void dumpOptions(int dbg_flags, int dbg_verbose, int analysis_flags, int merge_t
 void testPredicates();
 void testOperands();
 void testSimplify();	
-#include "EdgeDominance.h"
 
 int dbg_flags = 0b00000000; // global analysis flags for debugging
 int dbg_verbose = 0; // global verbose level (higher = less verbose)
@@ -49,7 +52,7 @@ public:
 		opt_nounminimized(SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
 		opt_slice(SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
 		opt_dry(SwitchOption::Make(*this).cmd("--dry").description("dry run (no solver calls)")),
-		opt_automerge(SwitchOption::Make(*this).cmd("--automerge").description("let the algorithm decide when to merge")),
+		opt_automerge(SwitchOption::Make(*this).cmd("-a").cmd("--automerge").description("let the algorithm decide when to merge")),
 		opt_virtualize(ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
 		opt_merge(ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)) { }
 
@@ -61,10 +64,10 @@ protected:
 			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
 		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
-		if(0) {
+		/*{
 			workspace()->require(DOMINANCE_FEATURE, props);
 			dom = otawa::DOM_INFO(workspace());
-		}
+		}*/
 		if(opt_slice) {
 			// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
 			// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
@@ -79,8 +82,13 @@ protected:
 		unsigned int max_registers = (unsigned int)workspace()->platform()->regCount(); // retrieve the count of registers
 		unsigned int max_tempvars = (unsigned int)workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
 		int analysis_flags = 0, merge_thresold = 0;
-
-EdgeDominance ed(cfg); return;
+#if 1
+EdgeDominance ed(cfg);
+workspace()->require(otawa::PCG_FEATURE);
+DBG(color::ICya() << "nb PCG blocks: " << PROGRAM_CALL_GRAPH(workspace())->blocks());
+EdgeDominanceGen<PCGBlock, PCGEdge> ed2(*PROGRAM_CALL_GRAPH(workspace()), PROGRAM_CALL_GRAPH(workspace())->entry());
+return;
+#endif
 		// high verbose numbers are more silent. TODO: that is counterintuitive
 		if(opt_s1) dbg_verbose = 1;
 		if(opt_s2) dbg_verbose = 2;

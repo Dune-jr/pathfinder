@@ -38,6 +38,67 @@ void RPO::process(DiGraph *g)
 	}
 }
 
+void EdgeDominance::DominanceProblem(DiGraph *g) {
+	/* for all nodes, b // initialize the dominators array */
+		/* doms[b] ← Undefined */
+	doms.clear();
+	/* doms[start node] ← start node */
+	doms.put(g->entry(),g->entry());
+	/* Changed ← true */
+	bool changed = true;
+	/* while (Changed) */
+	while(changed) {
+		/* Changed ← false */
+		changed = false;
+		/* for all nodes, b, in reverse postorder (except start node) */
+		for(RPO::Iterator b(rpo.toList()); b; b++) {
+			// DBG("  b= " << *b)
+			if(b == g->entry())
+				continue;
+			/* new idom ← first (processed) predecessor of b // (pick one) */
+			Vertex* new_idom = NULL;
+			/* for all other predecessors, p, of b */
+			for(Vertex::EdgeIter pe(b->ins()); pe; pe++) {
+				/* if doms[p] != Undefined // i.e., if doms[p] already calculated */
+				if(doms.exists(pe->source()))
+					/* new idom ← intersect(p, new idom) */
+					new_idom = (new_idom==NULL) ? pe->source() : intersect(pe->source(), new_idom);
+			}
+			ASSERT(new_idom);
+			/* if doms[b] != new idom */
+			if(doms.get(b, NULL) != new_idom) {
+				/* doms[b] ← new idom */
+				doms.put(b, new_idom);
+				/* Changed ← true */
+				changed = true;
+			}
+		}
+	}
+}
+
+Vertex* EdgeDominance::intersect(Vertex* b1, Vertex* b2) {
+	// DBG("    intersect(" << b1 << ", " << b2 << ")")
+	/* finger1 ← b1 */
+	/* finger2 ← b2 */
+	Vertex *finger1 = b1, *finger2 = b2;
+	/* while (finger1 != finger2) */
+	while(finger1 != finger2) {
+		/* while (finger1 < finger2) */
+		while(rpo.strictOrdered(finger1, finger2))
+			/* finger1 = doms[finger1] */
+			finger1 = doms[finger1];
+		// DBG("             (" << finger1 << ", " << finger2 << ")")
+		/* while (finger2 < finger1) */
+		while(rpo.strictOrdered(finger2, finger1))
+			/* finger2 = doms[finger2] */
+			finger2 = doms[finger2];
+		// DBG("             (" << finger1 << ", " << finger2 << ")")
+	}
+	// DBG("      = " << finger1)
+	/* return finger1 */
+	return finger1;
+}
+
 io::Output& EdgeDominance::print(io::Output& out) const {
 	bool first = true;
 	for(genstruct::HashTable<Vertex*, Vertex*>::PairIterator i(doms); i; i++) {
@@ -47,6 +108,12 @@ io::Output& EdgeDominance::print(io::Output& out) const {
 	return out;
 }
 
+io::Output& operator<<(io::Output& out, Vertex* b)
+{
+	return (out << b->index());
+}
+
+#if 0
 Vertex* EdgeDominance::inter(Vertex* a, Vertex* b) {
 	ASSERTP(a && b, "a: " << a->index() << ", b: " << b->index());
 	DBG("    inter(" << a->index() << ", " << b->index() << ")");
@@ -163,8 +230,4 @@ elm::String EdgeDominance::indent(int indent_increase)
 			str = str + "  ";
 	return str;
 }
-
-Output& operator<<(Output& out, Vertex* b)
-{
-	return (out << b->index());
-}
+#endif
