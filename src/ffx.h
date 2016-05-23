@@ -19,6 +19,8 @@ private:
 	inline bool edgeAfter(SLList<DetailedPath::FlowInfo>::Iterator iter) const
 		{ for(; iter; iter++) if(iter->isEdge()) return true; return false; }
 	void printInfeasiblePathOldNomenclature(io::Output& FFXFile, const DetailedPath& ip);
+
+	bool nextElementisCall(const DetailedPath::Iterator& iter, CFG* cfg);
 	elm::String indent(int indent_increase = 0);
 
 	const Vector<DetailedPath>& infeasible_paths;

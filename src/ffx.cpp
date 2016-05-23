@@ -79,20 +79,19 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				// here problem: we have to include the returning edgeS in the infeasible path. What does this mean? simply that we have called A.
 				// But we don't want to include the call to A because we would lose sequentiality... so let's just assert that we already have at least one edge from that sub-CFG we're returning from
 				CFG* subcfg = e->source()->toSynth()->callee();
-				cerr << "WARNING: infeasible path includes return edge of sub-CFG \"" << subcfg->name() 
-					 << "\" called from \"" << e->source()->toSynth()->caller() << "\"" << endl;
+				// cerr << "WARNING: infeasible path includes return edge of sub-CFG \"" << subcfg->name() 
+				// 	 << "\" called from \"" << e->source()->toSynth()->caller() << "\"" << endl;
 				bool includes_edge_in_subCFG = false;
 				for(DetailedPath::Iterator new_iter(ip); *new_iter != *iter; new_iter++)
 					if(new_iter->isEdge() && new_iter->getEdge()->source()->cfg() == subcfg) {
 						includes_edge_in_subCFG = true;
-						cerr << "\tfound edge in subCFG: " << new_iter->getEdge() << ", skipping edge" << endl;
+						// cerr << "\tfound some edge in called CFG: " << new_iter->getEdge() << ", skipping return edge" << endl;
 						break;
 					}
 				if(!includes_edge_in_subCFG)
 					ASSERTP(false, "ERROR: infeasible path includes return edge of sub-CFG" << subcfg->name() << ", but no edge from that CFG!")
+				FFXFile << indent(  ) << "<!-- skipped return edge of " << subcfg->name() << " -->" << endl;
 				continue;
-				// ASSERTP(false, "ip: [" << ip << "], e: " << e->source() << "->" << e->target() << ", source is caller, '" << e->source() << ", " << e->source()->address())
-				// source = e->source()->toSynth();
 			}
 			else if(e->source()->isExit())
 			{
@@ -105,12 +104,19 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				ASSERT(!(++caller_exit_edges_iter));
 				ASSERTP(!(++citer), "must be at max 1 outedge from caller")*/
 			} else assert(false);
+
 			if(e->target()->isBasic())
 				target = e->target();
 			else if(e->target()->isSynth())
 			{
 				ASSERT(e->target()->isCall()) // otherwise would be virtual...
-				// target is a call block: replace with callee entry (TODOv2 ffx: temporary! we should add <call> context!)
+				if(nextElementisCall(iter, e->target()->toSynth()->callee()))
+				{
+					FFXFile << indent(  ) << "<!-- skipped call edge of " << e->target()->toSynth()->callee()->name() << " -->" << endl;
+					continue;
+				}
+				cerr << "WARNING: found a call edge (" << e->source() << "->" << e->target() << ") not followed by a call element. end of path=" << !bool(iter) << endl;
+				// target is a call block: replace with callee entry
 				Block* callee_entry_target = e->target()->toSynth()->callee()->entry()->outs().item()->target();
 				ASSERTP(callee_entry_target->isBasic(), "entry does not point to a BasicBlock???")
 				target = callee_entry_target;
@@ -288,6 +294,21 @@ void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const Detailed
 			<< "\t\t\t</le>" << endl // <!-- @1->@3 + @5->@6 <= 1 -->
 			<< "\t\t</control-constraint> <!-- " << ip_str << " infeasible path -->" << endl;
 #endif
+}
+
+/**
+ * bool FFX::nextElementisCall(const DetailedPath::Iterator& iter, CFG* cfg);
+ * @brief test if the next element in the DetailedPath is a call to cfg
+ * @param current iterator on the detailed path
+ * @param cfg called CFG to match with
+*/
+bool FFX::nextElementisCall(const DetailedPath::Iterator& iter, CFG* cfg)
+{
+	DetailedPath::Iterator new_iter(iter);
+	new_iter++;
+	if(!new_iter)
+		return false;
+	return new_iter->isCall() && new_iter->getCaller()->callee() == cfg;
 }
 
 /**
