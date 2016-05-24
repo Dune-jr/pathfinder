@@ -13,9 +13,11 @@
 #include "debug.h"
 #include "oracle.h"
 //TODO
-#include "EdgeDominance.h"
 #include <otawa/pcg/PCGBuilder.h>
 #include <otawa/pcg/PCG.h>
+#include "EdgeDominance.h"
+io::Output& operator<<(io::Output& out, otawa::PCGBlock* b) { return (out << b->getName()); }
+
 
 using namespace elm;
 using namespace otawa;
@@ -64,10 +66,12 @@ protected:
 			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
 		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
-		/*{
-			workspace()->require(DOMINANCE_FEATURE, props);
-			dom = otawa::DOM_INFO(workspace());
-		}*/
+#if 1
+		workspace()->require(otawa::PCG_FEATURE);
+		EdgeDominance ed(cfg);
+		EdgeDominanceGen<PCGBlock, PCGEdge> edg(*PROGRAM_CALL_GRAPH(workspace()), PROGRAM_CALL_GRAPH(workspace())->entry());
+		DBG("PCG blocks count: " << PROGRAM_CALL_GRAPH(workspace())->count())
+#endif
 		if(opt_slice) {
 			// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
 			// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
@@ -82,13 +86,6 @@ protected:
 		unsigned int max_registers = (unsigned int)workspace()->platform()->regCount(); // retrieve the count of registers
 		unsigned int max_tempvars = (unsigned int)workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
 		int analysis_flags = 0, merge_thresold = 0;
-#if 1
-EdgeDominance ed(cfg);
-workspace()->require(otawa::PCG_FEATURE);
-DBG(color::ICya() << "nb PCG blocks: " << PROGRAM_CALL_GRAPH(workspace())->blocks());
-EdgeDominanceGen<PCGBlock, PCGEdge> ed2(*PROGRAM_CALL_GRAPH(workspace()), PROGRAM_CALL_GRAPH(workspace())->entry());
-return;
-#endif
 		// high verbose numbers are more silent. TODO: that is counterintuitive
 		if(opt_s1) dbg_verbose = 1;
 		if(opt_s2) dbg_verbose = 2;

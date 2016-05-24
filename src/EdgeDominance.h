@@ -15,9 +15,7 @@
 #include "debug.h"
 
 using namespace elm;
-// using namespace elm::genstruct;
 using namespace elm::color;
-// using namespace otawa;
 using namespace otawa::graph; // GrenGraph
 using namespace otawa::sgraph; // DiGraph, Vertex, ...
 

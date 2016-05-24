@@ -4,6 +4,10 @@
 
 #include "EdgeDominance.h"
 
+io::Output& operator<<(io::Output& out, Vertex* b) {
+	return (out << b->index());
+}
+
 void RPO::process(DiGraph *g)
 {
 	/* O ← [] */ // order
@@ -106,11 +110,6 @@ io::Output& EdgeDominance::print(io::Output& out) const {
 		first = false;
 	}
 	return out;
-}
-
-io::Output& operator<<(io::Output& out, Vertex* b)
-{
-	return (out << b->index());
 }
 
 #if 0
