@@ -123,7 +123,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 				DetailedPath reordered_path = reorderInfeasiblePath(ip, s.getDetailedPath());
 				reordered_path.optimize();
 				addDetailedInfeasiblePath(reordered_path, infeasible_paths); // infeasible_paths += order(ip); to output proprer ffx!
-				DBG(color::On_IRed() << "Inf. path found: " << reordered_path)
+				DBG(color::On_IRed() << "Inf. path found: " << reordered_path << color::RCol())
 			}
 			else // we found a counterexample, e.g. a feasible path that is included in the set of paths we marked as infeasible
 			{

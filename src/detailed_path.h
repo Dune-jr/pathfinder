@@ -74,6 +74,7 @@ public:
 			KIND_CALL, // SynthBlock
 			KIND_RETURN, // SynthBlock
 		};
+		FlowInfo() : _kind(kind_t(-1)), _identifier(NULL) { }
 		FlowInfo(kind_t kind, BasicBlock* bb) : _kind(kind), _identifier(bb) { ASSERT(isBasicBlockKind(kind)); }
 		FlowInfo(kind_t kind, SynthBlock* sb) : _kind(kind), _identifier(sb) { ASSERT(isSynthBlockKind(kind)); }
 		FlowInfo(kind_t kind, Edge* e) : _kind(kind), _identifier(e) { ASSERT(isEdgeKind(kind)); }
@@ -144,10 +145,10 @@ public:
 		inline Iterator(const DetailedPath& dpath) : SLList<FlowInfo>::Iterator(dpath._path) { }
 	};
 
+	void removeCallsAtEndOfPath();
 private:
 	void removeDuplicates();
 	void removeAntagonists();
-	void removeCallsAtEndOfPath();
 	io::Output& print(io::Output& out) const;
 	
 	SLList<FlowInfo> _path;

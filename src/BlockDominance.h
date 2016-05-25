@@ -1,78 +1,65 @@
 /*
- * EdgeDominance.h
+ * BlockDominance.h
  */
 
-#ifndef EDGEDOMINANCE_H
-#define EDGEDOMINANCE_H
+#ifndef BLOCKDOMINANCE_H
+#define BLOCKDOMINANCE_H
 
 #include <otawa/cfg.h>
 #include <otawa/cfg/features.h>
 #include <otawa/graph/GenGraph.h>
 #include <otawa/sgraph/DiGraph.h>
 #include <otawa/prog/WorkSpace.h>
-#include <elm/genstruct/SLList.h>
 #include <elm/genstruct/HashTable.h>
-#include "debug.h"
 
 using namespace elm;
-using namespace elm::color;
-using namespace otawa::graph; // GrenGraph
-using namespace otawa::sgraph; // DiGraph, Vertex, ...
+using otawa::sgraph::DiGraph;
+using otawa::sgraph::Vertex;
 
-io::Output& operator<<(io::Output& out, Vertex* b);
+io::Output& operator<<(io::Output& out, Vertex* b); // TODO
 
-class RPO {
+class BlockDominance {
 public:
-	RPO(DiGraph* g) { process(g); }
-	const genstruct::SLList<Vertex*>& toList() const { return O; }
-	bool ordered(Vertex* a, Vertex* b) const { // test a <= b
-		for(Iterator i(O); i; i++) {
-			if(*i == a) return true; // a <= b
-			if(*i == b) return false; // a > b
+	class RPO {
+	public:
+		RPO(DiGraph* g) { process(g); }
+		const genstruct::SLList<Vertex*>& toList() const { return O; }
+		bool ordered(Vertex* a, Vertex* b) const { // test a <= b
+			for(Iterator i(O); i; i++) {
+				if(*i == a) return true; // a <= b
+				if(*i == b) return false; // a > b
+			}
+			ASSERTP(false, "rpo.ordered found neither " << a << " nor " << b);assert(false);
 		}
-		ASSERTP(false, "rpo.ordered found neither " << a << " nor " << b);assert(false);
-	}
-	inline bool strictOrdered(Vertex* a, Vertex* b) const { return !ordered(a,b); } // a < b = !(b <= a)
+		inline bool strictOrdered(Vertex* a, Vertex* b) const { return !ordered(a,b); } // a < b = !(b <= a)
 
-	typedef genstruct::SLList<Vertex*>::Iterator Iterator;
+		typedef genstruct::SLList<Vertex*>::Iterator Iterator;
 
-private:
-	void process(DiGraph *g);
-	genstruct::SLList<Vertex*> O;
-};
+	private:
+		void process(DiGraph *g);
+		genstruct::SLList<Vertex*> O;
+	};
 
-class EdgeDominance {
-public:
-	EdgeDominance(/*WorkSpace *ws, */DiGraph *g) : rpo(g) {
+	BlockDominance(DiGraph *g) : rpo(g) {
 		process(g);
+	}
+	Vertex* idom(Vertex* v) {
+		ASSERT(doms.exists(v))
+		return doms.get(v);
 	}
 
 private:
 	void process(DiGraph *g) {
-		DBG("rpo= " << rpo.toList())
 		DominanceProblem(g);
-		DBG("dom= " << *this)
 	}
 	// dominance (new)
 	void DominanceProblem(DiGraph *g);
 	Vertex* intersect(Vertex* b1, Vertex* b2);
 	io::Output& print(io::Output& out) const; // print doms
-	inline friend io::Output& operator<<(io::Output& out, const EdgeDominance& ed) { return ed.print(out); }
+	inline friend io::Output& operator<<(io::Output& out, const BlockDominance& ed) { return ed.print(out); }
 	
 	RPO rpo;
 	genstruct::HashTable<Vertex*, Vertex*> doms;
-
-	// dominance (old)
-/*	Vertex* inter(Vertex* a, Vertex* b);
-	Vertex* intersectOld(Vertex::EdgeIter edges);
-	void DominanceProblemOld(DiGraph* g);
-	// genstruct::HashTable<Vertex*, Vertex*> doms;
-
-	// RPO (old)
-	void DepthFirstOrderOld(DiGraph *g);
-	void dfs(Vertex* b);
-	elm::String indent(int indent_increase = 0);
-	genstruct::SLList<Vertex*> reversePostOrder;*/
 };
 
 template<class Vertex, class Edge>
@@ -115,6 +102,7 @@ private:
 					all_done = false;
 					/* S ← w :: S */
 					S.addFirst(g->sinkOf(e));
+					break;
 				}
 			}
 			/* else */
@@ -130,19 +118,20 @@ private:
 };
 
 template<class Vertex, class Edge>
-class EdgeDominanceGen {
+class BlockDominanceGen {
 public:
-	EdgeDominanceGen(otawa::GenGraph<Vertex, Edge> *g, Vertex* entry) : rpo(g, entry) {
+	BlockDominanceGen(otawa::GenGraph<Vertex, Edge> *g, Vertex* entry) : rpo(g, entry) {
 		process(g, entry);
+	}
+	Vertex* idom(Vertex* v) {
+		ASSERT(doms.exists(v))
+		return doms.get(v);
 	}
 
 private:
 	void process(otawa::GenGraph<Vertex, Edge> *g, Vertex* entry) {
-		DBG("rpo= " << rpo.toList())
 		DominanceProblem(g, entry);
-		DBG("dom= " << *this)
 	}
-	// dominance (new)
 
 	void DominanceProblem(otawa::GenGraph<Vertex, Edge> *g, Vertex* entry) {
 		/* for all nodes, b // initialize the dominators array */
@@ -158,7 +147,6 @@ private:
 			changed = false;
 			/* for all nodes, b, in reverse postorder (except start node) */
 			for(typename RPOGen<Vertex, Edge>::Iterator b(rpo.toList()); b; b++) {
-				// DBG("  b= " << *b)
 				if(b == entry)
 					continue;
 				/* new idom ← first (processed) predecessor of b // (pick one) */
@@ -183,7 +171,6 @@ private:
 	}
 
 	Vertex* intersect(Vertex* b1, Vertex* b2) {
-		// DBG("    intersect(" << b1 << ", " << b2 << ")")
 		/* finger1 ← b1 */
 		/* finger2 ← b2 */
 		Vertex *finger1 = b1, *finger2 = b2;
@@ -193,14 +180,11 @@ private:
 			while(rpo.strictOrdered(finger1, finger2))
 				/* finger1 = doms[finger1] */
 				finger1 = doms[finger1];
-			// DBG("             (" << finger1 << ", " << finger2 << ")")
 			/* while (finger2 < finger1) */
 			while(rpo.strictOrdered(finger2, finger1))
 				/* finger2 = doms[finger2] */
 				finger2 = doms[finger2];
-			// DBG("             (" << finger1 << ", " << finger2 << ")")
 		}
-		// DBG("      = " << finger1)
 		/* return finger1 */
 		return finger1;
 	}
@@ -213,10 +197,10 @@ private:
 		}
 		return out;
 	}
-	inline friend io::Output& operator<<(io::Output& out, const EdgeDominanceGen& ed) { return ed.print(out); }
+	inline friend io::Output& operator<<(io::Output& out, const BlockDominanceGen& ed) { return ed.print(out); }
 	
 	RPOGen<Vertex, Edge> rpo;
 	genstruct::HashTable<Vertex*, Vertex*> doms;
 };
 
-#endif /* EDGEDOMINANCE_H */
+#endif /* BLOCKDOMINANCE_H */

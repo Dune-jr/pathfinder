@@ -11,7 +11,7 @@
 /**
  * @brief return unique caller of CFG (none if no caller exists) in virtualized scenario
  */
-Option<Block*> getCaller(CFG* cfg)
+Option<Block*> getCaller(CFG* cfg) // { return citer ? elm::some(theOnly(cfg->callers())) : elm::none(); }
 {
 	CFG::CallerIter citer(cfg->callers());
 	if(citer)
@@ -20,8 +20,7 @@ Option<Block*> getCaller(CFG* cfg)
 		ASSERTP(!(++citer), "must be max. 1 caller (CFG not virtualized or recursive?)");
 		return elm::some(rtn);
 	}
-	else // no caller: exiting main CFG
-		return elm::none;
+	return elm::none; // no caller: exiting main CFG
 }
 
 /**
@@ -36,6 +35,5 @@ Block* getCaller(CFG* cfg, Block* def)
 		ASSERTP(!(++citer), "must be max. 1 caller (CFG not virtualized or recursive?)");
 		return rtn;
 	}
-	else // no caller: exiting main CFG
-		return def;
+	return def; // no caller: exiting main CFG
 }

@@ -30,6 +30,7 @@ public:
 		DRY_RUN				  = 0b1 << 5,
 		SMT_CHECK_LINEAR	  = 0b1 << 6,
 		SHOW_PROGRESS		  = 0b1 << 7,
+		POST_PROCESSING		  = 0b1 << 8,
 	};
 protected:
 	typedef struct

@@ -12,12 +12,10 @@
 #include "ffx.h"
 #include "debug.h"
 #include "oracle.h"
-//TODO
-#include <otawa/pcg/PCGBuilder.h>
-#include <otawa/pcg/PCG.h>
-#include "EdgeDominance.h"
-io::Output& operator<<(io::Output& out, otawa::PCGBlock* b) { return (out << b->getName()); }
-
+#if 1
+#include "GlobalDominance.h"
+GlobalDominance* gdom;
+#endif
 
 using namespace elm;
 using namespace otawa;
@@ -30,7 +28,6 @@ void testSimplify();
 
 int dbg_flags = 0b00000000; // global analysis flags for debugging
 int dbg_verbose = 0; // global verbose level (higher = less verbose)
-DomInfo* dom;
 	
 class Display: public Application {
 public:
@@ -64,24 +61,23 @@ protected:
 		workspace()->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
 		if(opt_virtualize.get())
 			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
-		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
-		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
-#if 1
-		workspace()->require(otawa::PCG_FEATURE);
-		EdgeDominance ed(cfg);
-		EdgeDominanceGen<PCGBlock, PCGEdge> edg(*PROGRAM_CALL_GRAPH(workspace()), PROGRAM_CALL_GRAPH(workspace())->entry());
-		DBG("PCG blocks count: " << PROGRAM_CALL_GRAPH(workspace())->count())
-#endif
+		const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
+		ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
+		CFG *cfg = cfgs->get(0); // then get the first CFG
 		if(opt_slice) {
 			// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
 			// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
 			workspace()->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
 			workspace()->require(oslice::SLICER_FEATURE, props);
 		}
-		const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
+#if 1
+		// workspace()->require(otawa::PCG_FEATURE);
+		// GlobalDominance(PROGRAM_CALL_GRAPH(workspace()), cfg);
+		gdom = new GlobalDominance(cfgs);
+#endif
+		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
+		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
 		const dfa::State *inital_state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
-		ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
-		CFG *cfg = cfgs->get(0); // then get the first CFG
 		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
 		unsigned int max_registers = (unsigned int)workspace()->platform()->regCount(); // retrieve the count of registers
 		unsigned int max_tempvars = (unsigned int)workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
@@ -118,6 +114,8 @@ protected:
 			analysis_flags |= Analysis::UNMINIMIZED_PATHS;
 		if(opt_dry)
 			analysis_flags |= Analysis::DRY_RUN;
+		if(true)
+			analysis_flags |= Analysis::POST_PROCESSING;
 		if(opt_merge || opt_automerge)
 		{
 			analysis_flags |= Analysis::MERGE;

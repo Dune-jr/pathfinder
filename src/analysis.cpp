@@ -341,26 +341,51 @@ void Analysis::printResults(int exec_time_ms) const
 	}
 }
 
-extern DomInfo* dom;
+#include "GlobalDominance.h"
+extern GlobalDominance* gdom;
 void Analysis::postProcessResults(CFG *cfg)
 {
-	return;
-	Block::EdgeIter entry_outs(cfg->entry()->outs());
+	if(! flags&POST_PROCESSING)
+		return;
+	// elm::log::Debug::setDebugFlag(true);
+	// elm::log::Debug::setVerboseLevel(1);
+	DBG(color::On_IGre() << "post-processing..." << color::RCol())
+	otawa::Edge* program_entry_edge = theOnly(cfg->entry()->outs());
+	int changed_count = 0;
 	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
 	{
-		(*dpiter).remove(*entry_outs); // remove program entry edge from all IPs
-		Block* last = NULL;
-		for(DetailedPath::Iterator i(*dpiter); i; i++)
-		{
-			if(i->isEdge())
+		DetailedPath& dp = dpiter.item();
+		DBG(dp << "...")
+		DBG("\tcontains entry: " << DBG_TEST(dp.contains(program_entry_edge), false))
+		if(dp.contains(program_entry_edge))
+			dp.remove(program_entry_edge); // remove program entry edge from all IPs
+		bool hasChanged = false, changed = false;
+		do {
+			changed = false;
+			elm::Option<DetailedPath::FlowInfo> prev = elm::none;
+			for(DetailedPath::Iterator i(dp); i; i++)
 			{
-				if(last)
+				if(i->isEdge())
 				{
-					if(dom->dominates(i->getEdge()->target(), last)) 
-						cout << color::ICya() << "" << i->getEdge()->target() << " dominates " << last << " (remove dominated edge)" << color::RCol() << endl;
+					if(prev) {
+						DBG("\tdom(" << (*prev).getEdge() << ", " << i->getEdge() << "): " << 
+							DBG_TEST(gdom->dom((*prev).getEdge(), i->getEdge()), false))
+						if(gdom->dom((*prev).getEdge(), i->getEdge())) {
+							dp.remove((*prev).getEdge()); // search and destroy
+							changed = true;
+							hasChanged = true;
+							break;
+						}
+					}
+					prev = elm::some(*i);
 				}
-				last = i->getEdge()->source();
 			}
+		} while(changed);
+		if(hasChanged) {
+			dp.removeCallsAtEndOfPath();
+			DBG("\t...to " << dp)
+			changed_count++;
 		}
 	}
+	DBGG("Dominance: minimized " << changed_count << " infeasible paths.")
 }

@@ -117,7 +117,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				}
 				cerr << "WARNING: found a call edge (" << e->source() << "->" << e->target() << ") not followed by a call element. end of path=" << !bool(iter) << endl;
 				// target is a call block: replace with callee entry
-				Block* callee_entry_target = e->target()->toSynth()->callee()->entry()->outs().item()->target();
+				Block* callee_entry_target = theOnly(e->target()->toSynth()->callee()->entry()->outs())->target();
 				ASSERTP(callee_entry_target->isBasic(), "entry does not point to a BasicBlock???")
 				target = callee_entry_target;
 			}
@@ -172,7 +172,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		else if(iter->isCall())
 		{
 			SynthBlock* caller = iter->getCaller();
-			BasicBlock* callpoint = caller->ins().item()->source()->toBasic(); // TODO add asserts
+			BasicBlock* callpoint = theOnly(caller->ins())->source()->toBasic(); // TODO add asserts
 			// FFXFile << indent( ) << "<call address=\"0x" << caller->address() << "\">"
 			FFXFile << indent( ) << "<call address=\"0x" << callpoint->control()->address() << "\" name=\"" << caller->callee()->name() << "\">"
 				" <!-- call " << caller->cfg() << ":" << caller->index() << " -> " << caller->callee() << " -->" << endl; indent(+1);

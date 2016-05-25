@@ -14,6 +14,12 @@ using otawa::LOOP_HEADER;
 using otawa::ENCLOSING_LOOP_HEADER;
 using elm::PreIterator;
 
+template <class I, class T> inline T theOnly(PreIterator<I, T>& i)
+	{ ASSERT(i); T rtn = *i; ASSERT(!++i); return rtn; }
+template <class I, class T> inline T theOnly(const PreIterator<I, T>& i) 
+	{ I j(static_cast<const I&>(i)); return theOnly(j); }
+	// { ASSERT(i); T rtn = *i; I j(static_cast<const I&>(i)); ASSERT(!++j); return rtn; }
+
 Option<Block*> getCaller(CFG* cfg);
 Block* getCaller(CFG* cfg, Block* def);
 inline Block* getCaller(Block* b, Block* def) { return getCaller(b->cfg(), def); }
