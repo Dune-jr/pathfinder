@@ -59,9 +59,19 @@ private:
 public:
 	Progress(CFG* main) : lines(0), maxlines(-1) { onEntry(main); }
 	void onBlock(Block* b) {
+		bool all_leave = true; // enable when on sequential level
+		for(LoopHeaderIter lh(b); lh; lh++) {
+			if(loopStatus(lh) != LEAVE)	{
+				all_leave = false;
+				break;
+			}
+		}
+		if(!all_leave)
+			return;
+
 		if(b->isEntry())
 			onEntry(b->cfg());
-		else if(b->isCall()){
+		else if(b->isCall()) {
 			incrementStat(b->cfg());
 			onExit(b->toSynth()->callee());
 			// b = b->toSynth()->callee()->exit();
@@ -113,11 +123,16 @@ private:
 		}
 		maxlines = max(maxlines, lines);	
 	}
-	inline void incrementStat(CFG* cfg) { tab.put(cfg, *tab.get(cfg) + Stats(1, 0)); }
-	inline elm::String indent(int n) const { String str; for(int i = 0; i < n; i++) str=str+"\t"; return str; }
-	inline void moveUp(int n) const { elm::cout << "\e[" << n << "A"; }
-	inline void newLines(int n) const { for(int i = 0; i < n; i++) elm::cout << endl; }
-	inline void eraseAboveLines(int n) const { moveUp(n); for(int i = 0; i < n; i++) elm::cout << "\e[K\e[1B"; }
+	inline void incrementStat(CFG* cfg)
+		{ tab.put(cfg, *tab.get(cfg) + Stats(1, 0)); }
+	inline elm::String indent(int n) const 
+		{ String str; for(int i = 0; i < n; i++) str=str+"\t"; return str; }
+	inline void moveUp(int n) const
+		{ elm::cout << "\e[" << n << "A"; }
+	inline void newLines(int n) const 
+		{ for(int i = 0; i < n; i++) elm::cout << endl; }
+	inline void eraseAboveLines(int n) const
+		{ moveUp(n); for(int i = 0; i < n; i++) elm::cout << "\e[K\e[1B"; }
 
 	HashTable<CFG*, Stats> tab;
 	int lines, maxlines;
