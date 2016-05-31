@@ -343,34 +343,92 @@ void Analysis::printResults(int exec_time_ms) const
 
 #include "GlobalDominance.h"
 extern GlobalDominance* gdom;
-void Analysis::postProcessResults(CFG *cfg)
+
+// returns edge to remove
+Option<Edge*> f_dom(Edge* e1, Edge* e2) {
+	DBG("\tdom(" << e1 << ", " << e2 << "): " << DBG_TEST(gdom->dom(e1, e2), false))
+	if(gdom->dom(e1, e2))
+		return elm::some(e1);
+	return elm::none;
+}
+// returns edge to remove
+Option<Edge*> f_postdom(Edge* e1, Edge* e2) {
+	DBG("\tpostdom(" << e1 << ", " << e2 << "): " << DBG_TEST(gdom->postdom(e2, e1), false))
+	if(gdom->postdom(e2, e1))
+		return elm::some(e2);
+	return elm::none;
+}
+
+void simplifyUsingDominance(Option<Edge*> (*f)(Edge* e1, Edge* e2), Vector<DetailedPath>& infeasible_paths)
 {
-	if(! flags&POST_PROCESSING)
-		return;
-	// elm::log::Debug::setDebugFlag(true);
-	// elm::log::Debug::setVerboseLevel(1);
-	DBG(color::On_IGre() << "post-processing..." << color::RCol())
-	otawa::Edge* program_entry_edge = theOnly(cfg->entry()->outs());
 	int changed_count = 0;
 	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
 	{
 		DetailedPath& dp = dpiter.item();
 		DBG(dp << "...")
-		DBG("\tcontains entry: " << DBG_TEST(dp.contains(program_entry_edge), false))
-		if(dp.contains(program_entry_edge))
-			dp.remove(program_entry_edge); // remove program entry edge from all IPs
 		bool hasChanged = false, changed = false;
-		do {
+		do
+		{
 			changed = false;
 			elm::Option<DetailedPath::FlowInfo> prev = elm::none;
 			for(DetailedPath::Iterator i(dp); i; i++)
 			{
 				if(i->isEdge())
 				{
-					if(prev) {
+					if(prev)
+						if(f((*prev).getEdge(), i->getEdge()))
+						{
+							dp.remove((*prev).getEdge()); // search and destroy
+							changed = true;
+							hasChanged = true;
+							break;
+						}
+					prev = elm::some(*i);
+				}
+			}
+		} while(changed);
+		if(hasChanged) {
+			dp.removeCallsAtEndOfPath();
+			DBG("\t...to " << dp)
+			changed_count++;
+		}
+	}
+}
+
+void Analysis::postProcessResults(CFG *cfg)
+{
+	if(! flags&POST_PROCESSING)
+		return;
+	DBG(color::On_IGre() << "post-processing..." << color::RCol())
+	// elm::log::Debug::setDebugFlag(true);
+	// elm::log::Debug::setVerboseLevel(1);
+	/*otawa::Edge* program_entry_edge = theOnly(cfg->entry()->outs());
+	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
+	{
+		DBG("\tcontains entry: " << DBG_TEST(dp.contains(program_entry_edge), false))
+		if(dp.contains(program_entry_edge))
+			dp.remove(program_entry_edge);
+	}*/ // should be removed by dominance anyway
+	int changed_count = 0;
+	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
+	{
+		DetailedPath& dp = dpiter.item();
+		DBG(dp << "...")
+		bool hasChanged = false, changed = false;
+		do
+		{
+			changed = false;
+			elm::Option<DetailedPath::FlowInfo> prev = elm::none;
+			for(DetailedPath::Iterator i(dp); i; i++)
+			{
+				if(i->isEdge())
+				{
+					if(prev)
+					{
 						DBG("\tdom(" << (*prev).getEdge() << ", " << i->getEdge() << "): " << 
 							DBG_TEST(gdom->dom((*prev).getEdge(), i->getEdge()), false))
-						if(gdom->dom((*prev).getEdge(), i->getEdge())) {
+						if(gdom->dom((*prev).getEdge(), i->getEdge()))
+						{
 							dp.remove((*prev).getEdge()); // search and destroy
 							changed = true;
 							hasChanged = true;
@@ -381,8 +439,9 @@ void Analysis::postProcessResults(CFG *cfg)
 				}
 			}
 		} while(changed);
-		if(hasChanged) {
-			dp.removeCallsAtEndOfPath();
+		if(hasChanged)
+		{
+			dp.optimize();
 			DBG("\t...to " << dp)
 			changed_count++;
 		}

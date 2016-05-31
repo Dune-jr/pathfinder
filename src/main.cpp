@@ -58,6 +58,10 @@ public:
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
 		// workspace()->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
+#if 0
+		MyTransformer t;
+		t.process(workspace());
+#endif
 		workspace()->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
 		if(opt_virtualize.get())
 			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
@@ -71,9 +75,7 @@ protected:
 			workspace()->require(oslice::SLICER_FEATURE, props);
 		}
 #if 1
-		// workspace()->require(otawa::PCG_FEATURE);
-		// GlobalDominance(PROGRAM_CALL_GRAPH(workspace()), cfg);
-		gdom = new GlobalDominance(cfgs);
+		gdom = new GlobalDominance(cfgs, GlobalDominance::EDGE_DOM | GlobalDominance::EDGE_POSTDOM); // no block dom
 #endif
 		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
@@ -96,14 +98,10 @@ protected:
 		elm::log::Debug::setPrefixColor(elm::color::Yel);
 		if(opt_notime)
 			dbg_flags |= DBG_NO_TIME;
-		// if(opt_nopred)
-			// dbg_flags |= DBG_NO_PREDICATES;
 		if(! opt_noipresults)
 			dbg_flags |= DBG_RESULT_IPS;
 		if(! opt_noformattedflowinfo)
 			dbg_flags |= DBG_FORMAT_FLOWINFO;
-		// if(opt_preanalysis)
-		// 	dbg_flags |= DBG_PREANALYSIS;
 		if(opt_avgiplength)
 			dbg_flags |= DBG_AVG_IP_LENGTH;
 		if(opt_progress)

@@ -139,7 +139,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		else if(iter->isLoopEntry())
 		{
 			BasicBlock* loop_header = iter->getLoopHeader();
-			FFXFile << indent(  ) << "<loop address=\"0x" << loop_header->address() << "\" index=\"" << loop_header->index() << "\">"
+			FFXFile << indent(  ) << "<loop address=\"0x" << loop_header->address() << "\">"
 					<< " <!-- loop " << loop_header->index() << " -->" << endl; indent(+1);
 			if(edgeAfter(ip.find(DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_LOOP_EXIT, loop_header)))) {
 				FFXFile << indent(  ) << "<iteration number=\"n\">" << endl; indent(+1);

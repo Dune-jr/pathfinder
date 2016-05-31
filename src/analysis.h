@@ -6,6 +6,7 @@
 #include <otawa/cfg/features.h>
 #include <otawa/dfa/State.h>
 #include <otawa/prop/Identifier.h>
+#include "GlobalDominance.h"
 #include "detailed_path.h"
 #include "operand.h"
 #include "pretty_printing.h"
@@ -23,8 +24,8 @@ public:
 
 	enum // flags 
 	{
-		// FOLLOW_CALLS		  = 0b1 << 1,
-		//SUPERSILENT		  = 0b1 << 2,
+		// VIRTUALIZE_CFG		  = 0b1 << 1,
+		// SLICE_CFG			  = 0b1 << 2,
 		MERGE				  = 0b1 << 3,
 		UNMINIMIZED_PATHS	  = 0b1 << 4,
 		DRY_RUN				  = 0b1 << 5,
@@ -60,7 +61,8 @@ protected:
 	};
 
 public:
-	Analysis(const context_t& context, int state_size_limit, int flags);
+	// Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold);
+	Analysis(const context_t& context, /*WorkSpace *ws, PropList &props,*/ int flags, int merge_thresold);
 	~Analysis();
 	const Vector<DetailedPath>& run(CFG *cfg);
 	inline const Vector<DetailedPath>& infeasiblePaths() const { return infeasible_paths; }
@@ -108,6 +110,7 @@ private:
 
 	WorkingList wl; // working list
 	Vector<DetailedPath> infeasible_paths;
+	GlobalDominance* gdom;
 
 	// virtual pure functions to implement
 	virtual LockPtr<States> narrowing(const Vector<Edge*>& edges) const = 0;
@@ -134,9 +137,13 @@ private:
 	bool allEdgesHaveTrace(const Vector<Edge*>& edges) const;
 	bool allEdgesHaveTrace(const Block::EdgeIter& biter) const;
 
+	// dominance stuff
+	// Option<Edge*> f_dom(Edge* e1, Edge* e2) const; // returns edge to remove
+	// Option<Edge*> f_postdom(Edge* e1, Edge* e2) const; // returns edge to remove
+	// void simplifyUsingDominance(Option<Edge*> (*f)(Edge* e1, Edge* e2), Vector<DetailedPath>& infeasible_paths);
+
 	// bool invalidate_constant_info
-	enum
-	{
+	enum {
 		KEEP_CONSTANT_INFO = false,
 		INVALIDATE_CONSTANT_INFO = true,
 	};

@@ -5,6 +5,7 @@
 #ifndef _CFG_FEATURES_H
 #define _CFG_FEATURES_H
 #include <elm/PreIterator.h>
+#include <elm/genstruct/SLList.h>
 #include <otawa/cfg/CFG.h>
 #include <otawa/cfg/features.h>
 
@@ -13,12 +14,14 @@ using otawa::CFG;
 using otawa::LOOP_HEADER;
 using otawa::ENCLOSING_LOOP_HEADER;
 using elm::PreIterator;
+using elm::genstruct::SLList;
 
 template <class I, class T> inline T theOnly(PreIterator<I, T>& i)
-	{ ASSERT(i); T rtn = *i; ASSERT(!++i); return rtn; }
+	{ ASSERT(i); T rtn = *i; ASSERTP(!++i, "not alone, next is " << *i); return rtn; }
 template <class I, class T> inline T theOnly(const PreIterator<I, T>& i) 
 	{ I j(static_cast<const I&>(i)); return theOnly(j); }
 	// { ASSERT(i); T rtn = *i; I j(static_cast<const I&>(i)); ASSERT(!++j); return rtn; }
+template <class T> inline SLList<T> singleton(const T& x) { SLList<T> l; l.add(x); return l; }
 
 Option<Block*> getCaller(CFG* cfg);
 Block* getCaller(CFG* cfg, Block* def);

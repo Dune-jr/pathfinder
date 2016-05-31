@@ -16,9 +16,6 @@
  	typedef Z3SMT chosen_smt_t;
 #endif
 
-DefaultAnalysis::DefaultAnalysis(const context_t& context, int state_size_limit, int flags)
-	: Analysis(context, state_size_limit, flags) { }
-
 /**
  * actually... this is widening
  */
