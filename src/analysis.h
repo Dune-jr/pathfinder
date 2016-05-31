@@ -24,8 +24,8 @@ public:
 
 	enum // flags 
 	{
-		// VIRTUALIZE_CFG		  = 0b1 << 1,
-		// SLICE_CFG			  = 0b1 << 2,
+		VIRTUALIZE_CFG		  = 0b1 << 1,
+		SLICE_CFG			  = 0b1 << 2,
 		MERGE				  = 0b1 << 3,
 		UNMINIMIZED_PATHS	  = 0b1 << 4,
 		DRY_RUN				  = 0b1 << 5,
@@ -62,7 +62,7 @@ protected:
 
 public:
 	// Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold);
-	Analysis(const context_t& context, /*WorkSpace *ws, PropList &props,*/ int flags, int merge_thresold);
+	Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold);
 	~Analysis();
 	const Vector<DetailedPath>& run(CFG *cfg);
 	inline const Vector<DetailedPath>& infeasiblePaths() const { return infeasible_paths; }

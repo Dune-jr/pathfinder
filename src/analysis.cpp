@@ -7,18 +7,49 @@
 #include <iostream> // std::cout
 #include <iomanip> // std::setprecision
 #include <otawa/cfg/Edge.h>
+#include <otawa/hard/Platform.h>
+#include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
+#include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
+#include <otawa/prog/WorkSpace.h>
+#include "/home/jruiz/Documents/oslice/blockBased/cfg_v2_plugin/oslice_features.h"
 #include "analysis_state.h"
 #include "cfg_features.h"
+#include "GlobalDominance.h"
 #include "progress.h"
 #include "smt.h"
+
+GlobalDominance* gdom;
 
 /**
  * @class Analysis
  * @brief Perform an infeasible path analysis on a CFG 
  */
-Analysis::Analysis(const context_t& context, int state_size_limit, int flags)
-	: context(context), state_size_limit(state_size_limit), flags(flags)
-	{ }
+Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold) : state_size_limit(merge_thresold), flags(flags)
+{
+	ws->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
+	// ws->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
+	// MyTransformer t; t.process(ws);
+	if(flags & VIRTUALIZE_CFG)
+		ws->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
+	if(flags & SLICE_CFG) {
+		// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
+		// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
+		ws->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
+		ws->require(oslice::SLICER_FEATURE, props);
+	}
+	const CFGCollection *cfgs = INVOLVED_CFGS(ws); // retrieving the main CFG
+	ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
+	gdom = new GlobalDominance(cfgs, GlobalDominance::EDGE_DOM | GlobalDominance::EDGE_POSTDOM); // no block dom
+	ws->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
+	ws->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
+
+	context = {
+		dfa::INITIAL_STATE(ws), 					// initial dfa::State
+		ws->platform()->getSP()->number(),			// id of the stack pointer
+		(unsigned int)ws->platform()->regCount(), 	// count of registers
+		(unsigned int)ws->process()->maxTemp(),	// maximum number of tempvars used
+	};
+}
 
 Analysis::~Analysis() { }
 
@@ -340,9 +371,6 @@ void Analysis::printResults(int exec_time_ms) const
 		std::cout.precision(oldprecision);
 	}
 }
-
-#include "GlobalDominance.h"
-extern GlobalDominance* gdom;
 
 // returns edge to remove
 Option<Edge*> f_dom(Edge* e1, Edge* e2) {

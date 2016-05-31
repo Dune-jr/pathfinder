@@ -2,20 +2,11 @@
 #include <elm/types.h>
 #include <elm/options.h>
 #include <otawa/app/Application.h> // main Display class
-#include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
-#include <otawa/hard/Platform.h>
-#include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
-#include <otawa/prog/WorkSpace.h>
 #include <otawa/app/Application.h>
-#include "/home/jruiz/Documents/oslice/blockBased/cfg_v2_plugin/oslice_features.h"
 #include "analysis.h"
 #include "ffx.h"
 #include "debug.h"
 #include "oracle.h"
-#if 1
-#include "GlobalDominance.h"
-GlobalDominance* gdom;
-#endif
 
 using namespace elm;
 using namespace otawa;
@@ -24,7 +15,7 @@ using namespace option;
 void dumpOptions(int dbg_flags, int dbg_verbose, int analysis_flags, int merge_thresold);
 void testPredicates();
 void testOperands();
-void testSimplify();	
+void testSimplify();
 
 int dbg_flags = 0b00000000; // global analysis flags for debugging
 int dbg_verbose = 0; // global verbose level (higher = less verbose)
@@ -57,32 +48,6 @@ public:
 
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
-		// workspace()->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
-#if 0
-		MyTransformer t;
-		t.process(workspace());
-#endif
-		workspace()->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
-		if(opt_virtualize.get())
-			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
-		const CFGCollection *cfgs = INVOLVED_CFGS(workspace()); // retrieving the main CFG
-		ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
-		CFG *cfg = cfgs->get(0); // then get the first CFG
-		if(opt_slice) {
-			// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
-			// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
-			workspace()->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
-			workspace()->require(oslice::SLICER_FEATURE, props);
-		}
-#if 1
-		gdom = new GlobalDominance(cfgs, GlobalDominance::EDGE_DOM | GlobalDominance::EDGE_POSTDOM); // no block dom
-#endif
-		workspace()->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
-		workspace()->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
-		const dfa::State *inital_state = dfa::INITIAL_STATE(workspace()); // retrieving the initial state
-		int sp_id = workspace()->platform()->getSP()->number(); // retrieve the id of the stack pointer
-		unsigned int max_registers = (unsigned int)workspace()->platform()->regCount(); // retrieve the count of registers
-		unsigned int max_tempvars = (unsigned int)workspace()->process()->maxTemp(); // retrieve the maximum number of tempvars used
 		int analysis_flags = 0, merge_thresold = 0;
 		// high verbose numbers are more silent. TODO: that is counterintuitive
 		if(opt_s1) dbg_verbose = 1;
@@ -104,6 +69,10 @@ protected:
 			dbg_flags |= DBG_FORMAT_FLOWINFO;
 		if(opt_avgiplength)
 			dbg_flags |= DBG_AVG_IP_LENGTH;
+		if(opt_virtualize.get())
+			analysis_flags |= Analysis::VIRTUALIZE_CFG;
+		if(opt_slice)
+			analysis_flags |= Analysis::SLICE_CFG;
 		if(opt_progress)
 			analysis_flags |= Analysis::SHOW_PROGRESS;
 		if(! opt_nolinearcheck)
@@ -114,8 +83,7 @@ protected:
 			analysis_flags |= Analysis::DRY_RUN;
 		if(true)
 			analysis_flags |= Analysis::POST_PROCESSING;
-		if(opt_merge || opt_automerge)
-		{
+		if(opt_merge || opt_automerge) {
 			analysis_flags |= Analysis::MERGE;
 			merge_thresold = opt_automerge ? 250 : opt_merge.get(); // 250 is good 
 		}
@@ -123,8 +91,8 @@ protected:
 		// 	analysis_flags |= Analysis::FOLLOW_CALLS;
 		if(opt_dumpoptions)
 			dumpOptions(dbg_flags, dbg_verbose, analysis_flags, merge_thresold);
-		DefaultAnalysis analysis({inital_state, sp_id, max_tempvars, max_registers}, merge_thresold, analysis_flags);
-		analysis.run(cfg);
+		DefaultAnalysis analysis(workspace(), props, analysis_flags, merge_thresold);
+		analysis.run(INVOLVED_CFGS(workspace())->get(0));
 
 		// outputing to .ffx
 		if(opt_output.get())
