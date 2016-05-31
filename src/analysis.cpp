@@ -11,6 +11,8 @@
 #include "cfg_features.h"
 #include "progress.h"
 #include "smt.h"
+#include "GlobalDominance.h"
+extern GlobalDominance* gdom;
 
 /**
  * @class Analysis
@@ -28,7 +30,7 @@ Analysis::~Analysis() { }
   */
 const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 {
-	if(flags&SHOW_PROGRESS) progress = new Progress(cfg); 
+	if(flags&SHOW_PROGRESS) progress = new Progress(cfg);
 	DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
 	DBG("Stack pointer identified to " << context.sp)
 	std::time_t start = clock();
@@ -340,9 +342,6 @@ void Analysis::printResults(int exec_time_ms) const
 		std::cout.precision(oldprecision);
 	}
 }
-
-#include "GlobalDominance.h"
-extern GlobalDominance* gdom;
 
 // returns edge to remove
 Option<Edge*> f_dom(Edge* e1, Edge* e2) {

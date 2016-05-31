@@ -110,7 +110,7 @@ private:
 
 	WorkingList wl; // working list
 	Vector<DetailedPath> infeasible_paths;
-	GlobalDominance* gdom;
+	// GlobalDominance* gdom;
 
 	// virtual pure functions to implement
 	virtual LockPtr<States> narrowing(const Vector<Edge*>& edges) const = 0;

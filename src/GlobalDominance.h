@@ -17,30 +17,27 @@
 using namespace elm;
 using otawa::Block;
 
-/*
 class MyTransformer : public otawa::CFGTransformer {
 
 Block* clone(Block *b) {
 		// end case
-		DBG("cur: " << cur->entry())
 		if(b->isEnd()) {
 			if(b->isEntry())
 				return cur->entry();
 			else if(b->isExit()) {
 				return cur->exit();
 				Block::EdgeIter exits(cur->exit()->ins());
-				Edge* first_exit_edge = *exits;
+				otawa::Edge* first_exit_edge = *exits;
 				ASSERT(first_exit_edge);
 				if(++exits)
 				{
 					// need to create an empty basic block to make sure we only have one exit edge
-					genstruct::Table<Inst *> insts;
-					BasicBlock* bb = build(insts);
-					build(bb, cur->exit(), Edge::NOT_TAKEN); // add bb out edge
-					build(first_exit_edge->source(), bb, Edge::NOT_TAKEN); // add bb in edge
-					for(; exits; exits++) {
-						build((*exits)->source(), bb, Edge::NOT_TAKEN); // add bb in edge
-					}
+					genstruct::Table<otawa::Inst *> insts;
+					otawa::BasicBlock* bb = build(insts);
+					build(bb, cur->exit(), otawa::Edge::NOT_TAKEN); // add bb out edge
+					build(first_exit_edge->source(), bb, otawa::Edge::NOT_TAKEN); // add bb in edge
+					for(; exits; exits++)
+						build((*exits)->source(), bb, otawa::Edge::NOT_TAKEN); // add bb in edge
 				}
 				return cur->exit();
 			}
@@ -58,15 +55,14 @@ Block* clone(Block *b) {
 
 		// basic block
 		else {
-			BasicBlock *bb = b->toBasic();
-			genstruct::Vector<Inst *> insts(bb->count());
-			for(BasicBlock::InstIter i = bb; i; i++)
+			otawa::BasicBlock *bb = b->toBasic();
+			genstruct::Vector<otawa::Inst *> insts(bb->count());
+			for(otawa::BasicBlock::InstIter i = bb; i; i++)
 				insts.add(*i);
 			return build(insts.detach());
 		}
-
 	}
-};*/
+};
 
 class GlobalDominance
 {
@@ -79,28 +75,29 @@ public:
 
 	GlobalDominance(const otawa::CFGCollection *cfgs, int flags) {
 		for(otawa::CFGCollection::Iterator cfg(cfgs); cfg; cfg++) {
-			// DBG("g=" << cfg->name())
+			DBG("Computing dominance for CFG: " << cfg->name())
 
-			// if(flags&BLOCK_DOM)
+			if(flags&BLOCK_DOM) {
 				bdoms.put(*cfg, new BlockDominance(*cfg));
-			// DBG("\tbdoms= " << **bdoms[*cfg])
+				DBG("\tbdoms: " << **bdoms[*cfg])
+			}
 
-			genstruct::SLList<otawa::sgraph::Edge*> sll;
-			sll += theOnly(cfg->entry()->outs());
-			if(flags&EDGE_DOM)
+			if(flags&EDGE_DOM) {
+				genstruct::SLList<otawa::sgraph::Edge*> sll;
+				sll += theOnly(cfg->entry()->outs());
 				edoms.put(*cfg, new EdgeDom(*cfg, 
-					// singleton<otawa::sgraph::Edge*>(theOnly(cfg->entry()->outs()))
-					sll
+					singleton<otawa::sgraph::Edge*>(theOnly(cfg->entry()->outs()))
 				));
-			// DBG("\tedoms= " << **edoms[*cfg])
+				DBG("\tedoms: " << **edoms[*cfg])
+			}
 
 			if(flags&EDGE_POSTDOM) {
 				genstruct::SLList<otawa::sgraph::Edge*> sl; 
 				for(Block::EdgeIter i(cfg->exit()->ins()); i; i++)
 					sl += *i;
 				epdoms.put(*cfg, new EdgePostDom(*cfg, sl));
+				DBG("\tepdoms: " << **epdoms[*cfg])
 			}
-			// DBG("\tepdoms= " << **epdoms[*cfg])
 		}
 	}
 
@@ -109,11 +106,11 @@ public:
 			delete (*i).snd;
 		for(genstruct::HashTable<CFG*, EdgeDom*>::PairIterator i(edoms); i; i++)
 			delete (*i).snd;
-		// for(genstruct::HashTable<CFG*, EdgePostDom*>::PairIterator i(epdoms); i; i++)
-		// 	delete (*i).snd;
+		for(genstruct::HashTable<CFG*, EdgePostDom*>::PairIterator i(epdoms); i; i++)
+			delete (*i).snd;
 	}
 
-	bool dom(Block* b1, Block* b2) {
+	bool dom(Block* b1, Block* b2) const {
 		while(b2->cfg() != b1->cfg()) {
 			b2 = getCaller(b2, NULL);
 			if(!b2) // reached main, still didn't match b1's cfg, so b2 isn't even indirectly called by b1
@@ -127,7 +124,7 @@ public:
 		}
 		return true;
 	}
-	bool dom(otawa::Edge* e1, otawa::Edge* e2) {
+	bool dom(otawa::Edge* e1, otawa::Edge* e2) const {
 		while(e2->source()->cfg() != e1->source()->cfg()) {
 			Block* b = getCaller(e2->source()->cfg(), NULL);
 			if(!b) // reached main, still didn't match e1's cfg, so e2 isn't even indirectly called by e1
@@ -136,17 +133,13 @@ public:
 		}
 		while(e2 != e1) {
 			otawa::Edge* prev_e2 = e2;
-			DBGG("edoms: " << *edoms[e2->source()->cfg()])
-			ASSERT(e2->source()->cfg())
-			ASSERT(edoms.exists(e2->source()->cfg()))
-			ASSERT(edoms.get(e2->source()->cfg()))
 			e2 = static_cast<otawa::Edge*>((*edoms.get(e2->source()->cfg()))->idom(e2));
 			if(e2 == prev_e2) // reached entry
 				return false;
 		}
 		return true;
 	}
-	bool postdom(otawa::Edge* e1, otawa::Edge* e2) {
+	bool postdom(otawa::Edge* e1, otawa::Edge* e2) const {
 		while(e1->source()->cfg() != e2->source()->cfg()) {
 			Block* b = getCaller(e1->source()->cfg(), NULL);
 			if(!b) // reached main, still didn't match e2's cfg, so e1 isn't even indirectly called by e2

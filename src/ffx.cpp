@@ -1,3 +1,4 @@
+#include "debug.h"
 #include "ffx.h"
 #include "pretty_printing.h"
 
@@ -40,12 +41,19 @@ void FFX::output(const elm::String& function_name, const elm::String& ffx_filena
 	FFXFile << indent(-1) << "</function>" << endl;
 	FFXFile << indent(  ) << "</flowfacts>" << endl;
 	
+	if(dbg_verbose < DBG_VERBOSE_NONE)
+		cout << "output to " + ffx_filename << endl;
+
+	// graph	
 	if(! graph_filename.isEmpty())
 	{		
 		io::OutFileStream GraphStream(graph_filename);
 		io::Output GraphFile(GraphStream);
 		writeGraph(GraphFile, infeasible_paths);
+		if(dbg_verbose < DBG_VERBOSE_NONE)
+			cout << "graph output to " + graph_filename << endl;
 	}
+
 }
 
 /**
