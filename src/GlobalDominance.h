@@ -9,60 +9,12 @@
 #include <otawa/prog/WorkSpace.h>
 #include <otawa/pcg/PCG.h>
 #include <otawa/pcg/PCGBuilder.h>
-#include <otawa/cfg/CFGTransformer.h>
 #include "BlockDominance.h"
 #include "EdgeDominance.h"
 #include "cfg_features.h"
 
 using namespace elm;
 using otawa::Block;
-
-class MyTransformer : public otawa::CFGTransformer {
-
-Block* clone(Block *b) {
-		// end case
-		if(b->isEnd()) {
-			if(b->isEntry())
-				return cur->entry();
-			else if(b->isExit()) {
-				return cur->exit();
-				Block::EdgeIter exits(cur->exit()->ins());
-				otawa::Edge* first_exit_edge = *exits;
-				ASSERT(first_exit_edge);
-				if(++exits)
-				{
-					// need to create an empty basic block to make sure we only have one exit edge
-					genstruct::Table<otawa::Inst *> insts;
-					otawa::BasicBlock* bb = build(insts);
-					build(bb, cur->exit(), otawa::Edge::NOT_TAKEN); // add bb out edge
-					build(first_exit_edge->source(), bb, otawa::Edge::NOT_TAKEN); // add bb in edge
-					for(; exits; exits++)
-						build((*exits)->source(), bb, otawa::Edge::NOT_TAKEN); // add bb in edge
-				}
-				return cur->exit();
-			}
-			else if(b->isUnknown())
-				return cur->unknown();
-			else {
-				ASSERT(false);
-				return 0;
-			}
-		}
-
-		// synthetic block case
-		else if(b->isSynth())
-			return build(b->toSynth()->callee());
-
-		// basic block
-		else {
-			otawa::BasicBlock *bb = b->toBasic();
-			genstruct::Vector<otawa::Inst *> insts(bb->count());
-			for(otawa::BasicBlock::InstIter i = bb; i; i++)
-				insts.add(*i);
-			return build(insts.detach());
-		}
-	}
-};
 
 class GlobalDominance
 {
@@ -83,8 +35,6 @@ public:
 			}
 
 			if(flags&EDGE_DOM) {
-				genstruct::SLList<otawa::sgraph::Edge*> sll;
-				sll += theOnly(cfg->entry()->outs());
 				edoms.put(*cfg, new EdgeDom(*cfg, 
 					singleton<otawa::sgraph::Edge*>(theOnly(cfg->entry()->outs()))
 				));
@@ -125,6 +75,7 @@ public:
 		return true;
 	}
 	bool dom(otawa::Edge* e1, otawa::Edge* e2) const {
+		// a nice thing with dominance is that we don't need to check that the entry dominates the edge, it's always the case
 		while(e2->source()->cfg() != e1->source()->cfg()) {
 			Block* b = getCaller(e2->source()->cfg(), NULL);
 			if(!b) // reached main, still didn't match e1's cfg, so e2 isn't even indirectly called by e1
@@ -140,7 +91,10 @@ public:
 		return true;
 	}
 	bool postdom(otawa::Edge* e1, otawa::Edge* e2) const {
+		// now we're going to have to check that the entry is post-dominated by the edge, everytime we go up in the caller tree
 		while(e1->source()->cfg() != e2->source()->cfg()) {
+			if(! postdom(e1, theOnly(e1->source()->cfg()->entry()->outs())) )
+				return false; // e1 must dominate the entry edge of its cfg!
 			Block* b = getCaller(e1->source()->cfg(), NULL);
 			if(!b) // reached main, still didn't match e2's cfg, so e1 isn't even indirectly called by e2
 				return false;

@@ -86,16 +86,16 @@ public:
 
 private:
 	void DominanceProblem(DiGraph *g, genstruct::SLList<edge_t*> start) {
-// bool multiple_start = start.count() > 1;
+		bool multiple_start = start.count() > 1;
 		/* for all nodes, e // initialize the dominators array */
 			/* doms[e] ← Undefined */
 		doms.clear();
 		/* doms[start edge] ← start edge */
 		// doms.put(start, start);
-// if(multiple_start) doms.put(VIRTUAL_ENTRY_EDGE, VIRTUAL_ENTRY_EDGE); // hack
+		if(multiple_start) doms.put(VIRTUAL_ENTRY_EDGE, VIRTUAL_ENTRY_EDGE); // hack
 		for(genstruct::SLList<edge_t*>::Iterator i(start); i; i++)
-// if(multiple_start) doms.put(*i, VIRTUAL_ENTRY_EDGE); // hack	
-// else
+			if(multiple_start) doms.put(*i, VIRTUAL_ENTRY_EDGE); // hack	
+			else
 				doms.put(*i, *i);
 		/* Changed ← true */
 		bool changed = true;
@@ -140,14 +140,14 @@ private:
 			while(o.strictOrdered(finger1, finger2)) {
 				/* finger1 = doms[finger1] */
 				finger1 = doms[finger1];
-// if(!finger1) return VIRTUAL_ENTRY_EDGE;
+				if(!finger1) return VIRTUAL_ENTRY_EDGE;
 				// DBG("finger1= " << finger1)
 			}
 			/* while (finger2 < finger1) */
 			while(o.strictOrdered(finger2, finger1)) {
 				/* finger2 = doms[finger2] */
 				finger2 = doms[finger2];
-// if(!finger2) return VIRTUAL_ENTRY_EDGE;
+				if(!finger2) return VIRTUAL_ENTRY_EDGE;
 				// DBG("finger2= " << finger2)
 			}
 		}

@@ -13,10 +13,9 @@ using namespace elm;
 using namespace otawa;
 using namespace option;
 
-void dumpOptions(int dbg_flags, int dbg_verbose, int analysis_flags, int merge_thresold);
-void testPredicates();
-void testOperands();
-void testSimplify();	
+// void testPredicates();
+// void testOperands();
+// void testSimplify();	
 
 int dbg_flags = 0b00000000; // global analysis flags for debugging
 int dbg_verbose = 0; // global verbose level (higher = less verbose)
@@ -47,19 +46,20 @@ public:
 		opt_merge(ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)) { }
 
 protected:
-	virtual void work(const string &entry, PropList &props) throw (elm::Exception) {
-		int analysis_flags, dbg_flags, merge_thresold;
+	virtual void work(const string &entry, PropList &props) throw (elm::Exception)
+	{
+		int analysis_flags, merge_thresold;
 		initializeLoggingOptions();
-		setFlags(dbg_flags, analysis_flags, merge_thresold);
+		setFlags(analysis_flags, merge_thresold);
 		if(opt_dumpoptions)
-			dumpOptions(dbg_flags, dbg_verbose, analysis_flags, merge_thresold);
+			dumpOptions(analysis_flags, merge_thresold);
 
-		DefaultAnalysis analysis(workspace(), props, merge_thresold, analysis_flags);
-		analysis.run(INVOLVED_CFGS(workspace())); // TODO: make that default for (worspace) overloard
+		DefaultAnalysis analysis(workspace(), props, analysis_flags, merge_thresold);
+		analysis.run(workspace()); // TODO: make that default for (workspace) overloard fnct
 
 		// outputing to .ffx
 		if(opt_output.get())
-		{
+		{ // simplify
 			const Vector<DetailedPath>& infeasible_paths = analysis.infeasiblePaths();
 			FFX ffx_output(infeasible_paths);
 			const elm::String name = entry + "_ips.ffx"; // TODO: use args= arguments();
@@ -77,7 +77,8 @@ private:
 	ValueOption<bool> opt_virtualize;
 	ValueOption<int> opt_merge;
 
-	void setFlags(int& dbg_flags, int& analysis_flags, int& merge_thresold) {
+	void setFlags(int& analysis_flags, int& merge_thresold) {
+		dbg_flags = analysis_flags = 0;	
 		if(opt_notime)
 			dbg_flags |= DBG_NO_TIME;
 		if(! opt_noipresults)
@@ -88,6 +89,8 @@ private:
 			dbg_flags |= DBG_AVG_IP_LENGTH;
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::VIRTUALIZE_CFG;
+		else
+			cerr << color::BIRed() << "WARNING: IP analysis working with non-virtualized CFG. Not ready, and invalid results very likely" << color::RCol() << endl;
 		if(opt_slice)
 			analysis_flags |= Analysis::SLICE_CFG;
 		if(opt_progress)
@@ -126,7 +129,7 @@ private:
 			return 250; // 250 is good 
 		return 0;
 	}
-	void dumpOptions(int dbg_flags, int dbg_verbose, int analysis_flags, int merge_thresold) {
+	void dumpOptions(int analysis_flags, int merge_thresold) {
 		#define DBGPREFIX(str) "\t-" << elm::io::StringFormat(str).width(30) << ": " 
 		#define DBGOPT(str, val, normal) cout << DBGPREFIX(str) << (bool(val)==normal?color::IGre():color::IRed()) << ((val) ? "YES" : "NO") << color::RCol() << endl;
 		cout << "============== DUMPING OPTIONS ==============" << endl;
@@ -147,6 +150,8 @@ private:
 		DBGOPT("PRETTY PRINTING FOR FLOWINFO", (dbg_flags&DBG_FORMAT_FLOWINFO), true)
 		DBGOPT("DISPLAY AVERAGE IP LENGTH", dbg_flags&DBG_AVG_IP_LENGTH, false)
 		cout << "Analysis:" << endl;
+		DBGOPT("VIRTUALIZE", analysis_flags&Analysis::VIRTUALIZE_CFG, true)
+		DBGOPT("SLICE", analysis_flags&Analysis::SLICE_CFG, false)
 		DBGOPT("DISPLAY PROGRESS", analysis_flags&Analysis::SHOW_PROGRESS, false)
 		DBGOPT("CHECK LINEARITY BEFORE SMT CALL", analysis_flags&Analysis::SMT_CHECK_LINEAR, true)
 		DBGOPT("KEEP UNMINIMIZED PATHS", analysis_flags&Analysis::UNMINIMIZED_PATHS, true)

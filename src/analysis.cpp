@@ -19,8 +19,6 @@
 #include "smt.h"
 #include "GlobalDominance.h"
 
-GlobalDominance* gdom;
-
 /**
  * @class Analysis
  * @brief Perform an infeasible path analysis on a CFG 
@@ -48,16 +46,19 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 	this->context.max_registers = (unsigned int)ws->platform()->regCount(); // count of registers
 }
 
-Analysis::~Analysis() { }
+Analysis::~Analysis()
+{
+	delete gdom;
+}
 
 /**
  *
  *
  */
-const Vector<DetailedPath>& Analysis::run(const CFGCollection* cfgs)
+const Vector<DetailedPath>& Analysis::run(const WorkSpace* ws)
 {
-	ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
-	return run(cfgs->get(0));
+	ASSERTP(INVOLVED_CFGS(ws)->count() > 0, "no CFG found"); // make sure we have at least one CFG
+	return run(INVOLVED_CFGS(ws)->get(0));
 }
 
 /**
@@ -365,9 +366,10 @@ void Analysis::printResults(int exec_time_ms) const
 			"+" << color::Yel() << ip_stats.getUnminimizedIPCount() << color::RCol() << " => " << color::IRed() << ip_stats.getIPCount() << color::RCol() << endl;
 	if(dbg_flags&DBG_AVG_IP_LENGTH && infeasible_paths_count > 0)
 	{
-		int sum_path_lengths = 0, squaredsum_path_lengths = 0;
+		int sum_path_lengths = 0, squaredsum_path_lengths = 0, one_edges = 0;
 		for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
 		{
+			one_edges += iter->countEdges() == 1;
 			sum_path_lengths += iter->countEdges();
 			squaredsum_path_lengths += iter->countEdges() * iter->countEdges();
 		}
@@ -375,28 +377,29 @@ void Analysis::printResults(int exec_time_ms) const
 		float norm2 = sqrt((float)squaredsum_path_lengths / (float)infeasible_paths_count);
 	    std::ios_base::fmtflags oldflags = std::cout.flags();
 	    std::streamsize oldprecision = std::cout.precision();
-		std::cout << std::fixed << std::setprecision(2) << " (Average: " << average_length << ", Norm2: " << norm2 << ")" << endl;
+		std::cout << std::fixed << std::setprecision(2) << " (Average: " << average_length << ", Norm2: " << norm2
+			<< ", #1edge: " << one_edges << "/" << infeasible_paths_count << ")" << endl;
 		std::cout.flags(oldflags);
 		std::cout.precision(oldprecision);
 	}
 }
 
 // returns edge to remove
-Option<Edge*> f_dom(Edge* e1, Edge* e2) {
+Option<Edge*> f_dom(GlobalDominance* gdom, Edge* e1, Edge* e2) {
 	DBG("\tdom(" << e1 << ", " << e2 << "): " << DBG_TEST(gdom->dom(e1, e2), false))
 	if(gdom->dom(e1, e2))
 		return elm::some(e1);
 	return elm::none;
 }
 // returns edge to remove
-Option<Edge*> f_postdom(Edge* e1, Edge* e2) {
-	DBG("\tpostdom(" << e1 << ", " << e2 << "): " << DBG_TEST(gdom->postdom(e2, e1), false))
+Option<Edge*> f_postdom(GlobalDominance* gdom, Edge* e1, Edge* e2) {
+	DBG("\tpostdom(" << e2 << ", " << e1 << "): " << DBG_TEST(gdom->postdom(e2, e1), false))
 	if(gdom->postdom(e2, e1))
 		return elm::some(e2);
 	return elm::none;
 }
 
-void simplifyUsingDominance(Option<Edge*> (*f)(Edge* e1, Edge* e2), Vector<DetailedPath>& infeasible_paths)
+int Analysis::simplifyUsingDominance(Option<Edge*> (*f)(GlobalDominance* gdom, Edge* e1, Edge* e2))
 {
 	int changed_count = 0;
 	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
@@ -413,9 +416,9 @@ void simplifyUsingDominance(Option<Edge*> (*f)(Edge* e1, Edge* e2), Vector<Detai
 				if(i->isEdge())
 				{
 					if(prev)
-						if(f((*prev).getEdge(), i->getEdge()))
+						if(Option<Edge*> edge_to_remove = f(gdom, (*prev).getEdge(), i->getEdge()))
 						{
-							dp.remove((*prev).getEdge()); // search and destroy
+							dp.remove(edge_to_remove); // search and destroy
 							changed = true;
 							hasChanged = true;
 							break;
@@ -430,6 +433,7 @@ void simplifyUsingDominance(Option<Edge*> (*f)(Edge* e1, Edge* e2), Vector<Detai
 			changed_count++;
 		}
 	}
+	return changed_count;
 }
 
 void Analysis::postProcessResults(CFG *cfg)
@@ -437,8 +441,8 @@ void Analysis::postProcessResults(CFG *cfg)
 	if(! flags&POST_PROCESSING)
 		return;
 	DBG(color::On_IGre() << "post-processing..." << color::RCol())
-	// elm::log::Debug::setDebugFlag(true);
-	// elm::log::Debug::setVerboseLevel(1);
+	elm::log::Debug::setDebugFlag(true);
+	elm::log::Debug::setVerboseLevel(1);
 	/*otawa::Edge* program_entry_edge = theOnly(cfg->entry()->outs());
 	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
 	{
@@ -446,7 +450,13 @@ void Analysis::postProcessResults(CFG *cfg)
 		if(dp.contains(program_entry_edge))
 			dp.remove(program_entry_edge);
 	}*/ // should be removed by dominance anyway
-	int changed_count = 0;
+	int changed_count = simplifyUsingDominance(&f_dom);
+	DBGG("Dominance: minimized " << changed_count << " infeasible paths.")
+	printResults(0);
+	changed_count = simplifyUsingDominance(&f_postdom);
+	DBGG("Post-dominance: minimized " << changed_count << " infeasible paths.")
+
+	/*int changed_count = 0;
 	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
 	{
 		DetailedPath& dp = dpiter.item();
@@ -482,6 +492,5 @@ void Analysis::postProcessResults(CFG *cfg)
 			DBG("\t...to " << dp)
 			changed_count++;
 		}
-	}
-	DBGG("Dominance: minimized " << changed_count << " infeasible paths.")
+	}*/
 }

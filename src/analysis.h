@@ -24,8 +24,8 @@ public:
 
 	enum // flags 
 	{
-		VIRTUALIZE_CFG		  = 0b1 << 1,
-		SLICE_CFG			  = 0b1 << 2,
+		VIRTUALIZE_CFG		  = 0b1 << 0,
+		SLICE_CFG			  = 0b1 << 1,
 		MERGE				  = 0b1 << 3,
 		UNMINIMIZED_PATHS	  = 0b1 << 4,
 		DRY_RUN				  = 0b1 << 5,
@@ -64,7 +64,7 @@ public:
 	// Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold);
 	Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold);
 	~Analysis();
-	const Vector<DetailedPath>& run(const CFGCollection* cfgs);
+	const Vector<DetailedPath>& run(const WorkSpace* ws);
 	const Vector<DetailedPath>& run(CFG *cfg);
 	inline const Vector<DetailedPath>& infeasiblePaths() const { return infeasible_paths; }
 	// static bool listOfFixpoints(const SLList<Analysis::State>& sl);
@@ -111,7 +111,7 @@ private:
 
 	WorkingList wl; // working list
 	Vector<DetailedPath> infeasible_paths;
-	// GlobalDominance* gdom;
+	GlobalDominance* gdom;
 
 	// virtual pure functions to implement
 	virtual LockPtr<States> narrowing(const Vector<Edge*>& edges) const = 0;
@@ -141,7 +141,7 @@ private:
 	// dominance stuff
 	// Option<Edge*> f_dom(Edge* e1, Edge* e2) const; // returns edge to remove
 	// Option<Edge*> f_postdom(Edge* e1, Edge* e2) const; // returns edge to remove
-	// void simplifyUsingDominance(Option<Edge*> (*f)(Edge* e1, Edge* e2), Vector<DetailedPath>& infeasible_paths);
+	int simplifyUsingDominance(Option<Edge*> (*f)(GlobalDominance* gdom, Edge* e1, Edge* e2));
 
 	// bool invalidate_constant_info
 	enum {
