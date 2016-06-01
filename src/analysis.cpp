@@ -441,7 +441,7 @@ void Analysis::postProcessResults(CFG *cfg)
 	if(! flags&POST_PROCESSING)
 		return;
 	DBG(color::On_IGre() << "post-processing..." << color::RCol())
-	// elm::log::Debug::setDebugFlag(true);
+	elm::log::Debug::setDebugFlag(true);
 	// elm::log::Debug::setVerboseLevel(1);
 	/*otawa::Edge* program_entry_edge = theOnly(cfg->entry()->outs());
 	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)

@@ -94,7 +94,7 @@ public:
 		// now we're going to have to check that the entry is post-dominated by the edge, everytime we go up in the caller tree
 		while(e1->source()->cfg() != e2->source()->cfg()) {
 			if(! postdom(e1, theOnly(e1->source()->cfg()->entry()->outs())) )
-				return false; // e1 must dominate the entry edge of its cfg!
+				return false; // e1 must post-dominate the entry edge of its cfg!
 			Block* b = getCaller(e1->source()->cfg(), NULL);
 			if(!b) // reached main, still didn't match e2's cfg, so e1 isn't even indirectly called by e2
 				return false;
@@ -103,7 +103,7 @@ public:
 		while(e2 != e1) {
 			otawa::Edge* prev_e2 = e2;
 			e2 = static_cast<otawa::Edge*>((*epdoms.get(e2->source()->cfg()))->idom(e2));
-			if(e2 == prev_e2) // reached entry
+			if(!e2 || e2 == prev_e2) // reached (virtual) exit
 				return false;
 		}
 		return true;
