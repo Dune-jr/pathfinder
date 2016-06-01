@@ -7,22 +7,58 @@
 #include <iostream> // std::cout
 #include <iomanip> // std::setprecision
 #include <otawa/cfg/Edge.h>
+#include <otawa/hard/Platform.h>
+#include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
+#include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
+#include <otawa/prog/WorkSpace.h>
+#include "/home/jruiz/Documents/oslice/blockBased/cfg_v2_plugin/oslice_features.h"
 #include "analysis_state.h"
 #include "cfg_features.h"
+#include "GlobalDominance.h"
 #include "progress.h"
 #include "smt.h"
 #include "GlobalDominance.h"
-extern GlobalDominance* gdom;
+
+GlobalDominance* gdom;
 
 /**
  * @class Analysis
  * @brief Perform an infeasible path analysis on a CFG 
  */
-Analysis::Analysis(const context_t& context, int state_size_limit, int flags)
-	: context(context), state_size_limit(state_size_limit), flags(flags)
-	{ }
+Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold) : state_size_limit(merge_thresold), flags(flags)
+{
+	ws->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
+	ws->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
+	// MyTransformer t; t.process(ws);
+	if(flags & VIRTUALIZE_CFG)
+		ws->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
+	if(flags & SLICE_CFG) {
+		// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
+		// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
+		ws->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
+		ws->require(oslice::SLICER_FEATURE, props);
+	}
+	gdom = new GlobalDominance(INVOLVED_CFGS(ws), GlobalDominance::EDGE_DOM | GlobalDominance::EDGE_POSTDOM); // no block dom
+	ws->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
+	ws->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
+
+	this->context.dfa_state = dfa::INITIAL_STATE(ws); // initial state
+	this->context.sp = ws->platform()->getSP()->number(); // id of the stack pointer
+	this->context.max_tempvars = (unsigned int)ws->process()->maxTemp(); // maximum number of tempvars used
+	this->context.max_registers = (unsigned int)ws->platform()->regCount(); // count of registers
+}
 
 Analysis::~Analysis() { }
+
+/**
+ *
+ *
+ */
+const Vector<DetailedPath>& Analysis::run(const CFGCollection* cfgs)
+{
+	ASSERTP(cfgs->count() > 0, "no CFG found"); // make sure we have at least one CFG
+	return run(cfgs->get(0));
+}
 
 /**
   * @fn const Vector<DetailedPath>& Analysis::run(CFG *cfg);
@@ -33,9 +69,11 @@ const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 	if(flags&SHOW_PROGRESS) progress = new Progress(cfg);
 	DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
 	DBG("Stack pointer identified to " << context.sp)
+
 	std::time_t start = clock();
 	processCFG(cfg);
 	std::time_t end = clock();
+	
 	postProcessResults(cfg);
 	printResults((end-start)*1000/CLOCKS_PER_SEC);
 	if(flags&SHOW_PROGRESS) delete progress;
