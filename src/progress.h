@@ -15,7 +15,7 @@ using otawa::CFG;
 /* example: [■■       ] 4 states */
 class Analysis::SolverProgress {
 public:
-	SolverProgress(int state_count) : i(0), n(state_count) { }
+	SolverProgress(int state_count) : i(0), n(state_count) { if(n) { onSolving(false); } }
 	~SolverProgress() { onFinish(); }
 	inline void onSolving(bool ip) { elm::cout << "\e[1A\n\e[K" << percentBar(i++*10/n,9,ip) << " " << n << " states"; }
 
