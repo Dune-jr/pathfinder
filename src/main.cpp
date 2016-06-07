@@ -43,18 +43,19 @@ public:
 		opt_dry(SwitchOption::Make(*this).cmd("--dry").description("dry run (no solver calls)")),
 		opt_automerge(SwitchOption::Make(*this).cmd("-a").cmd("--automerge").description("let the algorithm decide when to merge")),
 		opt_virtualize(ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
-		opt_merge(ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)) { }
+		opt_merge(ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)),
+		opt_multithreading(ValueOption<int>::Make(*this).cmd("-j").description("enable multithreading on the given amount of cores (0/1=no multithreading, -1=autodetect)").def(-1)) { }
 
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception)
 	{
-		int analysis_flags, merge_thresold;
+		int analysis_flags, merge_thresold, nb_cores;
 		initializeLoggingOptions();
-		setFlags(analysis_flags, merge_thresold);
+		setFlags(analysis_flags, merge_thresold, nb_cores);
 		if(opt_dumpoptions)
-			dumpOptions(analysis_flags, merge_thresold);
+			dumpOptions(analysis_flags, merge_thresold, nb_cores);
 
-		DefaultAnalysis analysis(workspace(), props, analysis_flags, merge_thresold);
+		DefaultAnalysis analysis(workspace(), props, analysis_flags, merge_thresold, nb_cores);
 		analysis.run(workspace()); // TODO: make that default for (workspace) overloard fnct
 
 		// outputing to .ffx
@@ -75,9 +76,9 @@ private:
 	SwitchOption opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_progress, opt_dumpoptions, opt_notime, opt_noipresults, opt_noformattedflowinfo,
 		opt_avgiplength, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_dry, opt_automerge;
 	ValueOption<bool> opt_virtualize;
-	ValueOption<int> opt_merge;
+	ValueOption<int> opt_merge, opt_multithreading;
 
-	void setFlags(int& analysis_flags, int& merge_thresold) {
+	void setFlags(int& analysis_flags, int& merge_thresold, int& nb_cores) {
 		dbg_flags = analysis_flags = 0;	
 		if(opt_notime)
 			dbg_flags |= DBG_NO_TIME;
@@ -89,8 +90,7 @@ private:
 			dbg_flags |= DBG_AVG_IP_LENGTH;
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::VIRTUALIZE_CFG;
-		else
-			cerr << color::BIRed() << "WARNING: IP analysis working with non-virtualized CFG. Not ready, and invalid results very likely" << color::RCol() << endl;
+		else cerr << color::BIRed() << "WARNING: IP analysis working with non-virtualized CFG. Not ready, and invalid results very likely" << color::RCol() << endl;
 		if(opt_slice)
 			analysis_flags |= Analysis::SLICE_CFG;
 		if(opt_progress)
@@ -105,6 +105,11 @@ private:
 			analysis_flags |= Analysis::POST_PROCESSING;
 		if(opt_merge || opt_automerge)
 			analysis_flags |= Analysis::MERGE;
+		nb_cores = getNumberofCores();
+		if(nb_cores > 1) {
+			analysis_flags |= Analysis::MULTITHREADING;
+
+		}
 		merge_thresold = getMergeThresold();
 	}
 	void initializeLoggingOptions() {
@@ -122,6 +127,16 @@ private:
 		elm::log::Debug::setNumberingFlag(! opt_nolinenumbers);
 		elm::log::Debug::setPrefixColor(elm::color::Yel);	
 	}
+	int getNumberofCores() {
+		if(opt_multithreading.get() == -1) { // autodetect
+			// int nb_cores = AUTODETECT();
+			int nb_cores = 4;
+			DBG("Autodetected " << nb_cores << " cores.")
+			return nb_cores;
+		}
+		else
+			return opt_multithreading.get(); // either no multithreading (=0/1) or the amount of desired cores
+	}
 	int getMergeThresold() {
 		if(opt_merge)
 			return opt_merge.get();
@@ -129,7 +144,7 @@ private:
 			return 250; // 250 is good 
 		return 0;
 	}
-	void dumpOptions(int analysis_flags, int merge_thresold) {
+	void dumpOptions(int analysis_flags, int merge_thresold, int nb_cores) {
 		#define DBGPREFIX(str) "\t-" << elm::io::StringFormat(str).width(30) << ": " 
 		#define DBGOPT(str, val, normal) cout << DBGPREFIX(str) << (bool(val)==normal?color::IGre():color::IRed()) << ((val) ? "YES" : "NO") << color::RCol() << endl;
 		cout << "============== DUMPING OPTIONS ==============" << endl;
@@ -159,6 +174,11 @@ private:
 		cout << DBGPREFIX("MERGING THRESOLD");
 		if(analysis_flags&Analysis::MERGE)
 			cout << color::IRed() << merge_thresold << color::RCol() << endl;
+		else
+			cout << color::IGre() << "NONE" << color::RCol() << endl;
+		cout << DBGPREFIX("MULTITHREADING");
+		if(analysis_flags&Analysis::MULTITHREADING)
+			cout << color::IRed() << nb_cores << color::RCol() << endl;
 		else
 			cout << color::IGre() << "NONE" << color::RCol() << endl;
 		cout << "=============================================" << endl;

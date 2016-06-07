@@ -24,7 +24,7 @@ class SMT
 {
 public:
 	SMT(int flags);
-	Option<Analysis::Path> seekInfeasiblePaths(const Analysis::State& s);
+	Option<Analysis::Path*> seekInfeasiblePaths(const Analysis::State& s);
 	static const elm::String printChosenSolverInfo();
 	
 private:

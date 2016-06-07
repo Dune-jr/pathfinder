@@ -23,7 +23,8 @@
  * @class Analysis
  * @brief Perform an infeasible path analysis on a CFG 
  */
-Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold) : state_size_limit(merge_thresold), flags(flags)
+Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold, int nb_cores)
+	: state_size_limit(merge_thresold), nb_cores(nb_cores), flags(flags)
 {
 	ws->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
 	ws->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
@@ -441,7 +442,7 @@ void Analysis::postProcessResults(CFG *cfg)
 	if(! flags&POST_PROCESSING)
 		return;
 	DBG(color::On_IGre() << "post-processing..." << color::RCol())
-	elm::log::Debug::setDebugFlag(true);
+	// elm::log::Debug::setDebugFlag(true);
 	// elm::log::Debug::setVerboseLevel(1);
 	/*otawa::Edge* program_entry_edge = theOnly(cfg->entry()->outs());
 	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)

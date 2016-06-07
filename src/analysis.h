@@ -32,6 +32,7 @@ public:
 		SMT_CHECK_LINEAR	  = 0b1 << 6,
 		SHOW_PROGRESS		  = 0b1 << 7,
 		POST_PROCESSING		  = 0b1 << 8,
+		MULTITHREADING		  = 0b1 << 9,
 	};
 protected:
 	typedef struct
@@ -62,7 +63,7 @@ protected:
 
 public:
 	// Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold);
-	Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold);
+	Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold, int nb_cores);
 	~Analysis();
 	const Vector<DetailedPath>& run(const WorkSpace* ws);
 	const Vector<DetailedPath>& run(CFG *cfg);
@@ -77,9 +78,9 @@ protected:
 	context_t context;
 	IPStats ip_stats;
 	Analysis::Progress* progress;
-	int state_size_limit, flags; // read by inherited class
+	int state_size_limit, nb_cores, flags; // read by inherited class
 
-	static bool checkInfeasiblePathValidity(const Vector<State>& sv, const Vector<Option<Path> >& sv_paths, /*const Edge* e,*/ const Path& infeasible_path, elm::String& counterexample);
+	static bool checkInfeasiblePathValidity(const Vector<State>& sv, const Vector<Option<Path*> >& sv_paths, /*const Edge* e,*/ const Path& infeasible_path, elm::String& counterexample);
 	static DetailedPath reorderInfeasiblePath(const Path& infeasible_path, const DetailedPath& full_path);
 	static void addDetailedInfeasiblePath(const DetailedPath& infeasible_path, Vector<DetailedPath>& infeasible_paths);
 	static bool isSubPath(const OrderedPath& included_path, const Path& path_set);

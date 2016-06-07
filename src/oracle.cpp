@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "oracle.h"
 #include "progress.h"
+#include "smt_job.h"
 #ifdef SMT_SOLVER_CVC4
 	#include "cvc4/cvc4_smt.h"
  	typedef CVC4SMT chosen_smt_t;
@@ -74,42 +75,121 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 	IPStats stats;
 	if(flags&DRY_RUN) // no SMT call
 		return stats;
-	// find the conflicts
 	const int state_count = ss.count();
-	Vector<Option<Path> > vl_paths;
-	Vector<Analysis::State> new_sv(state_count); // safer to do it this way than remove on the fly (i think more convenient later too)
 	SolverProgress* sprogress;
 	if(flags&SHOW_PROGRESS)
 		sprogress = new SolverProgress(state_count);
+	// find the conflicts
+	Vector<Option<Path*> > vl_paths;
+	Vector<Analysis::State> new_sv(state_count); // safer to do it this way than remove on the fly (i think more convenient later too)
+
+	// const int nb_cores = 4; // TODO!!
+	if(flags&Analysis::MULTITHREADING && state_count >= nb_cores)
+	{	// with multithreading
+		const int nb_threads = nb_cores;
+		DBGG("1) Initializing " << nb_threads << " threads")
+		Vector<elm::sys::Thread*> threads(nb_threads);
+		Vector<SMTJob<chosen_smt_t>*> jobs(nb_threads);
+		States::Iterator si(ss.states());
+		for(int tid = 0, i = 0; tid < nb_threads; tid++)
+		{
+			SMTJob<chosen_smt_t>* job = new SMTJob<chosen_smt_t>(flags);
+			const int thresold = state_count * (tid+1)/nb_threads; // add states until this thresold
+			DBGG("\tthread #" << tid << ", doing jobs [" << i << "," << thresold << "[")
+			for(; i < thresold; i++)
+				job->addState(&(*si));
+			elm::sys::Thread* t = elm::sys::Thread::make(*job);
+			jobs.push(job);
+			threads.push(t);
+		}
+		DBGG("2) Starting threads")
+		for(int i = 0; i < nb_threads; i++)
+			threads[i]->start();
+		DBGG("3) Joining threads")
+		// join and get result
+		for(int i = 0; i < nb_threads; i++)
+		{
+			threads[i]->join();
+			DBGG("\t(joined #" << i+1 << ")")
+			for(SMTJob<chosen_smt_t>::Iterator ji(jobs[i]->getResults()); ji; ji++)
+			{
+				const State* s = (*ji).fst;
+				Option<Path*> infeasible_path = (*ji).snd;
+				if(flags&SHOW_PROGRESS)
+					sprogress->onSolving(infeasible_path);
+				vl_paths.addLast(infeasible_path);
+				if(!infeasible_path)
+					new_sv.addLast(*s);
+				DBGG( *(*ji).fst << ", ")
+				if ( (*ji).snd )
+					DBGG(*(*ji).snd)
+			}
+			delete jobs[i];
+			delete threads[i];
+		}
+		DBGG("4) done")
+	}
+	else
+	{	// without multithreading
+		for(States::Iterator si(ss.states()); si; si++)
+		{
+			// SMT call
+			chosen_smt_t smt(flags);
+			const Option<Path*> infeasible_path = smt.seekInfeasiblePaths(*si);
+			vl_paths.addLast(infeasible_path);
+			if(!infeasible_path)
+				new_sv.addLast(*si); // only add feasible states to new_sv
+	#		ifdef DBG_WARNINGS
+				else if(! (*infeasible_path)->contains(si->lastEdge())) // make sure the last edge was relevant in this path
+					cerr << "WARNING: !infeasible_path->contains(s.lastEdge())" << endl;
+	#		endif
+			if(flags&SHOW_PROGRESS)
+				sprogress->onSolving(infeasible_path);
+		}
+	}
+#if 0 // 1 thread per process
+	DBG("1) Initializing " << state_count << " threads")
+	Vector<elm::sys::Thread*> threads(state_count);
+	Vector<SMTJob*> jobs(state_count);
 	for(States::Iterator si(ss.states()); si; si++)
 	{
-		// SMT call
-		chosen_smt_t smt(flags);
-		const Option<Path>& infeasible_path = smt.seekInfeasiblePaths(*si);
-		vl_paths.addLast(infeasible_path);
-		if(infeasible_path)
-		{
-#			ifdef DBG_WARNINGS
-				if(! (*infeasible_path).contains(si->lastEdge())) // make sure the last edge was relevant in this path
-					cerr << "WARNING: !infeasible_path->contains(s.lastEdge())" << endl;
-#			endif
-		}
-		else
-			new_sv.addLast(*si); // only add feasible states to new_sv
-		if(flags&SHOW_PROGRESS)
-			sprogress->onSolving(infeasible_path);
+		SMTJob* job = new SMTJob(*si, flags); // TODO: keep a pointer (or a reference actually)
+		elm::sys::Thread* t = elm::sys::Thread::make(*job);
+		jobs.push(job);
+		threads.push(t);
 	}
+	DBG("2) Starting threads")
+	for(int i = 0; i < state_count; i++)
+		threads[i]->start();
+	DBG("3) Joining threads")
+	// join and get result
+	for(int i = 0; i < state_count; i++)
+	{
+		threads[i]->join();
+		DBG("\t(joined #" << i+1 << ")")
+		Option<Path*> infeasible_path = jobs[i]->getResult();
+		const State& s = jobs[i]->getState();
+		vl_paths.addLast(infeasible_path);
+		if(!infeasible_path)
+			new_sv.addLast(s);
+		delete jobs[i];
+		delete threads[i];
+	}
+	DBG("4) done")
+#endif
+	// cout << "["; for(Vector<Option<Path*> >::Iterator i(vl_paths); i; i++)
+	// 	if(*i) cout << pathToString(***i) << ", "; cout << "\n";
 	if(flags&SHOW_PROGRESS)
 		delete sprogress;
 	// analyse the conflicts found
 	ASSERTP(ss.count() == vl_paths.count(), "different size of ss and vl_paths")
-	Vector<Option<Path> >::Iterator pi(vl_paths);
+	Vector<Option<Path*> >::Iterator pi(vl_paths);
 	for(States::Iterator si(ss.states()); si; si++, pi++) // iterate on paths and states simultaneously
 	{
 		const State& s = *si;
 		if(*pi) // is infeasible?
 		{
-			const Path& ip = **pi;
+			const Path& ip = ***pi;
 			elm::String counterexample;
 			DBG("Path " << s.getPathString() << color::Bold() << " minimized to " << color::NoBold() << pathToString(ip))
 			bool valid = checkInfeasiblePathValidity(ss.states(), vl_paths, ip, counterexample);
@@ -131,7 +211,8 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 				if(flags&UNMINIMIZED_PATHS)
 				{	// falling back on full path (not as useful as a result, but still something)
 					addDetailedInfeasiblePath(full_path, infeasible_paths);
-					if(dbg_verbose == DBG_VERBOSE_ALL) {
+					if(dbg_verbose == DBG_VERBOSE_ALL)
+					{
 						Path fp;
 						for(DetailedPath::EdgeIterator fpi(full_path); fpi; fpi++)
 							fp += *fpi;
@@ -142,9 +223,10 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 					DBG(color::IRed() << "Ignored infeasible path that could not be minimized")
 			}
 			onAnyInfeasiblePath();
+			delete *pi;
 		}
 	}
-	ss = new_sv;
+	ss = new_sv; // TODO!! this is copying states, horribly unoptimized, we only need to remove a few states!
 	return stats;
 }
 

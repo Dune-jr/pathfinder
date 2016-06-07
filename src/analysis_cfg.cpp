@@ -540,9 +540,6 @@ void Analysis::processLoopHeader(Block* b, SLList<Analysis::State>& sl)
 			// don't compute anything, just extract the fixpoint we already know
 			delete s;
 			s = PROCESSED_LOOPHEADER_BB(bb);
-#ifdef NYU_BAD
-			ASSERT(s->fixpointState()) // instead of //s->setFixpointState(true); // ensure we keep this property
-#endif
 			PROCESSED_LOOPHEADER_BB.remove(bb); // clean the loop header from the soon to be obsolete annotation // TODO! test this
 		}
 		else
@@ -683,10 +680,10 @@ void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, co
  * If invalid, returns a counter-example in counterexample.
  * @return true if valid
 */
-bool Analysis::checkInfeasiblePathValidity(const Vector<Analysis::State>& sv, const Vector<Option<Path> >& sv_paths, const Path& infeasible_path, elm::String& counterexample)
+bool Analysis::checkInfeasiblePathValidity(const Vector<Analysis::State>& sv, const Vector<Option<Path*> >& sv_paths, const Path& infeasible_path, elm::String& counterexample)
 {
 	// check that all the paths going to the current BB are sound with the minimized inf. path we just found
-	Vector<Option<Path> >::Iterator pi(sv_paths);
+	Vector<Option<Path*> >::Iterator pi(sv_paths);
 	for(Vector<Analysis::State>::Iterator si(sv); si; si++, pi++) // iterate through paths at the same time
 	{
 		// if feasible path && contained in the minimized inf. path

@@ -22,12 +22,12 @@ config:Finalize("config.lua")
 -- Settings
 settings = NewSettings()
 settings.cc.flags:Add("-O1")
-settings.cc.flags:Add("-std=c++11")
+-- settings.cc.flags:Add("-std=c++11")
 
-if ScriptArgs["otawa"] and ScriptArgs["otawa"]~="1" then
-	otawa_config = "~/Documents/casse/otawa2/linux/bin/otawa-config" -- v2
-else
+if ScriptArgs["otawa"] and ScriptArgs["otawa"]~="2" then
 	otawa_config = "~/bin/otawa/otawa-config" --v1
+else
+	otawa_config = "~/Documents/casse/otawa2/linux/bin/otawa-config" -- v2
 end
 
 -- Wall option
@@ -78,6 +78,5 @@ end
 -- Sends all objs to an objs/ directory
 settings.cc.Output = Intermediate_Output
 
--- source = Collect("src/*.cpp", "src/cvc4/*.cpp", "src/z3/*.cpp")
 objects = Compile(settings, source)
 exe = Link(settings, "pathfinder", objects)

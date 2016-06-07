@@ -9,8 +9,8 @@
 class DefaultAnalysis : public Analysis
 {
 public:
-	DefaultAnalysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold)
-		: Analysis(ws, props, flags, merge_thresold) { }
+	DefaultAnalysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold, int nb_cores)
+		: Analysis(ws, props, flags, merge_thresold, nb_cores) { }
 
 private:
 	LockPtr<States> narrowing(const Vector<Edge*>& edges) const;

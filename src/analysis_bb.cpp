@@ -773,8 +773,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 // this function handles the deletion of opd1 and opd2
 LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, Operand* opd1, Operand* opd2, Path& labels) const
 {
-	assert(opd1);
-	assert(opd2);
+	ASSERT(opd1 && opd2);
 	const ConstantVariablesSimplified& cvs = constants.toSimplified(); // TODO: This is taking ressources because of bad class design
 	Vector<OperandVar> replaced_vars;
 	// If we have predicates such as ?16 = ?4 ~ t1, make sure none of these are identified as constants in the constantVariables table!

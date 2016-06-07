@@ -19,7 +19,7 @@ SMT::SMT(int flags) : flags(flags) { }
  * @param s State to check
  * @return If unsatisfiable, returns a path, otherwise elm::none
  */
-Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
+Option<Analysis::Path*> SMT::seekInfeasiblePaths(const Analysis::State& s)
 {
 	// add the constant info to the the list of predicates
 	SLList<LabelledPredicate> labelled_preds = s.getLabelledPreds(); // implicit copy
@@ -33,9 +33,9 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	}
 	DBG("Checking path " << s.getPathString() << ": " << color::BIRed() << "UNSAT")
 
-	Analysis::Path path;
+	Analysis::Path *path = new Analysis::Path();
 	std::basic_string<char> unsat_core_output;
-	bool unsat_core_success = retrieveUnsatCore(path, labelled_preds, unsat_core_output);
+	bool unsat_core_success = retrieveUnsatCore(*path, labelled_preds, unsat_core_output);
 
 	if(!unsat_core_success)
 	{
@@ -46,7 +46,7 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 			if((*parse_iter).pred().isComplete())
 			{
 				DBG("   * " << (*parse_iter))
-				path.addAll((*parse_iter).labels());
+				path->addAll((*parse_iter).labels());
 			}
 		}
 	}
@@ -57,7 +57,7 @@ Option<Analysis::Path> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	}
 
 	// printInfeasiblePath(path);
-	if(path == Analysis::Path::null)
+	if(path->isEmpty())
 		return elm::none;
 	return elm::some(path);
 }
