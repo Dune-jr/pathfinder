@@ -224,9 +224,13 @@ Vector<Edge*> Analysis::outsWithoutUnallowedExits(Block* b)
 	if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
 	{
 		Vector<Edge*>::Iterator i(rtn);
-		DBGG("-\toutput to " << i->source())
+		// DBGG("-\toutput to " << i->source())
 		for(; i; i++)
-			DBGG("\t\t  ->" << i->target())
+#ifndef NO_UTF8
+			DBGG(color::Bold() << "\t\t└▶" << color::RCol() << i->target())
+#else
+			DBGG(color::Bold() << "\t\t->" << color::RCol() << i->target())
+#endif
 	}
 	return rtn;
 }

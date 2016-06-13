@@ -39,9 +39,9 @@ public:
 	bool involvesMemory() const;
 	bool isAffine(const OperandVar& opdv) const;
 	unsigned int countTempVars() const;
-	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
-		
+
 	Predicate& operator=(const Predicate& p);
 	bool operator==(const Predicate& p) const;
 	inline bool operator!=(const Predicate& p) const { return !(*this == p); }

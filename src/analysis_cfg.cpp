@@ -143,7 +143,7 @@ LockPtr<Analysis::States> Analysis::I(Edge* e, const States& s)
 {
 	if(s.isEmpty())
 		DBGG("-\tpropagating bottom state")
-	DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
+	// DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
 	LockPtr<States> rtns(new States(s));
 	if(! e->source()->isEntry()) // do not process entry: no generated preds and uninteresting edge to add (everything comes from the entry)
 		for(States::MutableIterator rtnsi(rtns->states()); rtnsi; rtnsi++)

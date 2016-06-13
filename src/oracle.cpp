@@ -80,10 +80,12 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 	if(flags&SHOW_PROGRESS)
 		sprogress = new SolverProgress(state_count);
 	// find the conflicts
-	Vector<Option<Path*> > vl_paths;
+	Vector<Option<Path*> > sv_paths;
 	Vector<Analysis::State> new_sv(state_count); // safer to do it this way than remove on the fly (i think more convenient later too)
 
-	// const int nb_cores = 4; // TODO!!
+
+static int nyu = 0;
+static int nye = 0;
 	if(flags&Analysis::MULTITHREADING && state_count >= nb_cores)
 	{	// with multithreading
 		const int nb_threads = nb_cores;
@@ -93,7 +95,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 		States::Iterator si(ss.states());
 		for(int tid = 0, i = 0; tid < nb_threads; tid++)
 		{
-			SMTJob<chosen_smt_t>* job = new SMTJob<chosen_smt_t>(flags);
+			SMTJob<chosen_smt_t>* job = new SMTJob<chosen_smt_t>(flags,++nyu);
 			const int thresold = state_count * (tid+1)/nb_threads; // add states until this thresold
 			DBGG("\tthread #" << tid << ", doing jobs [" << i << "," << thresold << "[")
 			for(; i < thresold; i++)
@@ -111,32 +113,35 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 		{
 			threads[i]->join();
 			DBGG("\t(joined #" << i+1 << ")")
+cout << "-";
 			for(SMTJob<chosen_smt_t>::Iterator ji(jobs[i]->getResults()); ji; ji++)
 			{
 				const State* s = (*ji).fst;
 				Option<Path*> infeasible_path = (*ji).snd;
 				if(flags&SHOW_PROGRESS)
 					sprogress->onSolving(infeasible_path);
-				vl_paths.addLast(infeasible_path);
+				sv_paths.addLast(infeasible_path);
 				if(!infeasible_path)
 					new_sv.addLast(*s);
-				DBGG( *(*ji).fst << ", ")
-				if ( (*ji).snd )
-					DBGG(*(*ji).snd)
+cout << (infeasible_path?color::IRed():color::IGre()) << "X";
 			}
 			delete jobs[i];
 			delete threads[i];
 		}
 		DBGG("4) done")
+cout << color::RCol() << endl;
 	}
 	else
 	{	// without multithreading
+cout << "-";
 		for(States::Iterator si(ss.states()); si; si++)
 		{
 			// SMT call
 			chosen_smt_t smt(flags);
 			const Option<Path*> infeasible_path = smt.seekInfeasiblePaths(*si);
-			vl_paths.addLast(infeasible_path);
+// cout << (infeasible_path?color::IRed():color::IGre()) << "X";
+cout << (infeasible_path?color::IRed():color::IGre()) << (char)(nye+'A');
+			sv_paths.addLast(infeasible_path);
 			if(!infeasible_path)
 				new_sv.addLast(*si); // only add feasible states to new_sv
 	#		ifdef DBG_WARNINGS
@@ -145,45 +150,24 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 	#		endif
 			if(flags&SHOW_PROGRESS)
 				sprogress->onSolving(infeasible_path);
+++nye;
 		}
+cout << color::RCol() << endl;
 	}
-#if 0 // 1 thread per process
-	DBG("1) Initializing " << state_count << " threads")
-	Vector<elm::sys::Thread*> threads(state_count);
-	Vector<SMTJob*> jobs(state_count);
-	for(States::Iterator si(ss.states()); si; si++)
-	{
-		SMTJob* job = new SMTJob(*si, flags); // TODO: keep a pointer (or a reference actually)
-		elm::sys::Thread* t = elm::sys::Thread::make(*job);
-		jobs.push(job);
-		threads.push(t);
-	}
-	DBG("2) Starting threads")
-	for(int i = 0; i < state_count; i++)
-		threads[i]->start();
-	DBG("3) Joining threads")
-	// join and get result
-	for(int i = 0; i < state_count; i++)
-	{
-		threads[i]->join();
-		DBG("\t(joined #" << i+1 << ")")
-		Option<Path*> infeasible_path = jobs[i]->getResult();
-		const State& s = jobs[i]->getState();
-		vl_paths.addLast(infeasible_path);
-		if(!infeasible_path)
-			new_sv.addLast(s);
-		delete jobs[i];
-		delete threads[i];
-	}
-	DBG("4) done")
-#endif
-	// cout << "["; for(Vector<Option<Path*> >::Iterator i(vl_paths); i; i++)
+if(nyu+nye == 'L'-'A'+1 && ss.states().count()) {
+	cout << "\t" << ss.states().first()->dumpEverything() << endl;
+	cout << endl << "sv_paths=" << pathToString(**sv_paths.first()) << ", " << pathToString(**sv_paths.last())  << endl << endl;
+}
+
+
+
+	// cout << "["; for(Vector<Option<Path*> >::Iterator i(sv_paths); i; i++)
 	// 	if(*i) cout << pathToString(***i) << ", "; cout << "\n";
 	if(flags&SHOW_PROGRESS)
 		delete sprogress;
 	// analyse the conflicts found
-	ASSERTP(ss.count() == vl_paths.count(), "different size of ss and vl_paths")
-	Vector<Option<Path*> >::Iterator pi(vl_paths);
+	ASSERTP(ss.count() == sv_paths.count(), "different size of ss and sv_paths")
+	Vector<Option<Path*> >::Iterator pi(sv_paths);
 	for(States::Iterator si(ss.states()); si; si++, pi++) // iterate on paths and states simultaneously
 	{
 		const State& s = *si;
@@ -192,7 +176,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 			const Path& ip = ***pi;
 			elm::String counterexample;
 			DBG("Path " << s.getPathString() << color::Bold() << " minimized to " << color::NoBold() << pathToString(ip))
-			bool valid = checkInfeasiblePathValidity(ss.states(), vl_paths, ip, counterexample);
+			bool valid = checkInfeasiblePathValidity(ss.states(), sv_paths, ip, counterexample);
 			DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
 			stats.onAnyInfeasiblePath();
 			if(valid)
@@ -226,6 +210,12 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 			delete *pi;
 		}
 	}
+if(nyu+nye == 'L'-'A'+1) {
+	cout << "\t" << ss.states().first()->dumpEverything() << endl;
+	cout << "\t new_sv=" << new_sv << endl;
+	cout << "\t" << infeasible_paths << endl;
+	assert(false);
+}
 	ss = new_sv; // TODO!! this is copying states, horribly unoptimized, we only need to remove a few states!
 	return stats;
 }

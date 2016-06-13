@@ -308,12 +308,12 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						// b is usually a tempvar that has been previously set to a constant value
 						if(!isConstant(b) || !constants[b].isAbsolute())
 						{
-							DBG(color::Blu() << "  [" << OperandVar(b) << " could not be identified to a constant value]")
+							DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [" << OperandVar(b) << " could not be identified to a constant value]")
 							invalidateVar(d); // only invalidate now (otherwise we can't find t1 for shl t1, ?0, t1)
 							break;
 						}
 						t::int32 b_val = constants[b].val();
-						DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(b_val) << "]")
+						DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [" << OperandVar(b) << " identified as 0x" << io::hex(b_val) << "]")
 						if(d == a) // d <- d << b
 						{
 							labels = getLabels(b);
@@ -359,7 +359,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						// b is usually a tempvar that has been previously set to a constant value
 						if(!isConstant(b) || !constants[b].isAbsolute())
 						{
-							DBG(color::Blu() << "  [" << OperandVar(b) << " could not be identified as a constant value]")
+							DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [" << OperandVar(b) << " could not be identified as a constant value]")
 							invalidateVar(d);
 							break;
 						}
@@ -371,7 +371,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						else // d <- a >> b
 						{
 							t::int32 b_val = constants[b].val();
-							DBG(color::Blu() << "  [" << OperandVar(b) << " identified as 0x" << io::hex(b_val) << "]")
+							DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [" << OperandVar(b) << " identified as 0x" << io::hex(b_val) << "]")
 							if(isConstant(a))
 							{
 								const Path& l = getLabels(a, b);
@@ -441,9 +441,49 @@ void Analysis::State::processBB(const BasicBlock *bb)
 						invalidateVar(d); // don't do this earlier in case d==a or d==b
 						constants.set(d, val, labels);
 					}
+					else if(seminsts.op() == AND && (
+							(isConstant(a) && constants[a].isAbsolute() && !isConstant(b))
+						 || (isConstant(b) && constants[b].isAbsolute() && !isConstant(a)) ))
+					{
+						const t::int32 cstv = constants[isConstant(a) ? a : b].val();
+						const t::int16& varopd = isConstant(a) ? b : a;
+						ASSERTP(cstv >= 0 || !UNTESTED_CRITICAL, "Untested negative case running!")
+						int x = cstv, i = 0;
+						while(x&1) {
+							x >>= 1;
+							i++;
+						}
+						if(x == 0) // cstv was 00...000111..111, and i is the count of 1s
+						{
+							int mod_factor = cstv+1; // if cstv is 111, mod factor is 8 = 1000
+							DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [Detected a modulus " << mod_factor << " operation on " << OperandVar(varopd) << "]")
+							if(d == varopd)
+							{	// d <- d & k_b
+								// TODO: find predicate with isolated d...
+								invalidateVar(d);
+							}
+							else
+							{	// d <- a & k_b
+								invalidateVar(d);
+								opr = CONDOPR_EQ;
+								opd1 = new OperandVar(d);
+								opd21 = new OperandVar(varopd);
+								opd22 = new OperandConst(mod_factor);
+								opd2 = new OperandArithExpr(ARITHOPR_MOD, *opd21, *opd22);
+								make_pred = true;
+							}
+							ASSERT(!UNTESTED_CRITICAL);
+							DBG(color::BIRed() << "Untested case running!")
+						}
+						else
+						{
+							DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [An operand could not be identified as a constant value]")
+							invalidateVar(d);
+						}
+					}
 					else
 					{
-						DBG(color::Blu() << "  [An operand could not be identified as a constant value]")
+						DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [An operand could not be identified as a constant value]")
 						invalidateVar(d);
 					}
 					break;
@@ -759,13 +799,10 @@ void Analysis::State::processBB(const BasicBlock *bb)
 			DBG("Predicates generated: ")
 			DBG("|-> taken path: " << generated_preds_taken)
 			DBG("|-> not taken path: " << generated_preds)
-			DBG("Constants updated: " << constants.printChanges())
 		}
 		else
-		{
 			DBG("Predicates generated: " << generated_preds)
-			DBG("Constants updated: " << constants.printChanges()) // TODO! check that a mess doesn't happen with constants being updated by both taken and not taken path
-		}
+		DBG("Constants updated: " << constants.printChanges()) // TODO!! check that a mess doesn't happen with constants being updated by both taken and not taken path
 	}
 }
 
@@ -992,20 +1029,17 @@ bool Analysis::State::invalidateTempVars()
 			if(iter->pred().countTempVars())
 			{
 				OperandVar temp_var(0);
-				Operand* expr = NULL;
+				Operand const* expr = NULL;
 				if(iter->pred().getIsolatedTempVar(temp_var, expr)) // returns false if several tempvars
 				{
 					// try to keep the info
 					rtn |= replaceTempVar(temp_var, *expr);
-					delete expr;
 					// then remove the predicate
 					DBG(color::IYel() << "- " << iter->pred())
 					generated_preds.remove(iter);
 					loop = true;
 					break;
 				}
-				else if(expr)
-					delete expr;
 			}
 		}
 	} while(loop);
@@ -1253,7 +1287,7 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd
 	// amongst other things this can simplify constant arithopr such as 8+(4-2)
 	if(Option<Operand*> opd_modifier_new_simplified = opd_modifier_new->simplify())
 	{
-		DBG(color::Pur() << DBG_SEPARATOR << color::Blu() << " Simplified " << *opd_modifier_new << " to " << **opd_modifier_new_simplified)
+		DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " Simplified " << *opd_modifier_new << " to " << **opd_modifier_new_simplified)
 		delete opd_modifier_new;
 		opd_modifier_new = *opd_modifier_new_simplified;
 	}

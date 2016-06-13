@@ -93,8 +93,8 @@ unsigned int Predicate::countTempVars() const
 	return _opd1->countTempVars() + _opd2-> countTempVars();
 }
 
- // we are looking for a t1 = X or X = t1 pattern, with X being ground
-bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
+ // we are looking for a t1 = X or X = t1 pattern, with X being ground.
+bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
 {
 	if(_opr != CONDOPR_EQ) // not an equality, abort
 		return false;
@@ -108,10 +108,7 @@ bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 		return false;
 	
 	if(rtn1 && rtn2) // both are isolated tempvars, therefore temp_var <- _opd2 and expr <- [???]
-	{
-		delete expr;
-		expr = _opd1->copy();
-	}
+		expr = _opd1;
 	return true;
 }
 

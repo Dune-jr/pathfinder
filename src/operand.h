@@ -69,7 +69,7 @@ public:
 	virtual ~Operand() { }
 	virtual Operand* copy() const = 0;
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
-	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const = 0;
+	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const = 0;
 	int involvesOperand(const Operand& opd) const { return this->operator==(opd) ? 1 : 0; } // default case, to be overloaded for recursive classes
 	virtual int involvesVariable(const OperandVar& opdv) const = 0; // TODO! rewrite using involvesOperand, if the int return thing is not critical?
 	virtual Option<Constant> involvesStackBelow(const Constant& stack_limit) const = 0;
@@ -106,7 +106,7 @@ public:
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
-	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
@@ -146,7 +146,7 @@ public:
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
-	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
@@ -184,7 +184,7 @@ public:
 	
 	Operand* copy() const;
 	unsigned int countTempVars() const;
-	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
@@ -232,7 +232,7 @@ public:
 	int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
-	bool getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<OperandConst> evalConstantOperand() const;

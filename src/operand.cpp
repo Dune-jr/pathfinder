@@ -39,7 +39,7 @@ using namespace elm;
  * @warning This will count a variable several times if it occurs several times
  */
 /**
- * @fn bool Operand::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const;
+ * @fn bool Operand::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
  * @brief Check if the Operand is a single temporary variable (example "t3"). If true, copies itself in <b>temp_var</b>, if false, copies itself in <b>expr</b>
  * @return True if the Operand is a single temporary variable
  */
@@ -121,10 +121,9 @@ bool OperandConst::operator==(const Operand& o) const
 		return false; // Operand types are not matching
 }
 unsigned int OperandConst::countTempVars() const { return 0; }
-bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
+bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
 {
-	if(expr) delete expr;
-	expr = this->copy(); // Assume we are the expr
+	expr = this; // Assume we are the expr
 	return false; // We haven't found an isolated tempvar
 }
 int OperandConst::involvesVariable(const OperandVar& opdv) const { return 0; }
@@ -172,7 +171,7 @@ bool OperandVar::operator==(const Operand& o) const
 		return false; // Operand types are not matching
 }
 unsigned int OperandVar::countTempVars() const { return isTempVar() ? 1 : 0; }
-bool OperandVar::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
+bool OperandVar::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
 {
 	if(isTempVar()) // temporary
 	{
@@ -181,8 +180,7 @@ bool OperandVar::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
 	}
 	else // register
 	{
-		if(expr) delete expr;
-		expr = this->copy();
+		expr = this;
 		return false;
 	}
 }
@@ -243,10 +241,9 @@ bool OperandMem::operator==(const Operand& o) const
 	return true;
 }
 unsigned int OperandMem::countTempVars() const { return 0; }
-bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
+bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
 {
-	if(expr) delete expr;
-	expr = this->copy(); // Assume we are the expr
+	expr = this; // Assume we are the expr
 	return false; // We haven't found an isolated tempvar
 }
 int OperandMem::involvesVariable(const OperandVar& opdv) const { return 0; }
@@ -457,10 +454,9 @@ unsigned int OperandArithExpr::countTempVars() const
 		return opd1->countTempVars();
 	return opd1->countTempVars() + opd2->countTempVars();
 }
-bool OperandArithExpr::getIsolatedTempVar(OperandVar& temp_var, Operand*& expr) const
+bool OperandArithExpr::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
 {
-	if(expr) delete expr;
-	expr = this->copy();
+	expr = this;
 	return false;
 }
 int OperandArithExpr::involvesVariable(const OperandVar& opdv) const

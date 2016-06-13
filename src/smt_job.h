@@ -13,6 +13,7 @@ template<class SMT> class SMTJob : public elm::sys::Runnable {
 
 public:
 	SMTJob(int flags) : flags(flags) { }
+	SMTJob(int flags, int nyu) : flags(flags), nyu(nyu) { }
 
 	void addState(const Analysis::State* s) {
 		data.push(pair_t(s, elm::none));
@@ -34,6 +35,7 @@ public:
 
 private:
 	int flags;
+int nyu;
 	data_t data;
 };
 
