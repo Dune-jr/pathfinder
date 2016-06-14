@@ -13,31 +13,25 @@ template<class SMT> class SMTJob : public elm::sys::Runnable {
 
 public:
 	SMTJob(int flags) : flags(flags) { }
-	SMTJob(int flags, int nyu) : flags(flags), nyu(nyu) { }
-
-	void addState(const Analysis::State* s) {
-cout << color::IPur() << "[nyu=" << nyu << "] new state with s.path=" << s->getDetailedPath() << endl;
-		data.push(pair_t(s, elm::none));
-	}
 
 	void run() {
 		for(data_t::MutableIterator iter(data); iter; iter++) {
 			SMT smt(flags);
 			const Analysis::State* s = (*iter).fst;
-cout << color::IPur() << "new seekInfeasiblePaths with s.path=" << s->getDetailedPath() << endl;
 			iter.item().snd = smt.seekInfeasiblePaths(*s);
 		}
 	}
 
-	const data_t& getResults() const {
-		return data;
-	}
+	void addState(const Analysis::State* s)
+		{ data.push(pair_t(s, elm::none)); }
+
+	const data_t& getResults() const
+		{ return data; }
 
 	typedef data_t::Iterator Iterator;
 
 private:
 	int flags;
-int nyu;
 	data_t data;
 };
 

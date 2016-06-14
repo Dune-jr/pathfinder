@@ -78,13 +78,10 @@ bool CVC4SMT::retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredi
 		SLList<LabelledPredicate>::Iterator lp_iter(labelled_preds);
 		SLList<Option<Expr> >::Iterator expr_iter(exprs);
 		for(; lp_iter; lp_iter++, expr_iter++)
-			if(*expr_iter && **expr_iter == *unsat_core_iter) {
-cout << (*lp_iter).pred() << "	" << Analysis::pathToString((*lp_iter).labels()) << endl;
+			if(*expr_iter && **expr_iter == *unsat_core_iter)
 				path += (*lp_iter).labels();
-			}
 	}
 	unsat_core_output += "]";
-if(path)cout << color::IBlu() << Analysis::pathToString(path) << color::RCol() << endl;
 	return !empty;
 }
 

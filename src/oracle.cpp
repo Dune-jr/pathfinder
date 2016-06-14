@@ -83,13 +83,6 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 	Vector<Option<Path*> > sv_paths;
 	Vector<Analysis::State> new_sv(state_count); // safer to do it this way than remove on the fly (i think more convenient later too)
 
-
-static int nyu = 0;
-static int nye = 0;
-if(nyu+nye == 'K'-'A' && ss.states().count()) {
-	for(States::Iterator si(ss.states()); si; si++)
-		cout << color::IGre() << "\t" << si->dumpEverything() << endl;
-}
 	if(flags&Analysis::MULTITHREADING && state_count >= nb_cores)
 	{	// with multithreading
 		const int nb_threads = nb_cores;
@@ -99,7 +92,7 @@ if(nyu+nye == 'K'-'A' && ss.states().count()) {
 		States::Iterator si(ss.states());
 		for(int tid = 0, i = 0; tid < nb_threads; tid++)
 		{
-			SMTJob<chosen_smt_t>* job = new SMTJob<chosen_smt_t>(flags,++nyu);
+			SMTJob<chosen_smt_t>* job = new SMTJob<chosen_smt_t>(flags);
 			const int thresold = state_count * (tid+1)/nb_threads; // add states until this thresold
 			DBGG("\tthread #" << tid << ", doing jobs [" << i << "," << thresold << "[")
 			for(; i < thresold; i++, si++)
@@ -117,7 +110,6 @@ if(nyu+nye == 'K'-'A' && ss.states().count()) {
 		{
 			threads[i]->join();
 			DBGG("\t(joined #" << i+1 << ")")
-cout << "-";
 			for(SMTJob<chosen_smt_t>::Iterator ji(jobs[i]->getResults()); ji; ji++)
 			{
 				const State* s = (*ji).fst;
@@ -127,43 +119,30 @@ cout << "-";
 				sv_paths.addLast(infeasible_path);
 				if(!infeasible_path)
 					new_sv.addLast(*s);
-cout << (infeasible_path?color::IRed():color::IGre()) << "X";
 			}
 			delete jobs[i];
 			delete threads[i];
 		}
 		DBGG("4) done")
-cout << color::RCol() << endl;
 	}
 	else
 	{	// without multithreading
-cout << "-";
 		for(States::Iterator si(ss.states()); si; si++)
 		{
 			// SMT call
 			chosen_smt_t smt(flags);
 			const Option<Path*> infeasible_path = smt.seekInfeasiblePaths(*si);
-// cout << (infeasible_path?color::IRed():color::IGre()) << "X";
-cout << (infeasible_path?color::IRed():color::IGre()) << (char)(nye+'A');
 			sv_paths.addLast(infeasible_path);
 			if(!infeasible_path)
 				new_sv.addLast(*si); // only add feasible states to new_sv
-	#		ifdef DBG_WARNINGS
+#			ifdef DBG_WARNINGS
 				else if(! (*infeasible_path)->contains(si->lastEdge())) // make sure the last edge was relevant in this path
 					cerr << "WARNING: !infeasible_path->contains(s.lastEdge())" << endl;
-	#		endif
+#			endif
 			if(flags&SHOW_PROGRESS)
 				sprogress->onSolving(infeasible_path);
-++nye;
 		}
-cout << color::RCol() << endl;
 	}
-if(nyu+nye == 'L'-'A'+1 && ss.states().count()) {
-	cout << "\t" << ss.states().first()->dumpEverything() << endl;
-	cout << endl << "sv_paths=" << pathToString(**sv_paths.first()) << ", " << pathToString(**sv_paths.last())  << endl << endl;
-	cout << "new_sv=" << new_sv << endl;
-}
-
 
 
 	// cout << "["; for(Vector<Option<Path*> >::Iterator i(sv_paths); i; i++)
@@ -215,11 +194,6 @@ if(nyu+nye == 'L'-'A'+1 && ss.states().count()) {
 			delete *pi;
 		}
 	}
-if(nyu+nye == 'L'-'A'+1 && ss.count()) {
-	cout << "\t" << ss.states().first()->dumpEverything() << endl;
-	cout << "\t new_sv=" << new_sv << endl;
-	cout << "\t" << infeasible_paths << endl;
-}
 	ss = new_sv; // TODO!! this is copying states, horribly unoptimized, we only need to remove a few states!
 	return stats;
 }

@@ -53,9 +53,9 @@ Analysis::~Analysis()
 }
 
 /**
- *
- *
- */
+  * @fn const Vector<DetailedPath>& Analysis::run(const WorkSpace* ws);
+  * @brief Run the analysis on the main CFG
+  */
 const Vector<DetailedPath>& Analysis::run(const WorkSpace* ws)
 {
 	ASSERTP(INVOLVED_CFGS(ws)->count() > 0, "no CFG found"); // make sure we have at least one CFG
@@ -64,7 +64,7 @@ const Vector<DetailedPath>& Analysis::run(const WorkSpace* ws)
 
 /**
   * @fn const Vector<DetailedPath>& Analysis::run(CFG *cfg);
-  * @brief Run the analysis
+  * @brief Run the analysis on a specific CFG
   */
 const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 {
@@ -73,7 +73,9 @@ const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 	DBG("Stack pointer identified to " << context.sp)
 
 	std::time_t start = clock();
+	sw.start();
 	processCFG(cfg);
+	sw.stop();
 	std::time_t end = clock();
 	
 	postProcessResults(cfg);
@@ -340,36 +342,39 @@ void Analysis::printResults(int exec_time_ms) const
 	if(dbg_verbose == DBG_VERBOSE_NONE)
 		return;
 	const int infeasible_paths_count = infeasible_paths.count();
-	if(dbg_flags&DBG_NO_TIME)
-		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: ")
-	else
-		DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
-			<< "(" << (exec_time_ms>=1000 ? ((float)exec_time_ms)/(float(100)) : exec_time_ms) << (exec_time_ms>=1000 ? "s" : "ms") << ")")
-	if(dbg_flags&DBG_RESULT_IPS)
-		for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
-		{
-			if(dbg_verbose == DBG_VERBOSE_ALL)
-				DBG(color::IGre() << "    * [" << *iter << "]")
-			else if(dbg_verbose < DBG_VERBOSE_NONE)
-				cout << "    * [" << *iter << "]" << endl;
-		}
-	if(dbg_verbose > DBG_VERBOSE_ALL && dbg_verbose < DBG_VERBOSE_NONE)
+	if(dbg_verbose == DBG_VERBOSE_ALL)
 	{
+		if(dbg_flags&DBG_NO_TIME)
+			DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: ")
+		else
+			DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
+				<< "(" << (exec_time_ms>=1000 ? ((float)exec_time_ms)/(float(100)) : exec_time_ms) << (exec_time_ms>=1000 ? "s" : "ms") << ")")
+		if(dbg_flags&DBG_RESULT_IPS)
+			for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
+				DBG(color::IGre() << "    * [" << *iter << "]")
+	}
+	else // not all verbose
+	{
+		if(dbg_flags&DBG_RESULT_IPS)
+			for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
+				cout << "    * [" << *iter << "]" << endl;
 		cout << color::BIGre() << infeasible_paths_count << color::RCol() << " infeasible path(s) found.";
 		if(! (dbg_flags&DBG_NO_TIME))
 		{
 		    std::ios_base::fmtflags oldflags = std::cout.flags();
 		    std::streamsize oldprecision = std::cout.precision();
-			std::cout << std::fixed << std::setprecision(3) << color::IYel().chars() << " (" << ((float)exec_time_ms)/1000.f << "s)" << color::RCol().chars() << std::endl;
+			std::cout << std::fixed << std::setprecision(3) << color::IYel().chars() << " (" << ((float)exec_time_ms)/1000.f << "s)" << color::RCol().chars();
+		    if(dbg_flags&DBG_DETAILED_STATS)
+				std::cout << color::Yel().chars() << " [" << ((float)sw.delay())/1000000.f << "s]" << color::RCol().chars();
 		    std::cout.flags(oldflags);
 		    std::cout.precision(oldprecision);
+			std::cout << endl;
 		}
-		else
-			cout << endl;
+		else elm::cout << endl;
 	}
 	cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << infeasible_paths_count-ip_stats.getUnminimizedIPCount() << color::RCol() <<
 			"+" << color::Yel() << ip_stats.getUnminimizedIPCount() << color::RCol() << " => " << color::IRed() << ip_stats.getIPCount() << color::RCol() << endl;
-	if(dbg_flags&DBG_AVG_IP_LENGTH && infeasible_paths_count > 0)
+	if(dbg_flags&DBG_DETAILED_STATS && infeasible_paths_count > 0)
 	{
 		int sum_path_lengths = 0, squaredsum_path_lengths = 0, one_edges = 0;
 		for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)

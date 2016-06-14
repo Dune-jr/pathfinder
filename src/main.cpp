@@ -31,12 +31,12 @@ public:
 		opt_nocolor(SwitchOption::Make(*this).cmd("--nc").cmd("--no-color").cmd("--no-colors").description("do not use colors")),
 		opt_src_info(SwitchOption::Make(*this).cmd("-i").cmd("--src-info").description("print file/line number info")),
 		opt_nolinenumbers(SwitchOption::Make(*this).cmd("--nl").cmd("--no-line-nb").description("do not number lines of the output")),
-		opt_progress(SwitchOption::Make(*this).cmd("-p").cmd("--progress").description("display analysis progress (forces --s2+)")),
+		opt_progress(SwitchOption::Make(*this).cmd("-p").cmd("--progress").description("display analysis progress (forces -s or +)")),
 		opt_dumpoptions(SwitchOption::Make(*this).cmd("--dump-options").description("print the selected options for the analysis")),
 		opt_notime(SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
 		opt_noipresults(SwitchOption::Make(*this).cmd("--nir").cmd("--no-ip-results").description("do not print the list of IPs found")),
 		opt_noformattedflowinfo(SwitchOption::Make(*this).cmd("--nffi").cmd("--no-formatted-flowinfo").description("format flowinfo in paths like a list of items instead of pretty-printing it")),
-		opt_avgiplength(SwitchOption::Make(*this).cmd("--average-ip-length").description("display average length of infeasible_paths found")),
+		opt_detailedstats(SwitchOption::Make(*this).cmd("--ds").cmd("--detailed-stats").description("display detailed stats, including average length of infeasible_paths found")),
 		opt_nolinearcheck(SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
 		opt_nounminimized(SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
 		opt_slice(SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
@@ -44,7 +44,7 @@ public:
 		opt_automerge(SwitchOption::Make(*this).cmd("-a").cmd("--automerge").description("let the algorithm decide when to merge")),
 		opt_virtualize(ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
 		opt_merge(ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)),
-		opt_multithreading(ValueOption<int>::Make(*this).cmd("-j").description("enable multithreading on the given amount of cores (0/1=no multithreading, -1=autodetect)").def(-1)) { }
+		opt_multithreading(ValueOption<int>::Make(*this).cmd("-j").description("enable multithreading on the given amount of cores (0/1=no multithreading, -1=autodetect)").def(0)) { }
 
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception)
@@ -60,12 +60,9 @@ protected:
 
 		// outputing to .ffx
 		if(opt_output.get())
-		{ // simplify
-			const Vector<DetailedPath>& infeasible_paths = analysis.infeasiblePaths();
-			FFX ffx_output(infeasible_paths);
-			const elm::String name = entry + "_ips.ffx"; // TODO: use args= arguments();
-			const elm::String gname = opt_graph_output ? entry + "_ips.tsv" : "";
-			ffx_output.output(elm::String(entry), name, gname);
+		{
+			FFX ffx_output(analysis.infeasiblePaths());
+			ffx_output.output(elm::String(entry), entry + "_ips.ffx", opt_graph_output ? entry + "_ips.tsv" : "");
 		}
 	}
 
@@ -74,7 +71,7 @@ private:
 	SwitchOption opt_s0, opt_s2, opt_s3;
 	ValueOption<bool> opt_output;
 	SwitchOption opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_progress, opt_dumpoptions, opt_notime, opt_noipresults, opt_noformattedflowinfo,
-		opt_avgiplength, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_dry, opt_automerge;
+		opt_detailedstats, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_dry, opt_automerge;
 	ValueOption<bool> opt_virtualize;
 	ValueOption<int> opt_merge, opt_multithreading;
 
@@ -86,11 +83,11 @@ private:
 			dbg_flags |= DBG_RESULT_IPS;
 		if(! opt_noformattedflowinfo)
 			dbg_flags |= DBG_FORMAT_FLOWINFO;
-		if(opt_avgiplength)
-			dbg_flags |= DBG_AVG_IP_LENGTH;
+		if(opt_detailedstats)
+			dbg_flags |= DBG_DETAILED_STATS;
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::VIRTUALIZE_CFG;
-		else cerr << color::BIRed() << "WARNING: IP analysis working with non-virtualized CFG. Not ready, and invalid results very likely" << color::RCol() << endl;
+		else cerr << color::BIRed() << "WARNING: IP analysis working with non-virtualized CFG. Invalid results very likely" << color::RCol() << endl;
 		if(opt_slice)
 			analysis_flags |= Analysis::SLICE_CFG;
 		if(opt_progress)
@@ -106,10 +103,8 @@ private:
 		if(opt_merge || opt_automerge)
 			analysis_flags |= Analysis::MERGE;
 		nb_cores = getNumberofCores();
-		if(nb_cores > 1) {
+		if(nb_cores > 1)
 			analysis_flags |= Analysis::MULTITHREADING;
-
-		}
 		merge_thresold = getMergeThresold();
 	}
 	void initializeLoggingOptions() {
@@ -163,7 +158,7 @@ private:
 		DBGOPT("DISPLAY TIME", !(dbg_flags&DBG_NO_TIME), true)
 		DBGOPT("DISPLAY RESULT INF. PATHS", dbg_flags&DBG_RESULT_IPS, true)
 		DBGOPT("PRETTY PRINTING FOR FLOWINFO", (dbg_flags&DBG_FORMAT_FLOWINFO), true)
-		DBGOPT("DISPLAY AVERAGE IP LENGTH", dbg_flags&DBG_AVG_IP_LENGTH, false)
+		DBGOPT("DISPLAY DETAILED STATS", dbg_flags&DBG_DETAILED_STATS, false)
 		cout << "Analysis:" << endl;
 		DBGOPT("VIRTUALIZE", analysis_flags&Analysis::VIRTUALIZE_CFG, true)
 		DBGOPT("SLICE", analysis_flags&Analysis::SLICE_CFG, false)
@@ -178,7 +173,7 @@ private:
 			cout << color::IGre() << "NONE" << color::RCol() << endl;
 		cout << DBGPREFIX("MULTITHREADING");
 		if(analysis_flags&Analysis::MULTITHREADING)
-			cout << color::IRed() << nb_cores << color::RCol() << endl;
+			cout << color::IRed() << "x" << nb_cores << color::RCol() << endl;
 		else
 			cout << color::IGre() << "NONE" << color::RCol() << endl;
 		cout << "=============================================" << endl;
