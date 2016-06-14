@@ -16,6 +16,7 @@ public:
 	SMTJob(int flags, int nyu) : flags(flags), nyu(nyu) { }
 
 	void addState(const Analysis::State* s) {
+cout << color::IPur() << "[nyu=" << nyu << "] new state with s.path=" << s->getDetailedPath() << endl;
 		data.push(pair_t(s, elm::none));
 	}
 
@@ -23,6 +24,7 @@ public:
 		for(data_t::MutableIterator iter(data); iter; iter++) {
 			SMT smt(flags);
 			const Analysis::State* s = (*iter).fst;
+cout << color::IPur() << "new seekInfeasiblePaths with s.path=" << s->getDetailedPath() << endl;
 			iter.item().snd = smt.seekInfeasiblePaths(*s);
 		}
 	}

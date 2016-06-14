@@ -86,6 +86,10 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 
 static int nyu = 0;
 static int nye = 0;
+if(nyu+nye == 'K'-'A' && ss.states().count()) {
+	for(States::Iterator si(ss.states()); si; si++)
+		cout << color::IGre() << "\t" << si->dumpEverything() << endl;
+}
 	if(flags&Analysis::MULTITHREADING && state_count >= nb_cores)
 	{	// with multithreading
 		const int nb_threads = nb_cores;
@@ -98,8 +102,8 @@ static int nye = 0;
 			SMTJob<chosen_smt_t>* job = new SMTJob<chosen_smt_t>(flags,++nyu);
 			const int thresold = state_count * (tid+1)/nb_threads; // add states until this thresold
 			DBGG("\tthread #" << tid << ", doing jobs [" << i << "," << thresold << "[")
-			for(; i < thresold; i++)
-				job->addState(&(*si));
+			for(; i < thresold; i++, si++)
+				job->addState(&*(si));
 			elm::sys::Thread* t = elm::sys::Thread::make(*job);
 			jobs.push(job);
 			threads.push(t);
@@ -157,6 +161,7 @@ cout << color::RCol() << endl;
 if(nyu+nye == 'L'-'A'+1 && ss.states().count()) {
 	cout << "\t" << ss.states().first()->dumpEverything() << endl;
 	cout << endl << "sv_paths=" << pathToString(**sv_paths.first()) << ", " << pathToString(**sv_paths.last())  << endl << endl;
+	cout << "new_sv=" << new_sv << endl;
 }
 
 
@@ -210,11 +215,10 @@ if(nyu+nye == 'L'-'A'+1 && ss.states().count()) {
 			delete *pi;
 		}
 	}
-if(nyu+nye == 'L'-'A'+1) {
+if(nyu+nye == 'L'-'A'+1 && ss.count()) {
 	cout << "\t" << ss.states().first()->dumpEverything() << endl;
 	cout << "\t new_sv=" << new_sv << endl;
 	cout << "\t" << infeasible_paths << endl;
-	assert(false);
 }
 	ss = new_sv; // TODO!! this is copying states, horribly unoptimized, we only need to remove a few states!
 	return stats;
