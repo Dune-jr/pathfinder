@@ -11,6 +11,7 @@
 #include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
 #include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
 #include <otawa/prog/WorkSpace.h>
+#include <sys/time.h>
 #include "/home/jruiz/Documents/oslice/blockBased/cfg_v2_plugin/oslice_features.h"
 #include "analysis_state.h"
 #include "cfg_features.h"
@@ -72,14 +73,21 @@ const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 	DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
 	DBG("Stack pointer identified to " << context.sp)
 
+    struct timeval tim;
 	std::time_t start = clock();
 	sw.start();
+    gettimeofday(&tim, NULL);
+    t::int64 t1 = tim.tv_sec*1000000+tim.tv_usec;
+	
 	processCFG(cfg);
+
+    gettimeofday(&tim, NULL);
+    t::int64 t2 = tim.tv_sec*1000000+tim.tv_usec;
 	sw.stop();
 	std::time_t end = clock();
 	
 	postProcessResults(cfg);
-	printResults((end-start)*1000/CLOCKS_PER_SEC);
+	printResults((end-start)*1000/CLOCKS_PER_SEC, (t2-t1)/1000);
 	if(flags&SHOW_PROGRESS) delete progress;
 	return infeasiblePaths();
 }
@@ -337,7 +345,7 @@ elm::String Analysis::orderedPathToString(const OrderedPath& path)
  * @brief Print results after a CFG analysis completes
  * @param exec_time_ms Measured execution time of the analysis (in ms)
  */
-void Analysis::printResults(int exec_time_ms) const
+void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 {
 	if(dbg_verbose == DBG_VERBOSE_NONE)
 		return;
@@ -348,7 +356,7 @@ void Analysis::printResults(int exec_time_ms) const
 			DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: ")
 		else
 			DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
-				<< "(" << (exec_time_ms>=1000 ? ((float)exec_time_ms)/(float(100)) : exec_time_ms) << (exec_time_ms>=1000 ? "s" : "ms") << ")")
+				<< "(" << (real_time_ms>=1000 ? ((float)real_time_ms)/(float(1000)) : real_time_ms) << (real_time_ms>=1000 ? "s" : "ms") << ")")
 		if(dbg_flags&DBG_RESULT_IPS)
 			for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
 				DBG(color::IGre() << "    * [" << *iter << "]")
@@ -363,9 +371,9 @@ void Analysis::printResults(int exec_time_ms) const
 		{
 		    std::ios_base::fmtflags oldflags = std::cout.flags();
 		    std::streamsize oldprecision = std::cout.precision();
-			std::cout << std::fixed << std::setprecision(3) << color::IYel().chars() << " (" << ((float)exec_time_ms)/1000.f << "s)" << color::RCol().chars();
+			std::cout << std::fixed << std::setprecision(3) << color::IYel().chars() << " (" << real_time_ms/1000.f << "s)" << color::RCol().chars();
 		    if(dbg_flags&DBG_DETAILED_STATS)
-				std::cout << color::Yel().chars() << " [" << ((float)sw.delay())/1000000.f << "s]" << color::RCol().chars();
+				std::cout << color::Yel().chars() << " [" << sw.delay()/1000000.f << " of " << exec_time_ms/1000.f << "s]" << color::RCol().chars();
 		    std::cout.flags(oldflags);
 		    std::cout.precision(oldprecision);
 			std::cout << endl;

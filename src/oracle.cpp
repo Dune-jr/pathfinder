@@ -194,6 +194,8 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 			delete *pi;
 		}
 	}
+	for(Vector<Analysis::State>::MutableIterator svi(new_sv); svi; svi++)
+		svi.item().removeConstantPredicates(); // remaining constant predicates are tautologies, there is no need to keep them
 	ss = new_sv; // TODO!! this is copying states, horribly unoptimized, we only need to remove a few states!
 	return stats;
 }

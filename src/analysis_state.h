@@ -54,6 +54,7 @@ public:
 	template<template< class _ > class C> void merge(const C<Analysis::State>& cl, Block* b);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e, bool is_conditional);
+	void removeConstantPredicates();
 
 	// analysis_bb.cpp
 	void processBB(const BasicBlock *bb);

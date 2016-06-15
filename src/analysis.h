@@ -124,7 +124,7 @@ private:
 	// void debugProgress(int block_id, bool enable_smt) const;
 	Analysis::State topState(Block* entry) const;
 	void wl_push(Block* b);
-	void printResults(int exec_time_ms) const;
+	void printResults(int exec_time_ms, int real_time_ms) const;
 	void postProcessResults(CFG *cfg);
 	
 	// analysis_cfg.cpp

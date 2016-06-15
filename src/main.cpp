@@ -110,8 +110,8 @@ private:
 	void initializeLoggingOptions() {
 		// high verbose numbers are more silent. TODO: that is counterintuitive
 		dbg_verbose = 1; // default
-		if(opt_s0) dbg_verbose = 0;
 		if(opt_s2) dbg_verbose = 2;
+		if(opt_s0) dbg_verbose = 0;
 		if(opt_s3) dbg_verbose = 3;
 		if(opt_progress)
 			dbg_verbose = max(dbg_verbose, 2); // minimum 2	

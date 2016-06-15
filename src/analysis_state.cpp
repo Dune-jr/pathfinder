@@ -260,3 +260,20 @@ bool Analysis::State::equiv(const Analysis::State& s) const
 	DBG(s.dumpEverything())
 	return true;
 }
+
+/**
+ * @fn void Analysis::State::removeConstantPredicates();
+ * @brief Removes constant predicates. Useful after a SMT call returning SAT, as the constant predicates of such states must be tautologies
+ */
+void Analysis::State::removeConstantPredicates()
+{	
+	for(PredIterator piter(*this); piter; )
+	{
+		if(piter.pred().isConstant())
+		{
+			DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << *piter)
+			removePredicate(piter);
+		}
+		else piter++;
+	}
+}

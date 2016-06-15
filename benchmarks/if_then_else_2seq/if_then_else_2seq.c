@@ -1,26 +1,16 @@
-#include <math.h>
-
 volatile k;
 
-int f1()
+void f1()
 {
-//	time(NULL);
-	k = sqrt(0);
 }
-int f2()
+void f2()
 {
-//	time(NULL);
-	k = sqrt(1);
 }
-int f3()
+void f3()
 {
-//	time(NULL);
-	k = sqrt(2);
 }
-int f4()
+void f4()
 {
-//	time(NULL);
-	k = sqrt(3);
 }
 
 int main(int argc, char** argv)

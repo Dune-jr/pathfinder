@@ -118,7 +118,7 @@ public:
 	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
-	inline bool isConstant()   const { return true; }
+	inline bool isConstant() const { return true; }
 	inline bool isLinear()   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return true; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
