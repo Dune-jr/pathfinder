@@ -1,0 +1,43 @@
+
+div7.elf:     format de fichier elf32-littlearm
+
+
+Déassemblage de la section .text:
+
+000080d8 <div7>:
+    80d8:	e52db004 	push	{fp}		; (str fp, [sp, #-4]!)
+    80dc:	e28db000 	add	fp, sp, #0
+    80e0:	e24dd00c 	sub	sp, sp, #12
+    80e4:	e50b0008 	str	r0, [fp, #-8]
+    80e8:	e51b3008 	ldr	r3, [fp, #-8]
+    80ec:	e59f2020 	ldr	r2, [pc, #32]	; 8114 <div7+0x3c>
+    80f0:	e0c21293 	smull	r1, r2, r3, r2
+    80f4:	e0822003 	add	r2, r2, r3
+    80f8:	e1a02142 	asr	r2, r2, #2
+    80fc:	e1a03fc3 	asr	r3, r3, #31
+    8100:	e0633002 	rsb	r3, r3, r2
+    8104:	e1a00003 	mov	r0, r3
+    8108:	e28bd000 	add	sp, fp, #0
+    810c:	e8bd0800 	ldmfd	sp!, {fp}
+    8110:	e12fff1e 	bx	lr
+    8114:	92492493 	.word	0x92492493
+
+00008118 <main>:
+    8118:	e92d4800 	push	{fp, lr}
+    811c:	e28db004 	add	fp, sp, #4
+    8120:	e59f3034 	ldr	r3, [pc, #52]	; 815c <main+0x44>
+    8124:	e5933000 	ldr	r3, [r3]
+    8128:	e1a00003 	mov	r0, r3
+    812c:	ebffffe9 	bl	80d8 <div7>
+    8130:	e1a03000 	mov	r3, r0
+    8134:	e3530000 	cmp	r3, #0
+    8138:	0a000005 	beq	8154 <main+0x3c>
+    813c:	e59f3018 	ldr	r3, [pc, #24]	; 815c <main+0x44>
+    8140:	e5933000 	ldr	r3, [r3]
+    8144:	e1a00003 	mov	r0, r3
+    8148:	ebffffe2 	bl	80d8 <div7>
+    814c:	e1a03000 	mov	r3, r0
+    8150:	eaffffff 	b	8154 <main+0x3c>
+    8154:	e1a00003 	mov	r0, r3
+    8158:	e8bd8800 	pop	{fp, pc}
+    815c:	00010160 	.word	0x00010160

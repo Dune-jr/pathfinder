@@ -1,0 +1,36 @@
+
+minitest.elf:     format de fichier elf32-littlearm
+
+
+Déassemblage de la section .text:
+
+000080d8 <main>:
+    80d8:	e52db004 	push	{fp}		; (str fp, [sp, #-4]!)
+    80dc:	e28db000 	add	fp, sp, #0
+    80e0:	e59f305c 	ldr	r3, [pc, #92]	; 8144 <main+0x6c>
+    80e4:	e5933000 	ldr	r3, [r3]
+    80e8:	e3530005 	cmp	r3, #5
+    80ec:	da000002 	ble	80fc <main+0x24>
+    80f0:	e59f3050 	ldr	r3, [pc, #80]	; 8148 <main+0x70>
+    80f4:	e3a02000 	mov	r2, #0
+    80f8:	e5832000 	str	r2, [r3]
+    80fc:	e59f3040 	ldr	r3, [pc, #64]	; 8144 <main+0x6c>
+    8100:	e5932000 	ldr	r2, [r3]
+    8104:	e59f303c 	ldr	r3, [pc, #60]	; 8148 <main+0x70>
+    8108:	e5933000 	ldr	r3, [r3]
+    810c:	e0822003 	add	r2, r2, r3
+    8110:	e59f302c 	ldr	r3, [pc, #44]	; 8144 <main+0x6c>
+    8114:	e5832000 	str	r2, [r3]
+    8118:	e59f3024 	ldr	r3, [pc, #36]	; 8144 <main+0x6c>
+    811c:	e5933000 	ldr	r3, [r3]
+    8120:	e3530005 	cmp	r3, #5
+    8124:	da000001 	ble	8130 <main+0x58>
+    8128:	e3a03001 	mov	r3, #1
+    812c:	ea000000 	b	8134 <main+0x5c>
+    8130:	e3a03000 	mov	r3, #0
+    8134:	e1a00003 	mov	r0, r3
+    8138:	e28bd000 	add	sp, fp, #0
+    813c:	e8bd0800 	ldmfd	sp!, {fp}
+    8140:	e12fff1e 	bx	lr
+    8144:	0001014c 	.word	0x0001014c
+    8148:	00010150 	.word	0x00010150

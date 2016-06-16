@@ -1,0 +1,30 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [label="call", style=dashed, weight=2];
+	"1" [label="{BB 1 (000080d8) | main:\l000080d8    ldr r3, [pc, #116]\l000080dc    ldr r3, [r3, #0]\l000080e0    cmp r3, #0\l000080e4    bge 8110    # 00008110\l }"]
+	"1" -> "2" [weight=4];
+	"1" -> "3" [label="taken", weight=3];
+	"2" [label="{BB 2 (000080e8) | 000080e8    ldr r3, [pc, #100]\l000080ec    ldr r3, [r3, #0]\l000080f0    cmp r3, #0\l000080f4    bge 8110    # 00008110\l }"]
+	"2" -> "4" [weight=4];
+	"2" -> "3" [label="taken", weight=3];
+	"3" [label="{BB 3 (00008110) | 00008110    ldr r3, [pc, #60]\l00008114    ldr r3, [r3, #0]\l00008118    cmp r3, #0\l0000811c    ble 8148    # 00008148\l }"]
+	"3" -> "5" [weight=4];
+	"3" -> "6" [label="taken", weight=3];
+	"4" [label="{BB 4 (000080f8) | 000080f8    ldr r3, [pc, #84]\l }"]
+	"4" -> "7" [weight=4];
+	"5" [label="{BB 5 (00008120) | 00008120    ldr r3, [pc, #44]\l00008124    ldr r3, [r3, #0]\l00008128    cmp r3, #0\l0000812c    ble 8148    # 00008148\l }"]
+	"5" -> "8" [weight=4];
+	"5" -> "6" [label="taken", weight=3];
+	"6" [label="{BB 6 (00008148) | 00008148    ldr r3, [pc, #4]\l0000814c    ldr r0, [r3, #0]\l00008150    bx lr\l }"]
+	"6" -> "10" [label="return", style=dashed, weight=2];
+	"7" [label="{BB 7 (000080fc) | 000080fc    ldr r2, [r3, #0]\l00008100    str r2, [r3, #0]\l00008104    ldr r2, [r3, #0]\l00008108    cmp r2, #0\l0000810c    blt 1000080fc    # 000080fc\l }"]
+	"7" -> "3" [weight=4];
+	"7" -> "7" [label="taken", weight=3];
+	"8" [label="{BB 8 (00008130) | 00008130    ldr r3, [pc, #28]\l }"]
+	"8" -> "9" [weight=4];
+	"9" [label="{BB 9 (00008134) | 00008134    ldr r2, [r3, #0]\l00008138    str r2, [r3, #0]\l0000813c    ldr r2, [r3, #0]\l00008140    cmp r2, #0\l00008144    bgt 100008134    # 00008134\l }"]
+	"9" -> "6" [weight=4];
+	"9" -> "9" [label="taken", weight=3];
+	"10" [label="EXIT"]
+}

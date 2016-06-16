@@ -1,0 +1,22 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [label="call", style=dashed, weight=2];
+	"1" [label="{BB 1 (00008110) | main:\l00008110    stmdb sp!, \{fp, lr\}\l00008114    add fp, sp, #4\l00008118    ldr r3, [pc, #64]\l0000811c    ldr r3, [r3, #0]\l00008120    cmp r3, #0\l00008124    ble 8154    # 00008154\l }"]
+	"1" -> "2" [weight=4];
+	"1" -> "3" [label="taken", weight=3];
+	"2" [label="{BB 2 (00008128) | 00008128    ldr r3, [pc, #48]\l0000812c    ldr r3, [r3, #0]\l00008130    mov r0, r3\l00008134    bl 1000080d8    # div3\l }"]
+	"2" -> "7" [label="call", style=dashed, weight=2];
+	"3" [label="{BB 3 (00008154) | 00008154    mov r3, #0\l }"]
+	"3" -> "5" [weight=4];
+	"4" [label="{BB 4 (00008138) | 00008138    mov r2, r0\l0000813c    ldr r3, [pc, #28]\l00008140    ldr r3, [r3, #0]\l00008144    cmp r2, r3\l00008148    ble 8154    # 00008154\l }"]
+	"4" -> "6" [weight=4];
+	"4" -> "3" [label="taken", weight=3];
+	"5" [label="{BB 5 (00008158) | 00008158    mov r0, r3\l0000815c    ldmia sp!, \{fp, pc\}\l }"]
+	"5" -> "8" [label="return", style=dashed, weight=2];
+	"6" [label="{BB 6 (0000814c) | 0000814c    mov r3, #1\l00008150    b 8158    # 00008158\l }"]
+	"6" -> "5" [label="taken", weight=3];
+	"7" [label="{BB 7 (000080d8) | div3:\l000080d8    str fp, [sp, #-4]!\l000080dc    add fp, sp, #0\l000080e0    sub sp, sp, #12\l000080e4    str r0, [fp, #-8]\l000080e8    ldr r3, [fp, #-8]\l000080ec    ldr r2, [pc, #24]\l000080f0    smull r1,r2,r3,r2\l000080f4    mov r3, r3, asr #31\l000080f8    rsb r3, r3, r2\l000080fc    mov r0, r3\l00008100    add sp, fp, #0\l00008104    ldmia sp!, \{fp\}\l00008108    bx lr\l }"]
+	"7" -> "4" [label="return", style=dashed, weight=2];
+	"8" [label="EXIT"]
+}

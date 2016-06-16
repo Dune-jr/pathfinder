@@ -1,0 +1,21 @@
+digraph main{
+node [shape=Mrecord, labeljust=l, fontsize=10];
+	"0" [label="ENTRY"]
+	"0" -> "1" [label="call", style=dashed, weight=2];
+	"1" [label="{BB 1 (0000812c) | main:\l0000812c    stmdb sp!, \{fp, lr\}\l00008130    add fp, sp, #4\l00008134    ldr r3, [pc, #52]\l00008138    ldr r3, [r3, #0]\l0000813c    mov r0, r3\l00008140    bl 1000080d8    # div7\l }"]
+	"1" -> "6" [label="call", style=dashed, weight=2];
+	"2" [label="{BB 2 (00008144) | 00008144    mov r3, r0\l00008148    cmp r3, #0\l0000814c    beq 8168    # 00008168\l }"]
+	"2" -> "3" [weight=4];
+	"2" -> "4" [label="taken", weight=3];
+	"3" [label="{BB 3 (00008150) | 00008150    ldr r3, [pc, #24]\l00008154    ldr r3, [r3, #0]\l00008158    mov r0, r3\l0000815c    bl 1000080d8    # div7\l }"]
+	"3" -> "7" [label="call", style=dashed, weight=2];
+	"4" [label="{BB 4 (00008168) | 00008168    mov r0, r3\l0000816c    ldmia sp!, \{fp, pc\}\l }"]
+	"4" -> "8" [label="return", style=dashed, weight=2];
+	"5" [label="{BB 5 (00008160) | 00008160    mov r3, r0\l00008164    b 100008168    # 00008168\l }"]
+	"5" -> "4" [label="taken", weight=3];
+	"6" [label="{BB 6 (000080d8) | div7:\l000080d8    str fp, [sp, #-4]!\l000080dc    add fp, sp, #0\l000080e0    sub sp, sp, #12\l000080e4    str r0, [fp, #-8]\l000080e8    ldr r1, [fp, #-8]\l000080ec    ldr r3, [pc, #52]\l000080f0    smull r2,r3,r1,r3\l000080f4    add r3, r3, r1\l000080f8    mov r2, r3, asr #2\l000080fc    mov r3, r1, asr #31\l00008100    rsb r2, r3, r2\l00008104    mov r3, r2\l00008108    mov r3, r3, lsl #3\l0000810c    rsb r3, r2, r3\l00008110    rsb r2, r3, r1\l00008114    mov r3, r2\l00008118    mov r0, r3\l0000811c    add sp, fp, #0\l00008120    ldmia sp!, \{fp\}\l00008124    bx lr\l }"]
+	"6" -> "2" [label="return", style=dashed, weight=2];
+	"7" [label="{BB 7 (000080d8) | div7:\l000080d8    str fp, [sp, #-4]!\l000080dc    add fp, sp, #0\l000080e0    sub sp, sp, #12\l000080e4    str r0, [fp, #-8]\l000080e8    ldr r1, [fp, #-8]\l000080ec    ldr r3, [pc, #52]\l000080f0    smull r2,r3,r1,r3\l000080f4    add r3, r3, r1\l000080f8    mov r2, r3, asr #2\l000080fc    mov r3, r1, asr #31\l00008100    rsb r2, r3, r2\l00008104    mov r3, r2\l00008108    mov r3, r3, lsl #3\l0000810c    rsb r3, r2, r3\l00008110    rsb r2, r3, r1\l00008114    mov r3, r2\l00008118    mov r0, r3\l0000811c    add sp, fp, #0\l00008120    ldmia sp!, \{fp\}\l00008124    bx lr\l }"]
+	"7" -> "5" [label="return", style=dashed, weight=2];
+	"8" [label="EXIT"]
+}
