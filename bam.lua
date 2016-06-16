@@ -16,6 +16,8 @@ config:Add(OptCCompiler("compiler"))
 config:Add(OptLibrary("cvc4", "cvc4/cvc4.h", false))
 config:Add(OptLibrary("z3", "z3++.h", false))
 config:Add(OptString("solver", "cvc4"))
+config:Add(OptString("oslice_cc_path", "/home/jruiz/Documents/oslice/blockBased/cfg_v2_plugin/"))
+config:Add(OptString("oslice_link_path", "/home/jruiz/Documents/casse/otawa2/linux/lib/oslice.so"))
 config:Finalize("config.lua")
 
 
@@ -40,7 +42,12 @@ settings.cc.flags:Add("`" .. otawa_config .. " --cflags`")
 settings.link.flags:Add("`" .. otawa_config .." --libs --rpath`")
 
 -- OSLICE
-settings.link.flags:Add("~/Documents/casse/otawa2/linux/lib/oslice.so")
+if config.oslice_cc_path.value ~= "" and config.oslice_cc_path.value ~= "" then
+	settings.cc.flags:Add("-D OSLICE")
+	settings.cc.flags:Add("-I" .. config.oslice_cc_path.value)
+	settings.link.flags:Add(config.oslice_link_path.value)
+	-- settings.link.flags:Add("~/Documents/casse/otawa2/linux/lib/oslice.so")
+end
 
 -- SMT choice
 -- CVC4

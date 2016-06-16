@@ -12,7 +12,9 @@
 #include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
 #include <otawa/prog/WorkSpace.h>
 #include <sys/time.h>
-#include "/home/jruiz/Documents/oslice/blockBased/cfg_v2_plugin/oslice_features.h"
+#ifdef OSLICE
+	#include <oslice_features.h>
+#endif
 #include "analysis_state.h"
 #include "cfg_features.h"
 #include "GlobalDominance.h"
@@ -35,8 +37,12 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 	if(flags & SLICE_CFG) {
 		// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
 		// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
-		ws->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
-		ws->require(oslice::SLICER_FEATURE, props);
+#		ifdef OSLICE_PATH
+			ws->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
+			ws->require(oslice::SLICER_FEATURE, props);
+#		else
+			elm::cerr << color::IYel() << "WARNING: slicing unavailable. Rebuild with -D OSLICE_PATH=[path to oslice]" << color::RCol() << endl;
+#		endif
 	}
 	gdom = new GlobalDominance(INVOLVED_CFGS(ws), GlobalDominance::EDGE_DOM | GlobalDominance::EDGE_POSTDOM); // no block dom
 	ws->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
