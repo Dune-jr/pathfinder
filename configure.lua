@@ -225,8 +225,7 @@ function MakeOption(name, value, check, save, display, printhelp)
 end
 
 
--- Test Compile C --------------------------------------
-function OptTestCompileC(name, source, compileoptions, desc)
+function OptTestExecute(name, executable, execoptions, desc)
 	local check = function(option, settings)
 		option.value = false
 		if ScriptArgs[option.name] then
@@ -239,7 +238,43 @@ function OptTestCompileC(name, source, compileoptions, desc)
 			end
 			option.auto_detected = false
 		else
-			if CTestCompile(settings, option.source, option.compileoptions) then
+			if TestExecute(settings, option.executable, option.execoptions) then
+				option.value = true
+			end
+		end
+	end
+
+	local save = function(option, output)
+		output:option(option, "value")
+	end
+
+	local printhelp = function(option)
+		print("\t"..option.name.."=on|off")
+		if option.desc then print("\t\t"..option.desc) end
+	end
+
+	local o = MakeOption(name, false, check, save, nil, printhelp)
+	o.desc = desc
+	o.executable = executable
+	o.execoptions = execoptions
+	return o
+end
+
+-- Test Compile CPP --------------------------------------
+function OptTestCompileCPP(name, source, compileoptions, desc)
+	local check = function(option, settings)
+		option.value = false
+		if ScriptArgs[option.name] then
+			if IsNegativeTerm(ScriptArgs[option.name]) then
+				option.value = false
+			elseif IsPositiveTerm(ScriptArgs[option.name]) then
+				option.value = true
+			else
+				error(ScriptArgs[option.name].." is not a valid value for option "..option.name)
+			end
+			option.auto_detected = false
+		else
+			if CPPTestCompile(settings, option.source, option.compileoptions) then
 				option.value = true
 			end
 		end
@@ -434,12 +469,12 @@ function OptLibrary(name, header, desc)
 		option.include_path = false
 
 		local function check_compile_include(filename, paths)
-			if CTestCompile(settings, "#include <" .. filename .. ">\nint main(){return 0;}", "") then
+			if CPPTestCompile(settings, "#include <" .. filename .. ">\nint main(){return 0;}", "") then
 				return ""
 			end
 
 			for k,v in pairs(paths) do
-				if CTestCompile(settings, "#include <" .. filename .. ">\nint main(){return 0;}", "-I"..v) then
+				if CPPTestCompile(settings, "#include <" .. filename .. ">\nint main(){return 0;}", "-I"..v) then
 					return v
 				end
 			end
@@ -500,3 +535,23 @@ function OptLibrary(name, header, desc)
 	return o
 end
 
+function TestExecute(settings, executable, options)
+	local ret = ExecuteSilent("otawa-config " .. options)
+	return ret==0
+end
+
+function CPPTestCompile(settings, code, options)
+	-- return settings.cc.DriverCPPTest(code, options)
+	return DriverGPP_CPPTest(code, options)
+end
+
+function DriverGPP_CPPTest(code, options)
+	local f = io.open("_test.cpp", "w")
+	f:write(code)
+	f:write("\n")
+	f:close()
+	local ret = ExecuteSilent("g++ _test.cpp -o _test " .. options)
+	os.remove("_test.cpp")
+	os.remove("_test")
+	return ret==0
+end
