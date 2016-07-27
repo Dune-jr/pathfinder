@@ -12,9 +12,7 @@
 #include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
 #include <otawa/prog/WorkSpace.h>
 #include <sys/time.h>
-#ifdef OSLICE
-	#include <oslice_features.h>
-#endif
+#include <otawa/oslice/features.h>
 #include "analysis_state.h"
 #include "cfg_features.h"
 #include "GlobalDominance.h"
@@ -22,7 +20,7 @@
 #include "smt.h"
 #include "GlobalDominance.h"
 
-/**
+/**SLICER_FEATURE
  * @class Analysis
  * @brief Perform an infeasible path analysis on a CFG 
  */
@@ -37,12 +35,8 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 	if(flags & SLICE_CFG) {
 		// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
 		// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
-#		ifdef OSLICE_PATH
-			ws->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
-			ws->require(oslice::SLICER_FEATURE, props);
-#		else
-			elm::cerr << color::IYel() << "WARNING: slicing unavailable. Rebuild with -D OSLICE_PATH=[path to oslice]" << color::RCol() << endl;
-#		endif
+		ws->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
+		ws->require(oslice::SLICER_FEATURE, props);
 	}
 	gdom = new GlobalDominance(INVOLVED_CFGS(ws), GlobalDominance::EDGE_DOM | GlobalDominance::EDGE_POSTDOM); // no block dom
 	ws->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
@@ -462,7 +456,7 @@ int Analysis::simplifyUsingDominance(Option<Edge*> (*f)(GlobalDominance* gdom, E
 
 void Analysis::postProcessResults(CFG *cfg)
 {
-	if(! flags&POST_PROCESSING)
+	if(! (flags&POST_PROCESSING))
 		return;
 	DBG(color::On_IGre() << "post-processing..." << color::RCol())
 	// elm::log::Debug::setDebugFlag(true);

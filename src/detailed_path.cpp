@@ -329,7 +329,7 @@ SLList<Edge*> DetailedPath::toOrderedPath() const
 elm::String DetailedPath::toString(bool colored) const
 {
 	elm::String str;
-	if(! dbg_flags&DBG_FORMAT_FLOWINFO)
+	if(! (dbg_flags&DBG_FORMAT_FLOWINFO))
 	{
 		// show the list of flowinfo and edges
 		bool first = true;
@@ -397,7 +397,7 @@ elm::String DetailedPath::FlowInfo::toString(bool colored) const
 			{
 				ASSERT(getEdge()->source()->cfg() == getEdge()->target()->cfg());
 				elm::String prefix, suffix;
-				if(! dbg_flags&DBG_FORMAT_FLOWINFO) {
+				if(! (dbg_flags&DBG_FORMAT_FLOWINFO)) {
 					prefix = _ << getEdge()->source()->cfg() << "(";
 					suffix = ")";
 				}
