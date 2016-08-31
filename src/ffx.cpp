@@ -113,6 +113,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				ASSERTP(!(++citer), "must be at max 1 outedge from caller")*/
 			} else assert(false);
 
+
 			if(e->target()->isBasic())
 				target = e->target();
 			else if(e->target()->isSynth())
@@ -181,14 +182,17 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		{
 			SynthBlock* caller = iter->getCaller();
 			BasicBlock* callpoint = theOnly(caller->ins())->source()->toBasic(); // TODO add asserts
-			// FFXFile << indent( ) << "<call address=\"0x" << caller->address() << "\">"
 			FFXFile << indent( ) << "<call address=\"0x" << callpoint->control()->address() << "\" name=\"" << caller->callee()->name() << "\">"
 				" <!-- call " << caller->cfg() << ":" << caller->index() << " -> " << caller->callee() << " -->" << endl; indent(+1);
+			// also open a function tag
+			FFXFile << indent( ) << "<function address=\"0x" << caller->callee()->address() << "\" name=\"" << caller->callee()->name() << "\">"
+				<< endl; indent(+1);
 			open_tags += FFX_TAG_CALL;
 		}
 		else if(iter->isReturn())
 		{
 			const SynthBlock* caller = iter->getCaller();
+			FFXFile << indent(-1) << "</function>" << endl; // alo close function
 			FFXFile << indent(-1) << "</call>"
 				" <!-- return " << caller->cfg() << ":" << caller->index() << " <- " << caller->callee() << " -->" << endl;
 			ASSERTP(open_tags.first() == FFX_TAG_CALL, "return found when call is not the most recent open tag")
@@ -207,6 +211,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				FFXFile << indent(-1) << "</loop>" << endl;
 				break;
 			case FFX_TAG_CALL:
+				FFXFile << indent(-1) << "</function>" << endl; // also close function
 				FFXFile << indent(-1) << "</call>" << endl;
 				break;
 		}

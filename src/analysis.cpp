@@ -20,7 +20,7 @@
 #include "smt.h"
 #include "GlobalDominance.h"
 
-/**SLICER_FEATURE
+/**
  * @class Analysis
  * @brief Perform an infeasible path analysis on a CFG 
  */

@@ -447,13 +447,17 @@ void Analysis::State::processBB(const BasicBlock *bb)
 					{
 						const t::int32 cstv = constants[isConstant(a) ? a : b].val();
 						const t::int16& varopd = isConstant(a) ? b : a;
-						ASSERTP(cstv >= 0 || !UNTESTED_CRITICAL, "Untested negative case running!")
 						int x = cstv, i = 0;
 						while(x&1) {
 							x >>= 1;
 							i++;
 						}
-						if(x == 0) // cstv was 00...000111..111, and i is the count of 1s
+						if(cstv < 0)
+						{
+							DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [Right operand of AND affects MSB]")
+							invalidateVar(d);
+						}
+						else if(x == 0) // cstv was 00...000111..111, and i is the count of 1s
 						{
 							int mod_factor = cstv+1; // if cstv is 111, mod factor is 8 = 1000
 							DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [Detected a modulus " << mod_factor << " operation on " << OperandVar(varopd) << "]")
@@ -472,8 +476,6 @@ void Analysis::State::processBB(const BasicBlock *bb)
 								opd2 = new OperandArithExpr(ARITHOPR_MOD, *opd21, *opd22);
 								make_pred = true;
 							}
-							ASSERT(!UNTESTED_CRITICAL);
-							DBG(color::BIRed() << "Untested case running!")
 						}
 						else
 						{
