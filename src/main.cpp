@@ -178,6 +178,7 @@ private:
 			cout << color::IGre() << "NONE" << color::RCol() << endl;
 		cout << "=============================================" << endl;
 		#undef DBGOPT
+		#undef DBGPREFIX
 	}
 };
 

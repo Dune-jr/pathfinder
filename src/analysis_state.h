@@ -9,7 +9,12 @@
 #include "analysis.h"
 #include "constant_variables.h"
 #include "detailed_path.h"
+#include "halfpredicate.h"
 #include "labelled_predicate.h"
+// #define EXP
+#ifdef EXP
+	#include "expr.h"
+#endif
 
 using namespace otawa;
 using elm::genstruct::SLList;
@@ -27,7 +32,11 @@ private:
 	SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
 	SLList<LabelledPredicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
 		// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
-	// bool fixpoint;
+#ifdef EXP
+	HashTable<OperandVar, expr::Expr> lexprs;
+	HashTable<OperandMem, expr::Expr> mexprs;
+	HashTable<OperandVar, SLList<HalfPredicate> > preds;
+#endif
 	class PredIterator;
 
 public:

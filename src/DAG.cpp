@@ -300,7 +300,6 @@ public:
 			return pred(_op, right, left);
 		else
 			return pred(_op, left, right);
-
 	}
 
 	inline Predicate *eq(const Operand *left, const Operand *right) { return comPred(CONDOPR_EQ, left, right); }

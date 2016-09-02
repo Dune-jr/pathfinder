@@ -156,7 +156,7 @@ bool Predicate::operator==(const Predicate& p) const
 	return (_opr == p._opr) &&
 		(
 			(*_opd1 == *p._opd1 && *_opd2 == *p._opd2) || // operands match respectively
-			((_opr == CONDOPR_EQ || _opr == CONDOPR_NE) && (*_opd1 == *p._opd2 && *_opd2 == *p._opd1)) // operator is syemtric, and first operands match second operands
+			((_opr == CONDOPR_EQ || _opr == CONDOPR_NE) && (*_opd1 == *p._opd2 && *_opd2 == *p._opd1)) // operator is symetric, and first operands match second operands
 		);
 }
 

@@ -149,7 +149,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		{
 			BasicBlock* loop_header = iter->getLoopHeader();
 			FFXFile << indent(  ) << "<loop address=\"0x" << loop_header->address() << "\">"
-					<< " <!-- loop " << loop_header->index() << " -->" << endl; indent(+1);
+					<< " <!-- loop " << loop_header->index() << " -->" << endl; //indent(+1);
 			if(edgeAfter(ip.find(DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_LOOP_EXIT, loop_header)))) {
 				FFXFile << indent(  ) << "<iteration number=\"n\">" << endl; indent(+1);
 				// cout <<"detected iteration=n on ip:" << ip << color::RCol() << endl;
@@ -183,7 +183,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			SynthBlock* caller = iter->getCaller();
 			BasicBlock* callpoint = theOnly(caller->ins())->source()->toBasic(); // TODO add asserts
 			FFXFile << indent( ) << "<call address=\"0x" << callpoint->control()->address() << "\" name=\"" << caller->callee()->name() << "\">"
-				" <!-- call " << caller->cfg() << ":" << caller->index() << " -> " << caller->callee() << " -->" << endl; indent(+1);
+				" <!-- call " << caller->cfg() << ":" << caller->index() << " -> " << caller->callee() << " -->" << endl;
 			// also open a function tag
 			FFXFile << indent( ) << "<function address=\"0x" << caller->callee()->address() << "\" name=\"" << caller->callee()->name() << "\">"
 				<< endl; indent(+1);
@@ -192,7 +192,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		else if(iter->isReturn())
 		{
 			const SynthBlock* caller = iter->getCaller();
-			FFXFile << indent(-1) << "</function>" << endl; // alo close function
+			FFXFile << indent(  ) << "</function>" << endl; // alo close function
 			FFXFile << indent(-1) << "</call>"
 				" <!-- return " << caller->cfg() << ":" << caller->index() << " <- " << caller->callee() << " -->" << endl;
 			ASSERTP(open_tags.first() == FFX_TAG_CALL, "return found when call is not the most recent open tag")
@@ -208,11 +208,11 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		{
 			case FFX_TAG_LOOP:
 				FFXFile << indent(-1) << "</iteration>" << endl;
-				FFXFile << indent(-1) << "</loop>" << endl;
+				FFXFile << indent(  ) << "</loop>" << endl;
 				break;
 			case FFX_TAG_CALL:
 				FFXFile << indent(-1) << "</function>" << endl; // also close function
-				FFXFile << indent(-1) << "</call>" << endl;
+				FFXFile << indent(  ) << "</call>" << endl;
 				break;
 		}
 	}
