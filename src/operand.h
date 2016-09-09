@@ -34,10 +34,11 @@ enum arithoperator_t
 
 enum operand_kind_t
 {
-	OPERAND_CONST,     // Constant value
-	OPERAND_VAR,       // Variable (register or temporary variable, for now)
-	OPERAND_ARITHEXPR, // Memory cell
-	OPERAND_MEM, 	   // Arithmetic Expression
+	CST,	// Constant value
+	VAR,	// Variable (register or temporary variable, for now)
+	MEM,	// Memory cell
+	TOP,	// Constant of unknown value
+	ARITH,	// Arithmetic Expression
 };
 
 enum operandmem_kind_t
@@ -48,8 +49,9 @@ enum operandmem_kind_t
 
 class OperandConst;
 class OperandVar;
-class OperandArithExpr;
 class OperandMem;
+class OperandTop;
+class OperandArithExpr;
 class AffineEquationState;
 
 // The visitor: an abstract class
@@ -59,6 +61,7 @@ public:
 	virtual bool visit(const OperandConst& o) = 0;
 	virtual bool visit(const OperandVar& o) = 0;
 	virtual bool visit(const OperandMem& o) = 0;
+	virtual bool visit(const OperandTop& o) = 0;
 	virtual bool visit(const OperandArithExpr& o) = 0;
 };
 
@@ -89,6 +92,11 @@ public:
 	virtual bool operator==(const Operand& o) const = 0;
 	friend inline io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
 	
+	const OperandConst& toConst() const { ASSERT(false); }
+	const OperandVar& toVar() const { ASSERT(false); }
+	const OperandMem& toMem() const { ASSERT(false); }
+	const OperandTop& toTop() const { ASSERT(false); }
+	const OperandArithExpr& toArith() const { ASSERT(false); }
 private:
 	virtual io::Output& print(io::Output& out) const = 0;
 };
@@ -122,10 +130,11 @@ public:
 	inline bool isLinear()   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return true; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
-	inline operand_kind_t kind() const { return OPERAND_CONST; }
+	inline operand_kind_t kind() const { return CST; }
 	OperandConst& operator=(const OperandConst& opd);
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
+	const OperandConst& toConst() const { return *this; }
 private:
 	io::Output& print(io::Output& out) const;
 
@@ -162,10 +171,11 @@ public:
 	inline bool isLinear()   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return _addr == opdv.addr(); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
-	inline operand_kind_t kind() const { return OPERAND_VAR; }
+	inline operand_kind_t kind() const { return VAR; }
 	OperandVar& operator=(const OperandVar& opd);
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }	
+	const OperandVar& toVar() const { return *this; }
 private:
 	io::Output& print(io::Output& out) const;
 
@@ -200,15 +210,56 @@ public:
 	inline bool isLinear()   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return false; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
-	inline operand_kind_t kind() const { return OPERAND_MEM; }
+	inline operand_kind_t kind() const { return MEM; }
 	OperandMem& operator=(const OperandMem& opd);
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandMem& o) { return o.print(out); }	
+	const OperandMem& toMem() const { return *this; }
 private:
 	io::Output& print(io::Output& out) const;
 
 	OperandConst* _opdc;
 };
+
+class OperandTop : public Operand
+{
+public:
+	OperandTop(bool identified = true);
+	OperandTop(const OperandTop& opd);
+	
+	inline bool isUnidentified() const { return id == -1; } // blank Top
+	inline bool isIdentified() const { return !isUnidentified(); }
+	
+	Operand* copy() const;
+	unsigned int countTempVars() const;
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
+	// int involvesOperand(const Operand& opd) const;
+	int involvesVariable(const OperandVar& opdv) const;
+	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
+	bool involvesMemoryCell(const OperandMem& opdm) const;
+	bool involvesMemory() const;
+	bool update(const Operand& opd, const Operand& opd_modifier);
+	Option<OperandConst> evalConstantOperand() const;
+	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
+	Option<Operand*> replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
+	void parseAffineEquation(AffineEquationState& state) const;
+	inline bool isComplete() const { return true; }
+	inline bool isConstant() const { return false; }
+	inline bool isLinear()   const { ASSERT(false); return true; }
+	inline bool isAffine(const OperandVar& opdv) const { return false; }
+	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
+	inline operand_kind_t kind() const { return TOP; }
+	OperandTop& operator=(const OperandTop& opd);
+	bool operator==(const Operand& o) const;
+	friend inline io::Output& operator<<(io::Output& out, const OperandTop& o) { return o.print(out); }	
+	const OperandTop& toTop() const { return *this; }
+private:
+	io::Output& print(io::Output& out) const;
+
+	int id;
+	static int next_id;
+};
+static OperandTop Top(false);
 
 // Arithmetic Expressions
 class OperandArithExpr : public Operand
@@ -245,10 +296,11 @@ public:
 	inline bool isAffine(const OperandVar& opdv) const
 		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv) && opd2->isAffine(opdv); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
-	inline operand_kind_t kind() const { return OPERAND_ARITHEXPR; }
+	inline operand_kind_t kind() const { return ARITH; }
 	OperandArithExpr& operator=(const OperandArithExpr& opd);
 	bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
+	const OperandArithExpr& toArith() const { return *this; }
 private:
 	io::Output& print(io::Output& out) const;
 	
@@ -267,7 +319,7 @@ public:
 	inline int varCounter()  const { return sign()*_var_counter; }
 	inline void reverseSign() { _is_negative ^= 1; _delta = -_delta; _sp_counter = -_sp_counter; _var_counter = -_var_counter; }
 	inline void addToDelta(int d) { _delta += d; }
-	inline void onVarFound(const OperandVar& var) { _var_counter++; if(_var) assert(*_var == var); else _var = elm::some(var); }
+	inline void onVarFound(const OperandVar& var) { _var_counter++; /*if(!_var) _var = elm::some(var); else ASSERT(*_var == var);*/ }
 	inline void onSpFound(bool sign = SIGN_POSITIVE) { if(sign == SIGN_POSITIVE) _sp_counter++; else _sp_counter--; }
 private:
 	inline int sign() const { if(_is_negative) return -1; else return +1; }
@@ -276,7 +328,7 @@ private:
 	int _delta;
 	int _sp_counter;
 	int _var_counter;
-	Option<OperandVar> _var; // TODO! remove, this is just to check consistency
+	// Option<OperandVar> _var; // removed, this is just to check consistency
 };
 
 io::Output& operator<<(io::Output& out, operand_kind_t kind);

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "pretty_printing.h"
 
 /**

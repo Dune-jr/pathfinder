@@ -236,9 +236,7 @@ bool OperandMem::operator==(const Operand& o) const
 	if(o.kind() != kind())
 		return false; // Operand types are not matching
 	OperandMem& o_mem = (OperandMem&)o; // Force conversion
-	if(!(*_opdc == o_mem.getConst()))
-		return false;
-	return true;
+	return *_opdc == o_mem.getConst();
 }
 unsigned int OperandMem::countTempVars() const { return 0; }
 bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
@@ -255,121 +253,52 @@ Option<Constant> OperandMem::involvesStackBelow(const Constant& stack_limit) con
 	return elm::none;
 }
 bool OperandMem::involvesMemory() const { return true; }
-/*operand_state_t OperandMem::updateVar(const OperandVar& opdv, const Operand& opd_modifier)
-{
-	// if: this OperandMem involves a variable, and it matches the variable we have to update
-	if((_kind & OPERANDMEMFLAG_HASVAR) && *_opdv == opdv)
-	{
-		// we have to [opd_modifier / opdv]
-		switch(opd_modifier.kind())
-		{
-			case OPERAND_CONST:
-				{
-					OperandConst& o = (OperandConst&)opd_modifier;
-					// delete _opdv; // TO*DO (also _opdc)
-					if(_kind == OPERANDMEM_RELATIVE)
-						_opdc = new OperandConst(_opdc->value() + o.value());
-					else // OPERANDMEM_VARIABLE
-						_opdc = new OperandConst(o);
-					_opdv = NULL;
-					_kind = OPERANDMEM_ABSOLUTE;
-					return OPERANDSTATE_UPDATED;
-				}
-				break;
-			case OPERAND_VAR:
-				{
-					OperandVar& o = (OperandVar&)opd_modifier;
-					switch(_kind)
-					{
-						_kind = OPERANDMEM_VARIABLE;
-						_opdc = NULL;
-						_opdv = new OperandVar(o);
-						return OPERANDSTATE_UPDATED;
-					}
-				}
-				break;
-			case OPERAND_MEM:
-				// double indirection yay
-				return OPERANDSTATE_UNCHANGED;
-			case OPERAND_ARITHEXPR: // this is a frequent case
-				{
-					// OperandArithExpr& o = (OperandArithExpr&)opd_modifier;
-					Operand* o_new;
-					OperandArithExpr o_relative = (_kind == OPERANDMEM_RELATIVE) ?
-						OperandArithExpr(ARITHOPR_ADD, opd_modifier, *_opdc) :
-						OperandArithExpr((OperandArithExpr&)opd_modifier);
-
-					if(Option<Operand*> o_simplified = o_relative.simplify())
-					{
-						String before_simplification = _ << o_relative;
-						o_new = *o_simplified;
-						DBG(COLOR_IPur DBG_SEPARATOR " " COLOR_Blu DBG_SEPARATOR COLOR_Cya "%% (" << before_simplification << ") -> (" << *o_new << ")")
-					}
-					else
-						o_new = &o_relative;
-					
-					switch(o_new->kind())
-					{
-						case OPERAND_CONST:
-							_kind = OPERANDMEM_ABSOLUTE;
-							_opdc = (OperandConst*)o_new->copy();
-							_opdv = NULL;
-							return OPERANDSTATE_UPDATED;
-						case OPERAND_VAR:
-							_kind = OPERANDMEM_RELATIVE;
-							_opdc = NULL;
-							_opdv = (OperandVar*)o_new->copy();
-							return OPERANDSTATE_UPDATED;
-						case OPERAND_ARITHEXPR:
-							OperandArithExpr* o_arithexpr = (OperandArithExpr*) o_new;
-							operand_kind_t left_kind = o_arithexpr->leftOperand().kind(), right_kind = o_arithexpr->rightOperand().kind();
-							if(o_arithexpr->opr() == ARITHOPR_SUB) // try to reduce (t1 - 4) to (t1 + -4)
-							{	// TO*DO: we _NEED_ to try to identify t2 in the case (t1 - t2), that is the most realistic case!
-								if(left_kind == OPERAND_VAR && right_kind == OPERAND_CONST)
-								{
-									_kind = OPERANDMEM_RELATIVE;
-									t::int32 new_value = ((const OperandConst&)(o_arithexpr->rightOperand())).value() * -1;
-									_opdc = new OperandConst(new_value);
-									_opdv = (OperandVar*  )(o_arithexpr->leftOperand().copy());
-									return OPERANDSTATE_UPDATED;
-								}
-								else break;
-							}
-							if(o_arithexpr->opr() != ARITHOPR_ADD) // do not accept [ ¤ ] when ¤ is not +
-								break;
-							if(left_kind == OPERAND_ARITHEXPR || right_kind == OPERAND_ARITHEXPR) // do not accept [ (.+.)+. ]
-								break;
-							if(left_kind == right_kind) // two consts or two vars, invalid
-								break;
-							_kind = OPERANDMEM_RELATIVE;
-							if(left_kind == OPERAND_CONST)
-							{
-								ASSERT(right_kind == OPERAND_VAR);
-								_opdc = (OperandConst*)(o_arithexpr->leftOperand().copy());
-								_opdv = (OperandVar*  )(o_arithexpr->rightOperand().copy());
-							}
-							else
-							{
-								ASSERT(right_kind == OPERAND_CONST);
-								_opdc = (OperandConst*)(o_arithexpr->rightOperand().copy());
-								_opdv = (OperandVar*  )(o_arithexpr->leftOperand().copy());
-							}
-							return OPERANDSTATE_UPDATED;
-					}
-					return OPERANDSTATE_INVALID;
-				}
-				break;
-		}
-		return OPERANDSTATE_UPDATED;
-	}
-	return OPERANDSTATE_UNCHANGED; // no match
-}*/
 bool OperandMem::update(const Operand& opd, const Operand& opd_modifier) { return false; }
 // pop_result_t OperandMem::doAffinePop(Operand*& opd_result, Operand*& new_opd) { return POPRESULT_FAIL; }
 void OperandMem::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
 Option<Operand*> OperandMem::simplify() { return none; }
 Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars) { return none; }
+ 
+// Operands: Top
+int OperandTop::next_id = 0;
+OperandTop::OperandTop(bool identified) : id(identified ? next_id++ : -1) { ASSERT(next_id >= 0); }
+OperandTop::OperandTop(const OperandTop& opd) : id(opd.id) { }
+Operand* OperandTop::copy() const
+{
+	return new OperandTop(id);
+}
+io::Output& OperandTop::print(io::Output& out) const
+{
+	return (out << "T" << id);
+}
+OperandTop& OperandTop::operator=(const OperandTop& opd)
+{
+	id = opd.id;
+	return *this;
+}
+bool OperandTop::operator==(const Operand& o) const
+{
+	if(o.kind() != kind())
+		return false; // Operand types are not matching
+	OperandTop& o_top = (OperandTop&)o; // Force conversion
+	return o_top.id == id;
+}
+unsigned int OperandTop::countTempVars() const { return 0; }
+bool OperandTop::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
+{
+	expr = this; // Assume we are the expr
+	return false; // We haven't found an isolated tempvar
+}
+int OperandTop::involvesVariable(const OperandVar& opdv) const { return 0; }
+bool OperandTop::involvesMemoryCell(const OperandMem& opdm) const {	return false; }
+Option<Constant> OperandTop::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
+bool OperandTop::involvesMemory() const { return false; }
+bool OperandTop::update(const Operand& opd, const Operand& opd_modifier) { ASSERT(false); return false; }
+void OperandTop::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen (for Top too?)
+Option<OperandConst> OperandTop::evalConstantOperand() const { return none; }
+Option<Operand*> OperandTop::simplify() { return none; }
+Option<Operand*> OperandTop::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars) { return none; }
  
 // Operands: Arithmetic Expressions
 OperandArithExpr::OperandArithExpr(arithoperator_t opr, const Operand& opd1_)
@@ -407,19 +336,19 @@ io::Output& OperandArithExpr::print(io::Output& out) const
 	if(isUnary())
 	{
 		out << _opr;
-		if(opd1->kind() == OPERAND_ARITHEXPR)
+		if(opd1->kind() == ARITH)
 			out << "(" << *opd1 << ")";
 		else
 			out << *opd1;
 	}
 	else
 	{
-		if(opd1->kind() == OPERAND_ARITHEXPR)
+		if(opd1->kind() == ARITH)
 			out << "(" << *opd1 << ")";
 		else
 			out << *opd1;
 		out << " " << _opr << " ";
-		if(opd2->kind() == OPERAND_ARITHEXPR)
+		if(opd2->kind() == ARITH)
 			out << "(" << *opd2 << ")";
 		else
 			out << *opd2;
@@ -440,13 +369,10 @@ OperandArithExpr& OperandArithExpr::operator=(const OperandArithExpr& opd)
 }
 bool OperandArithExpr::operator==(const Operand& o) const
 {
-	if(o.kind() == kind())
-	{
-		OperandArithExpr& o_arith = (OperandArithExpr&)o; // Force conversion
-		return (_opr == o_arith._opr) && (*opd1 == *(o_arith.opd1)) && (isUnary() || *opd2 == *(o_arith.opd2));
-	}
-	else
+	if(o.kind() != kind())
 		return false; // Operand types are not matching
+	OperandArithExpr& o_arith = (OperandArithExpr&)o; // Force conversion
+	return (_opr == o_arith._opr) && (*opd1 == *(o_arith.opd1)) && (isUnary() || *opd2 == *(o_arith.opd2));
 }
 unsigned int OperandArithExpr::countTempVars() const
 {
@@ -528,12 +454,14 @@ pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_o
 				case ARITHOPR_ADD: // this is all fine and easy
 					return POPRESULT_CONTINUE;
 				case ARITHOPR_SUB:
-					if(opd_result->kind() == OPERAND_CONST)
+					if(opd_result->kind() == CST)
 					{
 						opd_result = new OperandConst(-((OperandConst*)opd_result)->value()); // opposite of the value
 						return POPRESULT_CONTINUE;
 					}
-					else // OPERAND_VAR
+					else // 
+V
+VAR
 						return POPRESULT_FAIL; // we do not handle X - t1 or X - sp (TO*DO: is it bad? maybe we should improve this)
 				default:
 					return POPRESULT_FAIL; // this case shouldn't happen
@@ -547,14 +475,16 @@ pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_o
 				case ARITHOPR_ADD: // all fine and easy, again
 					return POPRESULT_CONTINUE;
 				case ARITHOPR_SUB:
-					if(opd_result->kind() == OPERAND_CONST)
+					if(opd_result->kind() == CST)
 					{
 						opd_result = new OperandConst(-((OperandConst*)opd_result)->value()); // we have to take opposite of the value every time
 						return POPRESULT_CONTINUE;
 					}
 					// example of why we had  to do this: if we have (...) - (t1 + 2)
 					// (t1+2).doAffinePop() will return +2 even though it's actually -2
-					else // OPERAND_VAR
+					else // 
+V
+VAR
 						return POPRESULT_FAIL; // TO*DO: maybe improve this, see above
 				default:
 					return POPRESULT_FAIL; // this case shouldn't happen
@@ -649,8 +579,8 @@ Option<Operand*> OperandArithExpr::simplify()
 
 	// reminder: our arithexpr shouldn't be const (case handled by the earlier evalConstantOperand test)
 	// test neutrals
-	bool opd1_is_constant = opd1->kind() == OPERAND_CONST;
-	bool opd2_is_constant = opd2->kind() == OPERAND_CONST;
+	bool opd1_is_constant = opd1->kind() == CST;
+	bool opd2_is_constant = opd2->kind() == CST;
 	Constant opd1_val, opd2_val;
 	if(opd1_is_constant) opd1_val = ((OperandConst*)opd1)->value();
 	if(opd2_is_constant) opd2_val = ((OperandConst*)opd2)->value();
@@ -683,9 +613,9 @@ Option<Operand*> OperandArithExpr::simplify()
 	switch(_opr)
 	{
 		case ARITHOPR_ADD:
-			if(opd1->kind() == OPERAND_ARITHEXPR && ((OperandArithExpr*)opd1)->opr() == ARITHOPR_NEG)
+			if(opd1->kind() == ARITH && ((OperandArithExpr*)opd1)->opr() == ARITHOPR_NEG)
 				return ((Operand*) new OperandArithExpr(ARITHOPR_SUB, *opd2, ((OperandArithExpr*)opd1)->leftOperand()))->simplify(); // [y - x / -x + y]
-			if(opd2->kind() == OPERAND_ARITHEXPR && ((OperandArithExpr*)opd2)->opr() == ARITHOPR_NEG)
+			if(opd2->kind() == ARITH && ((OperandArithExpr*)opd2)->opr() == ARITHOPR_NEG)
 				return ((Operand*) new OperandArithExpr(ARITHOPR_SUB, *opd1, ((OperandArithExpr*)opd2)->leftOperand()))->simplify(); // [x - y / -y + x]
 			break;
 		case ARITHOPR_SUB:
@@ -765,17 +695,20 @@ io::Output& operator<<(io::Output& out, operand_kind_t kind)
 {
 	switch(kind)
 	{		
-		case OPERAND_CONST:
+		case CST:
 			out << "(CONST)";
 			break;
-		case OPERAND_VAR:
+		case VAR:
 			out << "(VAR)";
 			break;
-		case OPERAND_MEM:
+		case MEM:
 			out << "(MEM)";
 			break;
-		case OPERAND_ARITHEXPR:
-			out << "(ARITHEXPR)";
+		case TOP:
+			out << "(TOP)";
+			break;
+		case ARITH:
+			out << "(ARITH)";
 			break;
 	}
 	return out;

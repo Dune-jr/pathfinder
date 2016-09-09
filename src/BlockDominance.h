@@ -29,7 +29,7 @@ public:
 				if(*i == a) return true; // a <= b
 				if(*i == b) return false; // a > b
 			}
-			ASSERTP(false, "rpo.ordered found neither " << a << " nor " << b);assert(false);
+			ASSERTP(false, "rpo.ordered found neither " << a << " nor " << b);
 		}
 		inline bool strictOrdered(Vertex* a, Vertex* b) const { return !ordered(a,b); } // a < b = !(b <= a)
 
@@ -72,7 +72,7 @@ public:
 			if(*i == a) return true; // a <= b
 			if(*i == b) return false; // a > b
 		}
-		ASSERTP(false, "rpo.ordered found neither " << a << " nor " << b);assert(false);
+		ASSERTP(false, "rpo.ordered found neither " << a << " nor " << b);
 	}
 	inline bool strictOrdered(Vertex* a, Vertex* b) const { return !ordered(a,b); } // a < b = !(b <= a)
 

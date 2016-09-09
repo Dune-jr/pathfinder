@@ -13,6 +13,7 @@ public:
 	bool visit(const class OperandConst& o);
 	bool visit(const class OperandVar& o);
 	bool visit(const class OperandMem &o);
+	bool visit(const class OperandTop &o);
 	bool visit(const class OperandArithExpr& o);
 	
 private:

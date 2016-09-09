@@ -42,15 +42,17 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 	ws->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 	ws->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
 
-	this->context.dfa_state = dfa::INITIAL_STATE(ws); // initial state
-	this->context.sp = ws->platform()->getSP()->number(); // id of the stack pointer
-	this->context.max_tempvars = (unsigned int)ws->process()->maxTemp(); // maximum number of tempvars used
-	this->context.max_registers = (unsigned int)ws->platform()->regCount(); // count of registers
+	context.dfa_state = dfa::INITIAL_STATE(ws); // initial state
+	context.sp = ws->platform()->getSP()->number(); // id of the stack pointer
+	context.max_tempvars = (unsigned int)ws->process()->maxTemp(); // maximum number of tempvars used
+	context.max_registers = (unsigned int)ws->platform()->regCount(); // count of registers
+	context.dag = new DAG(context.max_tempvars, context.max_registers);
 }
 
 Analysis::~Analysis()
 {
 	delete gdom;
+	delete context.dag;
 }
 
 /**

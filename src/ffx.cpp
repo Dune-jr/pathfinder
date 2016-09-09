@@ -111,7 +111,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				source = (*caller_exit_edges_iter)->target()->toBasic();
 				ASSERT(!(++caller_exit_edges_iter));
 				ASSERTP(!(++citer), "must be at max 1 outedge from caller")*/
-			} else assert(false);
+			} else ASSERT(false);
 
 
 			if(e->target()->isBasic())

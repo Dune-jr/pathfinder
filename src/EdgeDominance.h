@@ -39,7 +39,7 @@ public:
 			if(*i == b) return true; // a <= b
 			if(*i == a) return false; // a > b
 		}
-		ASSERTP(false, "Order::ordered found neither " << a << " nor " << b);assert(false);
+		ASSERTP(false, "Order::ordered found neither " << a << " nor " << b);
 	}
 	inline bool strictOrdered(edge_t* a, edge_t* b) const { return !ordered(b,a); } // a < b = !(b <= a)
 

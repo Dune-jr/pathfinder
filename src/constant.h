@@ -1,7 +1,6 @@
 #ifndef _CONSTANT_H
 #define _CONSTANT_H
 
-#include <elm/assert.h>
 #include <elm/util/HashKey.h>
 #include <elm/int.h> // elm::t::int32
 #include <elm/io.h> // elm::io
@@ -36,6 +35,7 @@ public:
 	inline bool isRelative() const { return _kind > CONSTANT_ABSOLUTE; }
 	inline bool isAbsolute() const { return _kind == CONSTANT_ABSOLUTE; }
 	inline bool isValid()    const { return _kind != CONSTANT_INVALID;  }
+	inline bool isValidAddress() const { return isAbsolute() || isRelativePositive(); }
 	inline bool isRelativePositive() const { return _kind == CONSTANT_PLUS_SP; }
 	inline bool isRelativeNegative() const { return _kind == CONSTANT_MINUS_SP; }
 	inline t::hash hash() const { return elm::Hasher() << _kind << _val; }

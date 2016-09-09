@@ -18,23 +18,31 @@ public:
 	class LabelledValue
 	{
 	public:
-		LabelledValue() { }
-		LabelledValue(const Constant& val, const Set<Edge*>& labels, bool updated = true) : _val(val), _labels(labels), _updated(updated) { }
+		LabelledValue() : _exists(false), _labels(NULL) { }
+		LabelledValue(const LabelledValue& lv) : _val(lv._val), _updated(lv._updated), _exists(lv._exists),
+			_labels(lv._labels ? new Set<Edge*>(*lv._labels) : NULL) { }
+		LabelledValue(const Constant& val, const Set<Edge*>& labels, bool updated = true)
+			: _val(val), _updated(updated), _exists(true), _labels(new Set<Edge*>(labels)) { }
+		~LabelledValue() { delete _labels; }
 		inline Constant val() const { return _val; }
-		inline const Set<Edge*>& labels() const { return _labels; }
+		inline const Set<Edge*>& labels() const { return *_labels; }
 		inline bool isUpdated() const { return _updated; }
-		inline void addLabel(Edge* label) { if(!_labels.contains(label)) _labels.add(label); }
+		inline bool exists() const { return _exists; }
+		inline void addLabel(Edge* label) { ASSERT(_labels); _labels->add(label); }
 		// inline void clearLabels() { _labels.clear(); }
 		inline void setUpdatedFlag(bool updated = true) { _updated = updated; }
 		LabelledValue& operator=(const LabelledValue& lv);
+		operator bool() const { return _exists; }
 		bool operator==(const LabelledValue& lv) const;
 		inline bool operator!=(const LabelledValue& lv) const { return !(lv == *this); }
 		friend io::Output& operator<<(io::Output& out, const LabelledValue& lv) { return lv.print(out); }
 
-	private:
+	protected:
 		Constant _val;
-		Set<Edge*> _labels;
 		bool _updated;
+		bool _exists;
+	private:
+		Set<Edge*>* _labels;
 
 		io::Output& print(io::Output& out) const;
 	}; // LabelledValue class
@@ -61,7 +69,7 @@ public:
 	inline void update(const OperandVar& opdv, const OperandConst& opdc, bool updated_flag = true) { update(opdv, opdc.value(), updated_flag); }
 	void invalidate(const OperandVar& opdv);
 	inline void invalidateOperand(const Operand& opd)
-		{ if(opd.kind() == OPERAND_VAR) invalidate((const OperandVar&)opd); } // doesn't do anything in the case of OperandMem
+		{ if(opd.kind() == VAR) invalidate((const OperandVar&)opd); } // doesn't do anything in the case of OperandMem
 	bool invalidateTempVars();
 	void label(Edge* label);
 	void merge(const SLList<ConstantVariables>& cvl);
@@ -84,5 +92,6 @@ private:
 	Option<LabelledValue>& getCell(const OperandVar& opdv) const;
 	io::Output& print(io::Output& out) const;
 }; // ConstantVariables class
+
 
 #endif

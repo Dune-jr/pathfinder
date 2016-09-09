@@ -2,29 +2,39 @@
 #define _ANALYSIS_STATE_H
 
 #include <elm/avl/Set.h>
+#include <elm/genstruct/HashTable.h>
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include <otawa/cfg/features.h>
 #include <otawa/dfa/State.h> // dfa::State: isInitialized(addr), get(addr, _)...
+#include <otawa/sem/PathIter.h>
 #include "analysis.h"
 #include "constant_variables.h"
 #include "detailed_path.h"
 #include "halfpredicate.h"
 #include "labelled_predicate.h"
-// #define EXP
-#ifdef EXP
-	#include "expr.h"
-#endif
 
 using namespace otawa;
 using elm::genstruct::SLList;
 using elm::genstruct::Vector;
+using elm::genstruct::HashTable;
 
 class Analysis::State {
 private:
 	const dfa::State* dfa_state;
 	OperandVar sp; // the Stack Pointer register
 	// OrderedPath path;
+	DAG* dag;
+#ifdef EXP
+/*	class LVarsTable : HashTable<OperandVar, Operand*> {
+	public:
+		inline Operand* operator[](const OperandVar& key) { return *Ref(*this, key); }
+	};
+*/
+	HashTable<OperandVar, const Operand*> lvars;
+	HashTable<OperandMem, const Operand*> mvars;
+	// HashTable<OperandVar, SLList<HalfPredicate> > preds;
+#endif
 	bool bottom;
 	DetailedPath path;
 	ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
@@ -32,11 +42,6 @@ private:
 	SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
 	SLList<LabelledPredicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
 		// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
-#ifdef EXP
-	HashTable<OperandVar, expr::Expr> lexprs;
-	HashTable<OperandMem, expr::Expr> mexprs;
-	HashTable<OperandVar, SLList<HalfPredicate> > preds;
-#endif
 	class PredIterator;
 
 public:
@@ -67,6 +72,8 @@ public:
 
 	// analysis_bb.cpp
 	void processBB(const BasicBlock *bb);
+	void processSemInst1(const otawa::sem::PathIter& seminsts, sem::inst& last_condition);
+	void processSemInst2(const otawa::sem::PathIter& seminsts, sem::inst& last_condition);
 	// void throwInfo();
 	int invalidateStackBelow(const Constant& stack_limit);
 
@@ -132,7 +139,7 @@ private:
 			switch(state) {
 				case GENERATED_PREDS: return gp_iter.item();
 				case LABELLED_PREDS: return lp_iter.item();
-				default: assert(false);
+				default: ASSERT(false);
 			}
 		}
 		// this behaves fine when called while state == DONE. We use this in the code as of 2014-11-14 (for movePredicateToGenerated)

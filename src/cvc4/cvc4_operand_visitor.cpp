@@ -42,6 +42,14 @@ bool CVC4OperandVisitor::visit(const class OperandMem& o)
 	return true;
 }
 
+bool CVC4OperandVisitor::visit(const class OperandTop& o)
+{
+	ASSERT(false);
+	// expr = variables.getExpr(em, o);
+	visited = true;
+	return true;
+}
+
 bool CVC4OperandVisitor::visit(const class OperandArithExpr& o)
 {
 	if(!o.isComplete())
@@ -99,7 +107,7 @@ Kind_t CVC4OperandVisitor::getKind(arithoperator_t opr)
 		case ARITHOPR_CMP:
 			ASSERTP(false, "non-complete operator");
 		default:
-			assert(false);
+			ASSERT(false);
 	}
 }
 

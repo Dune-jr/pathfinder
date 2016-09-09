@@ -8,13 +8,14 @@
  * @class Analysis::State
  * @brief Abstract state of a set of path of the program
  */
-Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), bottom(bottom), constants() { }
+Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), bottom(bottom), constants() { }
 
 // Analysis::State::State(const context_t& context)
 	// : dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
 
 Analysis::State::State(Block* entryb, const context_t& context, bool init)
-	: dfa_state(context.dfa_state), sp(context.sp), bottom(false), constants(context.max_tempvars, context.max_registers)
+	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(context.max_tempvars+context.max_registers),
+	mvars(), bottom(false), constants(context.max_tempvars, context.max_registers)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -28,7 +29,7 @@ Analysis::State::State(Block* entryb, const context_t& context, bool init)
 }
 
 Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
-	: dfa_state(context.dfa_state), sp(context.sp), bottom(false), constants(context.max_tempvars, context.max_registers)
+	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), bottom(false), constants(context.max_tempvars, context.max_registers)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -40,7 +41,7 @@ Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
 }
 
 Analysis::State::State(const State& s)
-	: dfa_state(s.dfa_state), sp(s.sp), bottom(s.bottom), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
+	: dfa_state(s.dfa_state), sp(s.sp), dag(s.dag), bottom(s.bottom), path(s.path), constants(s.constants), labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
 	{ }
 
 void Analysis::State::appendEdge(Edge* e, bool is_conditional)

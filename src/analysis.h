@@ -1,13 +1,16 @@
 #ifndef _ANALYSIS_H
 #define _ANALYSIS_H
 
+#define EXP
+
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include <otawa/cfg/features.h>
 #include <otawa/dfa/State.h>
 #include <otawa/prop/Identifier.h>
-#include "GlobalDominance.h"
+#include "DAG.h"
 #include "detailed_path.h"
+#include "GlobalDominance.h"
 #include "operand.h"
 #include "pretty_printing.h"
 #include "working_list.h"
@@ -38,6 +41,7 @@ protected:
 	typedef struct
 	{
 		const dfa::State* dfa_state;
+		DAG* dag;
 		OperandVar sp; // Stack Pointer
 		unsigned int max_tempvars;
 		unsigned int max_registers;

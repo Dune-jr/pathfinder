@@ -42,15 +42,17 @@ void ConstantVariables::clear()
 
 ConstantVariables::LabelledValue& ConstantVariables::LabelledValue::operator=(const LabelledValue& lv)
 {
+	ASSERT(_labels != lv._labels);
+	delete _labels;
 	_val = lv._val;
-	_labels = lv._labels;
+	_labels = lv._labels ? new Set<Edge*>(*lv._labels) : NULL;
 	_updated = lv._updated;
 	return *this;
 }
 
 bool ConstantVariables::LabelledValue::operator==(const LabelledValue& lv) const
 {
-	return _val == lv._val && _updated == lv._updated && _labels == lv._labels; // Set<> has functional operator== and operator!=
+	return _val == lv._val && _updated == lv._updated && *_labels == *lv._labels; // Set<> has functional operator== and operator!=
 }
 
 ConstantVariables& ConstantVariables::operator=(const ConstantVariables& cv)
@@ -325,15 +327,14 @@ ConstantVariablesSimplified ConstantVariables::toSimplified() const
 	for(unsigned int i = 0; i < _max_tempvars; i++)
 	{
 		if(tempvars[i])
-			cvs.setTempVar(i, tempvars[i].value().val());
-		else cvs.setTempVar(i, none);
+			cvs.setTempVar(i,
+				tempvars[i].value().val()
+				);
+		else
+			cvs.setTempVar(i, none);
 	}
 	for(unsigned int i = 0; i < _max_registers; i++)
-	{
-		if(registers[i])
-			cvs.setRegister(i, registers[i].value().val());
-		else cvs.setRegister(i, none);
-	}
+		cvs.setRegister(i, registers[i] ? some(registers[i].value().val()) : none);
 	return cvs;
 }
 
@@ -360,7 +361,7 @@ io::Output& ConstantVariables::LabelledValue::print(io::Output& out) const
 	{
 		out << "(";
 		bool first_time = true;
-		for(Set<Edge*>::Iterator iter(_labels); iter; iter++)
+		for(Set<Edge*>::Iterator iter(*_labels); iter; iter++)
 		{
 			if(first_time)
 				first_time = false;
