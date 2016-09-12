@@ -9,16 +9,16 @@
  * @class ConstantVariables::LabelledValue
  * @brief Constant value labelled by a list of edges and an updated flag
  */
-ConstantVariables::ConstantVariables() : tempvars(NULL), registers(NULL), _max_tempvars(0), _max_registers(0) { }
+ConstantVariablesCore::ConstantVariablesCore() : tempvars(NULL), registers(NULL), _max_tempvars(0), _max_registers(0) { }
 
-ConstantVariables::ConstantVariables(unsigned int max_tempvars, unsigned int max_registers)
+ConstantVariablesCore::ConstantVariablesCore(unsigned int max_tempvars, unsigned int max_registers)
 	: _max_tempvars(max_tempvars), _max_registers(max_registers)
 {
 	tempvars = new Option<LabelledValue>[max_tempvars];
 	registers = new Option<LabelledValue>[max_registers];
 }
 
-ConstantVariables::ConstantVariables(const ConstantVariables& cv)
+ConstantVariablesCore::ConstantVariablesCore(const ConstantVariablesCore& cv)
 	: _max_tempvars(cv.maxTempVars()), _max_registers(cv.maxRegisters())
 {
 	tempvars = new Option<LabelledValue>[cv.maxTempVars()];
@@ -26,13 +26,13 @@ ConstantVariables::ConstantVariables(const ConstantVariables& cv)
 	*this = cv;
 }
 
-ConstantVariables::~ConstantVariables()
+ConstantVariablesCore::~ConstantVariablesCore()
 {
 	delete[] tempvars;
 	delete[] registers;
 }
 
-void ConstantVariables::clear()
+void ConstantVariablesCore::clear()
 {
 	for(unsigned int i = 0; i < _max_tempvars; i++)
 		tempvars[i] = none;
@@ -40,7 +40,15 @@ void ConstantVariables::clear()
 		registers[i] = none;
 }
 
-ConstantVariables::LabelledValue& ConstantVariables::LabelledValue::operator=(const LabelledValue& lv)
+Option<ConstantVariables::LabelledValue>& ConstantVariablesCore::getCell(t::int32 var_id) const
+{
+	if(var_id < 0)
+		return tempvars[-1-var_id]; // tempvars id start at 1 and are negative
+	else
+		return registers[var_id]; // registers ids start at 0 and are positive
+}
+
+ConstantVariablesCore::LabelledValue& ConstantVariablesCore::LabelledValue::operator=(const LabelledValue& lv)
 {
 	ASSERT(_labels != lv._labels);
 	delete _labels;
@@ -50,12 +58,12 @@ ConstantVariables::LabelledValue& ConstantVariables::LabelledValue::operator=(co
 	return *this;
 }
 
-bool ConstantVariables::LabelledValue::operator==(const LabelledValue& lv) const
+bool ConstantVariablesCore::LabelledValue::operator==(const LabelledValue& lv) const
 {
 	return _val == lv._val && _updated == lv._updated && *_labels == *lv._labels; // Set<> has functional operator== and operator!=
 }
 
-ConstantVariables& ConstantVariables::operator=(const ConstantVariables& cv)
+ConstantVariablesCore& ConstantVariablesCore::operator=(const ConstantVariablesCore& cv)
 {
 	if(this->isValid())
 	{
@@ -80,7 +88,7 @@ ConstantVariables& ConstantVariables::operator=(const ConstantVariables& cv)
 	return *this;
 }
 
-bool ConstantVariables::operator==(const ConstantVariables& cv) const
+bool ConstantVariablesCore::operator==(const ConstantVariablesCore& cv) const
 {
 	if(_max_tempvars != cv._max_tempvars || _max_registers != cv._max_registers)
 		return false; // sizes do not match
@@ -93,7 +101,7 @@ bool ConstantVariables::operator==(const ConstantVariables& cv) const
 	return true;
 }
 
-bool ConstantVariables::sameValuesAs(const ConstantVariables& cv) const
+bool ConstantVariablesCore::sameValuesAs(const ConstantVariablesCore& cv) const
 {
 	if(_max_tempvars != cv._max_tempvars || _max_registers != cv._max_registers)
 		return false; // sizes do not match
@@ -114,21 +122,14 @@ bool ConstantVariables::sameValuesAs(const ConstantVariables& cv) const
 	return true;
 }
 
-Option<ConstantVariables::LabelledValue>& ConstantVariables::getCell(const OperandVar& opdv) const
-{
-	if(opdv.isTempVar())
-		return tempvars[-1-opdv.addr()]; // tempvars id start at 1 and are negative
-	return registers[opdv.addr()]; // registers ids start at 0 and are positive
-}
-
 bool ConstantVariables::isConstant(const OperandVar& opdv) const
 {
 	return getCell(opdv).isOne();
 }
 
-Constant ConstantVariables::getValue(const OperandVar& opdv) const
+Constant ConstantVariablesCore::getValue(t::int32 var_id) const
 {
-	Option<LabelledValue>& k = getCell(opdv);
+	Option<LabelledValue>& k = getCell(var_id);
 	ASSERT(k.isOne());
 	return k.value().val();
 }
@@ -220,7 +221,7 @@ bool ConstantVariables::invalidateTempVars()
 	return true;
 }
 
-void ConstantVariables::label(Edge* label)
+void ConstantVariablesCore::label(Edge* label)
 {
 	for(unsigned int i = 0; i < _max_tempvars; i++)
 		if(tempvars[i] && (*tempvars[i]).isUpdated())
@@ -242,7 +243,7 @@ void ConstantVariables::label(Edge* label)
 
 /**
  * @fn void ConstantVariables::merge(const SLList<ConstantVariables>& cvl);
- * This uses the current ConstantVariables and change it to the result of the merge of it with the cvl list parameter
+ * This uses the current ConstantVariables and changes it to the result of the merge of it with the cvl list parameter
  */
 // TODO: we can improve this a lot
 void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
@@ -268,7 +269,7 @@ void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
 }
 
 // returns a one-line string with pretty printing of changes that occurred in the constants during the current block (updated flag)
-elm::String ConstantVariables::printChanges() const
+elm::String ConstantVariablesCore::printChanges() const
 {
 	elm::String rtn = "[";
 	bool first = true;
@@ -284,7 +285,6 @@ elm::String ConstantVariables::printChanges() const
 	}*/
 	for(unsigned int i = 0; i < _max_registers; i++)
 	{
-
 		if(registers[i] && (*registers[i]).isUpdated()) 
 		{
 			if(!first)
@@ -338,19 +338,15 @@ ConstantVariablesSimplified ConstantVariables::toSimplified() const
 	return cvs;
 }
 
-io::Output& ConstantVariables::print(io::Output& out) const
+io::Output& ConstantVariablesCore::print(io::Output& out) const
 {
 	out << "[" << endl;
 	for(unsigned int i = 0; i < _max_tempvars; i++)
-	{
 		if(tempvars[i])
 			out << "\tt" << i+1 << " = " << *(tempvars[i]) << endl;
-	}
 	for(unsigned int i = 0; i < _max_registers; i++)
-	{
 		if(registers[i])
 			out << "\t?" << i << " = " << *(registers[i]) << endl;
-	}
 	return (out << "]");
 }
 

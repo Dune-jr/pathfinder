@@ -13,7 +13,7 @@ using namespace otawa;
 using namespace elm::genstruct; 
 using namespace elm::avl;
 
-class ConstantVariables {
+class ConstantVariablesCore {
 public:
 	class LabelledValue
 	{
@@ -37,26 +37,57 @@ public:
 		inline bool operator!=(const LabelledValue& lv) const { return !(lv == *this); }
 		friend io::Output& operator<<(io::Output& out, const LabelledValue& lv) { return lv.print(out); }
 
-	protected:
+	private:
 		Constant _val;
 		bool _updated;
 		bool _exists;
-	private:
 		Set<Edge*>* _labels;
 
 		io::Output& print(io::Output& out) const;
 	}; // LabelledValue class
 
-	ConstantVariables(); // invalid
-	ConstantVariables(unsigned int max_tempvars, unsigned int max_registers);
-	ConstantVariables(const ConstantVariables& cv);
-	~ConstantVariables();
+	ConstantVariablesCore(); // invalid
+	ConstantVariablesCore(unsigned int max_tempvars, unsigned int max_registers);
+	ConstantVariablesCore(const ConstantVariablesCore& cv);
+	~ConstantVariablesCore();
 	void clear();
 	inline unsigned int maxTempVars() const { return _max_tempvars; }
 	inline unsigned int maxRegisters() const { return _max_registers; }
 	inline bool isValid() const { return _max_registers && _max_tempvars; }
+	
+	Constant getValue(t::int32 var_id) const;
+	void label(Edge* label);
+	// void merge(const SLList<ConstantVariablesCore>& cvl);
+	elm::String printChanges() const;
+	ConstantVariablesCore& operator=(const ConstantVariablesCore& cv);
+	bool operator==(const ConstantVariablesCore& cv) const; // strict
+	bool sameValuesAs(const ConstantVariablesCore& cv) const; // less strict (only values)
+	inline bool operator!=(const ConstantVariablesCore& cv) const { return !(*this == cv); }
+	inline Constant operator[](t::int32 var_id) const { return getValue(var_id); }
+	friend io::Output& operator<<(io::Output& out, const ConstantVariablesCore& cv) { return cv.print(out); }
+
+protected:
+	Option<LabelledValue>* tempvars;
+	Option<LabelledValue>* registers;
+	unsigned int _max_tempvars;
+	unsigned int _max_registers;
+
+	Option<LabelledValue>& getCell(t::int32 var_id) const;
+	io::Output& print(io::Output& out) const;
+}; // ConstantVariables class
+
+class ConstantVariables : public ConstantVariablesCore
+{
+public:
+	ConstantVariables() : ConstantVariablesCore() { } // invalid
+	ConstantVariables(unsigned int max_tempvars, unsigned int max_registers) : ConstantVariablesCore(max_tempvars, max_registers) { }
+	ConstantVariables(const ConstantVariables& cv) : ConstantVariablesCore(cv) { }
+	~ConstantVariables() { }
+
 	bool isConstant(const OperandVar& opdv) const;
-	Constant getValue(const OperandVar& opdv) const; // this must not be called if !isConstant(opdv)...
+	void merge(const SLList<ConstantVariables>& cvl);
+	inline Constant getValue(const OperandVar& opdv) const
+		{ return ConstantVariablesCore::getValue(opdv.addr()); } // this must not be called if !isConstant(opdv)...
 	Set<Edge*> getLabels(const OperandVar& opdv) const; // same
 	Set<Edge*> getLabels(const OperandVar& opdv1, const OperandVar& opdv2) const;
 	// template<typename First, typename ... OpdVars>
@@ -71,27 +102,14 @@ public:
 	inline void invalidateOperand(const Operand& opd)
 		{ if(opd.kind() == VAR) invalidate((const OperandVar&)opd); } // doesn't do anything in the case of OperandMem
 	bool invalidateTempVars();
-	void label(Edge* label);
-	void merge(const SLList<ConstantVariables>& cvl);
-	elm::String printChanges() const;
 	SLList<LabelledPredicate> toPredicates() const;
 	ConstantVariablesSimplified toSimplified() const;
 	inline Constant operator[](const OperandVar& opdv) const { return getValue(opdv); }
-	ConstantVariables& operator=(const ConstantVariables& cv);
-	bool operator==(const ConstantVariables& cv) const; // strict
-	bool sameValuesAs(const ConstantVariables& cv) const; // less strict (only values)
-	inline bool operator!=(const ConstantVariables& cv) const { return !(*this == cv); }
-	friend io::Output& operator<<(io::Output& out, const ConstantVariables& cv) { return cv.print(out); }
+	friend io::Output& operator<<(io::Output& out, const ConstantVariables& cv) { return operator<<(out, static_cast<ConstantVariablesCore>(cv)); }
 
 private:
-	Option<LabelledValue>* tempvars;
-	Option<LabelledValue>* registers;
-	unsigned int _max_tempvars;
-	unsigned int _max_registers;
-
-	Option<LabelledValue>& getCell(const OperandVar& opdv) const;
-	io::Output& print(io::Output& out) const;
-}; // ConstantVariables class
-
+	inline Option<LabelledValue>& getCell(const OperandVar& opdv) const
+		{ return ConstantVariablesCore::getCell(opdv.addr()); }
+};
 
 #endif
