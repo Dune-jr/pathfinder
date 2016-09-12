@@ -20,9 +20,9 @@ using namespace option;
 int dbg_flags = 0b00000000; // global analysis flags for debugging
 int dbg_verbose = 0; // global verbose level (higher = less verbose)
 	
-class Display: public Application {
+class Pathfinder: public Application {
 public:
-	Display(void): Application("display", Version(1, 0, 0)),
+	Pathfinder(void): Application("pathfinder", Version(1, 0, 0)),
 		opt_s0(SwitchOption::Make(*this).cmd("--vv").cmd("--s0").cmd("--nosilent").description("run with maximal output")),
 		opt_s2(SwitchOption::Make(*this).cmd("-s").cmd("--s1").description("only display results")),
 		opt_s3(SwitchOption::Make(*this).cmd("--s2").cmd("--fullsilent").description("run with zero output")),
@@ -182,7 +182,7 @@ private:
 	}
 };
 
-OTAWA_RUN(Display);
+OTAWA_RUN(Pathfinder);
 
 void simpleCFGparse(CFG* cfg)
 {

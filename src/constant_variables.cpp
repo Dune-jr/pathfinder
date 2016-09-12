@@ -321,23 +321,6 @@ SLList<LabelledPredicate> ConstantVariables::toPredicates() const
 	return l;
 }
 
-/*ConstantVariablesSimplified ConstantVariables::toSimplified() const
-{
-	ConstantVariablesSimplified cvs(_max_tempvars, _max_registers);
-	for(unsigned int i = 0; i < _max_tempvars; i++)
-	{
-		if(tempvars[i])
-			cvs.setTempVar(i,
-				tempvars[i].value().val()
-				);
-		else
-			cvs.setTempVar(i, none);
-	}
-	for(unsigned int i = 0; i < _max_registers; i++)
-		cvs.setRegister(i, registers[i] ? some(registers[i].value().val()) : none);
-	return cvs;
-}*/
-
 io::Output& ConstantVariablesCore::print(io::Output& out) const
 {
 	out << "[" << endl;
