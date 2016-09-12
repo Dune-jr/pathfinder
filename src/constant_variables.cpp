@@ -122,9 +122,9 @@ bool ConstantVariablesCore::sameValuesAs(const ConstantVariablesCore& cv) const
 	return true;
 }
 
-bool ConstantVariables::isConstant(const OperandVar& opdv) const
+bool ConstantVariablesCore::isConstant(t::int32 var_id) const
 {
-	return getCell(opdv).isOne();
+	return getCell(var_id).isOne();
 }
 
 Constant ConstantVariablesCore::getValue(t::int32 var_id) const
@@ -321,7 +321,7 @@ SLList<LabelledPredicate> ConstantVariables::toPredicates() const
 	return l;
 }
 
-ConstantVariablesSimplified ConstantVariables::toSimplified() const
+/*ConstantVariablesSimplified ConstantVariables::toSimplified() const
 {
 	ConstantVariablesSimplified cvs(_max_tempvars, _max_registers);
 	for(unsigned int i = 0; i < _max_tempvars; i++)
@@ -336,7 +336,7 @@ ConstantVariablesSimplified ConstantVariables::toSimplified() const
 	for(unsigned int i = 0; i < _max_registers; i++)
 		cvs.setRegister(i, registers[i] ? some(registers[i].value().val()) : none);
 	return cvs;
-}
+}*/
 
 io::Output& ConstantVariablesCore::print(io::Output& out) const
 {

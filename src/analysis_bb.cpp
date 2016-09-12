@@ -896,15 +896,15 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, Operand* opd1, Operand* opd2, Path& labels) const
 {
 	ASSERT(opd1 && opd2);
-	const ConstantVariablesSimplified& cvs = constants.toSimplified(); // TODO: This is taking ressources because of bad class design
+	const ConstantVariablesCore& cvc = static_cast<ConstantVariablesCore>(constants);
 	Vector<OperandVar> replaced_vars;
 	// If we have predicates such as ?16 = ?4 ~ t1, make sure none of these are identified as constants in the constantVariables table!
-	if(Option<Operand*> maybe_opd1 = opd1->replaceConstants(cvs, replaced_vars))
+	if(Option<Operand*> maybe_opd1 = opd1->replaceConstants(cvc, replaced_vars))
 	{
 		delete opd1;
 		opd1 = *maybe_opd1;
 	}
-	if(Option<Operand*> maybe_opd2 = opd2->replaceConstants(cvs, replaced_vars))
+	if(Option<Operand*> maybe_opd2 = opd2->replaceConstants(cvc, replaced_vars))
 	{
 		delete opd2;
 		opd2 = *maybe_opd2;
@@ -1360,7 +1360,7 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd
 	Operand *opd_modifier_new, *opd_modifier_prenew = opd_modifier.copy();
 	// for example instead of doing [?13+t1/?13], do [?13+4/?13]
 	Vector<OperandVar> replaced_vars;
-	if(Option<Operand*> maybe_opd_modifier_new = opd_modifier_prenew->replaceConstants(constants.toSimplified(), replaced_vars)) // replace constants
+	if(Option<Operand*> maybe_opd_modifier_new = opd_modifier_prenew->replaceConstants(static_cast<ConstantVariablesCore>(constants), replaced_vars)) // replace constants
 	{
 		delete opd_modifier_prenew;
 		opd_modifier_new = *maybe_opd_modifier_new;

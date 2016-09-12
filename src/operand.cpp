@@ -88,7 +88,7 @@ using namespace elm;
  * @warning If elm::none is returned, it is not safe to assume that nothing has been simplified!
  */
 /**
- * @fn Option<Operand*> Operand::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars);
+ * @fn Option<Operand*> Operand::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars);
  * @brief
  */
 /**
@@ -146,7 +146,7 @@ Option<OperandConst> OperandConst::evalConstantOperand() const
 	return some(*this);
 }
 Option<Operand*> OperandConst::simplify() { return none; }
-Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars) { return none; }
+Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) { return none; }
 
 // Operands: Variables
 OperandVar::OperandVar() : _addr(777) { }
@@ -197,7 +197,7 @@ bool OperandVar::update(const Operand& opd, const Operand& opd_modifier) { retur
 void OperandVar::parseAffineEquation(AffineEquationState& state) const { state.onVarFound(this->_addr); }
 Option<OperandConst> OperandVar::evalConstantOperand() const { return none; }
 Option<Operand*> OperandVar::simplify() { return none; }
-Option<Operand*> OperandVar::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars)
+Option<Operand*> OperandVar::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars)
 {
 	if(constants.isConstant(this->_addr))
 	{
@@ -258,7 +258,7 @@ bool OperandMem::update(const Operand& opd, const Operand& opd_modifier) { retur
 void OperandMem::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen
 Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
 Option<Operand*> OperandMem::simplify() { return none; }
-Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars) { return none; }
+Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) { return none; }
  
 // Operands: Top
 int OperandTop::next_id = 0;
@@ -298,7 +298,7 @@ bool OperandTop::update(const Operand& opd, const Operand& opd_modifier) { ASSER
 void OperandTop::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen (for Top too?)
 Option<OperandConst> OperandTop::evalConstantOperand() const { return none; }
 Option<Operand*> OperandTop::simplify() { return none; }
-Option<Operand*> OperandTop::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars) { return none; }
+Option<Operand*> OperandTop::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) { return none; }
  
 // Operands: Arithmetic Expressions
 OperandArithExpr::OperandArithExpr(arithoperator_t opr, const Operand& opd1_)
@@ -640,7 +640,7 @@ Option<Operand*> OperandArithExpr::simplify()
 	}
 	return none;
 }
-Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesSimplified& constants, Vector<OperandVar>& replaced_vars)
+Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars)
 {
 	if(Option<Operand*> o = opd1->replaceConstants(constants, replaced_vars))
 	{
