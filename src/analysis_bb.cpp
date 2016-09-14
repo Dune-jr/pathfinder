@@ -273,8 +273,8 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 						{
 							// d = constants[d] - b
 							opd1 = new OperandVar(d);
-							Operand* opd21 = new OperandConst(constants[d]);
-							Operand* opd22 = new OperandVar(b);
+							opd21 = new OperandConst(constants[d]);
+							opd22 = new OperandVar(b);
 							opd2 = new OperandArithExpr(ARITHOPR_SUB, *opd21, *opd22);
 							make_pred = true;
 
@@ -832,10 +832,18 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 			// TODO
 			break;
 		case LOAD: // reg <- MEM_type(addr)
-			if(lvars.get(addr,NULL) && lvars[OperandVar(addr)]->kind() == CST && lvars[addr]->toConst().value().isValidAddress())
-				lvars[reg] = mvars[lvars[addr]->toMem()];
-			else
-				lvars[reg] = dag->top();
+			// addr is likely to be t1
+			{
+				// HashTable<OperandVar, const Operand*> lvars2(211);
+				// HashTable<OperandVar, const Operand*> lvars3();
+				// lvars2.get(addr,NULL);
+				// lvars3.get(addr,NULL);
+				// lvars.get(addr,NULL);
+			}
+			// if(lvars.get(addr,NULL) && lvars[OperandVar(addr)]->kind() == CST && lvars[addr]->toConst().value().isValidAddress())
+			// 	lvars[reg] = mvars[lvars[addr]->toMem()];
+			// else
+			// 	lvars[reg] = dag->top();
 			break;
 		case STORE:	// MEM_type(addr) <- reg
 			// if()
@@ -919,7 +927,7 @@ LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, Ope
 				str = _ << str << ", ";
 			str = _ << str << *iter << ":" << constants[*iter];
 			if(constants.getLabels(*iter))
-				str = _ << str << pathToString(constants.getLabels(*iter));	
+				str = _ << str << "[" << pathToString(constants.getLabels(*iter)) << "]";
 		}
 			DBG(color::IPur() << DBG_SEPARATOR << color::IBlu() << " Replaced constant" << (count>1?"s ":" ") << str)
 	}

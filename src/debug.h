@@ -20,7 +20,7 @@
 
 #define UNTESTED_CRITICAL true // Raise exceptions when executing untested code
 #define DBG_RESULT_IPS	    1 << 3
-#define DBG_NO_TIME		    1 << 4
+#define DBG_DETERMINISTIC   1 << 4
 #define DBG_PREANALYSIS	    1 << 6
 // #define DBG_PROGRESS	    1 << 7
 #define DBG_FORMAT_FLOWINFO 1 << 8

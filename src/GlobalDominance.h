@@ -20,9 +20,9 @@ class GlobalDominance
 {
 public:
 	enum {
-		BLOCK_DOM 	 = 1 << 0,
-		EDGE_DOM 	 = 1 << 1,
-		EDGE_POSTDOM = 1 << 2,
+		BLOCK_DOM 	  = 1 << 0,
+		EDGE_DOM 	  = 1 << 1,
+		EDGE_POSTDOM  = 1 << 2,
 	};
 
 	GlobalDominance(const otawa::CFGCollection *cfgs, int flags) {
@@ -31,14 +31,16 @@ public:
 
 			if(flags&BLOCK_DOM) {
 				bdoms.put(*cfg, new BlockDominance(*cfg));
-				DBG("\tbdoms: " << **bdoms[*cfg])
+				if(! (dbg_flags&DBG_DETERMINISTIC) )
+					DBG("\tbdoms: " << **bdoms[*cfg])
 			}
 
 			if(flags&EDGE_DOM) {
 				edoms.put(*cfg, new EdgeDom(*cfg, 
 					singleton<otawa::sgraph::Edge*>(theOnly(cfg->entry()->outs()))
 				));
-				DBG("\tedoms: " << **edoms[*cfg])
+				if(! (dbg_flags&DBG_DETERMINISTIC) )
+					DBG("\tedoms: " << **edoms[*cfg])
 			}
 
 			if(flags&EDGE_POSTDOM) {
@@ -46,7 +48,8 @@ public:
 				for(Block::EdgeIter i(cfg->exit()->ins()); i; i++)
 					sl += *i;
 				epdoms.put(*cfg, new EdgePostDom(*cfg, sl));
-				DBG("\tepdoms: " << **epdoms[*cfg])
+				if(! (dbg_flags&DBG_DETERMINISTIC) )
+					DBG("\tepdoms: " << **epdoms[*cfg])
 			}
 		}
 	}

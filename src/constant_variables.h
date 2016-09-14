@@ -43,7 +43,7 @@ public:
 	friend io::Output& operator<<(io::Output& out, const ConstantVariables& cv) { return operator<<(out, static_cast<ConstantVariablesCore>(cv)); }
 
 private:
-	inline Option<LabelledValue>& getCell(const OperandVar& opdv) const
+	inline LabelledValue& getCell(const OperandVar& opdv) const
 		{ return ConstantVariablesCore::getCell(opdv.addr()); }
 }; // ConstantVariables class 
 

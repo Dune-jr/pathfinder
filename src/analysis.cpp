@@ -296,18 +296,22 @@ bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set)
  */
 elm::String Analysis::pathToString(const Path& path)
 {
-	elm::String str = "[";
-	bool first = true;
-	for(Analysis::Path::Iterator iter(path); iter; iter++)
+	if(dbg_flags&DBG_DETERMINISTIC)
+		return _ << path.count() << " labels";
+	else
 	{
-		if(first)
-			first = false;
-		else
-			str = str.concat(_ << ", ");
-		str = str.concat(_ << (*iter)->source()->cfg() << ":" << (*iter)->source()->index() << "->" << (*iter)->target()->cfg() << ":" << (*iter)->target()->index());
+		elm::String str;
+		bool first = true;
+		for(Analysis::Path::Iterator iter(path); iter; iter++)
+		{
+			if(first)
+				first = false;
+			else
+				str = str.concat(_ << ", ");
+			str = str.concat(_ << (*iter)->source()->cfg() << ":" << (*iter)->source()->index() << "->" << (*iter)->target()->cfg() << ":" << (*iter)->target()->index());
+		}
+		return str;
 	}
-	str = str.concat(_ << "]");
-	return str;
 }
 
 /**
@@ -354,7 +358,7 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 	const int infeasible_paths_count = infeasible_paths.count();
 	if(dbg_verbose == DBG_VERBOSE_ALL)
 	{
-		if(dbg_flags&DBG_NO_TIME)
+		if(dbg_flags&DBG_DETERMINISTIC)
 			DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: ")
 		else
 			DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
@@ -369,7 +373,7 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 			for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
 				cout << "    * [" << *iter << "]" << endl;
 		cout << color::BIGre() << infeasible_paths_count << color::RCol() << " infeasible path(s) found.";
-		if(! (dbg_flags&DBG_NO_TIME))
+		if(! (dbg_flags&DBG_DETERMINISTIC))
 		{
 		    std::ios_base::fmtflags oldflags = std::cout.flags();
 		    std::streamsize oldprecision = std::cout.precision();

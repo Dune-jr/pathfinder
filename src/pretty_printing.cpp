@@ -1,4 +1,3 @@
-#include <assert.h>
 #include "pretty_printing.h"
 
 /**
@@ -46,5 +45,25 @@ Output& otawa::operator<<(Output& out, otawa::Block* b)
 #		else
 			return (out << UTF8_Block_start_delim "@" << b->cfg() << ":" << b->index() << "->" << b->toSynth()->callee() << UTF8_Block_end_delim);
 #		endif
-	assert(false);
+	ASSERT(false);
+}
+
+elm::String pathToString(const Set<otawa::Edge*>& path)
+{
+	if(dbg_flags&DBG_DETERMINISTIC)
+		return _ << path.count() << " labels";
+	else
+	{
+		elm::String str;
+		bool first = true;
+		for(Set<otawa::Edge*>::Iterator iter(path); iter; iter++)
+		{
+			if(first)
+				first = false;
+			else
+				str = str.concat(_ << ", ");
+			str = str.concat(_ << (*iter)->source()->cfg() << ":" << (*iter)->source()->index() << "->" << (*iter)->target()->cfg() << ":" << (*iter)->target()->index());
+		}
+		return str;
+	}
 }

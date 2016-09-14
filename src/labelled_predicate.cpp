@@ -1,4 +1,5 @@
 #include "labelled_predicate.h"
+#include "pretty_printing.h"
 
 /**
  * @class LabelledPredicate
@@ -33,22 +34,8 @@ io::Output& LabelledPredicate::print(io::Output &out) const
 {
 	if(_labels.isEmpty())
 		return (out << _pred);
-
-	out << "(" << _pred << " | ";
-	bool first_time = true;
-	for(Set<Edge*>::Iterator iter(_labels); iter; iter++)
-	{
-		if(first_time)
-			first_time = false;
-		else
-			out << ", ";
-#ifdef v1
-		out << (*iter)->source()->number() << "->" << (*iter)->target()->number(); // v1
-#else
-		out << (*iter)->source()->index() << "->" << (*iter)->target()->index(); // v2
-#endif
-	}
-	return (out << ")");
+	else
+		return out << "(" << _pred << " | " << pathToString(_labels) << ")";
 }
 
 LabelledPredicate& LabelledPredicate::operator=(const LabelledPredicate& lp)

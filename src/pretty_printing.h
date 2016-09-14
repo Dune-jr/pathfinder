@@ -2,6 +2,7 @@
 #define _PRETTY_PRINTING_H
 
 #include <otawa/cfg.h> // Block
+#include <elm/avl/Set.h>
 #include <elm/genstruct/SLList.h>
 #include <elm/genstruct/Vector.h>
 #include <elm/io/Output.h>
@@ -9,6 +10,7 @@
 using elm::io::Output;
 using elm::genstruct::SLList;
 using elm::genstruct::Vector;
+using elm::avl::Set;
 
 
 // pretty printing
@@ -17,6 +19,7 @@ template <class C> Output& printCollection(Output& out, const C& items);
 template <class T> inline Output& operator<<(Output& out, const SLList<T>& l) { return printCollection(out, l); }
 template <class T> inline Output& operator<<(Output& out, const Vector<T>& v) { return printCollection(out, v); }
 Output& otawa::operator<<(Output& out, otawa::Block* b);
+elm::String pathToString(const Set<otawa::Edge*>& path);
 
 template <class T> inline const Vector<T>& nullVector(void) {
 	static const Vector<T> _null;

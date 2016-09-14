@@ -10,7 +10,11 @@ class BlockLoopComparator : public elm::Comparator<Block*>
 {
 public:
 	static inline int arbitraryCompare(Block* const& b1, Block* const& b2)
-		{ return b1 > b2 ? +1 : -1; }
+		//{ return b1 > b2 ? +1 : -1; } // this causes determinism problems
+		{ //ASSERT((b1->cfg() == b2->cfg() && b1->index() != b2->index()) || (b1->cfg() != b2->cfg() && b1->cfg()->index() != b2->cfg()->index()));
+		  	return b1->cfg() == b2->cfg()
+			? (b1->index() > b2->index() ? +1 : -1)
+			: (b1->cfg()->index() > b2->cfg()->index() ? +1 : -1); }
 	// says < when b1 is at a deeper loop level (so should be read first)
 	static int compare(Block* const& b1, Block* const& b2) {
 		if(b1 == b2)
@@ -37,7 +41,7 @@ public:
 		return arbitraryCompare(b1,b2);
 	}
 	inline int doCompare(Block* const& v1, Block* const& v2) const
-		{ return compare(v1, v2); } // TODO!!! why do we have to explicit this??? 
+		{ return compare(v1, v2); } // TODO! why do we have to explicit this??? 
 };
 
 class WorkingList
@@ -45,7 +49,7 @@ class WorkingList
 	typedef SortedList<Block*,BlockLoopComparator> wl_t;
 public:
 	WorkingList() { }
-	inline Block* pop(void) { Block* b = sl.first(); sl.removeFirst(); return b; }
+	inline Block* pop(void) { DBG("popping from " << toString()); Block* b = sl.first(); sl.removeFirst(); return b; }
 	inline void push(Block* b) { if(!sl.contains(b)) sl.add(b); } // WARNING: sortedList seems to remove duplicates!!
 	inline bool isEmpty(void) const { return sl.isEmpty(); }
 

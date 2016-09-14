@@ -22,8 +22,8 @@ int dbg_verbose = 0; // global verbose level (higher = less verbose)
 	
 class Pathfinder: public Application {
 public:
-	Pathfinder(void): Application("pathfinder", Version(1, 0, 0)),
-		opt_s0(SwitchOption::Make(*this).cmd("--vv").cmd("--s0").cmd("--nosilent").description("run with maximal output")),
+	Pathfinder(void): Application("pathfinder", Version(1, 0, 0), "An infeasible path detection program", "J. Ruiz"),
+		opt_s0(SwitchOption::Make(*this).cmd("-V").cmd("--vv").cmd("--s0").cmd("--nosilent").description("run with maximal output")),
 		opt_s2(SwitchOption::Make(*this).cmd("-s").cmd("--s1").description("only display results")),
 		opt_s3(SwitchOption::Make(*this).cmd("--s2").cmd("--fullsilent").description("run with zero output")),
 		opt_output(ValueOption<bool>::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file").def(false)),
@@ -33,14 +33,14 @@ public:
 		opt_nolinenumbers(SwitchOption::Make(*this).cmd("--nl").cmd("--no-line-nb").description("do not number lines of the output")),
 		opt_progress(SwitchOption::Make(*this).cmd("-p").cmd("--progress").description("display analysis progress (forces -s or +)")),
 		opt_dumpoptions(SwitchOption::Make(*this).cmd("--dump-options").description("print the selected options for the analysis")),
-		opt_notime(SwitchOption::Make(*this).cmd("--no-time").description("do not print execution time")),
 		opt_noipresults(SwitchOption::Make(*this).cmd("--nir").cmd("--no-ip-results").description("do not print the list of IPs found")),
 		opt_noformattedflowinfo(SwitchOption::Make(*this).cmd("--nffi").cmd("--no-formatted-flowinfo").description("format flowinfo in paths like a list of items instead of pretty-printing it")),
 		opt_detailedstats(SwitchOption::Make(*this).cmd("--ds").cmd("--detailed-stats").description("display detailed stats, including average length of infeasible_paths found")),
 		opt_nolinearcheck(SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
 		opt_nounminimized(SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
 		opt_slice(SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
-		opt_dry(SwitchOption::Make(*this).cmd("--dry").description("dry run (no solver calls)")),
+		opt_deterministic(SwitchOption::Make(*this).cmd("-D").cmd("--deterministic").description("Ensure deterministic output (two executions give the same output)")),
+		opt_dry(SwitchOption::Make(*this).cmd("-d").cmd("--dry").description("dry run (no solver calls)")),
 		opt_automerge(SwitchOption::Make(*this).cmd("-a").cmd("--automerge").description("let the algorithm decide when to merge")),
 		opt_virtualize(ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
 		opt_merge(ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)),
@@ -70,15 +70,15 @@ private:
 	// option::Manager manager;
 	SwitchOption opt_s0, opt_s2, opt_s3;
 	ValueOption<bool> opt_output;
-	SwitchOption opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_progress, opt_dumpoptions, opt_notime, opt_noipresults, opt_noformattedflowinfo,
-		opt_detailedstats, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_dry, opt_automerge;
+	SwitchOption opt_graph_output, opt_nocolor, opt_src_info, opt_nolinenumbers, opt_progress, opt_dumpoptions, opt_noipresults, opt_noformattedflowinfo,
+		opt_detailedstats, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_deterministic, opt_dry, opt_automerge;
 	ValueOption<bool> opt_virtualize;
 	ValueOption<int> opt_merge, opt_multithreading;
 
 	void setFlags(int& analysis_flags, int& merge_thresold, int& nb_cores) {
 		dbg_flags = analysis_flags = 0;	
-		if(opt_notime)
-			dbg_flags |= DBG_NO_TIME;
+		if(opt_deterministic)
+			dbg_flags |= DBG_DETERMINISTIC;
 		if(! opt_noipresults)
 			dbg_flags |= DBG_RESULT_IPS;
 		if(! opt_noformattedflowinfo)
@@ -155,7 +155,7 @@ private:
 		for(int i = 3; i > 0; i--)
 			cout << (i>dbg_verbose ? "=" : " ");
 		cout << "]" << color::RCol() << endl;
-		DBGOPT("DISPLAY TIME", !(dbg_flags&DBG_NO_TIME), true)
+		DBGOPT("DISPLAY TIME & NON-DTMSTIC INFO", !(dbg_flags&DBG_DETERMINISTIC), true)
 		DBGOPT("DISPLAY RESULT INF. PATHS", dbg_flags&DBG_RESULT_IPS, true)
 		DBGOPT("PRETTY PRINTING FOR FLOWINFO", (dbg_flags&DBG_FORMAT_FLOWINFO), true)
 		DBGOPT("DISPLAY DETAILED STATS", dbg_flags&DBG_DETAILED_STATS, false)
