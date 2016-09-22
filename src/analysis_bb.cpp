@@ -118,13 +118,13 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 				if(Option<OperandConst> addr_const_value = getConstantValueOfReadOnlyMemCell(*addr_mem, (*seminsts).type()))
 				{
 					DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "R-O memory data " << *addr_mem << " simplified to " << *addr_const_value)
-					constants.set(d, ConstantVariables::LabelledValue((*addr_const_value).value(), labels, true)); 
+					constants.set(d, ConstantVariables::LabelledValue(*addr_const_value, labels, true)); 
 				}
 				// or maybe we can link it to a constant value from the predicates
 				else if(Option<OperandConst> addr_const_value = findConstantValueOfMemCell(*addr_mem, labels))
 				{
 					DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "Memory data " << *addr_mem << " simplified to " << *addr_const_value)
-					constants.set(d, ConstantVariables::LabelledValue((*addr_const_value).value(), labels, true));
+					constants.set(d, ConstantVariables::LabelledValue(*addr_const_value, labels, true));
 				}
 				else
 				{							
@@ -833,17 +833,11 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 			break;
 		case LOAD: // reg <- MEM_type(addr)
 			// addr is likely to be t1
-			{
-				// HashTable<OperandVar, const Operand*> lvars2(211);
-				// HashTable<OperandVar, const Operand*> lvars3();
-				// lvars2.get(addr,NULL);
-				// lvars3.get(addr,NULL);
-				// lvars.get(addr,NULL);
-			}
-			// if(lvars.get(addr,NULL) && lvars[OperandVar(addr)]->kind() == CST && lvars[addr]->toConst().value().isValidAddress())
-			// 	lvars[reg] = mvars[lvars[addr]->toMem()];
-			// else
-			// 	lvars[reg] = dag->top();
+			DBGG("lvars[" << OperandVar(addr).toString() << "] = " << lvars(addr));
+			if(lvars[addr] && lvars.isConst(addr) && lvars(addr).toConst().value().isValidAddress())
+				lvars[reg] = mvars[lvars[addr]->toMem().getConst()];
+			else
+				lvars[reg] = dag->top();
 			break;
 		case STORE:	// MEM_type(addr) <- reg
 			// if()
@@ -1630,7 +1624,7 @@ Predicate* Analysis::State::getPredicateGeneratedByCondition(sem::inst condition
 */
 Option<OperandConst> Analysis::State::getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type)
 {
-	const Constant& addr = addr_mem.getConst().value();
+	const Constant& addr = addr_mem.getConst();
 	if(!addr.isAbsolute())
 		return none;
 	if(!dfa_state->isInitialized(addr.val()))

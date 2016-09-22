@@ -68,6 +68,7 @@ public:
 
 	bool operator>(const Constant& c) const; // for elm::Comparator in elm::genstruct::AVLMap
 
+	inline elm::String toString() const { return _ << *this; } 
 	friend io::Output& operator<<(io::Output& out, const Constant& c) { return c.print(out); }
 
 private:
@@ -78,6 +79,12 @@ private:
 	io::Output& print(io::Output& out) const;
 };
 
-static const Constant SP(0, CONSTANT_PLUS_SP); // SP + 0
+extern const Constant SP; // SP + 0
+
+class ConstantHash {
+public:
+	static inline t::hash hash(const Constant& c) { return c.hash(); }
+	static inline bool equals(const Constant& c1, const Constant& c2) { return c1 == c2; }
+};
 
 #endif

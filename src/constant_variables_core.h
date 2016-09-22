@@ -61,12 +61,12 @@ public:
 	}; // LabelledValue class
 
 	ConstantVariablesCore(); // invalid
-	ConstantVariablesCore(unsigned int max_tempvars, unsigned int max_registers);
+	ConstantVariablesCore(short max_tempvars, short max_registers);
 	ConstantVariablesCore(const ConstantVariablesCore& cv);
 	~ConstantVariablesCore();
 	void clear();
-	inline unsigned int maxTempVars() const { return _max_tempvars; }
-	inline unsigned int maxRegisters() const { return _max_registers; }
+	inline short maxTempVars() const { return _max_tempvars; }
+	inline short maxRegisters() const { return _max_registers; }
 	inline bool isValid() const { return _max_registers && _max_tempvars; }
 	
 	inline bool isConstant(t::int32 var_id) const { return getCell(var_id).exists(); }
@@ -84,8 +84,8 @@ public:
 protected:
 	LabelledValue* tempvars;
 	LabelledValue* registers;
-	unsigned int _max_tempvars;
-	unsigned int _max_registers;
+	short _max_tempvars;
+	short _max_registers;
 
 	LabelledValue& getCell(t::int32 var_id) const;
 	io::Output& print(io::Output& out) const;

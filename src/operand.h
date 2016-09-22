@@ -89,14 +89,16 @@ public:
 	virtual Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) = 0;
 	virtual bool accept(OperandVisitor& visitor) const = 0;
 	virtual operand_kind_t kind() const = 0;
-	virtual bool operator==(const Operand& o) const = 0;
 	friend inline io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
+	virtual bool operator==(const Operand& o) const = 0;
 	
-	const OperandConst& toConst() const { ASSERT(false); }
-	const OperandVar& toVar() const { ASSERT(false); }
-	const OperandMem& toMem() const { ASSERT(false); }
-	const OperandTop& toTop() const { ASSERT(false); }
+	inline const OperandConst& toConst() const { ASSERT(false); }
+	inline const Constant& toConstant() const { ASSERT(false); }
+	inline const OperandVar& toVar() const { ASSERT(false); }
+ 	inline const OperandMem& toMem() const { ASSERT(false); }
+	inline const OperandTop& toTop() const { ASSERT(false); }
 	const OperandArithExpr& toArith() const { ASSERT(false); }
+	elm::String toString() const { return _ << *this; }
 private:
 	virtual io::Output& print(io::Output& out) const = 0;
 };
@@ -131,10 +133,12 @@ public:
 	inline bool isAffine(const OperandVar& opdv) const { return true; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return CST; }
+	inline operator Constant() const { return _value; }
 	OperandConst& operator=(const OperandConst& opd);
 	bool operator==(const Operand& o) const;
+	inline const OperandConst& toConst() const { return *this; }
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
-	const OperandConst& toConst() const { return *this; }
+	inline Constant toConstant() const { return _value; }
 private:
 	io::Output& print(io::Output& out) const;
 
@@ -174,11 +178,10 @@ public:
 	inline operand_kind_t kind() const { return VAR; }
 	OperandVar& operator=(const OperandVar& opd);
 	bool operator==(const Operand& o) const;
-	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }	
+	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
 	const OperandVar& toVar() const { return *this; }
 private:
 	io::Output& print(io::Output& out) const;
-
 	t::int32 _addr;
 };
 
@@ -213,7 +216,7 @@ public:
 	inline operand_kind_t kind() const { return MEM; }
 	OperandMem& operator=(const OperandMem& opd);
 	bool operator==(const Operand& o) const;
-	friend inline io::Output& operator<<(io::Output& out, const OperandMem& o) { return o.print(out); }	
+	friend inline io::Output& operator<<(io::Output& out, const OperandMem& o) { return o.print(out); }
 	const OperandMem& toMem() const { return *this; }
 private:
 	io::Output& print(io::Output& out) const;
@@ -251,7 +254,7 @@ public:
 	inline operand_kind_t kind() const { return TOP; }
 	OperandTop& operator=(const OperandTop& opd);
 	bool operator==(const Operand& o) const;
-	friend inline io::Output& operator<<(io::Output& out, const OperandTop& o) { return o.print(out); }	
+	friend inline io::Output& operator<<(io::Output& out, const OperandTop& o) { return o.print(out); }
 	const OperandTop& toTop() const { return *this; }
 private:
 	io::Output& print(io::Output& out) const;
@@ -259,7 +262,7 @@ private:
 	int id;
 	static int next_id;
 };
-static OperandTop Top(false);
+extern const OperandTop Top;
 
 // Arithmetic Expressions
 class OperandArithExpr : public Operand

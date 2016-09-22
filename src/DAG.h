@@ -73,12 +73,6 @@ class DAG {
 				return +1;
 		}
 	};
-
- 	class ConstantHash {
- 	public:
- 		static inline t::hash hash(const Constant& c) { return c.hash(); }
- 		static inline bool equals(const Constant& c1, const Constant& c2) { return c1 == c2; }
- 	};
  
  	typedef genstruct::HashTable<Key,      Operand *,   SelfHashKey<Key> >  op_map_t;
  	typedef genstruct::HashTable<Pred,     Predicate *, SelfHashKey<Pred> > pred_map_t;
@@ -221,7 +215,7 @@ public:
 		{ return mem(static_cast<const OperandConst*>(this->cst(cst))); }
 
 	inline const Operand *mem(const OperandMem *opd_mem)
-		{ return mem(opd_mem->getConst().value()); }
+		{ return mem(opd_mem->getConst()); }
 
 	// creates a new top
 	const Operand* top(void) {

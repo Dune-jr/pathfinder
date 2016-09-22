@@ -100,6 +100,8 @@ using namespace elm;
  * @brief Returns an operand kind, in order to characterize each implementation of Operand
  */
 
+const OperandTop Top(false);
+
 // Operands: Constants
 OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }
 OperandConst::OperandConst(const Constant& value) : _value(value) { }

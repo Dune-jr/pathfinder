@@ -44,8 +44,8 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 
 	context.dfa_state = dfa::INITIAL_STATE(ws); // initial state
 	context.sp = ws->platform()->getSP()->number(); // id of the stack pointer
-	context.max_tempvars = (unsigned int)ws->process()->maxTemp(); // maximum number of tempvars used
-	context.max_registers = (unsigned int)ws->platform()->regCount(); // count of registers
+	context.max_tempvars = (short)ws->process()->maxTemp(); // maximum number of tempvars used
+	context.max_registers = (short)ws->platform()->regCount(); // count of registers
 	context.dag = new DAG(context.max_tempvars, context.max_registers);
 }
 

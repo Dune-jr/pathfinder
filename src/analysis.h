@@ -43,8 +43,8 @@ protected:
 		const dfa::State* dfa_state;
 		DAG* dag;
 		OperandVar sp; // Stack Pointer
-		unsigned int max_tempvars;
-		unsigned int max_registers;
+		short max_tempvars;
+		short max_registers;
 	} context_t;
 
 	class IPStats
@@ -124,9 +124,10 @@ private:
 	virtual bool inD_ip(const otawa::Edge* e) const = 0;
 	virtual IPStats ipcheck(States& s, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const = 0;
 
+	// analysis_state.cpp
+	Analysis::State topState(Block* entry) const;
 	// analysis.cpp
 	// void debugProgress(int block_id, bool enable_smt) const;
-	Analysis::State topState(Block* entry) const;
 	void wl_push(Block* b);
 	void printResults(int exec_time_ms, int real_time_ms) const;
 	void postProcessResults(CFG *cfg);

@@ -3,18 +3,21 @@
  */
 
 #include "analysis_state.h"
+// #include "debug.h"
 
 /**
  * @class Analysis::State
  * @brief Abstract state of a set of path of the program
  */
-Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), bottom(bottom), constants() { }
+const Analysis::State bottom(true);
+
+Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), lvars(), mvars(), bottom(bottom), constants() { }
 
 // Analysis::State::State(const context_t& context)
 	// : dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
 
 Analysis::State::State(Block* entryb, const context_t& context, bool init)
-	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(context.max_tempvars+context.max_registers+1),
+	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(*dag, context.max_tempvars, context.max_registers),
 	mvars(), bottom(false), constants(context.max_tempvars, context.max_registers)
 {
 	generated_preds.clear(); // generated_preds := [[]]
@@ -29,7 +32,8 @@ Analysis::State::State(Block* entryb, const context_t& context, bool init)
 }
 
 Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
-	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), bottom(false), constants(context.max_tempvars, context.max_registers)
+	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(*dag, context.max_tempvars, context.max_registers),
+	mvars(), bottom(false), constants(context.max_tempvars, context.max_registers)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -41,7 +45,7 @@ Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
 }
 
 Analysis::State::State(const State& s)
-	: dfa_state(s.dfa_state), sp(s.sp), dag(s.dag), bottom(s.bottom), path(s.path), constants(s.constants),
+	: dfa_state(s.dfa_state), sp(s.sp), dag(s.dag), lvars(s.lvars), bottom(s.bottom), path(s.path), constants(s.constants),
 	  labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
 	{ }
 
@@ -222,6 +226,7 @@ elm::String Analysis::State::dumpEverything() const
 		<< "  * ConstantVariables constants=" << constants << endl
 		<< "  * SLList<LabelledPredicate> labelled_preds=" << labelled_preds << endl
 		<< "  * SLList<LabelledPredicate> generated_preds=" << generated_preds << endl
+		<< "  * LocalVariables lvars= [" << endl << lvars << "]" << endl
 		// << "  * SLList<LabelledPredicate> generated_preds_taken=" << generated_preds_taken << endl
 		<< "\t--- END OF DUMP ---";
 }
@@ -239,7 +244,7 @@ bool Analysis::State::equiv(const Analysis::State& s) const
 	if(generated_preds_taken != generated_preds_taken)
 		return false;
 	*/
-	if(!this->constants.sameValuesAs(s.constants))
+	if(! this->constants.sameValuesAs(s.constants))
 		return false;
 	// checking for this->labelled_preds.sameValuesAs(s.labelled_preds)
 	if(this->labelled_preds.count() != s.labelled_preds.count())

@@ -80,7 +80,7 @@ void ConstantVariables::invalidate(const OperandVar& opdv)
 bool ConstantVariables::invalidateTempVars()
 {
 	int changes = 0;
-	for(unsigned int i = 0; i < _max_tempvars; i++)
+	for(short i = 0; i < _max_tempvars; i++)
 	{
 		if(tempvars[i])
 		{
@@ -106,18 +106,18 @@ void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
 	{
 		const ConstantVariables& cv = *iter;
 		ASSERTP(_max_tempvars == cv._max_tempvars && _max_registers == cv._max_registers, "ConstantVariables::merge: format does not match")
-		for(unsigned int i = 0; i < _max_tempvars; i++)
+		for(short i = 0; i < _max_tempvars; i++)
 			if(tempvars[i] && (!cv.tempvars[i] || tempvars[i].val() != (cv.tempvars[i]).val())) // do not compare labels!
 				tempvars[i].clear();
-		for(unsigned int i = 0; i < _max_registers; i++)
+		for(short i = 0; i < _max_registers; i++)
 			if(registers[i] && (!cv.registers[i] || registers[i].val() != (cv.registers[i]).val())) // do not compare labels!
 				registers[i].clear();
 	}
 	// manage labels
-	for(unsigned int i = 0; i < _max_tempvars; i++)
+	for(short i = 0; i < _max_tempvars; i++)
 		if(tempvars[i])
 			tempvars[i] = LabelledValue(tempvars[i].val(), Set<Edge*>::null, true); // it is important to mark them as updated so they can be labelled
-	for(unsigned int i = 0; i < _max_registers; i++)
+	for(short i = 0; i < _max_registers; i++)
 		if(registers[i])
 			registers[i] = LabelledValue(registers[i].val(), Set<Edge*>::null, true);
 }

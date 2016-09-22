@@ -11,6 +11,8 @@ using namespace elm;
  * @class Constant
  * @brief A constant of the abstract interpretation analysis. Can be relative to SP0 (the initial value of the stack pointer)
  */
+const Constant SP(0, CONSTANT_PLUS_SP);
+
 Constant::Constant() : _val(0), _kind(CONSTANT_INVALID)/*, _sign(SIGN_POSITIVE)*/ { }
 // Constant::Constant(t::int32 val, bool relative, bool sign)
 // 	: _val(val), _kind(relative ? (sign ? CONSTANT_PLUS_SP0 : CONSTANT_MINUS_SP0) : CONSTANT_ABSOLUTE) { }

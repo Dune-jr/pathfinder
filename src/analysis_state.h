@@ -11,8 +11,9 @@
 #include "analysis.h"
 #include "constant_variables.h"
 #include "detailed_path.h"
-#include "halfpredicate.h"
+// #include "halfpredicate.h"
 #include "labelled_predicate.h"
+#include "local_variables.h"
 
 using namespace otawa;
 using elm::genstruct::SLList;
@@ -23,17 +24,11 @@ class Analysis::State {
 private:
 	const dfa::State* dfa_state;
 	OperandVar sp; // the Stack Pointer register
-	// OrderedPath path;
-	DAG* dag;
 #ifdef EXP
-/*	class LVarsTable : HashTable<OperandVar, Operand*> {
-	public:
-		inline Operand* operator[](const OperandVar& key) { return *Ref(*this, key); }
-	};
-*/
-	HashTable<OperandVar, const Operand*> lvars;
-	HashTable<OperandMem, const Operand*> mvars;
-	// HashTable<OperandVar, SLList<HalfPredicate> > preds;
+	DAG* dag;
+	// HashTable<t::int32, const Operand*> lvars;
+	LocalVariables lvars;
+	HashTable<Constant, const Operand*, ConstantHash> mvars;
 #endif
 	bool bottom;
 	DetailedPath path;
@@ -60,7 +55,6 @@ public:
 	inline void onReturn(SynthBlock* sb) { path.onReturn(sb); }
 	inline bool isBottom() const { return bottom; }
 	inline bool isValid() const { return dfa_state != NULL && constants.isValid(); } // this is so that we can have empty states that do not use too much memory
-
 
 	// analysis_state.cpp
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
@@ -167,7 +161,7 @@ private:
 	}; // PredIterator class
 }; // State class
 
-const static Analysis::State bottom(true);
+extern const Analysis::State bottom;
 
 class Analysis::States : public elm::Lock {
 public:

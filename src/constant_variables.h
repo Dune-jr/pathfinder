@@ -16,7 +16,7 @@ class ConstantVariables : public ConstantVariablesCore
 {
 public:
 	ConstantVariables() : ConstantVariablesCore() { } // invalid
-	ConstantVariables(unsigned int max_tempvars, unsigned int max_registers) : ConstantVariablesCore(max_tempvars, max_registers) { }
+	ConstantVariables(short max_tempvars, short max_registers) : ConstantVariablesCore(max_tempvars, max_registers) { }
 	ConstantVariables(const ConstantVariables& cv) : ConstantVariablesCore(cv) { }
 	~ConstantVariables() { }
 
