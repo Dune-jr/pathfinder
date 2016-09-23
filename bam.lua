@@ -37,6 +37,7 @@ end
 -- OTAWA
 settings.cc.flags:Add("`" .. otawa_config .. " --cflags`")
 settings.link.flags:Add("`" .. otawa_config .." --libs --rpath`")
+-- settings.cc.flags:Add("-D NDEBUG") -- optimize
 
 -- OSLICE
 -- if config.oslice_cc_path.value ~= "" and config.oslice_cc_path.value ~= "" then
