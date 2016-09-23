@@ -127,7 +127,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 					constants.set(d, ConstantVariables::LabelledValue(*addr_const_value, labels, true));
 				}
 				else
-				{							
+				{
 					make_pred = true;
 					opd1 = new OperandVar(reg);
 					opd2 = new OperandMem(*addr_mem);
@@ -833,14 +833,13 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 			break;
 		case LOAD: // reg <- MEM_type(addr)
 			// addr is likely to be t1
-			DBGG("lvars[" << OperandVar(addr).toString() << "] = " << lvars(addr));
-			if(lvars[addr] && lvars.isConst(addr) && lvars(addr).toConst().value().isValidAddress())
-				lvars[reg] = mvars[lvars[addr]->toMem().getConst()];
+			if(lvars.isConst(addr) && lvars(addr).toConstant().isValidAddress())
+				lvars[reg] = mvars[lvars(addr).toConstant()];
 			else
 				lvars[reg] = dag->top();
 			break;
 		case STORE:	// MEM_type(addr) <- reg
-			// if()
+			// if(lvars.isConst(addr))
 			break;
 		case SET:
 			break;
@@ -1304,9 +1303,11 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand& 
 bool Analysis::State::replaceMem(const OperandMem& opdm, const Operand& expr, const Path& labels)
 {
 	bool rtn = false;
+	elm::String prev_str;
 	for(SLList<LabelledPredicate>::MutableIterator iter(generated_preds); iter; )
 	{
-		const elm::String prev_str = _ << iter.item().pred();
+		if(dbg_verbose == DBG_VERBOSE_ALL)
+			prev_str = _ << iter.item().pred();
 		if(iter.item().updatePred(opdm, expr))
 		{
 			iter.item().addLabels(labels);
@@ -1332,7 +1333,8 @@ bool Analysis::State::replaceMem(const OperandMem& opdm, const Operand& expr, co
 	}
 	for(SLList<LabelledPredicate>::MutableIterator iter(labelled_preds); iter; )
 	{
-		const elm::String prev_str = _ << iter.item();
+		if(dbg_verbose == DBG_VERBOSE_ALL)
+			prev_str = _ << iter.item();
 		if(iter.item().updatePred(opdm, expr))
 		{
 			iter.item().addLabels(labels);
@@ -1624,7 +1626,7 @@ Predicate* Analysis::State::getPredicateGeneratedByCondition(sem::inst condition
 */
 Option<OperandConst> Analysis::State::getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type)
 {
-	const Constant& addr = addr_mem.getConst();
+	const Constant& addr = addr_mem.addr();
 	if(!addr.isAbsolute())
 		return none;
 	if(!dfa_state->isInitialized(addr.val()))
@@ -1635,7 +1637,7 @@ Option<OperandConst> Analysis::State::getConstantValueOfReadOnlyMemCell(const Op
 		case INT16:
 		case INT32:
 		case INT64: // TODO: can't we just do the same as UINT and (int) convert it?
-		return none;
+			return none;
 		case UINT8:
 		{
 			t::uint8 v;

@@ -28,7 +28,7 @@ Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o)
 // o must have valid addr
 Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, const Expr& expr_addr)
 {
-	const Constant& addr = o.getConst().value();
+	const Constant& addr = o.addr().value();
 	ASSERT(addr.isValid());
 	int sp_factor = 0;
 	if(addr.isRelative())

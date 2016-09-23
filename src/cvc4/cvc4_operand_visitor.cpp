@@ -35,7 +35,7 @@ bool CVC4OperandVisitor::visit(const class OperandVar& o)
 bool CVC4OperandVisitor::visit(const class OperandMem& o)
 {
 	//o.addr().accept(*this); // fetch expr from address of o
-	if(!o.getConst().value().isValid())
+	if(!o.addr().value().isValid())
 		return false; // fail
 	expr = variables.getExpr(em, o);//, expr);
 	visited = true;

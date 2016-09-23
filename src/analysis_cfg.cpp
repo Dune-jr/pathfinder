@@ -69,7 +69,7 @@ void Analysis::processCFG(CFG* cfg)
 			/* if b ∈ H(G) then */
 			if(LOOP_HEADER(b))
 			{
-				ASSERT(s->count() <= 1)
+				ASSERT(s->count() <= 1);
 				/* if status_b = LEAVE then */
 				if(loopStatus(b) == LEAVE)
 				{
@@ -265,12 +265,11 @@ void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<Detailed
 	// Block *b = ip.firstEdge()->source();
 	// for(LoopHeaderIter i(b); i; i++)
 	// 	new_ip.addEnclosingLoop(*i);
-	if(!infeasible_paths.contains(new_ip))
+	if(! infeasible_paths.contains(new_ip))
 		infeasible_paths.add(new_ip);
 	else
 		DBG("not adding redundant IP: " << new_ip)
 }
-
 /**
  * @fn void Analysis::removeDuplicateInfeasiblePaths();
  * @brief Look for infeasible paths that share the same ordered list of edges and remove duplicates 

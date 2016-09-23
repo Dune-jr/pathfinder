@@ -117,10 +117,7 @@ io::Output& OperandConst::print(io::Output& out) const
 OperandConst& OperandConst::operator=(const OperandConst& opd) { _value = opd._value; return *this; }
 bool OperandConst::operator==(const Operand& o) const
 {
-	if(o.kind() == kind())
-		return _value == ((OperandConst&)o)._value;
-	else
-		return false; // Operand types are not matching
+	return (o.kind() == kind()) && _value == ((OperandConst&)o)._value;
 }
 unsigned int OperandConst::countTempVars() const { return 0; }
 bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
@@ -166,11 +163,8 @@ io::Output& OperandVar::print(io::Output& out) const
 }
 OperandVar& OperandVar::operator=(const OperandVar& opd){ _addr = opd._addr; return *this; }
 bool OperandVar::operator==(const Operand& o) const
-{	
-	if(o.kind() == kind())
-		return _addr == ((OperandVar&)o)._addr;
-	else
-		return false; // Operand types are not matching
+{
+	return (o.kind() == kind()) && _addr == ((OperandVar&)o)._addr;
 }
 unsigned int OperandVar::countTempVars() const { return isTempVar() ? 1 : 0; }
 bool OperandVar::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
@@ -210,57 +204,42 @@ Option<Operand*> OperandVar::replaceConstants(const ConstantVariablesCore& const
 }
 
 // Operands: Memory
-OperandMem::OperandMem(const OperandConst& opdc)
-{
-	_opdc = new OperandConst(opdc);
-}
-OperandMem::OperandMem(const OperandMem& opd) // : _kind(opd._kind)
-{
-	_opdc = new OperandConst(opd.getConst());
-}
-OperandMem::OperandMem() : _opdc(NULL) { }
-OperandMem::~OperandMem()
-{
-	if(_opdc) delete _opdc;
-}
-Operand* OperandMem::copy() const
-{
-	return new OperandMem(*_opdc);
-}
+OperandMem::OperandMem(const OperandConst& opdc) : _opdc(opdc) { }
+OperandMem::OperandMem(const OperandMem& opd) : _opdc(opd.addr()) { }
+OperandMem::OperandMem() { }
 io::Output& OperandMem::print(io::Output& out) const
-{
-	out << "[";
-	return (out << *_opdc << "]");
-}
-OperandMem& OperandMem::operator=(const OperandMem& opd) { delete _opdc; _opdc = new OperandConst(*(opd._opdc)); return *this; }
+	{ return out << "[" << _opdc << "]"; }
+OperandMem& OperandMem::operator=(const OperandMem& opd)
+	{ _opdc = opd._opdc; return *this; }
 bool OperandMem::operator==(const Operand& o) const
-{	// untested so far	
-	if(o.kind() != kind())
-		return false; // Operand types are not matching
-	OperandMem& o_mem = (OperandMem&)o; // Force conversion
-	return *_opdc == o_mem.getConst();
-}
-unsigned int OperandMem::countTempVars() const { return 0; }
+	{ return (kind() == o.kind()) && (addr() == ((OperandMem&)o).addr()); }
 bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
 {
 	expr = this; // Assume we are the expr
 	return false; // We haven't found an isolated tempvar
 }
-int OperandMem::involvesVariable(const OperandVar& opdv) const { return 0; }
-bool OperandMem::involvesMemoryCell(const OperandMem& opdm) const {	return *this == opdm; }
+int OperandMem::involvesVariable(const OperandVar& opdv) const
+	{ return 0; }
+bool OperandMem::involvesMemoryCell(const OperandMem& opdm) const
+	{ return *this == opdm; }
 Option<Constant> OperandMem::involvesStackBelow(const Constant& stack_limit) const 
 {
-	if(_opdc->value().isRelative() && (_opdc->value().val() < stack_limit.val()))
-		return elm::some(_opdc->value());
+	if(_opdc.value().isRelative() && (_opdc.value().val() < stack_limit.val()))
+		return elm::some(_opdc.value());
 	return elm::none;
 }
-bool OperandMem::involvesMemory() const { return true; }
-bool OperandMem::update(const Operand& opd, const Operand& opd_modifier) { return false; }
-// pop_result_t OperandMem::doAffinePop(Operand*& opd_result, Operand*& new_opd) { return POPRESULT_FAIL; }
-void OperandMem::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen
-Option<OperandConst> OperandMem::evalConstantOperand() const { return none; }
-Option<Operand*> OperandMem::simplify() { return none; }
-Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) { return none; }
+bool OperandMem::involvesMemory() const
+	{ return true; }
+bool OperandMem::update(const Operand& opd, const Operand& opd_modifier)
+	{ return false; }
+void OperandMem::parseAffineEquation(AffineEquationState& state) const
+	{ ASSERT(false); } // should never happen
+Option<OperandConst> OperandMem::evalConstantOperand() const
+	{ return none; }
+Option<Operand*> OperandMem::simplify()
+	{ return none; }
+Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars)
+	{ return none; }
  
 // Operands: Top
 int OperandTop::next_id = 0;
@@ -281,10 +260,7 @@ OperandTop& OperandTop::operator=(const OperandTop& opd)
 }
 bool OperandTop::operator==(const Operand& o) const
 {
-	if(o.kind() != kind())
-		return false; // Operand types are not matching
-	OperandTop& o_top = (OperandTop&)o; // Force conversion
-	return o_top.id == id;
+	return (kind() == o.kind()) && (id == ((OperandTop&)o).id);
 }
 unsigned int OperandTop::countTempVars() const { return 0; }
 bool OperandTop::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
@@ -371,10 +347,8 @@ OperandArithExpr& OperandArithExpr::operator=(const OperandArithExpr& opd)
 }
 bool OperandArithExpr::operator==(const Operand& o) const
 {
-	if(o.kind() != kind())
-		return false; // Operand types are not matching
 	OperandArithExpr& o_arith = (OperandArithExpr&)o; // Force conversion
-	return (_opr == o_arith._opr) && (*opd1 == *(o_arith.opd1)) && (isUnary() || *opd2 == *(o_arith.opd2));
+	return (o.kind() == kind()) && (_opr == o_arith._opr) && (*opd1 == *(o_arith.opd1)) && (isUnary() || *opd2 == *(o_arith.opd2));
 }
 unsigned int OperandArithExpr::countTempVars() const
 {

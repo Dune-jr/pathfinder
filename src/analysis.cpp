@@ -409,14 +409,16 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 }
 
 // returns edge to remove
-Option<Edge*> f_dom(GlobalDominance* gdom, Edge* e1, Edge* e2) {
+Option<Edge*> Analysis::f_dom(GlobalDominance* gdom, Edge* e1, Edge* e2)
+{
 	DBG("\tdom(" << e1 << ", " << e2 << "): " << DBG_TEST(gdom->dom(e1, e2), false))
 	if(gdom->dom(e1, e2))
 		return elm::some(e1);
 	return elm::none;
 }
 // returns edge to remove
-Option<Edge*> f_postdom(GlobalDominance* gdom, Edge* e1, Edge* e2) {
+Option<Edge*> Analysis::f_postdom(GlobalDominance* gdom, Edge* e1, Edge* e2)
+{
 	DBG("\tpostdom(" << e2 << ", " << e1 << "): " << DBG_TEST(gdom->postdom(e2, e1), false))
 	if(gdom->postdom(e2, e1))
 		return elm::some(e2);

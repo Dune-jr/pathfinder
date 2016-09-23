@@ -129,12 +129,13 @@ private:
 			{ state = i.state; gp_iter = i.gp_iter; lp_iter = i.lp_iter; return *this; }
 		
 		inline bool ended(void) const { return (state == DONE); }
-		const LabelledPredicate& item(void) const {
-			switch(state) {
-				case GENERATED_PREDS: return gp_iter.item();
-				case LABELLED_PREDS: return lp_iter.item();
-				default: ASSERT(false);
-			}
+		inline const LabelledPredicate& item(void) const {
+			return (state == GENERATED_PREDS) ? gp_iter.item() : lp_iter.item();
+			// switch(state) {
+			// 	case GENERATED_PREDS: return gp_iter.item();
+			// 	case LABELLED_PREDS: return lp_iter.item();
+			// 	default: ASSERT(false);
+			// }
 		}
 		// this behaves fine when called while state == DONE. We use this in the code as of 2014-11-14 (for movePredicateToGenerated)
 		void next(void) {

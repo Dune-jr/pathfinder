@@ -127,7 +127,6 @@ private:
 	// analysis_state.cpp
 	Analysis::State topState(Block* entry) const;
 	// analysis.cpp
-	// void debugProgress(int block_id, bool enable_smt) const;
 	void wl_push(Block* b);
 	void printResults(int exec_time_ms, int real_time_ms) const;
 	void postProcessResults(CFG *cfg);
@@ -146,8 +145,8 @@ private:
 	bool allEdgesHaveTrace(const Block::EdgeIter& biter) const;
 
 	// dominance stuff
-	// Option<Edge*> f_dom(Edge* e1, Edge* e2) const; // returns edge to remove
-	// Option<Edge*> f_postdom(Edge* e1, Edge* e2) const; // returns edge to remove
+	static Option<Edge*> f_dom(GlobalDominance* gdom, Edge* e1, Edge* e2);
+	static Option<Edge*> f_postdom(GlobalDominance* gdom, Edge* e1, Edge* e2);
 	int simplifyUsingDominance(Option<Edge*> (*f)(GlobalDominance* gdom, Edge* e1, Edge* e2));
 
 	// bool invalidate_constant_info

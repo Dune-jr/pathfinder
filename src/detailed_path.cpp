@@ -130,7 +130,7 @@ void DetailedPath::fromContext(Block* b)
 void DetailedPath::addEnclosingLoop(Block* loop_header)
 {
 	// TODO: I don't think this should actually be used... onLoopEntry/onLoopExit + preserving this stuff on merges should be enough // 11may2016
-	ASSERT(loop_header->isBasic())	
+	ASSERT(loop_header->isBasic());
 	if(!contains(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic())))
 		_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic()));
 	if(!contains(FlowInfo(FlowInfo::KIND_LOOP_EXIT, loop_header->toBasic())))
@@ -140,13 +140,13 @@ void DetailedPath::addEnclosingLoop(Block* loop_header)
 
 void DetailedPath::onLoopEntry(Block* loop_header)
 {
-	ASSERT(loop_header->isBasic())
+	ASSERT(loop_header->isBasic());
 	_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic())); // TODO! change this
 }
 
 void DetailedPath::onLoopExit(Option<Block*> new_loop_header) // TODO: shouldn't this be old_loop_header?
 {
-	ASSERT(!new_loop_header || (*new_loop_header)->isBasic())
+	ASSERT(!new_loop_header || (*new_loop_header)->isBasic());
 	if(new_loop_header)
 		_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, (*new_loop_header)->toBasic())); // TODO! change this
 	else _path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, (BasicBlock*)NULL));
@@ -157,7 +157,7 @@ void DetailedPath::onLoopExit(Option<Block*> new_loop_header) // TODO: shouldn't
  */
 void DetailedPath::onCall(SynthBlock* sb)
 {
-	ASSERT(sb->isCall())
+	ASSERT(sb->isCall());
 	_path.addLast(FlowInfo(FlowInfo::KIND_CALL, sb));
 }
 
@@ -166,7 +166,7 @@ void DetailedPath::onCall(SynthBlock* sb)
  */
 void DetailedPath::onReturn(SynthBlock* sb)
 {
-	ASSERT(sb->isCall())
+	ASSERT(sb->isCall());
 	_path.addLast(FlowInfo(FlowInfo::KIND_RETURN, sb));
 	/*
 	BasicBlock::InIterator ins(bb);

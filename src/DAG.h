@@ -215,7 +215,7 @@ public:
 		{ return mem(static_cast<const OperandConst*>(this->cst(cst))); }
 
 	inline const Operand *mem(const OperandMem *opd_mem)
-		{ return mem(opd_mem->getConst()); }
+		{ return mem(opd_mem->addr()); }
 
 	// creates a new top
 	const Operand* top(void) {

@@ -118,7 +118,7 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
-	int involvesVariable(const OperandVar& opdv) const;
+	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
@@ -135,7 +135,7 @@ public:
 	inline operand_kind_t kind() const { return CST; }
 	inline operator Constant() const { return _value; }
 	OperandConst& operator=(const OperandConst& opd);
-	bool operator==(const Operand& o) const;
+	inline bool operator==(const Operand& o) const;
 	inline const OperandConst& toConst() const { return *this; }
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 	inline Constant toConstant() const { return _value; }
@@ -161,7 +161,7 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
-	int involvesVariable(const OperandVar& opdv) const;
+	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
@@ -191,15 +191,14 @@ public:
 	OperandMem(const OperandMem& opd);
 	OperandMem(const OperandConst& opdc);
 	OperandMem(); // for use in Option
-	~OperandMem();
 	
-	inline const OperandConst& getConst() const { ASSERT(_opdc); return *_opdc; }
+	inline const OperandConst& addr() const { return _opdc; }
 	
-	Operand* copy() const;
-	unsigned int countTempVars() const;
+	Operand* copy() const { return new OperandMem(*this); }
+	unsigned int countTempVars() const { return 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
-	int involvesVariable(const OperandVar& opdv) const;
+	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
@@ -215,13 +214,13 @@ public:
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return MEM; }
 	OperandMem& operator=(const OperandMem& opd);
-	bool operator==(const Operand& o) const;
+	inline bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandMem& o) { return o.print(out); }
-	const OperandMem& toMem() const { return *this; }
+	inline const OperandMem& toMem() const { return *this; }
 private:
 	io::Output& print(io::Output& out) const;
 
-	OperandConst* _opdc;
+	OperandConst _opdc;
 };
 
 class OperandTop : public Operand
@@ -237,7 +236,7 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
-	int involvesVariable(const OperandVar& opdv) const;
+	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
@@ -253,7 +252,7 @@ public:
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return TOP; }
 	OperandTop& operator=(const OperandTop& opd);
-	bool operator==(const Operand& o) const;
+	inline bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandTop& o) { return o.print(out); }
 	const OperandTop& toTop() const { return *this; }
 private:
@@ -283,7 +282,7 @@ public:
 	Operand* copy() const;
 	unsigned int countTempVars() const;
 	int involvesOperand(const Operand& opd) const { return opd1->involvesOperand(opd) + opd2->involvesOperand(opd); }
-	int involvesVariable(const OperandVar& opdv) const;
+	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
@@ -301,7 +300,7 @@ public:
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return ARITH; }
 	OperandArithExpr& operator=(const OperandArithExpr& opd);
-	bool operator==(const Operand& o) const;
+	inline bool operator==(const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
 	const OperandArithExpr& toArith() const { return *this; }
 private:

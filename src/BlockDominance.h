@@ -44,7 +44,7 @@ public:
 		process(g);
 	}
 	Vertex* idom(Vertex* v) {
-		ASSERT(doms.exists(v))
+		ASSERT(doms.exists(v));
 		return doms.get(v);
 	}
 
@@ -124,7 +124,7 @@ public:
 		process(g, entry);
 	}
 	Vertex* idom(Vertex* v) {
-		ASSERT(doms.exists(v))
+		ASSERT(doms.exists(v));
 		return doms.get(v);
 	}
 
