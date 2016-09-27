@@ -179,7 +179,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 			opd1 = new OperandVar(d);
 			opd21 = new OperandVar(a);
 			opd22 = new OperandVar(b);
-			opd2 = new OperandArithExpr(ARITHOPR_CMP, *opd21, *opd22);
+			opd2 = new OperandArith(ARITHOPR_CMP, *opd21, *opd22);
 			invalidateVar(d);
 			break;
 		case ADD:
@@ -187,10 +187,10 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 			{
 				if(d == b) // d <- d+d
 				{	// [d/2 / d]
-					update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(2)), labels);
+					update(OperandVar(d), OperandArith(ARITHOPR_DIV, OperandVar(d), OperandConst(2)), labels);
 					opd11 = new OperandVar(d);
 					opd12 = new OperandVar(2);
-					opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
+					opd1 = new OperandArith(ARITHOPR_MOD, *opd11, *opd12);
 					opd2 = new OperandConst(0);
 					make_pred = true; // d % 2 = 0
 					if(isConstant(d))
@@ -198,7 +198,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 				}
 				else // d <- d+b
 				{	// [d-b / d]
-					update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(b)), labels);
+					update(OperandVar(d), OperandArith(ARITHOPR_SUB, OperandVar(d), OperandVar(b)), labels);
 					if(isConstant(d))
 					{
 						if(isConstant(b))
@@ -209,7 +209,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 							opd1 = new OperandVar(d);
 							opd21 = new OperandConst(constants[d]);
 							opd22 = new OperandVar(b);
-							opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
+							opd2 = new OperandArith(ARITHOPR_ADD, *opd21, *opd22);
 							make_pred = true;
 
 							constants.invalidate(d);
@@ -221,7 +221,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 			{
 				if(d == b) // d <- d+a
 				{	// [d-a / d]
-					update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(d), OperandVar(a)), labels);
+					update(OperandVar(d), OperandArith(ARITHOPR_SUB, OperandVar(d), OperandVar(a)), labels);
 					if(isConstant(d))
 					{
 						if(isConstant(a))
@@ -232,7 +232,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 							opd1 = new OperandVar(d);
 							opd21 = new OperandVar(a);
 							opd22 = new OperandConst(constants[d]);
-							opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
+							opd2 = new OperandArith(ARITHOPR_ADD, *opd21, *opd22);
 							make_pred = true;
 
 							constants.invalidate(d);
@@ -246,7 +246,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 					opd1 = new OperandVar(d);
 					opd21 = new OperandVar(a);
 					opd22 = new OperandVar(b);
-					opd2 = new OperandArithExpr(ARITHOPR_ADD, *opd21, *opd22);
+					opd2 = new OperandArith(ARITHOPR_ADD, *opd21, *opd22);
 					if(isConstant(a) && isConstant(b))
 						constants.set(d, constants[a]+constants[b], getLabels(a, b));
 					else make_pred = true; // d = a+b
@@ -264,7 +264,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 				}
 				else // d <- d-b
 				{	// [d+b / d]
-					update(OperandVar(d), OperandArithExpr(ARITHOPR_ADD, OperandVar(d), OperandVar(b)), labels);
+					update(OperandVar(d), OperandArith(ARITHOPR_ADD, OperandVar(d), OperandVar(b)), labels);
 					if(isConstant(d))
 					{
 						if(isConstant(b))
@@ -275,7 +275,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 							opd1 = new OperandVar(d);
 							opd21 = new OperandConst(constants[d]);
 							opd22 = new OperandVar(b);
-							opd2 = new OperandArithExpr(ARITHOPR_SUB, *opd21, *opd22);
+							opd2 = new OperandArith(ARITHOPR_SUB, *opd21, *opd22);
 							make_pred = true;
 
 							constants.invalidate(d);
@@ -287,7 +287,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 			{
 				if(d == b) // d <- a-d
 				{	// [a-d / d], this function f has a f°f=Id property
-					update(OperandVar(d), OperandArithExpr(ARITHOPR_SUB, OperandVar(a), OperandVar(d)), labels);
+					update(OperandVar(d), OperandArith(ARITHOPR_SUB, OperandVar(a), OperandVar(d)), labels);
 					if(isConstant(d))
 					{
 						if(isConstant(a)) // everything is const, update const value of d
@@ -298,7 +298,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 							opd1 = new OperandVar(d);
 							opd21 = new OperandVar(a);
 							opd22 = new OperandConst(constants[d]);
-							opd2 = new OperandArithExpr(ARITHOPR_SUB, *opd21, *opd22);
+							opd2 = new OperandArith(ARITHOPR_SUB, *opd21, *opd22);
 							make_pred = true;
 
 							constants.invalidate(d);
@@ -311,7 +311,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 					opd1 = new OperandVar(d);
 					opd21 = new OperandVar(a);
 					opd22 = new OperandVar(b);
-					opd2 = new OperandArithExpr(ARITHOPR_SUB, *opd21, *opd22);
+					opd2 = new OperandArith(ARITHOPR_SUB, *opd21, *opd22);
 					if(isConstant(a) && isConstant(b))
 						constants.set(d, constants[a]-constants[b], getLabels(a, b));
 					else make_pred = true; // d = a-b
@@ -339,7 +339,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 				if(d == a) // d <- d << b
 				{
 					labels = getLabels(b);
-					update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << b_val)), labels);
+					update(OperandVar(d), OperandArith(ARITHOPR_DIV, OperandVar(d), OperandConst(1 << b_val)), labels);
 					// we also add a predicate to say that d is now a multiple of 2^b
 					if(isConstant(d)) // we must update constant value of d
 					{
@@ -350,7 +350,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 					{ 
 						opd11 = new OperandVar(d);
 						opd12 = new OperandConst(1 << b_val);
-						opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12);
+						opd1 = new OperandArith(ARITHOPR_MOD, *opd11, *opd12);
 						opd2 = new OperandConst(0);
 						make_pred = true; // will use labels
 					}
@@ -368,7 +368,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 						invalidateVar(d);
 						opd21 = new OperandVar(a);
 						opd22 = new OperandConst(1 << b_val); // 2^b_val
-						opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
+						opd2 = new OperandArith(ARITHOPR_MUL, *opd21, *opd22);
 						make_pred = true;
 					}
 				}
@@ -406,7 +406,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 						invalidateVar(d);
 						opd21 = new OperandVar(a);
 						opd22 = new OperandConst(1 << b_val); // 2^b_val
-						opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
+						opd2 = new OperandArith(ARITHOPR_DIV, *opd21, *opd22);
 						make_pred = true; // this will use labels
 					}
 				}
@@ -418,7 +418,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 			{
 				if(a == d) // d <- -d
 				{	// [-1 * d / d]
-					update(OperandVar(d), OperandArithExpr(ARITHOPR_NEG, OperandVar(d)), labels); // TODO test
+					update(OperandVar(d), OperandArith(ARITHOPR_NEG, OperandVar(d)), labels); // TODO test
 					if(isConstant(d))
 						constants.set(d, -constants[d], getLabels(d));
 				}
@@ -428,7 +428,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 					opd1 = new OperandVar(d);
 					opd21 = new OperandConst(-1);
 					opd22 = new OperandVar(a);
-					opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
+					opd2 = new OperandArith(ARITHOPR_MUL, *opd21, *opd22);
 					if(isConstant(a))
 						constants.set(d, -constants[a], getLabels(a));
 					else make_pred = true;
@@ -495,7 +495,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 						opd1 = new OperandVar(d);
 						opd21 = new OperandVar(varopd);
 						opd22 = new OperandConst(mod_factor);
-						opd2 = new OperandArithExpr(ARITHOPR_MOD, *opd21, *opd22);
+						opd2 = new OperandArith(ARITHOPR_MOD, *opd21, *opd22);
 						make_pred = true;
 					}
 				}
@@ -541,19 +541,19 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 						else // d <- #d * b
 						{
 							opd1 = new OperandVar(d);
-							opd2 = new OperandArithExpr(ARITHOPR_MUL, OperandConst(constants[d]), OperandVar(b));
+							opd2 = new OperandArith(ARITHOPR_MUL, OperandConst(constants[d]), OperandVar(b));
 							make_pred = true;
 							constants.invalidate(d);
 						}
 					}
 					else
 					{	// we add a predicate to say that d is now a multiple of b
-						update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(b)), labels);
+						update(OperandVar(d), OperandArith(ARITHOPR_DIV, OperandVar(d), OperandVar(b)), labels);
 						if(isConstant(b))
 						{
 							opd11 = new OperandVar(d);
 							opd12 = new OperandConst(constants[b]);
-							opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12); // d % b (%0 is to consider!)
+							opd1 = new OperandArith(ARITHOPR_MOD, *opd11, *opd12); // d % b (%0 is to consider!)
 							opd2 = new OperandConst(0);
 							make_pred = true;
 						} // I don't think it's worth it to add this "b divides d" predicate if b is not constant... maybe I'm wrong
@@ -572,19 +572,19 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 						else
 						{
 							opd1 = new OperandVar(d);
-							opd2 = new OperandArithExpr(ARITHOPR_MUL, OperandConst(constants[d]), OperandVar(a));
+							opd2 = new OperandArith(ARITHOPR_MUL, OperandConst(constants[d]), OperandVar(a));
 							make_pred = true;
 							constants.invalidate(d);
 						}
 					}
 					else
 					{	// we add a predicate to say that d is now a multiple of a
-						update(OperandVar(d), OperandArithExpr(ARITHOPR_DIV, OperandVar(d), OperandVar(a)), labels);
+						update(OperandVar(d), OperandArith(ARITHOPR_DIV, OperandVar(d), OperandVar(a)), labels);
 						if(isConstant(a))
 						{
 							opd11 = new OperandVar(d);
 							opd12 = new OperandConst(constants[a]);
-							opd1 = new OperandArithExpr(ARITHOPR_MOD, *opd11, *opd12); // d % a (%0 is to consider!)
+							opd1 = new OperandArith(ARITHOPR_MOD, *opd11, *opd12); // d % a (%0 is to consider!)
 							opd2 = new OperandConst(0);
 							make_pred = true;
 						} // I don't think it's worth it to add this "a divides d" predicate if a is not constant... maybe I'm wrong
@@ -606,7 +606,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 						else
 							opd22 = new OperandVar(b);
 						opd1 = new OperandVar(d);
-						opd2 = new OperandArithExpr(ARITHOPR_MUL, *opd21, *opd22);
+						opd2 = new OperandArith(ARITHOPR_MUL, *opd21, *opd22);
 						make_pred = true;
 					}
 				}
@@ -641,7 +641,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 							DBG(color::BIRed() << "Untested case of operator MULH running!")
 							ASSERT(!UNTESTED_CRITICAL);
 							opd1 = new OperandVar(d);
-							opd2 = new OperandArithExpr(ARITHOPR_MULH, OperandConst(constants[d]), OperandVar(b));
+							opd2 = new OperandArith(ARITHOPR_MULH, OperandConst(constants[d]), OperandVar(b));
 							make_pred = true;
 							constants.invalidate(d);
 						}
@@ -662,7 +662,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 						else
 						{
 							opd1 = new OperandVar(d);
-							opd2 = new OperandArithExpr(ARITHOPR_MULH, OperandVar(a), OperandConst(constants[d]));
+							opd2 = new OperandArith(ARITHOPR_MULH, OperandVar(a), OperandConst(constants[d]));
 							make_pred = true;
 							constants.invalidate(d);
 						}
@@ -686,7 +686,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 						else
 							opd22 = new OperandVar(b);
 						opd1 = new OperandVar(d);
-						opd2 = new OperandArithExpr(ARITHOPR_MULH, *opd21, *opd22);
+						opd2 = new OperandArith(ARITHOPR_MULH, *opd21, *opd22);
 						make_pred = true;
 					}
 				}
@@ -735,7 +735,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 							opd1 = new OperandVar(d);
 							opd21 = new OperandConst(d_val);
 							opd22 = new OperandVar(b);
-							opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
+							opd2 = new OperandArith(ARITHOPR_DIV, *opd21, *opd22);
 							make_pred = true;
 						}
 					}
@@ -757,7 +757,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 							opd1 = new OperandVar(d);
 							opd21 = new OperandVar(a);
 							opd22 = new OperandConst(d_val);
-							opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
+							opd2 = new OperandArith(ARITHOPR_DIV, *opd21, *opd22);
 							make_pred = true;
 						}
 					}
@@ -768,7 +768,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 					opd1 = new OperandVar(d);
 					opd21 = new OperandVar(a);
 					opd22 = new OperandVar(b);
-					opd2 = new OperandArithExpr(ARITHOPR_DIV, *opd21, *opd22);
+					opd2 = new OperandArith(ARITHOPR_DIV, *opd21, *opd22);
 					if(isConstant(a) && isConstant(b))
 						constants.set(d, constants[a]/constants[b], getLabels(a, b));
 					else make_pred = true; // d = a / b
@@ -784,7 +784,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 			{
 				opd21 = new OperandVar(a);
 				opd22 = new OperandVar(b);
-				opd2 = new OperandArithExpr(ARITHOPR_MOD, *opd21, *opd22);
+				opd2 = new OperandArith(ARITHOPR_MOD, *opd21, *opd22);
 			}
 			if(isConstant(a) && isConstant(b))
 				constants.set(d, constants[a]%constants[b], getLabels(a, b));
@@ -815,8 +815,8 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 
 void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_condition)
 {
-	// const t::int16 &a = seminsts.a(), &b = seminsts.b(), &d = seminsts.d();
-	// const t::int32 &cst = seminsts.cst();
+	const t::int16 /*&a = seminsts.a(), &b = seminsts.b(),*/ &d = seminsts.d();
+	const t::int32 &cst = seminsts.cst();
 	const t::int16 &reg = seminsts.reg(), &addr = seminsts.addr();
 	switch(seminsts.op())
 	{
@@ -834,16 +834,17 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 		case LOAD: // reg <- MEM_type(addr)
 			// addr is likely to be t1
 			if(lvars.isConst(addr) && lvars(addr).toConstant().isValidAddress())
-				lvars[reg] = mvars[lvars(addr).toConstant()];
+				lvars[reg] = mvars.get(lvars(addr).toConstant(), NULL);
 			else
-				lvars[reg] = dag->top();
+				lvars[reg] = dag->new_top();
 			break;
 		case STORE:	// MEM_type(addr) <- reg
 			// if(lvars.isConst(addr))
 			break;
-		case SET:
+		case SET: // d <- a
 			break;
-		case SETI:
+		case SETI: // d <- cst
+			lvars[d] = dag->cst(cst);
 			break;
 		case SETP:
 			break;
@@ -1358,7 +1359,7 @@ bool Analysis::State::replaceMem(const OperandMem& opdm, const Operand& expr, co
 }
 
 // returns true if a variable has been updated
-// second operand is usually an OperandArithExpr
+// second operand is usually an OperandArith
 bool Analysis::State::update(const OperandVar& opd_to_update, const Operand& opd_modifier, Path& labels)
 {
 	Operand *opd_modifier_new, *opd_modifier_prenew = opd_modifier.copy();
@@ -1505,7 +1506,7 @@ bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_le
 			{
 				if(p.rightOperand().kind() == ARITH)
 				{
-					const OperandArithExpr& opd = (const OperandArithExpr&)p.rightOperand();
+					const OperandArith& opd = (const OperandArith&)p.rightOperand();
 					if(opd.opr() == ARITHOPR_CMP) // other operand has to be ??? ~ ???
 					{
 						opd_left = opd.leftOperand().copy();
@@ -1519,7 +1520,7 @@ bool Analysis::State::findValueOfCompVar(const OperandVar& var, Operand*& opd_le
 			{
 				if(p.leftOperand().kind() == ARITH)
 				{
-					const OperandArithExpr& opd = (OperandArithExpr&)p.leftOperand();
+					const OperandArith& opd = (OperandArith&)p.leftOperand();
 					if(opd.opr() == ARITHOPR_CMP) // other operand has to be ??? ~ ???
 					{
 						opd_left = opd.leftOperand().copy();

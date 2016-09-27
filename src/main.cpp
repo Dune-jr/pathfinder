@@ -211,9 +211,9 @@ void testSimplify()
 	OperandConst two   = OperandConst(2);
 	OperandConst three = OperandConst(3);
 	OperandVar t1 = OperandVar(-1);
-	OperandArithExpr e11 = OperandArithExpr(ARITHOPR_NEG, t1);
-	// OperandArithExpr e12 = OperandArithExpr(ARITHOPR_SUB, two, three);
-	OperandArithExpr e1 = OperandArithExpr(ARITHOPR_ADD, t1, e11);
+	OperandArith e11 = OperandArith(ARITHOPR_NEG, t1);
+	// OperandArith e12 = OperandArith(ARITHOPR_SUB, two, three);
+	OperandArith e1 = OperandArith(ARITHOPR_ADD, t1, e11);
 
 	DBG("zero: "  << zero)
 	DBG("one: "   << one)
@@ -228,7 +228,7 @@ void testPredicates()
 {
 	OperandConst oprconst = OperandConst(2);
 	OperandVar oprvar = OperandVar(0x4000);
-	OperandArithExpr e1 = OperandArithExpr(ARITHOPR_MUL, oprconst, oprvar); // e1 := 2 * @0x4000
+	OperandArith e1 = OperandArith(ARITHOPR_MUL, oprconst, oprvar); // e1 := 2 * @0x4000
 	Predicate p1 = Predicate(CONDOPR_EQ, oprvar, e1); // p1 := @0x4000 = e1
 	Predicate p2 = Predicate(CONDOPR_LE, oprconst, oprvar); // p2 := 2 <= @0x4000
 	
@@ -258,12 +258,12 @@ void testOperands()
 	DBG("o3 = o3:\t" << DBG_TEST(o3 == o3, true))
 	DBG("o3 = o4:\t" << DBG_TEST(o3 == o4, false) << io::endl)
 	
-	OperandArithExpr oae = OperandArithExpr(ARITHOPR_MUL, o1, o2);
-	OperandArithExpr oaebis = OperandArithExpr(ARITHOPR_MUL, o1, o2);
+	OperandArith oae = OperandArith(ARITHOPR_MUL, o1, o2);
+	OperandArith oaebis = OperandArith(ARITHOPR_MUL, o1, o2);
 	DBG("o1*o2:\t" << oae)
-	OperandArithExpr oae2 = OperandArithExpr(ARITHOPR_MUL, o2, o2);
-	OperandArithExpr oae3 = OperandArithExpr(ARITHOPR_MUL, o2, o1);
-	OperandArithExpr oae4 = OperandArithExpr(ARITHOPR_ADD, o1, o2);
+	OperandArith oae2 = OperandArith(ARITHOPR_MUL, o2, o2);
+	OperandArith oae3 = OperandArith(ARITHOPR_MUL, o2, o1);
+	OperandArith oae4 = OperandArith(ARITHOPR_ADD, o1, o2);
 	DBG("oae = oae:\t"  << DBG_TEST(oae == oae, true))
 	DBG("oae = oae':\t"  << DBG_TEST(oae == oaebis, true))
 	DBG("oae = oae2:\t" << DBG_TEST(oae == oae2, false))

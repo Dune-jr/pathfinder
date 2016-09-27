@@ -15,7 +15,7 @@ using elm::genstruct::Vector;
 enum arithoperator_t
 {
 	// Unary
-	ARITHOPR_NEG, // (-)   Arithmetic negation
+	ARITHOPR_NEG, // (-)   Arithmetic negation#define PROCESS_VAL(p) case(p): return out << #p; break;
 	// ARITHOPR_NOT, // Should we implement bit inversion? // actually it's just 2^n - x - 1 !
 	
 	// Binary
@@ -40,18 +40,20 @@ enum operand_kind_t
 	TOP,	// Constant of unknown value
 	ARITH,	// Arithmetic Expression
 };
+io::Output& operator<<(io::Output& out, operand_kind_t kind);
 
 enum operandmem_kind_t
 {
 	OPERANDMEM_ABSOLUTE, // Const
 	OPERANDMEM_RELATIVE, // sp+Const
 };
+io::Output& operator<<(io::Output& out, operandmem_kind_t kind);
 
 class OperandConst;
 class OperandVar;
 class OperandMem;
 class OperandTop;
-class OperandArithExpr;
+class OperandArith;
 class AffineEquationState;
 
 // The visitor: an abstract class
@@ -62,7 +64,7 @@ public:
 	virtual bool visit(const OperandVar& o) = 0;
 	virtual bool visit(const OperandMem& o) = 0;
 	virtual bool visit(const OperandTop& o) = 0;
-	virtual bool visit(const OperandArithExpr& o) = 0;
+	virtual bool visit(const OperandArith& o) = 0;
 };
 
 // Abstract Operand class
@@ -92,12 +94,12 @@ public:
 	friend inline io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
 	virtual bool operator==(const Operand& o) const = 0;
 	
-	inline const OperandConst& toConst() const { ASSERT(false); }
-	inline const Constant& toConstant() const { ASSERT(false); }
-	inline const OperandVar& toVar() const { ASSERT(false); }
- 	inline const OperandMem& toMem() const { ASSERT(false); }
-	inline const OperandTop& toTop() const { ASSERT(false); }
-	const OperandArithExpr& toArith() const { ASSERT(false); }
+	virtual inline const OperandConst& toConst() const { ASSERTP(false, "not an OperandConst: " << *this << " (" << kind() << ")"); }
+	virtual inline const Constant& toConstant()  const { ASSERTP(false, "not a Constant: " 		<< *this << " (" << kind() << ")"); }
+	virtual inline const OperandVar& toVar() 	 const { ASSERTP(false, "not an OperandVar: " 	<< *this << " (" << kind() << ")"); }
+ 	virtual inline const OperandMem& toMem() 	 const { ASSERTP(false, "not an OperandMem: " 	<< *this << " (" << kind() << ")"); }
+	virtual inline const OperandTop& toTop() 	 const { ASSERTP(false, "not an OperandTop: " 	<< *this << " (" << kind() << ")"); }
+	virtual inline const OperandArith& toArith() const { ASSERTP(false, "not an OperandArith: "	<< *this << " (" << kind() << ")"); }
 	elm::String toString() const { return _ << *this; }
 private:
 	virtual io::Output& print(io::Output& out) const = 0;
@@ -138,7 +140,7 @@ public:
 	inline bool operator==(const Operand& o) const;
 	inline const OperandConst& toConst() const { return *this; }
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
-	inline Constant toConstant() const { return _value; }
+	inline const Constant& toConstant() const { return _value; }
 private:
 	io::Output& print(io::Output& out) const;
 
@@ -264,13 +266,13 @@ private:
 extern const OperandTop Top;
 
 // Arithmetic Expressions
-class OperandArithExpr : public Operand
+class OperandArith : public Operand
 {
 public:
-	OperandArithExpr(const OperandArithExpr& opd);
-	OperandArithExpr(arithoperator_t opr, const Operand& opd1_); // unary constructor 
-	OperandArithExpr(arithoperator_t opr, const Operand& opd1_, const Operand& opd2_);
-	~OperandArithExpr();
+	OperandArith(const OperandArith& opd);
+	OperandArith(arithoperator_t opr, const Operand& opd1_); // unary constructor 
+	OperandArith(arithoperator_t opr, const Operand& opd1_, const Operand& opd2_);
+	~OperandArith();
 	
 	inline arithoperator_t opr() const { return _opr; }
 	inline const Operand& leftOperand() const { return *opd1; }
@@ -299,10 +301,10 @@ public:
 		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv) && opd2->isAffine(opdv); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return ARITH; }
-	OperandArithExpr& operator=(const OperandArithExpr& opd);
+	OperandArith& operator=(const OperandArith& opd);
 	inline bool operator==(const Operand& o) const;
-	friend inline io::Output& operator<<(io::Output& out, const OperandArithExpr& o) { return o.print(out); }
-	const OperandArithExpr& toArith() const { return *this; }
+	friend inline io::Output& operator<<(io::Output& out, const OperandArith& o) { return o.print(out); }
+	inline const OperandArith& toArith() const { return *this; }
 private:
 	io::Output& print(io::Output& out) const;
 	
@@ -333,8 +335,6 @@ private:
 	// Option<OperandVar> _var; // removed, this is just to check consistency
 };
 
-io::Output& operator<<(io::Output& out, operand_kind_t kind);
-io::Output& operator<<(io::Output& out, operandmem_kind_t kind);
 io::Output& operator<<(io::Output& out, arithoperator_t opr);
 
 #endif

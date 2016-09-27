@@ -25,7 +25,7 @@ using namespace elm;
  * @brief A memory cell, identified by its address (absolute or relative to SP0)
  */
 /**
- * @class OperandArithExpr
+ * @class OperandArith
  * @brief An operand composed of (an)other operand(s) and a binary or unary operator
  */
 
@@ -279,37 +279,37 @@ Option<Operand*> OperandTop::simplify() { return none; }
 Option<Operand*> OperandTop::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) { return none; }
  
 // Operands: Arithmetic Expressions
-OperandArithExpr::OperandArithExpr(arithoperator_t opr, const Operand& opd1_)
+OperandArith::OperandArith(arithoperator_t opr, const Operand& opd1_)
 	: _opr(opr)
 {
 	opd1 = opd1_.copy();
 }
-OperandArithExpr::OperandArithExpr(arithoperator_t opr, const Operand& opd1_, const Operand& opd2_)
+OperandArith::OperandArith(arithoperator_t opr, const Operand& opd1_, const Operand& opd2_)
 	: _opr(opr)
 {
 	opd1 = opd1_.copy();
 	opd2 = opd2_.copy();
 }
-OperandArithExpr::OperandArithExpr(const OperandArithExpr& x)
+OperandArith::OperandArith(const OperandArith& x)
 	: _opr(x._opr)
 {
 	opd1 = x.opd1->copy();
 	if(x.isBinary())
 		opd2 = x.opd2->copy();
 }
-OperandArithExpr::~OperandArithExpr()
+OperandArith::~OperandArith()
 {
 	delete opd1;
 	if(isBinary())
 		delete opd2;
 }
-Operand* OperandArithExpr::copy() const
+Operand* OperandArith::copy() const
 {
 	if(isUnary())
-		return new OperandArithExpr(_opr, *opd1);	
-	return new OperandArithExpr(_opr, *opd1, *opd2);
+		return new OperandArith(_opr, *opd1);	
+	return new OperandArith(_opr, *opd1, *opd2);
 }
-io::Output& OperandArithExpr::print(io::Output& out) const
+io::Output& OperandArith::print(io::Output& out) const
 {
 	if(isUnary())
 	{
@@ -333,7 +333,7 @@ io::Output& OperandArithExpr::print(io::Output& out) const
 	}
 	return out;
 }
-OperandArithExpr& OperandArithExpr::operator=(const OperandArithExpr& opd)
+OperandArith& OperandArith::operator=(const OperandArith& opd)
 {
 	_opr = opd._opr;
 	delete opd1;
@@ -345,29 +345,29 @@ OperandArithExpr& OperandArithExpr::operator=(const OperandArithExpr& opd)
 	}
 	return *this;
 }
-bool OperandArithExpr::operator==(const Operand& o) const
+bool OperandArith::operator==(const Operand& o) const
 {
-	OperandArithExpr& o_arith = (OperandArithExpr&)o; // Force conversion
+	OperandArith& o_arith = (OperandArith&)o; // Force conversion
 	return (o.kind() == kind()) && (_opr == o_arith._opr) && (*opd1 == *(o_arith.opd1)) && (isUnary() || *opd2 == *(o_arith.opd2));
 }
-unsigned int OperandArithExpr::countTempVars() const
+unsigned int OperandArith::countTempVars() const
 {
 	if(isUnary())
 		return opd1->countTempVars();
 	return opd1->countTempVars() + opd2->countTempVars();
 }
-bool OperandArithExpr::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
+bool OperandArith::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
 {
 	expr = this;
 	return false;
 }
-int OperandArithExpr::involvesVariable(const OperandVar& opdv) const
+int OperandArith::involvesVariable(const OperandVar& opdv) const
 {
 	if(isUnary())
 		return opd1->involvesVariable(opdv);
 	return opd1->involvesVariable(opdv) + opd2->involvesVariable(opdv);
 }
-Option<Constant> OperandArithExpr::involvesStackBelow(const Constant& stack_limit) const
+Option<Constant> OperandArith::involvesStackBelow(const Constant& stack_limit) const
 {
 	if(isUnary())
 		return opd1->involvesStackBelow(stack_limit);
@@ -376,19 +376,19 @@ Option<Constant> OperandArithExpr::involvesStackBelow(const Constant& stack_limi
 	else
 		return opd2->involvesStackBelow(stack_limit);
 }
-bool OperandArithExpr::involvesMemoryCell(const OperandMem& opdm) const
+bool OperandArith::involvesMemoryCell(const OperandMem& opdm) const
 {
 	if(isUnary())
 		return opd1->involvesMemoryCell(opdm);
 	return opd1->involvesMemoryCell(opdm) || opd2->involvesMemoryCell(opdm);
 }
-bool OperandArithExpr::involvesMemory() const
+bool OperandArith::involvesMemory() const
 {
 	if(isUnary())
 		return opd1->involvesMemory();
 	return opd1->involvesMemory() || opd2->involvesMemory();	
 }
-bool OperandArithExpr::update(const Operand& opd, const Operand& opd_modifier)
+bool OperandArith::update(const Operand& opd, const Operand& opd_modifier)
 {
 	bool rtn = false;
 	if(*opd1 == opd)
@@ -413,7 +413,7 @@ bool OperandArithExpr::update(const Operand& opd, const Operand& opd_modifier)
 }
 /*
 // TO*DO handle ARITHOPR_NEG _and_ replace in isAffine() the (_opr == +) || (_opr == -) statements by adding the NEG case! Handle unary everywhere!
-pop_result_t OperandArithExpr::doAffinePop(Operand*& opd_result, Operand*& new_opd)
+pop_result_t OperandArith::doAffinePop(Operand*& opd_result, Operand*& new_opd)
 {
 	// it's important to pop the items to the right side of the operator (otherwise problems with operator -)
 	pop_result_t result = opd2->doAffinePop(opd_result, new_opd);
@@ -442,10 +442,10 @@ VAR
 				default:
 					return POPRESULT_FAIL; // this case shouldn't happen
 			}
-		case POPRESULT_CONTINUE: // opd2 is an OperandArithExpr, so case (.1.) +- (.2.)
+		case POPRESULT_CONTINUE: // opd2 is an OperandArith, so case (.1.) +- (.2.)
 			// opd_result already contains some X into (.2.)
 			// new_opd already contains the new righ-handside (.2.)
-			new_opd = new OperandArithExpr(_opr, *opd1, *new_opd); // so return (.1.) +- (.2.)
+			new_opd = new OperandArith(_opr, *opd1, *new_opd); // so return (.1.) +- (.2.)
 			switch(_opr)
 			{
 				case ARITHOPR_ADD: // all fine and easy, again
@@ -470,7 +470,7 @@ VAR
 }
 */
 
-void OperandArithExpr::parseAffineEquation(AffineEquationState& state) const
+void OperandArith::parseAffineEquation(AffineEquationState& state) const
 {
 	switch(_opr)
 	{
@@ -495,7 +495,7 @@ void OperandArithExpr::parseAffineEquation(AffineEquationState& state) const
 }
 
 // An ArithExpr can be const if all of its children are const!
-Option<OperandConst> OperandArithExpr::evalConstantOperand() const
+Option<OperandConst> OperandArith::evalConstantOperand() const
 {
 	Option<OperandConst> val1 = opd1->evalConstantOperand();
 	Option<OperandConst> val2 = isUnary() ? elm::none : opd2->evalConstantOperand();
@@ -532,7 +532,7 @@ Option<OperandConst> OperandArithExpr::evalConstantOperand() const
 	return none; // one of the operands is not constant or we failed to evaluate it
 }
 // Warning: Option=none does not warrant that nothing has been simplified!
-Option<Operand*> OperandArithExpr::simplify()
+Option<Operand*> OperandArith::simplify()
 {
 	// before anything, test our groundness
 	if(Option<OperandConst> val = evalConstantOperand())
@@ -589,14 +589,14 @@ Option<Operand*> OperandArithExpr::simplify()
 	switch(_opr)
 	{
 		case ARITHOPR_ADD:
-			if(opd1->kind() == ARITH && ((OperandArithExpr*)opd1)->opr() == ARITHOPR_NEG)
-				return ((Operand*) new OperandArithExpr(ARITHOPR_SUB, *opd2, ((OperandArithExpr*)opd1)->leftOperand()))->simplify(); // [y - x / -x + y]
-			if(opd2->kind() == ARITH && ((OperandArithExpr*)opd2)->opr() == ARITHOPR_NEG)
-				return ((Operand*) new OperandArithExpr(ARITHOPR_SUB, *opd1, ((OperandArithExpr*)opd2)->leftOperand()))->simplify(); // [x - y / -y + x]
+			if(opd1->kind() == ARITH && ((OperandArith*)opd1)->opr() == ARITHOPR_NEG)
+				return ((Operand*) new OperandArith(ARITHOPR_SUB, *opd2, ((OperandArith*)opd1)->leftOperand()))->simplify(); // [y - x / -x + y]
+			if(opd2->kind() == ARITH && ((OperandArith*)opd2)->opr() == ARITHOPR_NEG)
+				return ((Operand*) new OperandArith(ARITHOPR_SUB, *opd1, ((OperandArith*)opd2)->leftOperand()))->simplify(); // [x - y / -y + x]
 			break;
 		case ARITHOPR_SUB:
 			if(opd1_is_constant && opd1_val == 0)
-				return some((Operand*) new OperandArithExpr(ARITHOPR_NEG, *opd2)); // [-x / 0 - x]
+				return some((Operand*) new OperandArith(ARITHOPR_NEG, *opd2)); // [-x / 0 - x]
 			if(*opd1 == *opd2)
 				return some((Operand*) new OperandConst(0)); // [0 / x - x]
 			break;
@@ -616,7 +616,7 @@ Option<Operand*> OperandArithExpr::simplify()
 	}
 	return none;
 }
-Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars)
+Option<Operand*> OperandArith::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars)
 {
 	if(Option<Operand*> o = opd1->replaceConstants(constants, replaced_vars))
 	{
@@ -634,7 +634,7 @@ Option<Operand*> OperandArithExpr::replaceConstants(const ConstantVariablesCore&
 	return none;
 }
 
-bool OperandArithExpr::isLinear() const
+bool OperandArith::isLinear() const
 {
 	switch(_opr)
 	{
@@ -667,24 +667,24 @@ bool OperandArithExpr::isLinear() const
  * For a given variable var, try to find an integer constant &Delta; such that var = +-SP + &Delta; 
  */
 
-io::Output& operator<<(io::Output& out, operand_kind_t kind)
+io::Output& operator<<(io::Output& out, const operand_kind_t kind)
 {
 	switch(kind)
 	{		
 		case CST:
-			out << "(CONST)";
+			out << "CST";
 			break;
 		case VAR:
-			out << "(VAR)";
+			out << "VAR";
 			break;
 		case MEM:
-			out << "(MEM)";
+			out << "MEM";
 			break;
 		case TOP:
-			out << "(TOP)";
+			out << "TOP";
 			break;
 		case ARITH:
-			out << "(ARITH)";
+			out << "ARITH";
 			break;
 	}
 	return out;
@@ -694,10 +694,10 @@ io::Output& operator<<(io::Output& out, operandmem_kind_t kind)
 	switch(kind)
 	{
 		case OPERANDMEM_ABSOLUTE:
-			out << "(ABSOLUTE)";
+			out << "ABSOLUTE";
 			break;
 		case OPERANDMEM_RELATIVE:
-			out << "(RELATIVE)";
+			out << "RELATIVE";
 			break;
 	}
 	return out;

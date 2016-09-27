@@ -14,11 +14,11 @@ public:
 	bool visit(const class OperandVar& o);
 	bool visit(const class OperandMem &o);
 	bool visit(const class OperandTop &o);
-	bool visit(const class OperandArithExpr& o);
+	bool visit(const class OperandArith& o);
 	
 private:
 		   Kind_t getKind(arithoperator_t opr);
-	inline Kind_t getKind(const OperandArithExpr& o) { return getKind(o.opr()); }
+	inline Kind_t getKind(const OperandArith& o) { return getKind(o.opr()); }
 
 	bool visited;
 	CVC4::ExprManager &em;

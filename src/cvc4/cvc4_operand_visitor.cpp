@@ -50,7 +50,7 @@ bool CVC4OperandVisitor::visit(const class OperandTop& o)
 	return true;
 }
 
-bool CVC4OperandVisitor::visit(const class OperandArithExpr& o)
+bool CVC4OperandVisitor::visit(const class OperandArith& o)
 {
 	if(!o.isComplete())
 		return false; // fail

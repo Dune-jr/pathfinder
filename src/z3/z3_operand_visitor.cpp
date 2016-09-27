@@ -64,7 +64,7 @@ bool Z3OperandVisitor::visit(const class OperandMem& o)
 	return true;
 }
 
-bool Z3OperandVisitor::visit(const class OperandArithExpr& o)
+bool Z3OperandVisitor::visit(const class OperandArith& o)
 {
 	if(!o.isComplete())
 		return false; // fail

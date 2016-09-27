@@ -87,7 +87,7 @@ class DAG {
 		virtual bool visit(const OperandMem& o)			{ args.add(pair(_neg, static_cast<const Operand *>(&o))); return true; }
 		virtual bool visit(const OperandTop& o)			{ args.add(pair(_neg, static_cast<const Operand *>(&o))); return true; }
 
-		virtual bool visit(const OperandArithExpr& o) {
+		virtual bool visit(const OperandArith& o) {
 			bool save = _neg;
 			if(o.opr() == ARITHOPR_ADD) {
 				o.leftOperand().accept(*this);
@@ -202,7 +202,7 @@ public:
 		return r;
 	}
 
-    const Operand *mem(const OperandConst *addr) {
+	const Operand *mem(const OperandConst *addr) {
 		Key k(ARITHOPR_MEM, addr);
 		Operand *r = op_map.get(k, 0);
 		if(!r) {
@@ -211,22 +211,22 @@ public:
 		}
 		return r;
 	}
-	inline const Operand *mem(const Constant& cst) 
+	inline const Operand *mem(const Constant& cst)
 		{ return mem(static_cast<const OperandConst*>(this->cst(cst))); }
 
 	inline const Operand *mem(const OperandMem *opd_mem)
 		{ return mem(opd_mem->addr()); }
 
 	// creates a new top
-	const Operand* top(void) {
+	const Operand* new_top(void) {
 		Operand* r = new OperandTop();
 		Key k(ARITHOPR_TOP, r);
 		op_map.put(k, r); // it can't possibly already exist in the tab
 		return r;
 	}
 
-	// in order to add an unidentified top, just use &Top
-	const Operand* top(const OperandTop* top) {
+	// what's the use of this function??
+	/*const Operand* top(const OperandTop* top) {
 		Key k(ARITHOPR_TOP, top);
 		Operand* r = op_map.get(k, 0);
 		if(!r) {
@@ -234,14 +234,14 @@ public:
 			op_map.put(k, r);
 		}
 		return r;
-	}
+	}*/
 
 private:
 	const Operand *op(arithoperator_t op, const Operand *arg) {
 		Key k(op, arg);
 		Operand *r = op_map.get(k, 0);
 		if(!r) {
-			r = new OperandArithExpr(op, *arg);
+			r = new OperandArith(op, *arg);
 			op_map.put(k, r);
 		}
 		return r;
@@ -252,7 +252,7 @@ private:
 		Operand *r = op_map.get(k, 0);
 		if(!r) {
 			// DBG(color::IBlu() << "k=" << *k.argument1() << (arithoperator_t)k.operation() << *k.argument2() << " not in " << *this)
-			r = new OperandArithExpr(op, *arg1, *arg2);
+			r = new OperandArith(op, *arg1, *arg2);
 			op_map.put(k, r);
 		}
 		return r;
