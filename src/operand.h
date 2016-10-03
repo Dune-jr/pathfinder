@@ -86,7 +86,7 @@ public:
 	virtual bool isLinear() const = 0;
 	virtual bool isAffine(const OperandVar& opdv) const = 0;
 	virtual void parseAffineEquation(AffineEquationState& state) const = 0;
-	virtual Option<OperandConst> evalConstantOperand() const = 0; // all uses commented out?
+	virtual Option<Constant> evalConstantOperand() const = 0; // all uses commented out?
 	virtual Option<Operand*> simplify() = 0; // Warning: Option=none does not warrant that nothing has been simplified!
 	virtual Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) = 0;
 	virtual bool accept(OperandVisitor& visitor) const = 0;
@@ -125,7 +125,7 @@ public:
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
-	Option<OperandConst> evalConstantOperand() const;
+	Option<Constant> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
@@ -149,7 +149,7 @@ private:
 
 // Variables
 class OperandVar : public Operand
-{	
+{
 public:
 	OperandVar(); // for Vector<OperandVar>
 	OperandVar(const OperandVar& opd);
@@ -168,7 +168,7 @@ public:
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
-	Option<OperandConst> evalConstantOperand() const;
+	Option<Constant> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
@@ -205,7 +205,7 @@ public:
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
-	Option<OperandConst> evalConstantOperand() const;
+	Option<Constant> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
@@ -228,7 +228,8 @@ private:
 class OperandTop : public Operand
 {
 public:
-	OperandTop(bool identified = true);
+	OperandTop();
+	OperandTop(int id);
 	OperandTop(const OperandTop& opd);
 	
 	inline bool isUnidentified() const { return id == -1; } // blank Top
@@ -243,7 +244,7 @@ public:
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
-	Option<OperandConst> evalConstantOperand() const;
+	Option<Constant> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
@@ -272,9 +273,12 @@ public:
 	OperandArith(const OperandArith& opd);
 	OperandArith(arithoperator_t opr, const Operand& opd1_); // unary constructor 
 	OperandArith(arithoperator_t opr, const Operand& opd1_, const Operand& opd2_);
+	// OperandArith(arithoperator_t opr, const Operand* opd1_, const Operand* opd2_ = NULL); // TODO...
 	~OperandArith();
 	
 	inline arithoperator_t opr() const { return _opr; }
+	inline const Operand* left() const { return opd1; }
+	inline const Operand* right() const { return opd2; }
 	inline const Operand& leftOperand() const { return *opd1; }
 	inline const Operand& rightOperand() const { ASSERT(isBinary()); return *opd2; }
 	
@@ -290,7 +294,7 @@ public:
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
-	Option<OperandConst> evalConstantOperand() const;
+	Option<Constant> evalConstantOperand() const;
 	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;

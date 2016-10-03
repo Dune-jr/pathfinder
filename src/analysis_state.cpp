@@ -11,14 +11,14 @@
  */
 const Analysis::State bottom(true);
 
-Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), lvars(), mvars(), bottom(bottom), constants() { }
+Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), lvars(), mem(), bottom(bottom), constants() { }
 
 // Analysis::State::State(const context_t& context)
 	// : dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
 
 Analysis::State::State(Block* entryb, const context_t& context, bool init)
 	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(*dag, context.max_tempvars, context.max_registers),
-	mvars(), bottom(false), constants(context.max_tempvars, context.max_registers)
+	mem(), bottom(false), constants(context.max_tempvars, context.max_registers)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -28,12 +28,13 @@ Analysis::State::State(Block* entryb, const context_t& context, bool init)
 		ASSERT(outs);
 		path.addLast(*outs);
 		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+		set(sp, dag->cst(SP));
 	}
 }
 
 Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
 	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(*dag, context.max_tempvars, context.max_registers),
-	mvars(), bottom(false), constants(context.max_tempvars, context.max_registers)
+	mem(), bottom(false), constants(context.max_tempvars, context.max_registers)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -41,6 +42,7 @@ Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
 	{
 		path.addLast(entry_edge);
 		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+		set(sp, dag->cst(SP));
 	}
 }
 
@@ -220,15 +222,18 @@ Analysis::State Analysis::topState(Block* entry) const
 
 elm::String Analysis::State::dumpEverything() const
 {
-	return _
+	elm::String rtn = _
 		<< "--- DUMPING WHOLE STATE ---" << endl
-		<< "  * OrderedPath path=" << getPathString() << endl
-		<< "  * ConstantVariables constants=" << constants << endl
-		<< "  * SLList<LabelledPredicate> labelled_preds=" << labelled_preds << endl
-		<< "  * SLList<LabelledPredicate> generated_preds=" << generated_preds << endl
-		<< "  * LocalVariables lvars= [" << endl << lvars << "]" << endl
+		<< "  * path=" << getPathString() << endl
+		<< "  * constants=" << constants << endl
+		<< "  * labelled_preds=" << labelled_preds << endl
+		<< "  * generated_preds=" << generated_preds << endl
 		// << "  * SLList<LabelledPredicate> generated_preds_taken=" << generated_preds_taken << endl
-		<< "\t--- END OF DUMP ---";
+		<< "  * lvars= [" << endl << lvars << "]" << endl
+		<< "  * mem= [" << endl;
+	for(mem_t::PairIterator i(mem); i; i++)
+		rtn = _ << rtn << "[" << (*i).fst << "]\t| " << *(*i).snd << endl;
+	return _ << rtn << "]" << endl << "\t--- END OF DUMP ---";
 }
 
 // this is not Leibniz equality, but a test to check for a fixpoint!

@@ -78,7 +78,7 @@ using namespace elm;
  * @brief
  */
 /**
- * @fn Option<OperandConst> Operand::evalConstantOperand() const;
+ * @fn Option<Constant> Operand::evalConstantOperand() const;
  * @brief
  * @warning Deprecated, bound to be removed in the future
  */
@@ -100,7 +100,8 @@ using namespace elm;
  * @brief Returns an operand kind, in order to characterize each implementation of Operand
  */
 
-const OperandTop Top(false);
+// const OperandTop Top(false);
+const OperandTop Top(-1);
 
 // Operands: Constants
 OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }
@@ -138,11 +139,11 @@ void OperandConst::parseAffineEquation(AffineEquationState& state) const
 	if(_value.isRelative())
 		state.onSpFound(_value.sign());
 }
-Option<OperandConst> OperandConst::evalConstantOperand() const
+Option<Constant> OperandConst::evalConstantOperand() const
 {
 	if(!_value.isValid())
 		return none;
-	return some(*this);
+	return some(_value);
 }
 Option<Operand*> OperandConst::simplify() { return none; }
 Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) { return none; }
@@ -191,7 +192,7 @@ bool OperandVar::involvesMemory() const { return false; }
 bool OperandVar::update(const Operand& opd, const Operand& opd_modifier) { return false; }
 // pop_result_t OperandVar::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 void OperandVar::parseAffineEquation(AffineEquationState& state) const { state.onVarFound(this->_addr); }
-Option<OperandConst> OperandVar::evalConstantOperand() const { return none; }
+Option<Constant> OperandVar::evalConstantOperand() const { return none; }
 Option<Operand*> OperandVar::simplify() { return none; }
 Option<Operand*> OperandVar::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars)
 {
@@ -234,7 +235,7 @@ bool OperandMem::update(const Operand& opd, const Operand& opd_modifier)
 	{ return false; }
 void OperandMem::parseAffineEquation(AffineEquationState& state) const
 	{ ASSERT(false); } // should never happen
-Option<OperandConst> OperandMem::evalConstantOperand() const
+Option<Constant> OperandMem::evalConstantOperand() const
 	{ return none; }
 Option<Operand*> OperandMem::simplify()
 	{ return none; }
@@ -243,7 +244,9 @@ Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesCore& const
  
 // Operands: Top
 int OperandTop::next_id = 0;
-OperandTop::OperandTop(bool identified) : id(identified ? next_id++ : -1) { ASSERT(next_id >= 0); }
+// OperandTop::OperandTop(bool identified) : id(identified ? next_id++ : -1) { (next_id >= 0); }
+OperandTop::OperandTop() : id(next_id++) { }
+OperandTop::OperandTop(int id) : id(id) { }
 OperandTop::OperandTop(const OperandTop& opd) : id(opd.id) { }
 Operand* OperandTop::copy() const
 {
@@ -251,7 +254,10 @@ Operand* OperandTop::copy() const
 }
 io::Output& OperandTop::print(io::Output& out) const
 {
-	return (out << "T" << id);
+	if(id == -1)
+		return out << "T"; // unidentified Top
+	else
+		return out << "T" << id;
 }
 OperandTop& OperandTop::operator=(const OperandTop& opd)
 {
@@ -274,7 +280,7 @@ Option<Constant> OperandTop::involvesStackBelow(const Constant& stack_limit) con
 bool OperandTop::involvesMemory() const { return false; }
 bool OperandTop::update(const Operand& opd, const Operand& opd_modifier) { ASSERT(false); return false; }
 void OperandTop::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen (for Top too?)
-Option<OperandConst> OperandTop::evalConstantOperand() const { return none; }
+Option<Constant> OperandTop::evalConstantOperand() const { return none; }
 Option<Operand*> OperandTop::simplify() { return none; }
 Option<Operand*> OperandTop::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) { return none; }
  
@@ -290,6 +296,8 @@ OperandArith::OperandArith(arithoperator_t opr, const Operand& opd1_, const Oper
 	opd1 = opd1_.copy();
 	opd2 = opd2_.copy();
 }
+// OperandArith::OperandArith(arithoperator_t opr, const Operand* opd1_, const Operand* opd2_)
+// 	: _opr(opr), opd1(opd1_), opd2(opd2_) { }
 OperandArith::OperandArith(const OperandArith& x)
 	: _opr(x._opr)
 {
@@ -495,34 +503,34 @@ void OperandArith::parseAffineEquation(AffineEquationState& state) const
 }
 
 // An ArithExpr can be const if all of its children are const!
-Option<OperandConst> OperandArith::evalConstantOperand() const
+Option<Constant> OperandArith::evalConstantOperand() const
 {
-	Option<OperandConst> val1 = opd1->evalConstantOperand();
-	Option<OperandConst> val2 = isUnary() ? elm::none : opd2->evalConstantOperand();
+	Option<Constant> val1 = opd1->evalConstantOperand();
+	Option<Constant> val2 = isUnary() ? elm::none : opd2->evalConstantOperand();
 	if(val1 && (val2 || isUnary()))
 	{
-#		define V1 (*val1).value().val()
-#		define V2 (*val2).value().val()
+#		define V1 (*val1).val()
+#		define V2 (*val2).val()
 		switch(_opr)
 		{
 			case ARITHOPR_NEG:
-				return some(OperandConst(-V1));
+				return Constant(-V1);
 			case ARITHOPR_ADD:
-				return some(OperandConst(V1 + V2));
+				return Constant(V1 + V2);
 			case ARITHOPR_SUB:
-				return some(OperandConst(V1 - V2));
+				return Constant(V1 - V2);
 			case ARITHOPR_MUL:
-				return some(OperandConst(V1 * V2));
+				return Constant(V1 * V2);
 			case ARITHOPR_MULH:
-				return some(OperandConst(Constant( (t::int64(V1)*t::int64(V2))/t::int64(0x100000000ul) )));
+				return Constant( (t::int64(V1)*t::int64(V2)) / t::int64(0x100000000ul) );
 			case ARITHOPR_DIV:
 				if(V2 == 0)
 					return none;
-				return some(OperandConst(V1 / V2));
+				return Constant(V1 / V2);
 			case ARITHOPR_MOD:
 				if(V2 == 0)
 					return none;
-				return some(OperandConst(V1 % V2));
+				return Constant(V1 % V2);
 			case ARITHOPR_CMP:
 				return none; // This can't be evaluated (wouldn't make much sense if this case was matched after the if anyway)
 		}
@@ -535,10 +543,10 @@ Option<OperandConst> OperandArith::evalConstantOperand() const
 Option<Operand*> OperandArith::simplify()
 {
 	// before anything, test our groundness
-	if(Option<OperandConst> val = evalConstantOperand())
+	if(Option<Constant> val = evalConstantOperand())
 	{
-		if((*val).value().isValid())
-			return some((Operand*)((*val).copy()));
+		if((*val).isValid())
+			return some((Operand*)(new OperandConst(*val)));
 	}
 	if(isUnary())
 	{
@@ -558,8 +566,8 @@ Option<Operand*> OperandArith::simplify()
 	bool opd1_is_constant = opd1->kind() == CST;
 	bool opd2_is_constant = opd2->kind() == CST;
 	Constant opd1_val, opd2_val;
-	if(opd1_is_constant) opd1_val = ((OperandConst*)opd1)->value();
-	if(opd2_is_constant) opd2_val = ((OperandConst*)opd2)->value();
+	if(opd1_is_constant) opd1_val = opd1->toConstant();
+	if(opd2_is_constant) opd2_val = opd2->toConstant();
 	switch(_opr)
 	{
 		case ARITHOPR_ADD:

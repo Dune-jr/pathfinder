@@ -52,7 +52,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 		// all temporary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();
 	}
-	// DBG(dumpEverything());
+	DBG(dumpEverything());
 	if(dbg_verbose == DBG_VERBOSE_ALL)
 	{
 		if(generated_preds_taken)
@@ -121,7 +121,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 					constants.set(d, ConstantVariables::LabelledValue(*addr_const_value, labels, true)); 
 				}
 				// or maybe we can link it to a constant value from the predicates
-				else if(Option<OperandConst> addr_const_value = findConstantValueOfMemCell(*addr_mem, labels))
+				else if(Option<Constant> addr_const_value = findConstantValueOfMemCell(*addr_mem, labels))
 				{
 					DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "Memory data " << *addr_mem << " simplified to " << *addr_const_value)
 					constants.set(d, ConstantVariables::LabelledValue(*addr_const_value, labels, true));
@@ -815,9 +815,10 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 
 void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_condition)
 {
-	const t::int16 /*&a = seminsts.a(), &b = seminsts.b(),*/ &d = seminsts.d();
+	const t::int16 &a = seminsts.a(), &b = seminsts.b(), &d = seminsts.d();
 	const t::int32 &cst = seminsts.cst();
 	const t::int16 &reg = seminsts.reg(), &addr = seminsts.addr();
+	Constant c;
 	switch(seminsts.op())
 	{
 		case NOP:
@@ -832,28 +833,38 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 			// TODO
 			break;
 		case LOAD: // reg <- MEM_type(addr)
-			// addr is likely to be t1
-			if(lvars.isConst(addr) && lvars(addr).toConstant().isValidAddress())
-				lvars[reg] = mvars.get(lvars(addr).toConstant(), NULL);
+		{	// addr is likely to be t1
+			if(lvars.isConst(addr) && (c = lvars(addr).toConstant(), mem.exists(c)))
+				set(reg, mem[c]);
 			else
-				lvars[reg] = dag->new_top();
+				scratch(reg);
 			break;
+		}
 		case STORE:	// MEM_type(addr) <- reg
-			// if(lvars.isConst(addr))
+		{
+			if(lvars.isConst(addr) && (c = lvars(addr).toConstant(), c.isValidAddress()))
+				setMem(c, getPtr(reg));
+			else
+				scratchAllMemory(); // access to Top
 			break;
+		}
 		case SET: // d <- a
+			set(d, getPtr(a));
 			break;
 		case SETI: // d <- cst
-			lvars[d] = dag->cst(cst);
+			set(d, dag->cst(cst));
 			break;
 		case SETP:
+			scratch(d);
 			break;
 		case CMP:
 		case CMPU:
 			break;
 		case ADD:
+			set(d, smart_add(getPtr(a), getPtr(b)));
 			break;
 		case SUB:
+			set(d, smart_sub(getPtr(a), getPtr(b)));
 			break;
 		case SHL:
 			break;
@@ -889,8 +900,85 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 			DBG(color::BIRed() << "Unknown seminst running!")
 			ASSERT(!UNTESTED_CRITICAL);
 		case SCRATCH:
+			scratch(d);
 			break;
 	}
+}
+
+void Analysis::State::set(const OperandVar& x, const Operand* expr)
+{
+	if(dbg_verbose == DBG_VERBOSE_ALL)
+	{
+		elm::String output = _ << color::Cya() << " {" << lvars(x) << "}";
+		lvars[x] = expr;
+		DBG(color::ICya() << " * " << x << " = " << lvars(x) << output)
+	}
+	else
+		lvars[x] = expr;
+}
+
+void Analysis::State::setMem(Constant addr, const Operand* expr)
+{
+	DBG(color::ICya() << " * " << OperandMem(addr) << " = " << *expr << (mem.exists(addr) ? _ << color::Cya() << " {" << *mem[addr] << "}" : elm::String()))
+	mem[addr] = expr;
+}
+
+void Analysis::State::scratchAllMemory()
+{
+	DBG(color::IRed() << "  Access to Top, invalidating all memory (" << mem.count() << " items)")
+	for(mem_t::MutableIter i(mem); i; i++)
+		i.item() = dag->new_top(); // TODO! that looks costly... maybe we should rework the way Tops work in DAG.
+}
+
+// this is minimal and a bit unoptimized
+const Operand* Analysis::State::smart_add(const Operand* a, const Operand* b)
+{
+	Option<Constant> av = a->evalConstantOperand(), bv = b->evalConstantOperand();
+	if(av && bv)
+		return dag->cst(*av+*bv);
+	else if(!av && !bv)
+		return dag->add(a, b);
+	// only one is constant
+	Constant x = av ? *av : *bv;
+	const Operand* y = av ? b : a;
+	if(x == 0)
+		return y;
+	if(y->kind() == ARITH)
+	{
+		const OperandArith& z = y->toArith();
+		av = z.leftOperand().evalConstantOperand();
+		bv = z.rightOperand().evalConstantOperand();
+		if(z.opr() == ARITHOPR_ADD)
+		{
+			if(av) // x + (av + z2)
+				return dag->add(z.right(), dag->cst(x + *av));
+			if(bv) // x + (z1 + bv)
+				return dag->add(z.left(), dag->cst(x + *bv));
+		}
+		if(z.opr() == ARITHOPR_SUB)
+		{
+			if(av) // x + (av - z2)
+				return dag->sub(dag->cst(x + *av), z.right());
+			if(bv) // x + (z1 - bv)
+				return dag->add(z.left(), dag->cst(x - *bv));
+		}
+	}
+	return dag->add(a, b);
+}
+
+// TODO! implement this further (just like smart_add)
+const Operand* Analysis::State::smart_sub(const Operand* a, const Operand* b)
+{
+	Option<Constant> av = a->evalConstantOperand(), bv = b->evalConstantOperand();
+	if(av && bv)
+		return dag->cst(*av-*bv);
+	else if(!av && !bv)
+		return dag->sub(a, b);
+	if(av && *av == 0)
+		return b;
+	if(bv && *bv == 0)
+		return a;
+	return dag->sub(a, b);
 }
 
 // do all the preprocessing and pretty printing job for making a predicate, then return the final labelled predicate ready to be added to the list
@@ -1084,8 +1172,8 @@ bool Analysis::State::invalidateMem(const OperandMem& addr)
 {
 	//return invalidate(addr); // TODO!! why was this here?
 	Path labels;
-	if(Option<OperandConst> maybe_val = findConstantValueOfMemCell(addr, labels))
-		return replaceMem(addr, *maybe_val, labels); // try to keep the info
+	if(Option<Constant> maybe_val = findConstantValueOfMemCell(addr, labels))
+		return replaceMem(addr, OperandConst(*maybe_val), labels); // try to keep the info
 	bool rtn = false;
 	for(PredIterator piter(*this); piter; )
 	{
@@ -1426,7 +1514,7 @@ Option<OperandConst> Analysis::State::findConstantValueOfVar(const OperandVar& v
 }
 
 // TODO: maybe we should improve this to handle affine equations ("[SP-12] -1 = 0" etc...)
-Option<OperandConst> Analysis::State::findConstantValueOfMemCell(const OperandMem& mem, Path &labels)
+Option<Constant> Analysis::State::findConstantValueOfMemCell(const OperandMem& mem, Path &labels)
 {
 	for(PredIterator piter(*this); piter; piter++)
 	{
@@ -1435,18 +1523,18 @@ Option<OperandConst> Analysis::State::findConstantValueOfMemCell(const OperandMe
 			continue;
 		if(p.leftOperand() == mem)
 		{
-			if(Option<OperandConst> maybe_val = p.rightOperand().evalConstantOperand())
+			if(Option<Constant> maybe_val = p.rightOperand().evalConstantOperand())
 			{
 				labels += piter.labels();
-				return *maybe_val;
+				return maybe_val;
 			}
 		}
 		else if(p.rightOperand() == mem)
 		{
-			if(Option<OperandConst> maybe_val = p.leftOperand().evalConstantOperand())
+			if(Option<Constant> maybe_val = p.leftOperand().evalConstantOperand())
 			{
 				labels += piter.labels();
-				return *maybe_val;
+				return maybe_val;
 			}
 		}
 	}

@@ -16,7 +16,7 @@ const Constant SP(0, CONSTANT_PLUS_SP);
 Constant::Constant() : _val(0), _kind(CONSTANT_INVALID)/*, _sign(SIGN_POSITIVE)*/ { }
 // Constant::Constant(t::int32 val, bool relative, bool sign)
 // 	: _val(val), _kind(relative ? (sign ? CONSTANT_PLUS_SP0 : CONSTANT_MINUS_SP0) : CONSTANT_ABSOLUTE) { }
-Constant::Constant(t::int32 val, constant_kind_t kind/*, bool sign*/) : _val(val), _kind(kind)/*, _sign(sign)*/ { }
+Constant::Constant(t::int32 val, constant_kind_t kind) : _val(val), _kind(kind) { }
 Constant::Constant(const Constant& c) : _val(c._val), _kind(c._kind)/*, _sign(c._sign)*/ { }
 
 Constant& Constant::operator=(const Constant& c)

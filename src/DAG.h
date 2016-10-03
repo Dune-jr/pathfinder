@@ -13,7 +13,7 @@ using namespace elm;
 using namespace otawa;
 
 // Comment / un-comment this to enable sum canonicalization (sometimes maybe time expensive)
-#define	DAG_SUM
+// #define	DAG_SUM
 
 class DAG {
 
@@ -82,10 +82,10 @@ class DAG {
 	class Sum: public OperandVisitor {
 	public:
 		Sum(DAG& dag): _dag(dag), _neg(false) { }
-		virtual bool visit(const OperandConst& o) 		{ args.add(pair(_neg, static_cast<const Operand *>(&o))); return true; }
-		virtual bool visit(const OperandVar& o)			{ args.add(pair(_neg, static_cast<const Operand *>(&o))); return true; }
-		virtual bool visit(const OperandMem& o)			{ args.add(pair(_neg, static_cast<const Operand *>(&o))); return true; }
-		virtual bool visit(const OperandTop& o)			{ args.add(pair(_neg, static_cast<const Operand *>(&o))); return true; }
+		virtual bool visit(const OperandConst& o) 	{ args.add(pair(_neg, static_cast<const Operand *>(&o))); return true; }
+		virtual bool visit(const OperandVar& o) 	{ args.add(pair(_neg, static_cast<const Operand *>(&o))); return true; }
+		virtual bool visit(const OperandMem& o)		{ args.add(pair(_neg, static_cast<const Operand *>(&o))); return true; }
+		virtual bool visit(const OperandTop& o)		{ args.add(pair(_neg, static_cast<const Operand *>(&o))); return true; }
 
 		virtual bool visit(const OperandArith& o) {
 			bool save = _neg;
@@ -110,7 +110,6 @@ class DAG {
 				args.add(pair(_neg, static_cast<const Operand *>(&o)));
 			return true;
 		}
-
 
 		const Operand *make(arithoperator_t op, const Operand *arg1, const Operand *arg2 = NULL) {
 			// only for ADD/SUB/NEG
@@ -242,6 +241,7 @@ private:
 		Operand *r = op_map.get(k, 0);
 		if(!r) {
 			r = new OperandArith(op, *arg);
+			// r = new OperandArith(op, arg);
 			op_map.put(k, r);
 		}
 		return r;
@@ -253,6 +253,7 @@ private:
 		if(!r) {
 			// DBG(color::IBlu() << "k=" << *k.argument1() << (arithoperator_t)k.operation() << *k.argument2() << " not in " << *this)
 			r = new OperandArith(op, *arg1, *arg2);
+			// r = new OperandArith(op, arg1, arg2);
 			op_map.put(k, r);
 		}
 		return r;
@@ -314,8 +315,8 @@ public:
 	friend io::Output& operator<<(io::Output& out, const DAG& dag) { return dag.print(out); }
 private:
 	io::Output& print(io::Output& out) const {
-		out << "DAG\n\t-> cst:  ";
 		bool first = true;
+		out << "DAG\n\t-> cst:  ";
 		for(cst_map_t::PairIterator i(cst_map); i; i++) {
 			out << (first?"":",  ") << (*i).fst;
 			first = false;

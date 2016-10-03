@@ -33,7 +33,8 @@ public:
 	LocalVariables(const LocalVariables& lv) : size(lv.size), thresold(lv.thresold),
 		o(new const Operand*[size]), l(new labels_t*[size]), u(new bool[size]) {
 		array::clear(l, size);
-		copy(lv);
+		if(size)
+			copy(lv);
 	}
 	~LocalVariables() {
 		delete[] o;
@@ -72,28 +73,42 @@ public:
 	// bool sameValuesAs(const ConstantVariablesCore& cv) const; // less strict (only values)
 	
 	LocalVariables& operator=(const LocalVariables& lv) {
-		if(isValid())
-			{ ASSERTP(size == lv.size && thresold == lv.thresold, "sizes or thresolds do not match ("
-			  << size << "/" << lv.size << ", " << thresold << "/" << lv.thresold << ")"); }
+		if(lv.isValid())
+		{
+			if(isValid()) {
+				ASSERTP(size == lv.size && thresold == lv.thresold, "sizes or thresolds do not match ("
+				  << size << "/" << lv.size << ", " << thresold << "/" << lv.thresold << ")");
+			}
+			else
+			{
+				size = lv.size;
+				thresold = lv.thresold;
+				o = new Operand const*[size];
+				l = new labels_t*[size];
+				array::clear(l, size);
+				u = new bool[size];
+			}
+			copy(lv);
+		}
 		else
 		{
-			size = lv.size;
-			thresold = lv.thresold;
-			o = new Operand const*[size];
-			l = new labels_t*[size];
-			array::clear(l, size);
-			u = new bool[size];
+			delete[] o;
+			delete[] u;
+			for(int i = 0; i < size; i++)
+				delete l[i];
+			size = 0;
+			thresold = 0;
+			o = NULL;
+			u = NULL;
+			l = NULL;
 		}
-		copy(lv);
 		return *this;
 	}
 	inline bool operator==(const LocalVariables& lv) const // only compares operands!
 		{ return array::cmp(o, lv.o, size) == 0; }
 	inline bool operator!=(const LocalVariables& lv) const
 		{ return !(*this == lv); }
-	// inline Constant operator()(OperandVar var)
-	// 	{ return (*this)[var]->toConst().value(); } // error if not OperandConst
-	inline const Operand& operator()(OperandVar var) // returns concrete value
+	inline const Operand& operator()(OperandVar var) const // returns concrete value
 		{ return (*this)[var] ? *(*this)[var] : var; }
 	inline Operand const*& operator[](OperandVar var)
 		{ return o[getIndex(var)]; }

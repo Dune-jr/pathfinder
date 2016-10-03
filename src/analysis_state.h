@@ -22,15 +22,17 @@ using elm::genstruct::HashTable;
 
 class Analysis::State {
 private:
+	typedef HashTable<Constant, const Operand*, ConstantHash> mem_t;
+	// HashTable<t::int32, const Operand*> lvars;
+
 	const dfa::State* dfa_state;
 	OperandVar sp; // the Stack Pointer register
 #ifdef EXP
 	DAG* dag;
-	// HashTable<t::int32, const Operand*> lvars;
 	LocalVariables lvars;
-	HashTable<Constant, const Operand*, ConstantHash> mvars;
+	mem_t mem;
 #endif
-	bool bottom;
+	bool bottom; // true=is Bottom, false= is Top
 	DetailedPath path;
 	ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
 	SLList<LabelledPredicate> labelled_preds; // previously generated predicates
@@ -40,7 +42,7 @@ private:
 	class PredIterator;
 
 public:
-	State(bool bottom = false); // false: create an invalid state, true: create a bottom state
+	explicit State(bool bottom = false); // false: create an invalid state, true: create a bottom state
 	State(Block* entryb, const context_t& context, bool init = true);
 	State(Edge* entry_edge, const context_t& context, bool init = false);
 	State(const State& s);
@@ -84,7 +86,13 @@ private:
 	SLList<LabelledPredicate> labelPredicateList (const SLList<LabelledPredicate>& pred_list, Edge* label);
 	io::Output& print(io::Output& out) const;
 
-	// analysis_bb.cpp
+	// analysis_bb.cpp (v2)
+	void set(const OperandVar& var, const Operand* expr);
+	void setMem(Constant addr, const Operand* expr);
+	inline const Operand* getPtr(t::int32 var_id) { const Operand* rtn; return rtn = lvars[var_id], rtn ? rtn : dag->var(var_id); }
+	inline void scratch(const OperandVar& var) { set(var, dag->new_top()); }
+	void scratchAllMemory();
+
 	LabelledPredicate makeLabelledPredicate(condoperator_t opr, Operand* opd1, Operand* opd2, Path& labels) const;
 	bool tryToKeepVar(const OperandVar& var);//, const Predicate*& removed_predicate);
 	bool invalidateVar(const OperandVar& var, bool invalidate_constant_info = true);
@@ -99,7 +107,7 @@ private:
 	bool replaceTempVar(const OperandMem& mem, const Operand& expr);
 	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier, Path& labels);
 	Option<OperandConst> findConstantValueOfVar(const OperandVar& var); // changed to a simple lookup to "constants"
-	Option<OperandConst> findConstantValueOfMemCell(const OperandMem& mem, Path &labels);
+	Option<Constant> findConstantValueOfMemCell(const OperandMem& mem, Path &labels);
 	Option<t::int32> findStackRelativeValueOfVar(const OperandVar& var, Path& labels);
 	bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right, Path& labels);
 	Option<OperandMem> getOperandMem(const OperandVar& var, Path& labels);
@@ -110,6 +118,10 @@ private:
 	inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv) const { return constants.getLabels(opdv); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv1, const OperandVar& opdv2) const { return constants.getLabels(opdv1, opdv2); }
+
+	// smart functions
+	const Operand* smart_add(const Operand* a, const Operand* b);
+	const Operand* smart_sub(const Operand* a, const Operand* b);
 
 	// PredIterator class
 	class PredIterator: public PreIterator<PredIterator, const LabelledPredicate&> {
