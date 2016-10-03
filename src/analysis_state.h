@@ -89,9 +89,14 @@ private:
 	// analysis_bb.cpp (v2)
 	void set(const OperandVar& var, const Operand* expr);
 	void setMem(Constant addr, const Operand* expr);
-	inline const Operand* getPtr(t::int32 var_id) { const Operand* rtn; return rtn = lvars[var_id], rtn ? rtn : dag->var(var_id); }
+	inline const Operand* getPtr(t::int32 var_id) const;
 	inline void scratch(const OperandVar& var) { set(var, dag->new_top()); }
 	void scratchAllMemory();
+	// smart functions
+	const Operand* smart_add(const Operand* a, const Operand* b);
+	const Operand* smart_sub(const Operand* a, const Operand* b);
+	const Operand* smart_mul(const Operand* a, const Operand* b);
+	const Operand* smart_mul(const Operand* a, Constant c);
 
 	LabelledPredicate makeLabelledPredicate(condoperator_t opr, Operand* opd1, Operand* opd2, Path& labels) const;
 	bool tryToKeepVar(const OperandVar& var);//, const Predicate*& removed_predicate);
@@ -114,14 +119,10 @@ private:
 	bool invalidateAllMemory();
 	void updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const;
 	Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels);
-	Option<OperandConst> getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type);
+	Option<Constant> getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type);
 	inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv) const { return constants.getLabels(opdv); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv1, const OperandVar& opdv2) const { return constants.getLabels(opdv1, opdv2); }
-
-	// smart functions
-	const Operand* smart_add(const Operand* a, const Operand* b);
-	const Operand* smart_sub(const Operand* a, const Operand* b);
 
 	// PredIterator class
 	class PredIterator: public PreIterator<PredIterator, const LabelledPredicate&> {

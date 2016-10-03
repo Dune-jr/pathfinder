@@ -46,8 +46,8 @@ void Analysis::State::processBB(const BasicBlock *bb)
 				generated_preds_taken = generated_preds;
 				generated_preds = generated_preds_before_condition;
 			}
-			processSemInst1(seminsts, last_condition);
 			processSemInst2(seminsts, last_condition);
+			processSemInst1(seminsts, last_condition);
 		}
 		// all temporary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();
@@ -67,7 +67,7 @@ void Analysis::State::processBB(const BasicBlock *bb)
 	}
 }
 
-void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_condition)
+void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_condition)
 {
 	Operand *opd1 = NULL, *opd2 = NULL, *opd11 = NULL, *opd12 = NULL, *opd21 = NULL, *opd22 = NULL;
 	condoperator_t opr = CONDOPR_EQ; // default is =
@@ -115,7 +115,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 			if(Option<OperandMem> addr_mem = getOperandMem(addr, labels))
 			{
 				// if it's a constant address of some read-only data
-				if(Option<OperandConst> addr_const_value = getConstantValueOfReadOnlyMemCell(*addr_mem, (*seminsts).type()))
+				if(Option<Constant> addr_const_value = getConstantValueOfReadOnlyMemCell(*addr_mem, (*seminsts).type()))
 				{
 					DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "R-O memory data " << *addr_mem << " simplified to " << *addr_const_value)
 					constants.set(d, ConstantVariables::LabelledValue(*addr_const_value, labels, true)); 
@@ -470,13 +470,14 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 				const t::int32 cstv = constants[isConstant(a) ? a : b].val();
 				const t::int16& varopd = isConstant(a) ? b : a;
 				int x = cstv, i = 0;
-				while(x&1) {
+				while(x&1)
+				{
 					x >>= 1;
 					i++;
 				}
 				if(cstv < 0)
 				{
-					DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [Right operand of AND affects MSB]")
+					DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [Right operand of AND affects MSB]") // Most Significant Bit
 					invalidateVar(d);
 				}
 				else if(x == 0) // cstv was 00...000111..111, and i is the count of 1s
@@ -813,174 +814,6 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 	delete opd22;
 }
 
-void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_condition)
-{
-	const t::int16 &a = seminsts.a(), &b = seminsts.b(), &d = seminsts.d();
-	const t::int32 &cst = seminsts.cst();
-	const t::int16 &reg = seminsts.reg(), &addr = seminsts.addr();
-	Constant c;
-	switch(seminsts.op())
-	{
-		case NOP:
-			break;
-		case BRANCH:
-			// TODO
-			break;
-		case CONT:
-			// TODO
-			break;
-		case IF:
-			// TODO
-			break;
-		case LOAD: // reg <- MEM_type(addr)
-		{	// addr is likely to be t1
-			if(lvars.isConst(addr) && (c = lvars(addr).toConstant(), mem.exists(c)))
-				set(reg, mem[c]);
-			else
-				scratch(reg);
-			break;
-		}
-		case STORE:	// MEM_type(addr) <- reg
-		{
-			if(lvars.isConst(addr) && (c = lvars(addr).toConstant(), c.isValidAddress()))
-				setMem(c, getPtr(reg));
-			else
-				scratchAllMemory(); // access to Top
-			break;
-		}
-		case SET: // d <- a
-			set(d, getPtr(a));
-			break;
-		case SETI: // d <- cst
-			set(d, dag->cst(cst));
-			break;
-		case SETP:
-			scratch(d);
-			break;
-		case CMP:
-		case CMPU:
-			break;
-		case ADD:
-			set(d, smart_add(getPtr(a), getPtr(b)));
-			break;
-		case SUB:
-			set(d, smart_sub(getPtr(a), getPtr(b)));
-			break;
-		case SHL:
-			break;
-		case ASR:
-		case SHR:
-			break;
-		case NEG:
-			break;
-		case NOT: // d <- ~a
-			break;
-		case AND: // d <- a & b
-		case OR:  // d <- a | b
-		case XOR: // d <- a ^ b
-			break;
-		case MULU:
-			ASSERT(!UNTESTED_CRITICAL);
-			DBG(color::BIRed() << "Untested unsigned variant running!")
-		case MUL:
-			break;
-		case MULH:
-			break;
-		case DIVU:
-			DBG(color::BIRed() << "Untested unsigned variant running!")
-			ASSERT(!UNTESTED_CRITICAL);
-		case DIV:
-			break;
-		case MODU:
-		case MOD:
-			break;
-		case SPEC: // special instruction (d: code, cst: sub-code)
-			break;
-		default:
-			DBG(color::BIRed() << "Unknown seminst running!")
-			ASSERT(!UNTESTED_CRITICAL);
-		case SCRATCH:
-			scratch(d);
-			break;
-	}
-}
-
-void Analysis::State::set(const OperandVar& x, const Operand* expr)
-{
-	if(dbg_verbose == DBG_VERBOSE_ALL)
-	{
-		elm::String output = _ << color::Cya() << " {" << lvars(x) << "}";
-		lvars[x] = expr;
-		DBG(color::ICya() << " * " << x << " = " << lvars(x) << output)
-	}
-	else
-		lvars[x] = expr;
-}
-
-void Analysis::State::setMem(Constant addr, const Operand* expr)
-{
-	DBG(color::ICya() << " * " << OperandMem(addr) << " = " << *expr << (mem.exists(addr) ? _ << color::Cya() << " {" << *mem[addr] << "}" : elm::String()))
-	mem[addr] = expr;
-}
-
-void Analysis::State::scratchAllMemory()
-{
-	DBG(color::IRed() << "  Access to Top, invalidating all memory (" << mem.count() << " items)")
-	for(mem_t::MutableIter i(mem); i; i++)
-		i.item() = dag->new_top(); // TODO! that looks costly... maybe we should rework the way Tops work in DAG.
-}
-
-// this is minimal and a bit unoptimized
-const Operand* Analysis::State::smart_add(const Operand* a, const Operand* b)
-{
-	Option<Constant> av = a->evalConstantOperand(), bv = b->evalConstantOperand();
-	if(av && bv)
-		return dag->cst(*av+*bv);
-	else if(!av && !bv)
-		return dag->add(a, b);
-	// only one is constant
-	Constant x = av ? *av : *bv;
-	const Operand* y = av ? b : a;
-	if(x == 0)
-		return y;
-	if(y->kind() == ARITH)
-	{
-		const OperandArith& z = y->toArith();
-		av = z.leftOperand().evalConstantOperand();
-		bv = z.rightOperand().evalConstantOperand();
-		if(z.opr() == ARITHOPR_ADD)
-		{
-			if(av) // x + (av + z2)
-				return dag->add(z.right(), dag->cst(x + *av));
-			if(bv) // x + (z1 + bv)
-				return dag->add(z.left(), dag->cst(x + *bv));
-		}
-		if(z.opr() == ARITHOPR_SUB)
-		{
-			if(av) // x + (av - z2)
-				return dag->sub(dag->cst(x + *av), z.right());
-			if(bv) // x + (z1 - bv)
-				return dag->add(z.left(), dag->cst(x - *bv));
-		}
-	}
-	return dag->add(a, b);
-}
-
-// TODO! implement this further (just like smart_add)
-const Operand* Analysis::State::smart_sub(const Operand* a, const Operand* b)
-{
-	Option<Constant> av = a->evalConstantOperand(), bv = b->evalConstantOperand();
-	if(av && bv)
-		return dag->cst(*av-*bv);
-	else if(!av && !bv)
-		return dag->sub(a, b);
-	if(av && *av == 0)
-		return b;
-	if(bv && *bv == 0)
-		return a;
-	return dag->sub(a, b);
-}
-
 // do all the preprocessing and pretty printing job for making a predicate, then return the final labelled predicate ready to be added to the list
 // this function handles the deletion of opd1 and opd2
 LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, Operand* opd1, Operand* opd2, Path& labels) const
@@ -1246,7 +1079,8 @@ int Analysis::State::invalidateStackBelow(const Constant& stack_limit)
 		{
 			removePredicate(piter);
 			count++;
-			continue; }
+			continue;
+		}
 			/*
 			// const Predicate* removed_predicate = NULL;
 			bool replaced_predicates = false;
@@ -1713,7 +1547,7 @@ Predicate* Analysis::State::getPredicateGeneratedByCondition(sem::inst condition
 /*
 	Check if addr_mem is the constant address of some read-only data, if so returns the constant data value
 */
-Option<OperandConst> Analysis::State::getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type)
+Option<Constant> Analysis::State::getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type)
 {
 	const Constant& addr = addr_mem.addr();
 	if(!addr.isAbsolute())
@@ -1731,41 +1565,41 @@ Option<OperandConst> Analysis::State::getConstantValueOfReadOnlyMemCell(const Op
 		{
 			t::uint8 v;
 			dfa_state->get(addr.val(), v);
-			return elm::some(OperandConst(v));
+			return Constant(v);
 		}
 		case UINT16:
 		{
 			t::uint16 v;
 			dfa_state->get(addr.val(), v);
-			return elm::some(OperandConst(v));
+			return Constant(v);
 		}
 		case UINT32:
 		{
 			t::uint32 v;
 			dfa_state->get(addr.val(), v);
-			return elm::some(OperandConst(v));
+			return Constant(v);
 		}
 		case UINT64:
 		{
 			t::uint64 v;
 			dfa_state->get(addr.val(), v);
-			return elm::some(OperandConst(v));
+			return Constant(v);
 		}
 		case FLOAT32:
 		{
 			float v;
 			dfa_state->get(addr.val(), v);
-			return elm::some(OperandConst(v));
+			return Constant(v);
 		}
 		case FLOAT64:
 		{
 			double v;
 			dfa_state->get(addr.val(), v);
-			return elm::some(OperandConst(v));
+			return Constant(v);
 		}
 		case MAX_TYPE:
 		case NO_TYPE:
-		return none;
+			return none;
 	}
 	return none;
 }

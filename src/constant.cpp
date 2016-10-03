@@ -129,6 +129,30 @@ Constant Constant::operator%(const Constant& c) const
 		return Constant(_val % c._val);
 	return Constant();
 }
+Constant Constant::operator&(const Constant& c) const
+{
+	if(c == 0 || *this == 0)
+		return 0;
+	if(isAbsolute() && c.isAbsolute())
+		return Constant(_val & c._val);
+	return Constant();
+}
+Constant Constant::operator|(const Constant& c) const
+{
+	if(c == 0)
+		return *this;
+	if(*this == 0)
+		return c;
+	if(isAbsolute() && c.isAbsolute())
+		return Constant(_val | c._val);
+	return Constant();
+}
+Constant Constant::operator^(const Constant& c) const
+{
+	if(!c.isAbsolute())
+		return Constant(_val ^ c._val);
+	return Constant();
+}
 Constant Constant::operator<<(const Constant& c) const
 {
 	if(c == 0)
