@@ -36,15 +36,15 @@ end
 
 -- OTAWA
 settings.cc.flags:Add("`" .. otawa_config .. " --cflags`")
-settings.link.flags:Add("`" .. otawa_config .." --libs --rpath`")
+settings.link.flags:Add("`" .. otawa_config .." --libs --rpath otawa/oslice`")
 -- settings.cc.flags:Add("-D NDEBUG") -- optimize
 
 -- OSLICE
 -- if config.oslice_cc_path.value ~= "" and config.oslice_cc_path.value ~= "" then
 -- 	settings.cc.flags:Add("-D OSLICE")
 -- 	settings.cc.flags:Add("-I" .. config.oslice_cc_path.value)
-	settings.link.flags:Add("~/o/linux-x86_64/otawa-core-build/v2/src/oslice/oslice.so")
-	settings.link.flags:Add("-L~/o/linux-x86_64/otawa-core-build/v2/src/oslice/oslice.so")
+	-- settings.link.flags:Add("~/o/linux-x86_64/otawa-core-build/v2/src/oslice/oslice.so")
+	-- settings.link.flags:Add("-L~/o/linux-x86_64/otawa-core-build/v2/src/oslice/oslice.so")
 -- 	-- settings.link.flags:Add("~/Documents/casse/otawa2/linux/lib/oslice.so")
 -- end
 
