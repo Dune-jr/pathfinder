@@ -25,7 +25,7 @@ public:
 	class State; // Abstract state corresponding to a set of paths at one point of the program
 	class States; // Collection of State representing an abstract state at one point of the program
 
-	enum // flags 
+	enum // flags
 	{
 		VIRTUALIZE_CFG		  = 0b1 << 0,
 		SLICE_CFG			  = 0b1 << 1,

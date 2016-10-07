@@ -264,7 +264,9 @@ private:
 	int id;
 	static int next_id;
 };
-extern const OperandTop Top;
+extern OperandTop const* const Top;
+
+// class DAG;
 
 // Arithmetic Expressions
 class OperandArith : public Operand
@@ -295,7 +297,7 @@ public:
 	bool involvesMemory() const;
 	bool update(const Operand& opd, const Operand& opd_modifier);
 	Option<Constant> evalConstantOperand() const;
-	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
+	Option<Operand*> simplify(/*DAG& dag*/); // Warning: Option=none does not warrant that nothing has been simplified!
 	Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
@@ -310,6 +312,8 @@ public:
 	friend inline io::Output& operator<<(io::Output& out, const OperandArith& o) { return o.print(out); }
 	inline const OperandArith& toArith() const { return *this; }
 private:
+	// friend class DAG;
+	// inline void *operator new(size_t s) { return new char[s]; }
 	io::Output& print(io::Output& out) const;
 	
 	arithoperator_t _opr;

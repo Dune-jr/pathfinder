@@ -101,7 +101,8 @@ using namespace elm;
  */
 
 // const OperandTop Top(false);
-const OperandTop Top(-1);
+// const OperandTop Top(-1);
+OperandTop const* const Top = new OperandTop(-1);
 
 // Operands: Constants
 OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }

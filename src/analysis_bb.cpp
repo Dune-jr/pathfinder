@@ -13,7 +13,7 @@
 
 using namespace otawa::sem;
 
-void Analysis::State::processBB(const BasicBlock *bb)
+void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 {
 	DBG("Processing " << (otawa::Block*)bb << " (" << bb->address() << ") of path " << getPathString())
 	SLList<LabelledPredicate> generated_preds_before_condition;
@@ -23,7 +23,8 @@ void Analysis::State::processBB(const BasicBlock *bb)
 	// parse assembly instructions
 	for(BasicBlock::InstIter insts(bb); insts; insts++)
 	{
-		DBG(color::BIPur() << *insts)
+		//DBG(color::BIPur() << *insts)
+		DBG(color::Pur() << *insts)
 		sem::Block block;
 		insts->semInsts(block);
 		
@@ -46,13 +47,16 @@ void Analysis::State::processBB(const BasicBlock *bb)
 				generated_preds_taken = generated_preds;
 				generated_preds = generated_preds_before_condition;
 			}
-			processSemInst2(seminsts, last_condition);
-			processSemInst1(seminsts, last_condition);
+			if(version_flags & WITH_V2)
+				processSemInst2(seminsts, last_condition);
+			if(version_flags & WITH_V1)
+				processSemInst1(seminsts, last_condition);
 		}
 		// all temporary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();
 	}
 	DBG(dumpEverything());
+	DBG("dag:" << *dag)
 	if(dbg_verbose == DBG_VERBOSE_ALL)
 	{
 		if(generated_preds_taken)
@@ -791,15 +795,12 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 				constants.set(d, constants[a]%constants[b], getLabels(a, b));
 			else make_pred = true;
 			break;
-		case SPEC: // special instruction (d: code, cst: sub-code)
-			invalidateVar(d);
-			break;
 		default:
 			DBG(color::BIRed() << "Unknown seminst running!")
 			ASSERT(!UNTESTED_CRITICAL);
+		case SPEC: // special instruction (d: code, cst: sub-code)
 		case SCRATCH:
 			invalidateVar(d);
-			make_pred = false;
 	}
 	if(make_pred)
 		generated_preds += makeLabelledPredicate(opr, opd1, opd2, labels);

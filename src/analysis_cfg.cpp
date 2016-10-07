@@ -126,7 +126,7 @@ Analysis::States& Analysis::I(Block* b, States& s)
 	{
 		DBGG(color::Bold() << "-\tI(b=" << b << ") " << color::NoBold() << printFixPointStatus(b))
 		for(States::MutableIterator si(s.states()); si; si++)
-			si.item().processBB(b->toBasic());
+			si.item().processBB(b->toBasic(), State::WITH_V2);
 	}
 	else if(b->isEntry())
 		s.onCall((*getCaller(b->cfg()))->toSynth());
@@ -226,7 +226,7 @@ bool Analysis::checkInfeasiblePathValidity(const Vector<Analysis::State>& sv, co
 		// if feasible path && contained in the minimized inf. path
 		if((*pi).isNone() && isSubPath(si->getDetailedPath().toOrderedPath(), infeasible_path))
 		{
-			counterexample = _ << si->getPathString();
+			counterexample = si->getPathString();
 			return false;
 		}
 	}

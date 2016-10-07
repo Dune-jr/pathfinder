@@ -66,8 +66,12 @@ public:
 	void appendEdge(Edge* e, bool is_conditional);
 	void removeConstantPredicates();
 
+	enum {
+		WITH_V1=0b01,
+		WITH_V2=0b10,
+	};
 	// analysis_bb.cpp
-	void processBB(const BasicBlock *bb);
+	void processBB(const BasicBlock *bb, int version_flags = WITH_V1 | WITH_V2);
 	void processSemInst1(const otawa::sem::PathIter& seminsts, sem::inst& last_condition);
 	void processSemInst2(const otawa::sem::PathIter& seminsts, sem::inst& last_condition);
 	// void throwInfo();
@@ -214,22 +218,29 @@ private:
  * 
  * @param cl Collection of States to process (accepts SLList, Vector etc.)
  */
-template<template< class _ > class C> void Analysis::State::merge(const C<Analysis::State>& cl, Block* b)
+template<template< class _ > class C> void Analysis::State::merge(const C<Analysis::State>& sc, Block* b)
 {
-	ASSERTP(!cl.isEmpty(), "call to Analysis::State::merge with empty cl parameter"); // maybe just leave the state empty
-	DBGG("-\tmerging from " << cl.count() << " state(s).")
+	ASSERTP(!sc.isEmpty(), "call to Analysis::State::merge with empty sc parameter"); // maybe just leave the state empty
+	DBGG("-\tmerging from " << sc.count() << " state(s).")
 	// resetting stuff
 	generated_preds.clear();
 	generated_preds_taken.clear();
 	labelled_preds.clear();
 	SLList<ConstantVariables> cvl;
+#ifdef EXP0
+	// const LocalVariables* lvtab[sc.count()];
+	LocalVariables lvars1(sc.first().lvars);
+	mem_t mem1(sc.first().mem);
+	// const mem_t* mtab[sc.count()];
+	// int i = 0;
+#endif
 	// intialize to first element
-	constants = cl.first().constants;
+	constants = sc.first().constants;
 	// copy firstElement.labelled_preds into labelled_preds with empty labels
-	for(SLList<LabelledPredicate>::Iterator iter(cl.first().labelled_preds); iter; iter++)
+	for(SLList<LabelledPredicate>::Iterator iter(sc.first().labelled_preds); iter; iter++)
 		labelled_preds += LabelledPredicate(iter->pred(), Path::null);
 	bool first = true;
-	for(typename C<State>::Iterator sl_iter(cl); sl_iter; sl_iter++)
+	for(typename C<State>::Iterator sc_iter(sc); sc_iter; sc_iter++)
 	{
 		if(first) // the first element is s itself, it's useless to merge s with s
 		{
@@ -237,13 +248,25 @@ template<template< class _ > class C> void Analysis::State::merge(const C<Analys
 			continue;
 		}
 		// else //TODOv2
-			cvl += (*sl_iter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
-		// for each element of labelled_preds, we make sure it is in *sl_iter
+			cvl += (*sc_iter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
+#ifdef EXP0
+		lvars.merge(sc_iter->lvars);
+		for(mem_t::PairIterator iter(mem1); iter; iter++)		
+			if((*iter).snd != sc_iter->mem[(*iter).fst])
+				mem1[(*iter).fst] = Top;
+		for(mem_t::PairIterator iter(sc_iter->mem); iter; iter++)		
+			if((*iter).snd != mem1[(*iter).fst])
+				mem1[(*iter).fst] = Top;
+		// lvtab[i] = &(sc_iter->lvars);
+		// mtab[i++] = &(sc_iter->mem);
+
+#endif
+		// for each element of labelled_preds, we make sure it is in *sc_iter
 		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; )
 		{
 			// do not use 'if(s.labelled_preds.contains(*iter))' as we want to use Predicate::operator== and not LabelledPredicate::operator==
 			bool contains = false;
-			for(SLList<LabelledPredicate>::Iterator subiter((*sl_iter).labelled_preds); subiter; subiter++)
+			for(SLList<LabelledPredicate>::Iterator subiter((*sc_iter).labelled_preds); subiter; subiter++)
 			{
 				if((*subiter).pred() == iter->pred())
 				{
@@ -258,10 +281,10 @@ template<template< class _ > class C> void Analysis::State::merge(const C<Analys
 		}
 	}
 	this->constants.merge(cvl);
-	// this->path.merge(stateListToPathVector(cl)); // merge paths as well while keeping some flow info and shrink that in this->path
-	// this-path = DetailedPath(cl.first().lastEdge()->target()->toBasic());
+	// this->path.merge(stateListToPathVector(sc)); // merge paths as well while keeping some flow info and shrink that in this->path
+	// this-path = DetailedPath(sc.first().lastEdge()->target()->toBasic());
 	this->path.clear();
-	// this->path.fromContext(cl.first().lastEdge()->target()->toBasic());
+	// this->path.fromContext(sc.first().lastEdge()->target()->toBasic());
 	this->path.fromContext(b);
 }
 

@@ -2,23 +2,23 @@
  * General analysis methods
  */
 
-#include <ctime> // clock
 #include <cmath> // sqrt
-#include <iostream> // std::cout
+#include <ctime> // clock
 #include <iomanip> // std::setprecision
+#include <iostream> // std::cout
 #include <otawa/cfg/Edge.h>
-#include <otawa/hard/Platform.h>
 #include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
 #include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
+#include <otawa/hard/Platform.h>
+#include <otawa/oslice/features.h>
 #include <otawa/prog/WorkSpace.h>
 #include <sys/time.h>
-#include <otawa/oslice/features.h>
 #include "analysis_state.h"
 #include "cfg_features.h"
 #include "GlobalDominance.h"
+#include "GlobalDominance.h"
 #include "progress.h"
 #include "smt.h"
-#include "GlobalDominance.h"
 
 /**
  * @class Analysis

@@ -174,11 +174,12 @@ public:
 
 	~DAG(void) {
 		for(int i = 0; i < tmp_cnt + var_cnt; i++)
-			if(vars[i])
-				delete vars[i];
+			delete vars[i];
 		delete [] vars;
 		for(cst_map_t::Iterator cst(cst_map); cst; cst++)
 			delete *cst;
+		for(Vector<Operand*>::Iterator atop(tops); atop; atop++)
+			delete *atop;
 		for(op_map_t::Iterator op(op_map); op; op++)
 			delete *op;
 		for(pred_map_t::Iterator pred(pred_map); pred; pred++)
@@ -218,20 +219,14 @@ public:
 
 	// creates a new top
 	const Operand* new_top(void) {
+		Operand* r = new OperandTop(tops.length());
+		tops.push(r);
+		return r;
+	}
+	/*const Operand* new_top(void) {
 		Operand* r = new OperandTop();
 		Key k(ARITHOPR_TOP, r);
 		op_map.put(k, r); // it can't possibly already exist in the tab
-		return r;
-	}
-
-	// what's the use of this function??
-	/*const Operand* top(const OperandTop* top) {
-		Key k(ARITHOPR_TOP, top);
-		Operand* r = op_map.get(k, 0);
-		if(!r) {
-			r = new OperandTop(*top);
-			op_map.put(k, r);
-		}
 		return r;
 	}*/
 
@@ -341,6 +336,7 @@ private:
 
 	int tmp_cnt, var_cnt;
 	Operand **vars;
+	Vector<Operand *> tops;
  	cst_map_t 	cst_map;
  	op_map_t 	op_map;
  	pred_map_t 	pred_map;
