@@ -24,8 +24,8 @@ class Pathfinder: public Application {
 public:
 	Pathfinder(void): Application("pathfinder", Version(1, 0, 0), "An infeasible path detection program", "J. Ruiz"),
 		opt_s0 			 (SwitchOption::Make(*this).cmd("-V").cmd("--vv").cmd("--s0").cmd("--nosilent").description("run with maximal output")),
-		opt_s2 			 (SwitchOption::Make(*this).cmd("-s").cmd("--s1").description("only display results")),
-		opt_s3	  		 (SwitchOption::Make(*this).cmd("-S").cmd("--s2").cmd("--fullsilent").description("run with zero output")),
+		opt_s1 			 (SwitchOption::Make(*this).cmd("-s").cmd("--s1").description("only display results")),
+		opt_s2	  		 (SwitchOption::Make(*this).cmd("-S").cmd("--s2").cmd("--fullsilent").description("run with zero output")),
 		opt_progress	 (SwitchOption::Make(*this).cmd("-p").cmd("--progress").description("display analysis progress (forces -s or +)")),
 		opt_src_info	 (SwitchOption::Make(*this).cmd("-i").cmd("--src-info").description("print file/line number info")),
 		opt_nocolor		 (SwitchOption::Make(*this).cmd("--nc").cmd("--no-color").cmd("--no-colors").description("do not use colors")),
@@ -37,6 +37,8 @@ public:
 		opt_noformattedflowinfo(SwitchOption::Make(*this).cmd("--nffi").cmd("--no-formatted-flowinfo").description("format flowinfo in paths like a list of items instead of pretty-printing it")),
 		opt_automerge	 (SwitchOption::Make(*this).cmd("-a").cmd("--automerge").description("let the algorithm decide when to merge")),
 		opt_dry			 (SwitchOption::Make(*this).cmd("-d").cmd("--dry").description("dry run (no solver calls)")),
+		opt_v1			 (ValueOption<bool>::Make(*this).cmd("-1").cmd("--v1").description("Run v1 of abstract interpretation (symbolic predicates)").def(true)),
+		opt_v2			 (ValueOption<bool>::Make(*this).cmd("-2").cmd("--v2").description("Run v2 of abstract interpretation (smarter structs)").def(true)),
 		opt_deterministic(SwitchOption::Make(*this).cmd("-D").cmd("--deterministic").description("Ensure deterministic output (two executions give the same output)")),
 		opt_nolinearcheck(SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
 		opt_nounminimized(SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
@@ -68,9 +70,11 @@ protected:
 
 private:
 	// option::Manager manager;
-	SwitchOption opt_s0, opt_s2, opt_s3, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats;
+	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats;
 	ValueOption<bool> opt_output;
-	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry, opt_deterministic, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_dumpoptions;
+	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry;
+	ValueOption<bool> opt_v1, opt_v2;
+	SwitchOption opt_deterministic, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_dumpoptions;
 	ValueOption<bool> opt_virtualize;
 	ValueOption<int> opt_merge, opt_multithreading;
 
@@ -84,9 +88,11 @@ private:
 			dbg_flags |= DBG_FORMAT_FLOWINFO;
 		if(opt_detailedstats)
 			dbg_flags |= DBG_DETAILED_STATS;
+
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::VIRTUALIZE_CFG;
-		else cerr << color::BIRed() << "WARNING: IP analysis working with non-virtualized CFG. Invalid results very likely" << color::RCol() << endl;
+		else
+			cerr << color::BIRed() << "WARNING: IP analysis working with non-virtualized CFG. Invalid results very likely" << color::RCol() << endl;
 		if(opt_slice)
 			analysis_flags |= Analysis::SLICE_CFG;
 		if(opt_progress)
@@ -97,6 +103,10 @@ private:
 			analysis_flags |= Analysis::UNMINIMIZED_PATHS;
 		if(opt_dry)
 			analysis_flags |= Analysis::DRY_RUN;
+		if(opt_v1.get())
+			analysis_flags |= Analysis::WITH_V1;
+		if(opt_v2.get())
+			analysis_flags |= Analysis::WITH_V2;
 		if(true)
 			analysis_flags |= Analysis::POST_PROCESSING;
 		if(opt_merge || opt_automerge)
@@ -109,9 +119,9 @@ private:
 	void initializeLoggingOptions() {
 		// high verbose numbers are more silent. TODO: that is counterintuitive
 		dbg_verbose = 1; // default
-		if(opt_s2) dbg_verbose = 2;
+		if(opt_s1) dbg_verbose = 2;
 		if(opt_s0) dbg_verbose = 0;
-		if(opt_s3) dbg_verbose = 3;
+		if(opt_s2) dbg_verbose = 3;
 		if(opt_progress)
 			dbg_verbose = max(dbg_verbose, 2); // minimum 2	
 		elm::log::Debug::setDebugFlag(dbg_verbose == DBG_VERBOSE_ALL || dbg_verbose == DBG_VERBOSE_MINIMAL);
@@ -128,8 +138,7 @@ private:
 			DBG("Autodetected " << nb_cores << " cores.")
 			return nb_cores;
 		}
-		else
-			return opt_multithreading.get(); // either no multithreading (=0/1) or the amount of desired cores
+		return opt_multithreading.get(); // either no multithreading (=0/1) or the amount of desired cores
 	}
 	int getMergeThresold() {
 		if(opt_merge)
@@ -140,7 +149,7 @@ private:
 	}
 	void dumpOptions(int analysis_flags, int merge_thresold, int nb_cores) {
 		#define DBGPREFIX(str) "\t-" << elm::io::StringFormat(str).width(30) << ": " 
-		#define DBGOPT(str, val, normal) cout << DBGPREFIX(str) << (bool(val)==normal?color::IGre():color::IRed()) << ((val) ? "YES" : "NO") << color::RCol() << endl;
+		#define DBGOPT(str, val, normal) cout << DBGPREFIX(str) << (bool(val)==normal?color::IGre():color::IRed()) << (val ? "YES" : "NO") << color::RCol() << endl;
 		cout << "============== DUMPING OPTIONS ==============" << endl;
 		cout << "Logging:" << endl;
 		DBGOPT("LOGGING", elm::log::Debug::getDebugFlag(), true)
@@ -151,7 +160,7 @@ private:
 		cout << DBGPREFIX("LOG VERBOSE MASK") << (elm::log::Debug::getVerboseLevel()?color::IGre():color::IRed()) << elm::log::Debug::getVerboseLevel() << color::RCol() << endl;
 		cout << "Debugging:" << endl;
 		cout << DBGPREFIX("VERBOSE LEVEL") << color::ICya() << "[";
-		for(int i = 3; i > 0; i--)
+		for(int i = 3; i >= 1; i--)
 			cout << (i>dbg_verbose ? "=" : " ");
 		cout << "]" << color::RCol() << endl;
 		DBGOPT("DISPLAY TIME & NON-DTMSTIC INFO", !(dbg_flags&DBG_DETERMINISTIC), true)
@@ -165,6 +174,8 @@ private:
 		DBGOPT("CHECK LINEARITY BEFORE SMT CALL", analysis_flags&Analysis::SMT_CHECK_LINEAR, true)
 		DBGOPT("KEEP UNMINIMIZED PATHS", analysis_flags&Analysis::UNMINIMIZED_PATHS, true)
 		DBGOPT("RUN DRY (NO SMT SOLVER)", analysis_flags&Analysis::DRY_RUN, false)
+		DBGOPT("RUN V1 A.I.", analysis_flags&Analysis::WITH_V1, true)
+		DBGOPT("RUN V2 A.I.", analysis_flags&Analysis::WITH_V2, true)
 		cout << DBGPREFIX("MERGING THRESOLD");
 		if(analysis_flags&Analysis::MERGE)
 			cout << color::IRed() << merge_thresold << color::RCol() << endl;

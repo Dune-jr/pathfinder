@@ -1,3 +1,4 @@
+#if 0
 #include <elm/io/Output.h>
 #include "halfpredicate.h"
 
@@ -46,3 +47,4 @@ io::Output& operator<<(io::Output& out, const HalfPredicate& p)
 {
 	return (out << (condoperator_t)p._opr << " " << *p._opd);
 }
+#endif

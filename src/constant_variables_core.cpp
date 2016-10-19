@@ -74,7 +74,6 @@ ConstantVariablesCore::LabelledValue& ConstantVariablesCore::getCell(t::int32 va
 		return registers[var_id]; // registers ids start at 0 and are positive
 }
 
-// TODO!! use array.h here (fast copy (?) and slow copy)
 ConstantVariablesCore& ConstantVariablesCore::operator=(const ConstantVariablesCore& cv)
 {
 	if(this->isValid())

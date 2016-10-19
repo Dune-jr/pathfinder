@@ -12,14 +12,14 @@ using namespace elm::avl;
 // LabelledPredicate class
 class LabelledPredicate {
 public:
-	LabelledPredicate(const Predicate& pred, const Set<Edge*>& labels);
+	LabelledPredicate(const Predicate& pred, const Set<Edge*>& labels); // TODO!!!
 	LabelledPredicate(const LabelledPredicate& lp);
 	inline const Predicate& pred() const
 		{ return _pred; }
 	inline const Set<Edge*>& labels() const
 		{ return _labels; }
-	inline bool updatePred(const Operand& opd, const Operand& expr)
-		{ return _pred.update(opd, expr); }
+	inline bool updatePred(DAG& dag, const Operand* opd, const Operand* expr)
+		{ return _pred.update(dag, opd, expr); }
 	inline void addLabel(Edge* label)
 		{ _labels += label; }
 	inline void addLabels(const Set<Edge*>& labels)

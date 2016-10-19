@@ -18,21 +18,28 @@
 // #define DBGG(str) { if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) elm::cout << elm::log::Debug::debugPrefix(__FILE__, __LINE__) << str << elm::color::RCol() << elm::io::endl; }
 #define DBG_WARNINGS
 
-#define UNTESTED_CRITICAL true // Raise exceptions when executing untested code
-#define DBG_RESULT_IPS	    1 << 3
-#define DBG_DETERMINISTIC   1 << 4
-#define DBG_PREANALYSIS	    1 << 6
-// #define DBG_PROGRESS	    1 << 7
-#define DBG_FORMAT_FLOWINFO 1 << 8
-#define DBG_DETAILED_STATS  1 << 9
+#define UNTESTED_CRITICAL true // Raise exceptions when executing untested code if true
+
 #define DBG_SEPARATOR " "
 
-#define DBG_VERBOSE_ALL			 0
-#define DBG_VERBOSE_MINIMAL		 1
-#define DBG_VERBOSE_RESULTS_ONLY 2
-#define DBG_VERBOSE_NONE 		 3
-
+enum
+{
+	DBG_RESULT_IPS	    = 1 << 3,
+	DBG_DETERMINISTIC   = 1 << 4,
+	DBG_PREANALYSIS	    = 1 << 6,
+	// DBG_PROGRESS	    = 1 << 7,
+	DBG_FORMAT_FLOWINFO = 1 << 8,
+	DBG_DETAILED_STATS  = 1 << 9
+};
 extern int dbg_flags;
+
+enum
+{
+	DBG_VERBOSE_ALL			 = 0,
+	DBG_VERBOSE_MINIMAL		 = 1,
+	DBG_VERBOSE_RESULTS_ONLY = 2,
+	DBG_VERBOSE_NONE		 = 3
+};
 extern int dbg_verbose;
 
 // #define DBG_STD(str) { if(elm::color::flags&elm::color::DEBUG) std::cout << elm::color::Debug::debugPrefix(__FILE__, __LINE__).chars() << str << elm::color::RCol << std::endl; }

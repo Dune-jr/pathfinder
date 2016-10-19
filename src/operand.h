@@ -55,6 +55,7 @@ class OperandMem;
 class OperandTop;
 class OperandArith;
 class AffineEquationState;
+class DAG;
 
 // The visitor: an abstract class
 class OperandVisitor
@@ -67,12 +68,16 @@ public:
 	virtual bool visit(const OperandArith& o) = 0;
 };
 
+#define NONEW\
+	friend class DAG;\
+	inline void *operator new(size_t s) { return new char[s]; }
+
 // Abstract Operand class
 class Operand
 {
 public:
 	virtual ~Operand() { }
-	virtual Operand* copy() const = 0;
+	// virtual Operand* copy() const = 0;
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
 	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const = 0;
 	int involvesOperand(const Operand& opd) const { return this->operator==(opd) ? 1 : 0; } // default case, to be overloaded for recursive classes
@@ -80,19 +85,20 @@ public:
 	virtual Option<Constant> involvesStackBelow(const Constant& stack_limit) const = 0;
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
 	virtual bool involvesMemory() const = 0;
-	virtual bool update(const Operand& opd, const Operand& opd_modifier) = 0;
+	virtual Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const = 0;
 	virtual bool isComplete() const = 0;
 	virtual bool isConstant() const = 0;
 	virtual bool isLinear() const = 0;
 	virtual bool isAffine(const OperandVar& opdv) const = 0;
 	virtual void parseAffineEquation(AffineEquationState& state) const = 0;
 	virtual Option<Constant> evalConstantOperand() const = 0; // all uses commented out?
-	virtual Option<Operand*> simplify() = 0; // Warning: Option=none does not warrant that nothing has been simplified!
-	virtual Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) = 0;
+	virtual Option<const Operand*> simplify(DAG& dag) const = 0; // Warning: Option=none does not warrant that nothing has been simplified!
+	virtual const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const = 0;
 	virtual bool accept(OperandVisitor& visitor) const = 0;
 	virtual operand_kind_t kind() const = 0;
 	friend inline io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
 	virtual bool operator==(const Operand& o) const = 0;
+	virtual bool operator< (const Operand& o) const = 0;
 	
 	virtual inline const OperandConst& toConst() const { ASSERTP(false, "not an OperandConst: " << *this << " (" << kind() << ")"); }
 	virtual inline const Constant& toConstant()  const { ASSERTP(false, "not a Constant: " 		<< *this << " (" << kind() << ")"); }
@@ -116,7 +122,7 @@ public:
 	
 	inline Constant value() const { return _value; }
 	
-	Operand* copy() const;
+	// Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
@@ -124,10 +130,10 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
-	bool update(const Operand& opd, const Operand& opd_modifier);
+	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
-	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
-	Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
+	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
+	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return true; }
@@ -138,10 +144,12 @@ public:
 	inline operator Constant() const { return _value; }
 	OperandConst& operator=(const OperandConst& opd);
 	inline bool operator==(const Operand& o) const;
+	inline bool operator< (const Operand& o) const;
 	inline const OperandConst& toConst() const { return *this; }
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 	inline const Constant& toConstant() const { return _value; }
 private:
+	NONEW;
 	io::Output& print(io::Output& out) const;
 
 	Constant _value;
@@ -159,7 +167,7 @@ public:
 	inline t::int32 addr() const { return _addr; }
 	inline bool isTempVar() const { return _addr < 0; }
 	
-	Operand* copy() const;
+	// Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
@@ -167,10 +175,10 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
-	bool update(const Operand& opd, const Operand& opd_modifier);
+	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
-	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
-	Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
+	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
+	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return false; }
@@ -180,9 +188,11 @@ public:
 	inline operand_kind_t kind() const { return VAR; }
 	OperandVar& operator=(const OperandVar& opd);
 	bool operator==(const Operand& o) const;
+	bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
 	const OperandVar& toVar() const { return *this; }
 private:
+	NONEW;
 	io::Output& print(io::Output& out) const;
 	t::int32 _addr;
 };
@@ -196,7 +206,7 @@ public:
 	
 	inline const OperandConst& addr() const { return _opdc; }
 	
-	Operand* copy() const { return new OperandMem(*this); }
+	// Operand* copy() const { return new OperandMem(*this); }
 	unsigned int countTempVars() const { return 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
@@ -204,10 +214,10 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
-	bool update(const Operand& opd, const Operand& opd_modifier);
+	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
-	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
-	Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
+	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
+	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return false; }
@@ -217,9 +227,11 @@ public:
 	inline operand_kind_t kind() const { return MEM; }
 	OperandMem& operator=(const OperandMem& opd);
 	inline bool operator==(const Operand& o) const;
+	inline bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandMem& o) { return o.print(out); }
 	inline const OperandMem& toMem() const { return *this; }
 private:
+	NONEW;
 	io::Output& print(io::Output& out) const;
 
 	OperandConst _opdc;
@@ -235,7 +247,7 @@ public:
 	inline bool isUnidentified() const { return id == -1; } // blank Top
 	inline bool isIdentified() const { return !isUnidentified(); }
 	
-	Operand* copy() const;
+	// Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
@@ -243,10 +255,10 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool involvesMemory() const;
-	bool update(const Operand& opd, const Operand& opd_modifier);
+	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
-	Option<Operand*> simplify(); // Warning: Option=none does not warrant that nothing has been simplified!
-	Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
+	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
+	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return false; }
@@ -256,9 +268,11 @@ public:
 	inline operand_kind_t kind() const { return TOP; }
 	OperandTop& operator=(const OperandTop& opd);
 	inline bool operator==(const Operand& o) const;
+	inline bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandTop& o) { return o.print(out); }
 	const OperandTop& toTop() const { return *this; }
 private:
+	// NONEW;
 	io::Output& print(io::Output& out) const;
 
 	int id;
@@ -266,17 +280,15 @@ private:
 };
 extern OperandTop const* const Top;
 
-// class DAG;
-
 // Arithmetic Expressions
 class OperandArith : public Operand
 {
 public:
-	OperandArith(const OperandArith& opd);
-	OperandArith(arithoperator_t opr, const Operand& opd1_); // unary constructor 
-	OperandArith(arithoperator_t opr, const Operand& opd1_, const Operand& opd2_);
-	// OperandArith(arithoperator_t opr, const Operand* opd1_, const Operand* opd2_ = NULL); // TODO...
-	~OperandArith();
+	// OperandArith(const OperandArith& opd);
+	// OperandArith(arithoperator_t opr, const Operand& opd1_); // unary constructor 
+	// OperandArith(arithoperator_t opr, const Operand& opd1_, const Operand& opd2_);
+	OperandArith(arithoperator_t opr, const Operand* opd1_, const Operand* opd2_ = NULL);
+	// ~OperandArith();
 	
 	inline arithoperator_t opr() const { return _opr; }
 	inline const Operand* left() const { return opd1; }
@@ -287,7 +299,7 @@ public:
 	inline bool isUnary()  const { return _opr <  ARITHOPR_ADD; }
 	inline bool isBinary() const { return _opr >= ARITHOPR_ADD; }
 	
-	Operand* copy() const;
+	// Operand* copy() const;
 	unsigned int countTempVars() const;
 	int involvesOperand(const Operand& opd) const { return opd1->involvesOperand(opd) + opd2->involvesOperand(opd); }
 	inline int involvesVariable(const OperandVar& opdv) const;
@@ -295,10 +307,10 @@ public:
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	bool involvesMemory() const;
-	bool update(const Operand& opd, const Operand& opd_modifier);
+	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
-	Option<Operand*> simplify(/*DAG& dag*/); // Warning: Option=none does not warrant that nothing has been simplified!
-	Option<Operand*> replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars); // warning: Option=none does not warrant that nothing has been replaced!
+	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
+	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
 	inline bool isConstant() const { return opd1->isConstant() && (isUnary() || opd2->isConstant()); }
@@ -307,18 +319,18 @@ public:
 		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv) && opd2->isAffine(opdv); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return ARITH; }
-	OperandArith& operator=(const OperandArith& opd);
+	// OperandArith& operator=(const OperandArith& opd);
 	inline bool operator==(const Operand& o) const;
+	inline bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandArith& o) { return o.print(out); }
 	inline const OperandArith& toArith() const { return *this; }
 private:
-	// friend class DAG;
-	// inline void *operator new(size_t s) { return new char[s]; }
+	NONEW;
 	io::Output& print(io::Output& out) const;
 	
 	arithoperator_t _opr;
-	Operand* opd1;
-	Operand* opd2; // unused if operator is unary
+	const Operand* opd1;
+	const Operand* opd2; // unused if operator is unary
 };
 
 
@@ -334,6 +346,7 @@ public:
 	inline void onVarFound(const OperandVar& var) { _var_counter++; /*if(!_var) _var = elm::some(var); else ASSERT(*_var == var);*/ }
 	inline void onSpFound(bool sign = SIGN_POSITIVE) { if(sign == SIGN_POSITIVE) _sp_counter++; else _sp_counter--; }
 private:
+	NONEW;
 	inline int sign() const { if(_is_negative) return -1; else return +1; }
 
 	bool _is_negative;

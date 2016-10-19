@@ -20,7 +20,6 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 		case NOP:
 			break;
 		case BRANCH:
-			// TODO
 			break;
 		case CONT:
 			// TODO
@@ -105,7 +104,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 				if(lvars.isConst(a))
 					set(d, dag->cst(getPtr(a)->toConstant() / Constant(1) << lvars(b).toConstant()));
 				else
-					set(d, dag->div(getPtr(a), dag->cst(Constant(1) << lvars(b).toConstant())));
+					set(d, smart_div(getPtr(a), dag->cst(Constant(1) << lvars(b).toConstant())));
 			}
 			else
 			{
@@ -186,7 +185,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 					set(d, dag->cst(*av / *bv));
 					break;
 				}
-			set(d, dag->div(getPtr(a), getPtr(b)));
+			set(d, smart_div(getPtr(a), getPtr(b)));
 			break;
 		case MODU:
 		case MOD:
@@ -222,7 +221,7 @@ void Analysis::State::set(const OperandVar& x, const Operand* expr)
 
 void Analysis::State::setMem(Constant addr, const Operand* expr)
 {
-	DBG(color::ICya() << " * " << OperandMem(addr) << " = " << *expr << (mem.exists(addr) ? _ << color::Cya() << " {" << *mem[addr] << "}" : elm::String()))
+	DBG(color::ICya() << " * " << OperandMem(addr) << " = " << *expr << (mem.exists(addr) ? _ << color::Cya() << " {" << **mem[addr] << "}" : elm::String()))
 	mem[addr] = expr;
 }
 
@@ -306,19 +305,135 @@ const Operand* Analysis::State::smart_mul(const Operand* a, Constant c)
 		return a;
 	if(c == 0)
 		return dag->cst(0);
-	Option<Constant> v;
-	if(a->kind() == ARITH) // explore both operands and try to reduce (k*x)*c to [k*c]*x (where a=k*x)
-	{
-		const OperandArith& z = a->toArith();
-		if(v = z.left()->evalConstantOperand())
-			return dag->mul(z.right(), dag->cst(*v * c));
-		else if(v = z.rightOperand().evalConstantOperand())
-			return dag->mul(z.left(), dag->cst(*v * c));
+	Option<Constant> k;
+	if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_MUL)
+	{ // try to reduce a*c=(k*x)*c to [k*c]*x by exploring both operands of a and identifying one of them as a constant
+		const OperandArith& aa = a->toArith();
+		if(k = aa.left()->evalConstantOperand())
+			return dag->mul(aa.right(), dag->cst(*k * c));
+		else if(k = aa.rightOperand().evalConstantOperand())
+			return dag->mul(aa.left(), dag->cst(*k * c));
 		else
+			return dag->mul(a, dag->cst(c));
+	}
+	else if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_DIV)
+	{
+		const OperandArith& aa = a->toArith();
+		if(k = aa.left()->evalConstantOperand())
+		{	// if a = k/x, k constant, reduce a*c=(k/x)*c to k*c/x
+			DBG(color::IBlu() << "  Simplified (" << *k << "/" << *aa.right() << ")*" << c << " to " << *k*c << "/" << *aa.right())
+			DBG(color::BIRed() << "Untested simplification!"); ASSERT(!UNTESTED_CRITICAL);
+			return dag->div(dag->cst(*k * c), aa.right());
+		}
+		else if(k = aa.rightOperand().evalConstantOperand())
+		{	// if a = x/k, k constant, try to reduce a*c=(x/k)*c to x/[k/c] or x*[c/k]
+			return smart_divmul(aa.left(), *k, c);
+		}
+		else // give up
 			return dag->mul(a, dag->cst(c));
 	}
 	else if(a->kind() == CST)
 		return dag->cst(a->toConstant() * c);
 	else
 		return dag->mul(a, dag->cst(c));
+}
+
+/**
+ * @brief Tries to simplify x/k * c
+ * @return A (possibly) simplified form of x/k * c
+ */
+const Operand* Analysis::State::smart_divmul(const Operand* x, Constant k, Constant c)
+{
+	if(c == k) // (x/k)*c = x
+	{
+		DBG(color::IBlu() << "  Simplified (" << *x << "/" << k << ")*" << c << " to " << *x << " [because " << k << " = " << c << "]")
+		return x;
+	}
+	if(k % c == 0) // k = c*K ==> (x/k)*c = (x/(c*K))*c = x/K
+	{
+		const Constant K = k/c;
+		DBG(color::IBlu() << "  Simplified (" << *x << "/" << k << ")*" << c << " to " << *x << "/" << K << " [because " << k << " = " << c << "*" << K << "]")
+		return dag->div(x, dag->cst(K));
+	}
+	else if(c % k == 0) // c = k*K ==> (x/k)*c = (x/k)*k*K = x*K
+	{
+		const Constant K = c/k;
+		DBG(color::IBlu() << "  Simplified (" << *x << "/" << k << ")*" << c << " to " << *x << "*" << K << " [because " << c << " = " << k << "*" << K << "]")
+		return dag->mul(x, dag->cst(K));
+	}
+	else // give up
+		return dag->mul(dag->div(x, dag->cst(k)), dag->cst(c));
+}
+
+/**
+ * @brief Tries to simplify a/b
+ * @return A (possibly) simplified form of x/k * c
+ */
+const Operand* Analysis::State::smart_div(const Operand* a, const Operand* b)
+{
+	if(Option<Constant> bv = b->evalConstantOperand())
+	{
+		if(Option<Constant> av = a->evalConstantOperand())
+			return dag->cst(*av / *bv); // 2 constants, easy simplification
+		else
+			return smart_div(a, *bv);
+	}
+	else
+		return dag->div(a, b); // 0 constants, give up
+}
+
+const Operand* Analysis::State::smart_div(const Operand* a, Constant c)
+{
+	if(c == 1) // ignore division by 0 problems
+		return a;
+	Option<Constant> k;
+	if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_DIV)
+	{
+		const OperandArith& aa = a->toArith();
+		if(k = aa.left()->evalConstantOperand()) // a/c = (k/x)/c = [k/c]/x
+			return dag->div(dag->cst(*k/c), aa.right());
+		else if(k = aa.right()->evalConstantOperand()) // a/c = (x/k)/c = x/[k*c]
+			return dag->div(aa.left(), dag->cst(*k * c));
+		else
+			return dag->div(a, dag->cst(c));
+	}
+	else if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_MUL)
+	{	// a = (a1*a2)/c
+		const OperandArith& aa = a->toArith();
+		if(k = aa.left()->evalConstantOperand()) // a/c = (k*x)/c = (x*k)/c
+			return smart_muldiv(aa.right(), *k, c);
+		else if(k = aa.right()->evalConstantOperand()) // a/c = (x*k)/c
+			return smart_muldiv(aa.left(), *k, c);
+		else
+			return dag->div(a, dag->cst(c));
+	}
+	else
+		return dag->div(a, dag->cst(c));
+}
+
+/**
+ * @brief Tries to simplify x*k / c
+ * @return A (possibly) simplified form of x*k / c
+ */
+const Operand* Analysis::State::smart_muldiv(const Operand* x, Constant k, Constant c)
+{
+	if(c == k) // (x*k)/c = x
+	{
+		DBG(color::IBlu() << "  Simplified (" << *x << "*" << k << ")/" << c << " to " << *x << " [because " << k << " = " << c << "]")
+		return x;
+	}
+	if(k % c == 0) // k = c*K ==> (x*k)/c = (x*c*K)/c = x*K
+	{
+		const Constant K = k/c;
+		DBG(color::IBlu() << "  Simplified (" << *x << "*" << k << ")/" << c << " to " << *x << "*" << K << " [because " << k << " = " << c << "*" << K << "]")
+		return dag->mul(x, dag->cst(K));
+	}
+	else if(c % k == 0) // c = k*K ==> (x*k)/c = (x/k)/(k*K) = x/K
+	{
+		const Constant K = c/k;
+		DBG(color::IBlu() << "  Simplified (" << *x << "*" << k << ")/" << c << " to " << *x << "/" << K << " [because " << c << " = " << k << "*" << K << "]")
+		return dag->div(x, dag->cst(K));
+	}
+	else // give up
+		return dag->mul(dag->div(x, dag->cst(k)), dag->cst(c));
 }

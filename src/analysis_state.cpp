@@ -51,14 +51,14 @@ Analysis::State::State(const State& s)
 	  labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
 	{ }
 
-void Analysis::State::appendEdge(Edge* e, bool is_conditional)
+void Analysis::State::appendEdge(Edge* e)
 {
 	// add edge to the end of the path
 	this->path.addLast(e);
 	// we now need to label the correct list of predicates
-	const SLList<LabelledPredicate> &relevant_preds = (is_conditional && e->isTaken())
+	const SLList<LabelledPredicate> &relevant_preds = (isConditional(e->source()) && e->isTaken())
 		? generated_preds_taken // conditional TAKEN
-		: generated_preds;  // non-conditional, NOT TAKEN
+		: generated_preds; // non-conditional, NOT TAKEN
 	labelled_preds += labelPredicateList(relevant_preds, e); // label our list of predicates with the current edge then append it
 	constants.label(e); // label the constants as well
 }

@@ -177,6 +177,24 @@ Constant& Constant::operator-=(const Constant& c)
 {
 	return (*this = *this - c);
 }
+bool Constant::operator<(const Constant& c) const
+{
+	if(_kind != c._kind)
+		return _kind < c._kind; // doesn't make sense, but doesn't have to
+	switch(_kind)
+	{
+		case CONSTANT_PLUS_SP:
+		case CONSTANT_MINUS_SP:
+			if(sign() < c.sign())
+				return false;
+			if(sign() > c.sign())
+				return true;
+		case CONSTANT_ABSOLUTE: // or CONSTANT_RELATIVE with same sign
+			return val() < c.val();
+		default: // CONSTANT_INVALID:
+			return false;
+	}
+}
 bool Constant::operator>(const Constant& c) const
 {
 	if(_kind != c._kind)
@@ -185,9 +203,9 @@ bool Constant::operator>(const Constant& c) const
 	{
 		case CONSTANT_PLUS_SP:
 		case CONSTANT_MINUS_SP:
-			if(sign() > c.sign())
-				return true;
 			if(sign() < c.sign())
+				return true;
+			if(sign() > c.sign())
 				return false;
 		case CONSTANT_ABSOLUTE: // or CONSTANT_RELATIVE with same sign
 			return val() > c.val();

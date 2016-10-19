@@ -3,6 +3,7 @@
 
 #include <elm/avl/Set.h>
 #include <elm/genstruct/SLList.h>
+#include <elm/util/BitVector.h>
 #include <otawa/cfg/Edge.h>
 #include "constant.h"
 // #include "debug.h"
@@ -21,24 +22,26 @@ class LocalVariables {
 public:
 	typedef Set<Edge*> labels_t;
 
-	LocalVariables() : size(0), thresold(0), o(NULL), l(NULL), u(NULL) { } // invalid
+	LocalVariables() : size(0), thresold(0), o(NULL), l(NULL), u() { } // invalid
 	LocalVariables(DAG& dag, short max_tempvars, short max_registers) : size(max_tempvars + max_registers), thresold(max_registers),
-		o(new const Operand*[size]), l(new labels_t*[size]), u(new bool[size]) {
+		o(new const Operand*[size]), l(new labels_t*[size]), u(size) {
 		array::clear(l, size); // array::clear call is a fast one because it's an array of pointers
-		array::clear(u, size); // all updates to false
+		// array::clear(u, size); // all updates to false
 		array::clear(o, size); // all operands to NULL - aka Identity
 		// for(int i = 0; i < size; i++)
 		// 	o[i] = dag.var(getId(i)); // set every rx to rx, and tx to tx
 	}
 	LocalVariables(const LocalVariables& lv) : size(lv.size), thresold(lv.thresold),
-		o(new const Operand*[size]), l(new labels_t*[size]), u(new bool[size]) {
-		array::clear(l, size);
-		if(size)
+		o(size ? new const Operand*[size] : NULL), l(size ? new labels_t*[size] : NULL), u() {
+		if(size) {
+			array::clear(l, size);
+			u.resize(size);
 			copy(lv);
+		}
 	}
 	~LocalVariables() {
 		delete[] o;
-		delete[] u;
+		// delete[] u;
 		for(int i = 0; i < size; i++)
 			delete l[i];
 		delete[] l;
@@ -64,9 +67,10 @@ public:
 	inline bool isUpdated(OperandVar var)
 		{ return u[getIndex(var)]; }
 	inline void markAsUpdated(OperandVar var)
-		{ u[getIndex(var)] = true; }
+		{ u.set(getIndex(var)); }
 	inline void resetUpdatedMarks()
-		{ array::clear(u, size); }
+		{ u.clear(); }
+		// { array::clear(u, size); }
 
 	// void merge(const SLList<ConstantVariablesCore>& cvl);
 	// elm::String printChanges() const;
@@ -86,20 +90,22 @@ public:
 				o = new Operand const*[size];
 				l = new labels_t*[size];
 				array::clear(l, size);
-				u = new bool[size];
+				// u = new bool[size];
+				u.resize(size);
 			}
 			copy(lv);
 		}
 		else
 		{
 			delete[] o;
-			delete[] u;
+			// delete[] u;
 			for(int i = 0; i < size; i++)
 				delete l[i];
 			size = 0;
 			thresold = 0;
 			o = NULL;
-			u = NULL;
+			// u = NULL;
+			u = BitVector();
 			l = NULL;
 		}
 		return *this;
@@ -122,12 +128,14 @@ private:
 	short thresold; // == max_registers
 	Operand const** o; // operands
 	labels_t** l; // labels
-	bool*      u; // updated // TODO!! that's badly optimized, need to do a bitfield
+	BitVector  u; // updated
+	// bool*      u; // updated // TODO!! that's badly optimized, need to do a bitfield
 
 	inline void copy(const LocalVariables& lv) {
 		ASSERT(isValid());
 		array::copy(o, lv.o, size);
-		array::copy(u, lv.u, size);
+		// array::copy(u, lv.u, size);
+		u = lv.u;
 		for(int i = 0; i < size; i++) {
 			delete l[i];
 			l[i] = lv.l[i] ? new labels_t(*lv.l[i]) : NULL;		

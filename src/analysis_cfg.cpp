@@ -126,7 +126,7 @@ Analysis::States& Analysis::I(Block* b, States& s)
 	{
 		DBGG(color::Bold() << "-\tI(b=" << b << ") " << color::NoBold() << printFixPointStatus(b))
 		for(States::MutableIterator si(s.states()); si; si++)
-			si.item().processBB(b->toBasic(), State::WITH_V2);
+			si.item().processBB(b->toBasic(), flags&(Analysis::WITH_V1 | Analysis::WITH_V2));
 	}
 	else if(b->isEntry())
 		s.onCall((*getCaller(b->cfg()))->toSynth());
@@ -147,7 +147,7 @@ LockPtr<Analysis::States> Analysis::I(Edge* e, const States& s)
 	LockPtr<States> rtns(new States(s));
 	if(! e->source()->isEntry()) // do not process entry: no generated preds and uninteresting edge to add (everything comes from the entry)
 		for(States::MutableIterator rtnsi(rtns->states()); rtnsi; rtnsi++)
-			rtnsi.item().appendEdge(e, isConditional(e->source()));
+			rtnsi.item().appendEdge(e);
 	if(LOOP_EXIT_EDGE(e))
 		rtns->onLoopExit(e);
 	return rtns;

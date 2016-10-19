@@ -27,9 +27,10 @@ private:
 
 	const dfa::State* dfa_state;
 	OperandVar sp; // the Stack Pointer register
-#ifdef EXP
 	DAG* dag;
+#ifdef EXP
 	LocalVariables lvars;
+	// LocalVariables lvars_taken;
 	mem_t mem;
 #endif
 	bool bottom; // true=is Bottom, false= is Top
@@ -57,21 +58,18 @@ public:
 	inline void onReturn(SynthBlock* sb) { path.onReturn(sb); }
 	inline bool isBottom() const { return bottom; }
 	inline bool isValid() const { return dfa_state != NULL && constants.isValid(); } // this is so that we can have empty states that do not use too much memory
+	inline DAG& getDag() const { return *dag; }
 
 	// analysis_state.cpp
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
 	elm::String dumpEverything() const;
 	template<template< class _ > class C> void merge(const C<Analysis::State>& cl, Block* b);
 	bool equiv(const State& s) const;
-	void appendEdge(Edge* e, bool is_conditional);
+	void appendEdge(Edge* e);
 	void removeConstantPredicates();
 
-	enum {
-		WITH_V1=0b01,
-		WITH_V2=0b10,
-	};
 	// analysis_bb.cpp
-	void processBB(const BasicBlock *bb, int version_flags = WITH_V1 | WITH_V2);
+	void processBB(const BasicBlock *bb, int version_flags = Analysis::WITH_V1 | Analysis::WITH_V2);
 	void processSemInst1(const otawa::sem::PathIter& seminsts, sem::inst& last_condition);
 	void processSemInst2(const otawa::sem::PathIter& seminsts, sem::inst& last_condition);
 	// void throwInfo();
@@ -101,28 +99,32 @@ private:
 	const Operand* smart_sub(const Operand* a, const Operand* b);
 	const Operand* smart_mul(const Operand* a, const Operand* b);
 	const Operand* smart_mul(const Operand* a, Constant c);
+	const Operand* smart_div(const Operand* a, const Operand* b);
+	const Operand* smart_div(const Operand* a, Constant c);
+	const Operand* smart_divmul(const Operand* x, Constant k, Constant c);
+	const Operand* smart_muldiv(const Operand* x, Constant k, Constant c);
 
-	LabelledPredicate makeLabelledPredicate(condoperator_t opr, Operand* opd1, Operand* opd2, Path& labels) const;
+	LabelledPredicate makeLabelledPredicate(condoperator_t opr, const Operand* opd1, const Operand* opd2, Path& labels) const;
 	bool tryToKeepVar(const OperandVar& var);//, const Predicate*& removed_predicate);
 	bool invalidateVar(const OperandVar& var, bool invalidate_constant_info = true);
-	bool invalidate(const Operand& var, bool invalidate_constant_info = true);
+	// bool invalidate(const Operand& var, bool invalidate_constant_info = true);
 	bool invalidateMem(const OperandMem& addr);
 	bool invalidateMem(const OperandVar& var);
 	bool invalidateTempVars();
-	bool replaceOperand(const Operand& opd, const Operand& expr);
-	bool replaceVar(const OperandVar& var, const Operand& expr);
-	bool replaceMem(const OperandMem& opd, const Operand& expr, const Path& labels);
-	bool replaceTempVar(const OperandVar& temp_var, const Operand& expr);
-	bool replaceTempVar(const OperandMem& mem, const Operand& expr);
-	bool update(const OperandVar& opd_to_update, const Operand& opd_modifier, Path& labels);
+	// bool replaceOperand(const Operand& opd, const Operand& expr);
+	bool replaceVar(const OperandVar& var, const Operand* expr);
+	bool replaceMem(const OperandMem& opd, const Operand* expr, const Path& labels);
+	bool replaceTempVar(const OperandVar& temp_var, const Operand* expr);
+	bool replaceTempVar(const OperandMem& mem, const Operand* expr);
+	bool update(const OperandVar& opd_to_update, const Operand* opd_modifier, Path& labels);
 	Option<OperandConst> findConstantValueOfVar(const OperandVar& var); // changed to a simple lookup to "constants"
 	Option<Constant> findConstantValueOfMemCell(const OperandMem& mem, Path &labels);
 	Option<t::int32> findStackRelativeValueOfVar(const OperandVar& var, Path& labels);
-	bool findValueOfCompVar(const OperandVar& var, Operand*& opd_left, Operand*& opd_right, Path& labels);
+	bool findValueOfCompVar(const OperandVar& var, Operand const*& opd_left, Operand const*& opd_right, Path& labels);
 	Option<OperandMem> getOperandMem(const OperandVar& var, Path& labels);
 	bool invalidateAllMemory();
 	void updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const;
-	Predicate* getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels);
+	Option<Predicate> getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels);
 	Option<Constant> getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type);
 	inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv) const { return constants.getLabels(opdv); }

@@ -10,7 +10,9 @@
  * @class Predicate
  * @brief A predicate of the abstract analysis
  */
-Predicate::Predicate(condoperator_t opr, const Operand& opd1, const Operand& opd2) : _opr(opr)
+Predicate::Predicate() :_opr(0), _opd1(NULL), _opd2(NULL) { }
+Predicate::Predicate(condoperator_t opr, const Operand* opd1, const Operand* opd2) : _opr(opr), _opd1(opd1), _opd2(opd2) { }
+/*Predicate::Predicate(condoperator_t opr, const Operand& opd1, const Operand& opd2) : _opr(opr)
 {
 	_opd1 = opd1.copy();
 	_opd2 = opd2.copy();
@@ -19,11 +21,11 @@ Predicate::Predicate(const Predicate& p) : _opr(p._opr)
 {
 	_opd1 = p._opd1->copy();
 	_opd2 = p._opd2->copy();
-} 
+}*/
 Predicate::~Predicate()
 {
-	if(_opd1) delete _opd1;
-	if(_opd2) delete _opd2;
+	// delete _opd1;
+	// delete _opd2;
 }
 
 /**
@@ -36,10 +38,10 @@ Predicate::~Predicate()
  * the program analysis that does not make sense in a solver (for example X = Y ~ Z).
  */
 
-Predicate* Predicate::copy() const
-{
-	return new Predicate(*this);
-}
+// Predicate* Predicate::copy() const
+// {
+// 	return new Predicate(*this);
+// }
 
 int Predicate::involvesOperand(const Operand& opd) const
 {
@@ -113,26 +115,30 @@ bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) c
 }
 
 // returns true if something was updated
-bool Predicate::update(const Operand& opd, const Operand& opd_modifier)
+bool Predicate::update(DAG& dag, const Operand* opd, const Operand* opd_modifier)
 {
 	// we need to replace the matching children as they can't do it themselves since the parent has to do the modification
 	bool rtn = false;
-	if(*_opd1 == opd)
+	if(_opd1 == opd)
 	{
-		delete _opd1;
-		_opd1 = opd_modifier.copy();
+		_opd1 = opd_modifier;
 		rtn = true;
 	}
-	else if(_opd1->update(opd, opd_modifier))
-		rtn = true;
-	if(*_opd2 == opd)
+	else if(Option<const Operand*> new_opd1 = _opd1->update(dag, opd, opd_modifier))
 	{
-		delete _opd2;
-		_opd2 = opd_modifier.copy();
+		_opd1 = *new_opd1;
 		rtn = true;
 	}
-	else if(_opd2->update(opd, opd_modifier))
+	if(_opd2 == opd)
+	{
+		_opd2 = opd_modifier;
 		rtn = true;
+	}
+	else if(Option<const Operand*> new_opd2 = _opd2->update(dag, opd, opd_modifier))
+	{
+		_opd2 = *new_opd2;
+		rtn = true;
+	}
 	return rtn;
 }
 
@@ -140,10 +146,8 @@ bool Predicate::update(const Operand& opd, const Operand& opd_modifier)
 Predicate& Predicate::operator=(const Predicate& p)
 {
 	_opr = p._opr;
-	delete _opd1;
-	delete _opd2;
-	_opd1 = p._opd1->copy();
-	_opd2 = p._opd2->copy();
+	_opd1 = p._opd1;
+	_opd2 = p._opd2;
 	return *this;
 }
 

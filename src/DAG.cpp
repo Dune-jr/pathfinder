@@ -32,12 +32,6 @@ void testSimplify(DAG& d)
 	const Operand* fv2 = d.sub(two, three);fv2=fv2;
 
 	DBG("e1: "    << *e1)
-	/*Operand* o1 = e1->copy();
-	if(Option<Operand*> o2 = o1->simplify()) {
-		DBG("e1 simplified: " << **o2)
-		delete *o2;
-	}
-	else DBG("e1 easy-simplified: " << *o1)*/
 	DBG("f=fv2: " << DBG_TEST(f==fv2, true) << "  (" << *f << "==" << *fv2 << ")")
 	// DBG("one+two: " << *d.add(one, two))
 	// DBG("one+two simplified: " << **d.op(ARITHOPR_ADD, one, two)->simplify())

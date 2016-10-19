@@ -69,6 +69,7 @@ public:
 	inline Constant& operator+=(int val) { return (*this += Constant(val)); }
 	inline Constant& operator-=(int val) { return (*this -= Constant(val)); }
 
+	bool operator<(const Constant& c) const;
 	bool operator>(const Constant& c) const; // for elm::Comparator in elm::genstruct::AVLMap
 
 	inline elm::String toString() const { return _ << *this; } 

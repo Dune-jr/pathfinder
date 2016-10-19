@@ -23,15 +23,16 @@ Option<Analysis::Path*> SMT::seekInfeasiblePaths(const Analysis::State& s)
 {
 	// add the constant info to the the list of predicates
 	SLList<LabelledPredicate> labelled_preds = s.getLabelledPreds(); // implicit copy
-	labelled_preds += s.getConstants().toPredicates();
+	labelled_preds += s.getConstants().toPredicates(s.getDag());
 	
 	initialize(labelled_preds);
+	ELM_DBGV(1, "Checking path " << s.getPathString() << ": ")
 	if(checkPredSat())
 	{
-		DBG("Checking path " << s.getPathString() << ": " << color::BGre() << "SAT")
+		if(dbg_verbose == DBG_VERBOSE_ALL) cout << color::BGre() << "SAT\n";
 		return elm::none;
 	}
-	DBG("Checking path " << s.getPathString() << ": " << color::BIRed() << "UNSAT")
+	if(dbg_verbose == DBG_VERBOSE_ALL) cout << color::BIRed() << "UNSAT\n";
 
 	Analysis::Path *path = new Analysis::Path();
 	std::basic_string<char> unsat_core_output;

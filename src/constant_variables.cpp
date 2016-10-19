@@ -122,7 +122,7 @@ void ConstantVariables::merge(const SLList<ConstantVariables>& cvl)
 			registers[i] = LabelledValue(registers[i].val(), Set<Edge*>::null, true);
 }
 
-SLList<LabelledPredicate> ConstantVariables::toPredicates() const
+SLList<LabelledPredicate> ConstantVariables::toPredicates(DAG& dag) const
 {
 	SLList<LabelledPredicate> l;
 	// all tempvars should be gone when toPredicates() is used, but we still handle them in case the method is used during the BB analysis
@@ -130,8 +130,8 @@ SLList<LabelledPredicate> ConstantVariables::toPredicates() const
 	{
 		if(tempvars[i])
 		{
-			OperandVar opd_left(-i-1);
-			OperandConst opd_right((tempvars[i]).val());
+			const Operand* opd_left = dag.var(-i-1);
+			const Operand* opd_right = dag.cst(tempvars[i].val());
 			l += LabelledPredicate(Predicate(CONDOPR_EQ, opd_left, opd_right), tempvars[i].labels());
 		}
 	}
@@ -139,8 +139,8 @@ SLList<LabelledPredicate> ConstantVariables::toPredicates() const
 	{
 		if(registers[i])
 		{
-			OperandVar opd_left(i);
-			OperandConst opd_right((registers[i]).val());
+			const Operand* opd_left = dag.var(i);
+			const Operand* opd_right = dag.cst(registers[i].val());
 			l += LabelledPredicate(Predicate(CONDOPR_EQ, opd_left, opd_right), registers[i].labels());
 		}
 	}

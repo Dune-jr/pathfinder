@@ -3,10 +3,10 @@
  */
 #include <elm/io/Output.h>
 #include "operand.h"
+#include "DAG.h"
 #include "debug.h"
 
 using namespace elm;
-// using namespace elm::avl;
 
 /**
  * @class Operand
@@ -33,6 +33,7 @@ using namespace elm;
  * @fn Operand* Operand::copy() const;
  * @brief Copy the Operand
  */
+
 /**
  * @fn unsigned int Operand::countTempVars() const;
  * @brief Count the number of temporary variables in the Operand
@@ -62,7 +63,7 @@ using namespace elm;
  * @brief Check for any reference to a value in the stack or the heap in the Operand
  */
 /**
- * @fn bool Operand::update(const Operand& opd, const Operand& opd_modifier);
+ * @fn Option<const Operand*> Operand::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
  * @brief
  */
 /**
@@ -83,12 +84,12 @@ using namespace elm;
  * @warning Deprecated, bound to be removed in the future
  */
 /**
- * @fn Option<Operand*> Operand::simplify();
+ * @fn Option<const Operand*> Operand::simplify(DAG& dag) const;
  * @brief Simplify the operand, may return a new equivalent Operand to replace the current one with
  * @warning If elm::none is returned, it is not safe to assume that nothing has been simplified!
  */
 /**
- * @fn Option<Operand*> Operand::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars);
+ * @fn const Operand* Operand::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars);
  * @brief
  */
 /**
@@ -109,14 +110,20 @@ OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }
 OperandConst::OperandConst(const Constant& value) : _value(value) { }
 OperandConst::OperandConst() : _value(0) { }
 OperandConst::~OperandConst() { }
-Operand* OperandConst::copy() const { return new OperandConst(_value); }
+// Operand* OperandConst::copy() const { return new OperandConst(_value); }
 io::Output& OperandConst::print(io::Output& out) const
 {
-	// if(_value >= 64 || _value <= -63) // print large values in hex
-	// 	return (out << "0x" << io::hex(_value));
 	return (out << _value);
 }
 OperandConst& OperandConst::operator=(const OperandConst& opd) { _value = opd._value; return *this; }
+bool OperandConst::operator<(const Operand& o) const
+{
+	if(kind() < o.kind())
+		return true;
+	if(kind() > o.kind())
+		return false;
+	return _value < o.toConst()._value;
+}
 bool OperandConst::operator==(const Operand& o) const
 {
 	return (o.kind() == kind()) && _value == ((OperandConst&)o)._value;
@@ -131,7 +138,7 @@ int OperandConst::involvesVariable(const OperandVar& opdv) const { return 0; }
 bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 Option<Constant> OperandConst::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
 bool OperandConst::involvesMemory() const { return false; }
-bool OperandConst::update(const Operand& opd, const Operand& opd_modifier) { return false; }
+Option<const Operand*> OperandConst::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { return none; }
 // pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 void OperandConst::parseAffineEquation(AffineEquationState& state) const
 {
@@ -146,15 +153,16 @@ Option<Constant> OperandConst::evalConstantOperand() const
 		return none;
 	return some(_value);
 }
-Option<Operand*> OperandConst::simplify() { return none; }
-Option<Operand*> OperandConst::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) { return none; }
+Option<const Operand*> OperandConst::simplify(DAG& dag) const { return none; }
+const Operand* OperandConst::replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const
+	{ return this; }
 
 // Operands: Variables
 OperandVar::OperandVar() : _addr(777) { }
 OperandVar::OperandVar(const OperandVar& opd) : _addr(opd._addr) { }
 OperandVar::OperandVar(t::int32 addr) : _addr(addr) { }
 // OperandVar::~OperandVar() { }
-Operand* OperandVar::copy() const { return new OperandVar(_addr); }
+// Operand* OperandVar::copy() const { return new OperandVar(_addr); }
 io::Output& OperandVar::print(io::Output& out) const
 {
 	if(!isTempVar())
@@ -164,6 +172,14 @@ io::Output& OperandVar::print(io::Output& out) const
 	return out; 
 }
 OperandVar& OperandVar::operator=(const OperandVar& opd){ _addr = opd._addr; return *this; }
+bool OperandVar::operator<(const Operand& o) const
+{
+	if(kind() < o.kind())
+		return true;
+	if(kind() > o.kind())
+		return false;
+	return _addr < o.toVar()._addr;
+}
 bool OperandVar::operator==(const Operand& o) const
 {
 	return (o.kind() == kind()) && _addr == ((OperandVar&)o)._addr;
@@ -190,19 +206,20 @@ bool OperandVar::involvesMemoryCell(const OperandMem& opdm) const { return false
 Option<Constant> OperandVar::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
 bool OperandVar::involvesMemory() const { return false; }
 // since the parent has to do the modification, and var has no child, return false
-bool OperandVar::update(const Operand& opd, const Operand& opd_modifier) { return false; }
+Option<const Operand*> OperandVar::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
+	{ return (this == opd) ? some(opd_modifier) : none; }
 // pop_result_t OperandVar::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 void OperandVar::parseAffineEquation(AffineEquationState& state) const { state.onVarFound(this->_addr); }
 Option<Constant> OperandVar::evalConstantOperand() const { return none; }
-Option<Operand*> OperandVar::simplify() { return none; }
-Option<Operand*> OperandVar::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars)
+Option<const Operand*> OperandVar::simplify(DAG& dag) const { return none; }
+const Operand* OperandVar::replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const
 {
-	if(constants.isConstant(this->_addr))
+	if(constants.isConstant(_addr))
 	{
 		replaced_vars.push(*this);
-		return new OperandConst(constants[this->_addr]);
+		return dag.cst(constants[_addr]);
 	}
-	return none;
+	return this;
 }
 
 // Operands: Memory
@@ -213,6 +230,14 @@ io::Output& OperandMem::print(io::Output& out) const
 	{ return out << "[" << _opdc << "]"; }
 OperandMem& OperandMem::operator=(const OperandMem& opd)
 	{ _opdc = opd._opdc; return *this; }
+bool OperandMem::operator<(const Operand& o) const
+{
+	if(kind() < o.kind())
+		return true;
+	if(kind() > o.kind())
+		return false;
+	return _opdc.value() < o.toMem()._opdc.value();
+}
 bool OperandMem::operator==(const Operand& o) const
 	{ return (kind() == o.kind()) && (addr() == ((OperandMem&)o).addr()); }
 bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
@@ -232,16 +257,16 @@ Option<Constant> OperandMem::involvesStackBelow(const Constant& stack_limit) con
 }
 bool OperandMem::involvesMemory() const
 	{ return true; }
-bool OperandMem::update(const Operand& opd, const Operand& opd_modifier)
-	{ return false; }
+Option<const Operand*> OperandMem::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
+	{ return none; }
 void OperandMem::parseAffineEquation(AffineEquationState& state) const
 	{ ASSERT(false); } // should never happen
 Option<Constant> OperandMem::evalConstantOperand() const
 	{ return none; }
-Option<Operand*> OperandMem::simplify()
+Option<const Operand*> OperandMem::simplify(DAG& dag) const
 	{ return none; }
-Option<Operand*> OperandMem::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars)
-	{ return none; }
+const Operand* OperandMem::replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const
+	{ return this; }
  
 // Operands: Top
 int OperandTop::next_id = 0;
@@ -249,10 +274,7 @@ int OperandTop::next_id = 0;
 OperandTop::OperandTop() : id(next_id++) { }
 OperandTop::OperandTop(int id) : id(id) { }
 OperandTop::OperandTop(const OperandTop& opd) : id(opd.id) { }
-Operand* OperandTop::copy() const
-{
-	return new OperandTop(id);
-}
+// Operand* OperandTop::copy() const { return new OperandTop(id); }
 io::Output& OperandTop::print(io::Output& out) const
 {
 	if(id == -1)
@@ -264,6 +286,14 @@ OperandTop& OperandTop::operator=(const OperandTop& opd)
 {
 	id = opd.id;
 	return *this;
+}
+bool OperandTop::operator<(const Operand& o) const
+{
+	if(kind() < o.kind())
+		return true;
+	if(kind() > o.kind())
+		return false;
+	return id < o.toTop().id;
 }
 bool OperandTop::operator==(const Operand& o) const
 {
@@ -279,14 +309,17 @@ int OperandTop::involvesVariable(const OperandVar& opdv) const { return 0; }
 bool OperandTop::involvesMemoryCell(const OperandMem& opdm) const {	return false; }
 Option<Constant> OperandTop::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
 bool OperandTop::involvesMemory() const { return false; }
-bool OperandTop::update(const Operand& opd, const Operand& opd_modifier) { ASSERT(false); return false; }
+Option<const Operand*> OperandTop::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { ASSERT(false); return none; }
 void OperandTop::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen (for Top too?)
 Option<Constant> OperandTop::evalConstantOperand() const { return none; }
-Option<Operand*> OperandTop::simplify() { return none; }
-Option<Operand*> OperandTop::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) { return none; }
+Option<const Operand*> OperandTop::simplify(DAG& dag) const { return none; }
+const Operand* OperandTop::replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const
+	{ return this; }
  
 // Operands: Arithmetic Expressions
-OperandArith::OperandArith(arithoperator_t opr, const Operand& opd1_)
+OperandArith::OperandArith(arithoperator_t opr, const Operand* opd1_, const Operand* opd2_)
+	: _opr(opr), opd1(opd1_), opd2(opd2_) { }
+/*OperandArith::OperandArith(arithoperator_t opr, const Operand& opd1_)
 	: _opr(opr)
 {
 	opd1 = opd1_.copy();
@@ -297,8 +330,6 @@ OperandArith::OperandArith(arithoperator_t opr, const Operand& opd1_, const Oper
 	opd1 = opd1_.copy();
 	opd2 = opd2_.copy();
 }
-// OperandArith::OperandArith(arithoperator_t opr, const Operand* opd1_, const Operand* opd2_)
-// 	: _opr(opr), opd1(opd1_), opd2(opd2_) { }
 OperandArith::OperandArith(const OperandArith& x)
 	: _opr(x._opr)
 {
@@ -317,7 +348,7 @@ Operand* OperandArith::copy() const
 	if(isUnary())
 		return new OperandArith(_opr, *opd1);	
 	return new OperandArith(_opr, *opd1, *opd2);
-}
+}*/
 io::Output& OperandArith::print(io::Output& out) const
 {
 	if(isUnary())
@@ -342,7 +373,7 @@ io::Output& OperandArith::print(io::Output& out) const
 	}
 	return out;
 }
-OperandArith& OperandArith::operator=(const OperandArith& opd)
+/*OperandArith& OperandArith::operator=(const OperandArith& opd)
 {
 	_opr = opd._opr;
 	delete opd1;
@@ -353,6 +384,26 @@ OperandArith& OperandArith::operator=(const OperandArith& opd)
 		opd2 = opd.opd2->copy();
 	}
 	return *this;
+}*/
+bool OperandArith::operator<(const Operand& o) const
+{
+	if(kind() < o.kind())
+		return true;
+	if(kind() > o.kind())
+		return false;
+	if(isBinary() < o.toArith().isBinary())
+		return true;
+	if(isBinary() > o.toArith().isBinary())
+		return false;
+	if(*opd1 < *(o.toArith().opd1))
+		return true;
+	// *opd1 >= *o.opd1
+	if(isUnary())
+		return false; // it's over
+	if(*opd1 == *(o.toArith().opd1))
+		return *opd2 < *(o.toArith().opd2);
+	else // > or == but unary
+		return false;
 }
 bool OperandArith::operator==(const Operand& o) const
 {
@@ -397,28 +448,36 @@ bool OperandArith::involvesMemory() const
 		return opd1->involvesMemory();
 	return opd1->involvesMemory() || opd2->involvesMemory();	
 }
-bool OperandArith::update(const Operand& opd, const Operand& opd_modifier)
+Option<const Operand*> OperandArith::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
 {
 	bool rtn = false;
-	if(*opd1 == opd)
+	const Operand *n1 = opd1, *n2 = opd2;
+	if(opd1 == opd)
 	{
-		delete opd1;
-		opd1 = opd_modifier.copy();
+		n1 = opd_modifier;
 		rtn = true;
 	}
-	else if(opd1->update(opd, opd_modifier))
-		rtn = true;
-	if(isUnary())
-		return rtn; // stop here
-	if(*opd2 == opd)
+	else if(Option<const Operand*> new_opd1 = opd1->update(dag, opd, opd_modifier))
 	{
-		delete opd2;
-		opd2 = opd_modifier.copy();
+		n1 = *new_opd1;
 		rtn = true;
 	}
-	else if(opd2->update(opd, opd_modifier))
-		rtn = true;
-	return rtn;
+	if(isBinary())
+	{
+		if(opd2 == opd)
+		{
+			n2 = opd_modifier;
+			rtn = true;
+		}
+		else if(Option<const Operand*> new_opd2 = opd2->update(dag, opd, opd_modifier))
+		{
+			n2 = *new_opd2;
+			rtn = true;
+		}
+		return rtn ? some(dag.autoOp(_opr, n1, n2)) : none;
+	}
+	else
+		return rtn ? some(dag.autoOp(_opr, n1)) : none;		
 }
 /*
 // TO*DO handle ARITHOPR_NEG _and_ replace in isAffine() the (_opr == +) || (_opr == -) statements by adding the NEG case! Handle unary everywhere!
@@ -541,52 +600,51 @@ Option<Constant> OperandArith::evalConstantOperand() const
 	return none; // one of the operands is not constant or we failed to evaluate it
 }
 // Warning: Option=none does not warrant that nothing has been simplified!
-Option<Operand*> OperandArith::simplify()
+Option<const Operand*> OperandArith::simplify(DAG& dag) const
 {
 	// before anything, test our groundness
 	if(Option<Constant> val = evalConstantOperand())
-	{
 		if((*val).isValid())
-			return some((Operand*)(new OperandConst(*val)));
-	}
+		return some(dag.cst(*val));
 	if(isUnary())
 	{
-		if(Option<Operand*> o = opd1->simplify())
-			opd1 = *o;
+		if(Option<const Operand*> o = opd1->simplify(dag))
+			return some(dag.autoOp(_opr, *o));
 		return none; // if there was anything to simplify, it would have been done earlier with evalConstantOperand
 	}
 	// binary case
 	// simplify operands first
-	if(Option<Operand*> o = opd1->simplify())
-		opd1 = *o;
-	if(Option<Operand*> o = opd2->simplify())
-		opd2 = *o;
+	const Operand *new_opd1 = opd1, *new_opd2 = opd2;
+	if(Option<const Operand*> o = opd1->simplify(dag))
+		new_opd1 = *o;
+	if(Option<const Operand*> o = opd2->simplify(dag))
+		new_opd2 = *o;
 
 	// reminder: our arithexpr shouldn't be const (case handled by the earlier evalConstantOperand test)
 	// test neutrals
-	bool opd1_is_constant = opd1->kind() == CST;
-	bool opd2_is_constant = opd2->kind() == CST;
+	bool opd1_is_constant = new_opd1->kind() == CST;
+	bool opd2_is_constant = new_opd2->kind() == CST;
 	Constant opd1_val, opd2_val;
-	if(opd1_is_constant) opd1_val = opd1->toConstant();
-	if(opd2_is_constant) opd2_val = opd2->toConstant();
+	if(opd1_is_constant) opd1_val = new_opd1->toConstant();
+	if(opd2_is_constant) opd2_val = new_opd2->toConstant();
 	switch(_opr)
 	{
 		case ARITHOPR_ADD:
 			if(opd1_is_constant && opd1_val == 0)
-				return some(opd2->copy()); // [x / 0 + x]
+				return some(new_opd2); // [x / 0 + x]
 		case ARITHOPR_SUB:
 			if(opd2_is_constant && opd2_val == 0)
-				return some(opd1->copy()); // [x / x +- 0]
+				return some(new_opd1); // [x / x +- 0]
 			break;
 		case ARITHOPR_MUL:
 			if(opd2_is_constant && opd2_val == 1)
-				return some(opd1->copy()); // [x / 1 * x]
+				return some(new_opd1); // [x / 1 * x]
 		case ARITHOPR_MULH:
 			break; // nothing to do
 		case ARITHOPR_DIV:
 		case ARITHOPR_MOD:
 			if(opd1_is_constant && opd1_val == 1)
-				return some(opd2->copy()); // [x / x */% 1]
+				return some(new_opd2); // [x / x */% 1]
 			break;
 		case ARITHOPR_CMP:
 			return none;
@@ -598,25 +656,25 @@ Option<Operand*> OperandArith::simplify()
 	switch(_opr)
 	{
 		case ARITHOPR_ADD:
-			if(opd1->kind() == ARITH && ((OperandArith*)opd1)->opr() == ARITHOPR_NEG)
-				return ((Operand*) new OperandArith(ARITHOPR_SUB, *opd2, ((OperandArith*)opd1)->leftOperand()))->simplify(); // [y - x / -x + y]
-			if(opd2->kind() == ARITH && ((OperandArith*)opd2)->opr() == ARITHOPR_NEG)
-				return ((Operand*) new OperandArith(ARITHOPR_SUB, *opd1, ((OperandArith*)opd2)->leftOperand()))->simplify(); // [x - y / -y + x]
+			if(opd1->kind() == ARITH && opd1->toArith().opr() == ARITHOPR_NEG)
+				return (dag.sub(opd2, opd1->toArith().left()))->simplify(dag); // [y - x / -x + y]
+			if(opd2->kind() == ARITH && opd2->toArith().opr() == ARITHOPR_NEG)
+				return (dag.sub(opd1, opd2->toArith().left()))->simplify(dag); // [x - y / -y + x]
 			break;
 		case ARITHOPR_SUB:
 			if(opd1_is_constant && opd1_val == 0)
-				return some((Operand*) new OperandArith(ARITHOPR_NEG, *opd2)); // [-x / 0 - x]
+				return some(dag.neg(opd2)); // [-x / 0 - x]
 			if(*opd1 == *opd2)
-				return some((Operand*) new OperandConst(0)); // [0 / x - x]
+				return some(dag.cst(0)); // [0 / x - x]
 			break;
 		case ARITHOPR_MUL:
 		case ARITHOPR_MULH:
 			if(opd2_is_constant && opd2_val == 0)
-				return some((Operand*) new OperandConst(0)); // [0 / x*0]
+				return some(dag.cst(0)); // [0 / x*0]
 		case ARITHOPR_DIV:
 		case ARITHOPR_MOD:
 			if(opd1_is_constant && opd1_val == 0) 
-				return some((Operand*) new OperandConst(0)); // [0 / 0*/%x]
+				return some(dag.cst(0)); // [0 / 0*/%x]
 			break;
 		case ARITHOPR_CMP:
 			return none;
@@ -625,22 +683,12 @@ Option<Operand*> OperandArith::simplify()
 	}
 	return none;
 }
-Option<Operand*> OperandArith::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars)
+const Operand* OperandArith::replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const
 {
-	if(Option<Operand*> o = opd1->replaceConstants(constants, replaced_vars))
-	{
-		delete opd1;
-		opd1 = *o;
-	}
 	if(isBinary())
-	{
-		if(Option<Operand*> o = opd2->replaceConstants(constants, replaced_vars))
-		{
-			delete opd2;
-			opd2 = *o;
-		}
-	}
-	return none;
+		return dag.autoOp(_opr, opd1->replaceConstants(dag, constants, replaced_vars), opd2->replaceConstants(dag, constants, replaced_vars));
+	else
+		return dag.autoOp(_opr, opd1->replaceConstants(dag, constants, replaced_vars));
 }
 
 bool OperandArith::isLinear() const
@@ -680,21 +728,11 @@ io::Output& operator<<(io::Output& out, const operand_kind_t kind)
 {
 	switch(kind)
 	{		
-		case CST:
-			out << "CST";
-			break;
-		case VAR:
-			out << "VAR";
-			break;
-		case MEM:
-			out << "MEM";
-			break;
-		case TOP:
-			out << "TOP";
-			break;
-		case ARITH:
-			out << "ARITH";
-			break;
+		case CST:	out << "CST";	break;
+		case VAR:	out << "VAR";	break;
+		case MEM:	out << "MEM";	break;
+		case TOP:	out << "TOP";	break;
+		case ARITH: out << "ARITH";	break;
 	}
 	return out;
 }
@@ -742,6 +780,7 @@ io::Output& operator<<(io::Output& out, arithoperator_t opr)
 			break;
 		case ARITHOPR_CMP:
 			out << "~";
+			break;
 	}
 	return out;
 }

@@ -65,11 +65,11 @@ class DAG {
 			else if(o1.fst > o2.fst)
 				return +1;
 			// same sign
-			else if(o1.snd < o2.snd)
-				return -1;
-			else if(o1.snd == o2.snd)
+			else if(*o1.snd == *o2.snd)
 				return 0;
-			else
+			else if(*o1.snd < *o2.snd)
+				return -1;
+			else // *o1.snd > *o2.snd
 				return +1;
 		}
 	};
@@ -192,6 +192,8 @@ public:
 			vars[v + tmp_cnt] = new OperandVar(v);
 		return vars[v + tmp_cnt];
 	}
+	inline const Operand *var(const OperandVar& opdv)
+		{ return var(opdv.addr()); }
 
 	const Operand *cst(const Constant& cst) {
 		Operand *r = cst_map.get(cst, 0);
@@ -203,6 +205,7 @@ public:
 	}
 
 	const Operand *mem(const OperandConst *addr) {
+ASSERT(addr);
 		Key k(ARITHOPR_MEM, addr);
 		Operand *r = op_map.get(k, 0);
 		if(!r) {
@@ -214,8 +217,8 @@ public:
 	inline const Operand *mem(const Constant& cst)
 		{ return mem(static_cast<const OperandConst*>(this->cst(cst))); }
 
-	inline const Operand *mem(const OperandMem *opd_mem)
-		{ return mem(opd_mem->addr()); }
+	inline const Operand *mem(const OperandMem& opd_mem)
+		{ return mem(opd_mem.addr().value()); }
 
 	// creates a new top
 	const Operand* new_top(void) {
@@ -235,20 +238,20 @@ private:
 		Key k(op, arg);
 		Operand *r = op_map.get(k, 0);
 		if(!r) {
-			r = new OperandArith(op, *arg);
-			// r = new OperandArith(op, arg);
+			r = new OperandArith(op, arg);
 			op_map.put(k, r);
 		}
 		return r;
 	}
 
 	const Operand *op(arithoperator_t op, const Operand *arg1, const Operand *arg2) {
+ASSERTP(arg1 && arg2, arg1 << arg2);
 		Key k(op, arg1, arg2);
-		Operand *r = op_map.get(k, 0);
+		Operand *r = op_map.get(
+			k, 0);
 		if(!r) {
 			// DBG(color::IBlu() << "k=" << *k.argument1() << (arithoperator_t)k.operation() << *k.argument2() << " not in " << *this)
-			r = new OperandArith(op, *arg1, *arg2);
-			// r = new OperandArith(op, arg1, arg2);
+			r = new OperandArith(op, arg1, arg2);
 			op_map.put(k, r);
 		}
 		return r;
@@ -260,7 +263,7 @@ private:
 	}
 
 	const Operand *comOp(arithoperator_t _op, const Operand *arg1, const Operand *arg2) {
-		if(arg1 > arg2)
+		if(*arg2 < *arg1)
 			return op(_op, arg2, arg1);
 		else
 			return op(_op, arg1, arg2);
@@ -283,11 +286,32 @@ public:
 	inline const Operand *mod (const Operand *arg1, const Operand *arg2) { return op(ARITHOPR_MOD, arg1, arg2); }
 	inline const Operand *cmp (const Operand *arg1, const Operand *arg2) { return op(ARITHOPR_CMP, arg1, arg2); }
 
+	const Operand *autoOp(arithoperator_t op, const Operand *arg1, const Operand *arg2) {
+ASSERTP(arg1 && arg2, arg1 << arg2);
+		switch(op) {
+			case ARITHOPR_ADD: return add(arg1, arg2);
+			case ARITHOPR_SUB: return sub(arg1, arg2);
+			case ARITHOPR_MUL: return mul(arg1, arg2);
+			case ARITHOPR_MULH: return mulh(arg1, arg2);
+			case ARITHOPR_DIV: return div(arg1, arg2);
+			case ARITHOPR_MOD: return mod(arg1, arg2);
+			case ARITHOPR_CMP: return cmp(arg1, arg2);
+			default: elm::crash();
+		}
+	}
+
+	const Operand *autoOp(arithoperator_t op, const Operand *arg1) {
+		switch(op) {
+			case ARITHOPR_NEG: return neg(arg1);
+			default: elm::crash();
+		}
+	}
+
 	inline Predicate *pred(condoperator_t _op, const Operand *left, const Operand *right) {
 		Pred k(_op, left, right);
 		Predicate *p = pred_map.get(k, 0);
 		if(!p) {
-			p = new Predicate(_op, *left, *right);
+			p = new Predicate(_op, left, right);
 			pred_map.put(k, p);
 		}
 		return p;

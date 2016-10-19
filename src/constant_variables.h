@@ -4,8 +4,9 @@
 #include <elm/avl/Set.h>
 #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
-#include "debug.h"
 #include "constant_variables_core.h"
+#include "DAG.h"
+#include "debug.h"
 #include "labelled_predicate.h"
 
 using namespace otawa;
@@ -38,7 +39,7 @@ public:
 	inline void invalidateOperand(const Operand& opd)
 		{ if(opd.kind() == VAR) invalidate((const OperandVar&)opd); } // doesn't do anything in the case of OperandMem
 	bool invalidateTempVars();
-	SLList<LabelledPredicate> toPredicates() const;
+	SLList<LabelledPredicate> toPredicates(DAG& dag) const;
 	inline Constant operator[](const OperandVar& opdv) const { return getValue(opdv); }
 	friend io::Output& operator<<(io::Output& out, const ConstantVariables& cv) { return operator<<(out, static_cast<ConstantVariablesCore>(cv)); }
 
