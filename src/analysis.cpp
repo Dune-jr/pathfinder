@@ -355,25 +355,19 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 {
 	if(dbg_verbose == DBG_VERBOSE_NONE)
 		return;
-	const int infeasible_paths_count = infeasible_paths.count();
-	if(dbg_verbose == DBG_VERBOSE_ALL)
-	{
-		if(dbg_flags&DBG_DETERMINISTIC)
-			DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: ")
-		else
-			DBG(color::BIGre() << infeasible_paths_count << " infeasible path" << (infeasible_paths_count == 1 ? "" : "s") << " found: "
-				<< "(" << (real_time_ms>=1000 ? ((float)real_time_ms)/(float(1000)) : real_time_ms) << (real_time_ms>=1000 ? "s" : "ms") << ")")
-		if(dbg_flags&DBG_RESULT_IPS)
-			for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
-				DBG(color::IGre() << "    * [" << *iter << "]")
-	}
-	else // not all verbose
-	{
-		if(dbg_flags&DBG_RESULT_IPS)
-			for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
-				cout << "    * [" << *iter << "]" << endl;
-		cout << color::BIGre() << infeasible_paths_count << color::RCol() << " infeasible path(s) found.";
-		if(! (dbg_flags&DBG_DETERMINISTIC))
+	const int ipcount = infeasible_paths.count();
+
+	printInfeasiblePaths();
+	cout << color::BIGre() << ipcount << color::RCol() << " infeasible path" << (ipcount == 1 ? " " : "s") << " ("
+		 << color::IGre() << ipcount-ip_stats.getUnminimizedIPCount() << color::RCol() << " min + "
+		 << color::Yel() << ip_stats.getUnminimizedIPCount() << color::RCol() << " unmin, implicitly "
+		 << color::IRed() << ip_stats.getIPCount() << color::RCol() << ").";
+
+	if(! (dbg_flags&DBG_DETERMINISTIC))
+	{	// print execution time
+		if(dbg_verbose == DBG_VERBOSE_ALL)
+			cout << " (" << (real_time_ms>=1000 ? (float(real_time_ms)/float(1000)) : real_time_ms) << (real_time_ms>=1000 ? "s" : "ms") << ")" << color::RCol() << endl;
+		else // not all verbose
 		{
 		    std::ios_base::fmtflags oldflags = std::cout.flags();
 		    std::streamsize oldprecision = std::cout.precision();
@@ -384,11 +378,11 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 		    std::cout.precision(oldprecision);
 			std::cout << endl;
 		}
-		else elm::cout << endl;
 	}
-	cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << infeasible_paths_count-ip_stats.getUnminimizedIPCount() << color::RCol() <<
-			"+" << color::Yel() << ip_stats.getUnminimizedIPCount() << color::RCol() << " => " << color::IRed() << ip_stats.getIPCount() << color::RCol() << endl;
-	if(dbg_flags&DBG_DETAILED_STATS && infeasible_paths_count > 0)
+	else elm::cout << endl;
+	// cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << ipcount-ip_stats.getUnminimizedIPCount() << color::RCol() <<
+	// 		"+" << color::Yel() << ip_stats.getUnminimizedIPCount() << color::RCol() << " => " << color::IRed() << ip_stats.getIPCount() << color::RCol() << endl;
+	if(dbg_flags&DBG_DETAILED_STATS && ipcount > 0)
 	{
 		int sum_path_lengths = 0, squaredsum_path_lengths = 0, one_edges = 0;
 		for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
@@ -397,15 +391,27 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 			sum_path_lengths += iter->countEdges();
 			squaredsum_path_lengths += iter->countEdges() * iter->countEdges();
 		}
-		float average_length = (float)sum_path_lengths / (float)infeasible_paths_count;
-		float norm2 = sqrt((float)squaredsum_path_lengths / (float)infeasible_paths_count);
+		float average_length = (float)sum_path_lengths / (float)ipcount;
+		float norm2 = sqrt((float)squaredsum_path_lengths / (float)ipcount);
 	    std::ios_base::fmtflags oldflags = std::cout.flags();
 	    std::streamsize oldprecision = std::cout.precision();
 		std::cout << std::fixed << std::setprecision(2) << " (Average: " << average_length << ", Norm2: " << norm2
-			<< ", #1edge: " << one_edges << "/" << infeasible_paths_count << ")" << endl;
+			<< ", #1edge: " << one_edges << "/" << ipcount << ")" << endl;
 		std::cout.flags(oldflags);
 		std::cout.precision(oldprecision);
 	}
+}
+
+void Analysis::printInfeasiblePaths() const
+{
+	if(dbg_flags&DBG_RESULT_IPS)
+		for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
+		{
+			if(dbg_verbose == DBG_VERBOSE_ALL)
+				DBG(color::IGre() << "    * [" << *iter << "]")
+			else
+				cout << "    * [" << *iter << "]" << endl;
+		}
 }
 
 // returns edge to remove

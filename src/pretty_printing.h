@@ -29,7 +29,7 @@ template <class T> inline const Vector<T>& nullVector(void) {
 template <class C> elm::io::Output& printCollection(elm::io::Output& out, const C& items)
 {
 	int count = items.count();
-	if(count > 32)
+	if(count > 35)
 	{
 		out << "#" << count << "#";
 		return out; // just exit if too many items

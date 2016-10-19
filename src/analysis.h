@@ -131,6 +131,7 @@ private:
 	// analysis.cpp
 	void wl_push(Block* b);
 	void printResults(int exec_time_ms, int real_time_ms) const;
+	void printInfeasiblePaths() const;
 	void postProcessResults(CFG *cfg);
 	
 	// analysis_cfg.cpp

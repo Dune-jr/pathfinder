@@ -56,11 +56,12 @@ void Analysis::State::appendEdge(Edge* e)
 	// add edge to the end of the path
 	this->path.addLast(e);
 	// we now need to label the correct list of predicates
-	const SLList<LabelledPredicate> &relevant_preds = (isConditional(e->source()) && e->isTaken())
+	SLList<LabelledPredicate> &relevant_preds = (isConditional(e->source()) && e->isTaken())
 		? generated_preds_taken // conditional TAKEN
 		: generated_preds; // non-conditional, NOT TAKEN
 	labelled_preds += labelPredicateList(relevant_preds, e); // label our list of predicates with the current edge then append it
 	constants.label(e); // label the constants as well
+	relevant_preds.clear(); // TODO!! this is too strong in case of multiple not taken...
 }
 
 
@@ -72,7 +73,7 @@ void Analysis::State::setPredicate(PredIterator &iter, const LabelledPredicate &
 		generated_preds.set(iter.gp_iter, labelled_predicate);
 	else if(iter.state == PredIterator::LABELLED_PREDS)
 		labelled_preds.set(iter.lp_iter, labelled_predicate);
-	else DBG(color::BIRed() << "Analysis::setPredicate(): unhandled iter.state!")
+	else ASSERTP(false, "Analysis::setPredicate(): unhandled iter.state!")
 }
 
 /**
@@ -90,7 +91,7 @@ void Analysis::State::movePredicateToGenerated(PredIterator &iter)
 		labelled_preds.remove(iter.lp_iter);
 		iter.updateState();
 	}
-	else DBG(color::BIRed() << "Analysis::movePredicateToGenerated(): unhandled iter.state!")
+	else ASSERTP(false, "Analysis::movePredicateToGenerated(): unhandled iter.state!")
 }
 
 void Analysis::State::removePredicate(PredIterator &iter)
@@ -100,7 +101,7 @@ void Analysis::State::removePredicate(PredIterator &iter)
 		generated_preds.remove(iter.gp_iter);
 	else if(iter.state == PredIterator::LABELLED_PREDS)
 		labelled_preds.remove(iter.lp_iter);
-	else DBG(color::BIRed() << "Analysis::removePredicate(): unhandled iter.state!")
+	else ASSERTP(false, "Analysis::removePredicate(): unhandled iter.state!")
 	iter.updateState();
 }
 

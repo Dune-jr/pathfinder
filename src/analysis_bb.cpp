@@ -812,15 +812,6 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 	}
 	if(make_pred)
 		generated_preds += makeLabelledPredicate(opr, opd1, opd2, labels);
-	// else
-	// {
-	// 	delete opd1;
-	// 	delete opd2;
-	// }
-	// delete opd11;
-	// delete opd12;
-	// delete opd21;
-	// delete opd22;
 #	endif
 }
 
