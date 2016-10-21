@@ -118,9 +118,9 @@ io::Output& OperandConst::print(io::Output& out) const
 OperandConst& OperandConst::operator=(const OperandConst& opd) { _value = opd._value; return *this; }
 bool OperandConst::operator<(const Operand& o) const
 {
-	if(kind() < o.kind())
-		return true;
 	if(kind() > o.kind())
+		return true;
+	if(kind() < o.kind())
 		return false;
 	return _value < o.toConst()._value;
 }
@@ -174,9 +174,9 @@ io::Output& OperandVar::print(io::Output& out) const
 OperandVar& OperandVar::operator=(const OperandVar& opd){ _addr = opd._addr; return *this; }
 bool OperandVar::operator<(const Operand& o) const
 {
-	if(kind() < o.kind())
-		return true;
 	if(kind() > o.kind())
+		return true;
+	if(kind() < o.kind())
 		return false;
 	return _addr < o.toVar()._addr;
 }
@@ -232,9 +232,9 @@ OperandMem& OperandMem::operator=(const OperandMem& opd)
 	{ _opdc = opd._opdc; return *this; }
 bool OperandMem::operator<(const Operand& o) const
 {
-	if(kind() < o.kind())
-		return true;
 	if(kind() > o.kind())
+		return true;
+	if(kind() < o.kind())
 		return false;
 	return _opdc.value() < o.toMem()._opdc.value();
 }
@@ -289,15 +289,15 @@ OperandTop& OperandTop::operator=(const OperandTop& opd)
 }
 bool OperandTop::operator<(const Operand& o) const
 {
-	if(kind() < o.kind())
-		return true;
 	if(kind() > o.kind())
+		return true;
+	if(kind() < o.kind())
 		return false;
 	return id < o.toTop().id;
 }
 bool OperandTop::operator==(const Operand& o) const
 {
-	return (kind() == o.kind()) && (id == ((OperandTop&)o).id);
+	return kind() == o.kind() && id == ((OperandTop&)o).id;
 }
 unsigned int OperandTop::countTempVars() const { return 0; }
 bool OperandTop::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
@@ -387,9 +387,9 @@ io::Output& OperandArith::print(io::Output& out) const
 }*/
 bool OperandArith::operator<(const Operand& o) const
 {
-	if(kind() < o.kind())
-		return true;
 	if(kind() > o.kind())
+		return true;
+	if(kind() < o.kind())
 		return false;
 	if(isBinary() < o.toArith().isBinary())
 		return true;

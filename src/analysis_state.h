@@ -89,14 +89,16 @@ private:
 	io::Output& print(io::Output& out) const;
 
 	// analysis_bb.cpp (v2)
-	void set(const OperandVar& var, const Operand* expr);
+	void set(const OperandVar& var, const Operand* expr, bool set_updated = true);
 	void setMem(Constant addr, const Operand* expr);
 	inline const Operand* getPtr(t::int32 var_id) const;
-	inline void scratch(const OperandVar& var) { set(var, dag->new_top()); }
+	inline void scratch(const OperandVar& var) { set(var, dag->new_top(), false); lvars.clearLabels(var); }
 	void scratchAllMemory();
 	// smart functions
 	const Operand* smart_add(const Operand* a, const Operand* b);
+	const Operand* smart_add(Constant x, const Operand* y);
 	const Operand* smart_sub(const Operand* a, const Operand* b);
+	const Operand* smart_sub(Constant x, const Operand* y);
 	const Operand* smart_mul(const Operand* a, const Operand* b);
 	const Operand* smart_mul(const Operand* a, Constant c);
 	const Operand* smart_div(const Operand* a, const Operand* b);

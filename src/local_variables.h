@@ -64,6 +64,8 @@ public:
 		{ return l[getIndex(var)] ? *l[getIndex(var)] : labels_t::null; }
 	inline void label(OperandVar var, Edge* e)
 		{ l[getIndex(var)]->add(e); }
+	inline void clearLabels(OperandVar var)
+		{ delete l[getIndex(var)]; l[getIndex(var)] = NULL; }
 	inline bool isUpdated(OperandVar var)
 		{ return u[getIndex(var)]; }
 	inline void markAsUpdated(OperandVar var)
@@ -104,9 +106,9 @@ public:
 			size = 0;
 			thresold = 0;
 			o = NULL;
-			// u = NULL;
-			u = BitVector();
 			l = NULL;
+			//u = NULL;
+			u = BitVector();
 		}
 		return *this;
 	}
@@ -129,12 +131,11 @@ private:
 	Operand const** o; // operands
 	labels_t** l; // labels
 	BitVector  u; // updated
-	// bool*      u; // updated // TODO!! that's badly optimized, need to do a bitfield
 
 	inline void copy(const LocalVariables& lv) {
 		ASSERT(isValid());
 		array::copy(o, lv.o, size);
-		// array::copy(u, lv.u, size);
+		//array::copy(u, lv.u, size);
 		u = lv.u;
 		for(int i = 0; i < size; i++) {
 			delete l[i];

@@ -52,9 +52,8 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 			{
 				DBG(color::IYel() << "  Load address is unknown: " << OperandVar(addr) << " = " << lvars(addr))
 				scratch(reg);
-			}			
+			}		
 			break;
-		
 		case STORE:	// MEM_type(addr) <- reg
 		{
 			Constant c;
@@ -207,7 +206,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 	}
 }
 
-void Analysis::State::set(const OperandVar& x, const Operand* expr)
+void Analysis::State::set(const OperandVar& x, const Operand* expr, bool set_updated)
 {
 	if(dbg_verbose == DBG_VERBOSE_ALL)
 	{
@@ -217,6 +216,9 @@ void Analysis::State::set(const OperandVar& x, const Operand* expr)
 	}
 	else
 		lvars[x] = expr;
+
+	if(set_updated)
+		lvars.markAsUpdated(x);
 }
 
 void Analysis::State::setMem(Constant addr, const Operand* expr)
@@ -243,18 +245,23 @@ const Operand* Analysis::State::smart_add(const Operand* a, const Operand* b)
 	Option<Constant> av = a->evalConstantOperand(), bv = b->evalConstantOperand();
 	if(av && bv)
 		return dag->cst(*av+*bv);
-	else if(!av && !bv)
+	else if(av)
+		return smart_add(*av, b);
+	else if(bv)
+		return smart_add(*bv, a);
+	else //(!av && !bv)
 		return dag->add(a, b);
-	// only one is constant
-	Constant x = av ? *av : *bv;
-	const Operand* y = av ? b : a;
+}
+
+const Operand* Analysis::State::smart_add(Constant x, const Operand* y)
+{
 	if(x == 0)
 		return y;
 	if(y->kind() == ARITH)
 	{
 		const OperandArith& z = y->toArith();
-		av = z.leftOperand().evalConstantOperand();
-		bv = z.rightOperand().evalConstantOperand();
+		Option<Constant> av = z.leftOperand().evalConstantOperand();
+		Option<Constant> bv = z.rightOperand().evalConstantOperand();
 		if(z.opr() == ARITHOPR_ADD)
 		{
 			if(av) // x + (av + z2)
@@ -262,7 +269,7 @@ const Operand* Analysis::State::smart_add(const Operand* a, const Operand* b)
 			if(bv) // x + (z1 + bv)
 				return dag->add(z.left(), dag->cst(x + *bv));
 		}
-		if(z.opr() == ARITHOPR_SUB)
+		else if(z.opr() == ARITHOPR_SUB)
 		{
 			if(av) // x + (av - z2)
 				return dag->sub(dag->cst(x + *av), z.right());
@@ -270,10 +277,9 @@ const Operand* Analysis::State::smart_add(const Operand* a, const Operand* b)
 				return dag->add(z.left(), dag->cst(x - *bv));
 		}
 	}
-	return dag->add(a, b);
+	return dag->add(y, dag->cst(x));
 }
 
-// TODO! implement this further (just like smart_add)
 const Operand* Analysis::State::smart_sub(const Operand* a, const Operand* b)
 {
 	Option<Constant> av = a->evalConstantOperand(), bv = b->evalConstantOperand();
@@ -281,12 +287,39 @@ const Operand* Analysis::State::smart_sub(const Operand* a, const Operand* b)
 		return dag->cst(*av-*bv);
 	else if(!av && !bv)
 		return dag->sub(a, b);
-	else if(av && *av == 0)
-		return b;
-	else if(bv && *bv == 0)
-		return a;
+	else if(av) // k - b
+		return smart_sub(*av, b);
+	else if(bv) // a - k = a+ (-k)
+		return smart_add(-*bv, a);
 	else
 		return dag->sub(a, b);
+}
+
+const Operand* Analysis::State::smart_sub(Constant x, const Operand* y)
+{
+	if(x == 0)
+		return y;
+	if(y->kind() == ARITH)
+	{
+		const OperandArith& z = y->toArith();
+		Option<Constant> av = z.leftOperand().evalConstantOperand();
+		Option<Constant> bv = z.rightOperand().evalConstantOperand();
+		if(z.opr() == ARITHOPR_ADD)
+		{
+			if(av) // x - (av + z2)  ==>  [x-av] - z2
+				return dag->sub(dag->cst(x - *av), z.right());
+			if(bv) // x - (z1 + bv)  ==>  [x-bv] - z1
+				return dag->sub(dag->cst(x - *bv), z.left());
+		}
+		else if(z.opr() == ARITHOPR_SUB)
+		{
+			if(av) // x - (av - z2)  ==>  [x-av] + z2
+				return dag->add(dag->cst(x - *av), z.right());
+			if(bv) // x - (z1 - bv)  ==>  [x+bv] - z1
+				return dag->sub(dag->cst(x + *bv), z.left());
+		}
+	}
+	return dag->sub(dag->cst(x), y);
 }
 
 const Operand* Analysis::State::smart_mul(const Operand* a, const Operand* b)
