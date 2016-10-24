@@ -26,10 +26,12 @@ class SMT
 public:
 	SMT(int flags);
 	Option<Analysis::Path*> seekInfeasiblePaths(const Analysis::State& s);
+	Option<Analysis::Path*> seekInfeasiblePathsv2(const Analysis::State& s);
 	static const elm::String printChosenSolverInfo();
 	
 private:
 	virtual void initialize(const SLList<LabelledPredicate>& labelled_preds) = 0;
+	virtual void initialize(const LocalVariables& lv, const HashTable<Constant, const Operand*, ConstantHash>& mem, DAG& dag) = 0;
 	virtual bool checkPredSat() = 0;
 	virtual bool retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredicate>& labelled_preds, std::basic_string<char>& unsat_core_output) = 0;
 

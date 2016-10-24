@@ -28,11 +28,13 @@ private:
 
 	// SMT virtual pure methods
 	void initialize(const SLList<LabelledPredicate>& labelled_preds);
+	void initialize(const LocalVariables& lv, const HashTable<Constant, const Operand*, ConstantHash>& mem, DAG& dag);
 	bool checkPredSat();
 	bool retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredicate>& labelled_preds, std::basic_string<char>& unsat_core_output);
 	// bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds);
 	Option<Expr> getExpr(const Predicate& p);
 	Option<Expr> getExpr(const Operand& o);
+	Expr getRegExpr(t::int32 reg_id);
 	Kind_t getKind(const Predicate& p) const;
 };
 

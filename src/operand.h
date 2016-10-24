@@ -4,6 +4,7 @@
 #include <otawa/cfg/Edge.h>
 #include <elm/genstruct/Vector.h>
 #include <elm/io/Output.h>
+#include <elm/util/BitVector.h>
 #include <elm/util/Option.h>
 #include "constant.h"
 #include "constant_variables_core.h"
@@ -86,6 +87,7 @@ public:
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
 	virtual bool involvesMemory() const = 0;
 	virtual Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const = 0;
+	virtual void markUsedRegisters(BitVector &uses) const = 0;
 	virtual bool isComplete() const = 0;
 	virtual bool isConstant() const = 0;
 	virtual bool isLinear() const = 0;
@@ -135,6 +137,7 @@ public:
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
+	inline void markUsedRegisters(BitVector& uses) const { }
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return true; }
 	inline bool isLinear()   const { return true; }
@@ -180,6 +183,7 @@ public:
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
+	inline void markUsedRegisters(BitVector& uses) const { if(!isTempVar()) uses.set(_addr); }
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return false; }
 	inline bool isLinear()   const { return true; }
@@ -219,6 +223,7 @@ public:
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
+	inline void markUsedRegisters(BitVector& uses) const { }
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return false; }
 	inline bool isLinear()   const { return true; }
@@ -260,6 +265,7 @@ public:
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
+	inline void markUsedRegisters(BitVector& uses) const { }
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return false; }
 	inline bool isLinear()   const { ASSERT(false); return true; }
@@ -312,6 +318,7 @@ public:
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
+	inline void markUsedRegisters(BitVector& uses) const { opd1->markUsedRegisters(uses); if(isBinary()) opd1->markUsedRegisters(uses); }
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
 	inline bool isConstant() const { return opd1->isConstant() && (isUnary() || opd2->isConstant()); }
 	bool isLinear() const;

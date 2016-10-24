@@ -58,6 +58,8 @@ private:
 public:
 	inline bool isValid() const
 		{ return size && thresold; }
+	inline short maxRegisters() const
+		{ return thresold; }
 	inline bool isConst(OperandVar var) const
 		{ Operand const* k = (*this)[var]; return k && k->kind() == CST; }
 	inline const labels_t& labels(OperandVar var) const

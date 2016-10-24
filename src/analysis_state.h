@@ -51,6 +51,10 @@ public:
 	inline Edge* lastEdge() const { return path.lastEdge(); }
 	inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
 	inline const ConstantVariables& getConstants() const { return constants; }
+#ifdef EXP
+	inline const LocalVariables& getLocalVariables() const { return lvars; }
+	inline const mem_t& getMemoryTable() const { return mem; }
+#endif
 	inline elm::String getPathString() const { return path.toString(); /*orderedPathToString(path.toOrderedPath());*/ }
 	inline void onLoopEntry(Block* loop_header) { path.onLoopEntry(loop_header); }
 	inline void onLoopExit(Option<Block*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }

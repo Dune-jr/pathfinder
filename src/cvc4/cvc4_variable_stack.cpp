@@ -6,21 +6,23 @@
 
 using CVC4::Expr;
 
-CVC4VariableStack::CVC4VariableStack(CVC4::ExprManager& em) : integer(em.integerType())
+CVC4VariableStack::CVC4VariableStack(CVC4::ExprManager& em) : integer(em.integerType()), def_mode(VARIABLE_PREFIX)
 {
 	expr_sp = em.mkVar("SP", integer);
 }
 
-Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o)
+Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o, stackmode_t mode)
 {
+	const stackmode_t effective_mode = mode ? mode : def_mode;
+	ASSERTP(!o.isTempVar(), "getExpr was given a tempvar")
 	const t::int32 addr = o.addr();
-	if(Option<Expr> opt_expr = varmap.get(addr))
+	if(Option<Expr> opt_expr = varmap.get(getRegId(addr, mode)))
 		return *opt_expr; // already in the stack
 	else
 	{	// not in stack, create it
-		elm::String label = _ << o;
+		elm::String label = _ << getChar(effective_mode) << addr;
 		Expr expr = em.mkVar(label.chars(), integer);
-		varmap.put(addr, expr);
+		varmap.put(getRegId(addr, mode), expr);
 		return expr;
 	}
 }

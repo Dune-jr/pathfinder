@@ -15,6 +15,8 @@
 #elif SMT_SOLVER_Z3
 	#include "z3/z3_smt.h"
  	typedef Z3SMT chosen_smt_t;
+#else
+ 	#error "no SMT solver"
 #endif
 
 /**
@@ -128,8 +130,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 	else
 	{	// without multithreading
 		for(States::Iterator si(ss.states()); si; si++)
-		{
-			// SMT call
+		{	// SMT call
 			chosen_smt_t smt(flags);
 			const Option<Path*> infeasible_path = smt.seekInfeasiblePaths(*si);
 			sv_paths.addLast(infeasible_path);

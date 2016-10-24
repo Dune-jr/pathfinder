@@ -34,7 +34,7 @@ Option<Analysis::Path*> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	}
 	if(dbg_verbose == DBG_VERBOSE_ALL) cout << color::BIRed() << "UNSAT\n";
 
-	Analysis::Path *path = new Analysis::Path();
+	Analysis::Path *path = new Analysis::Path(); // will be deleted in oracle
 	std::basic_string<char> unsat_core_output;
 	bool unsat_core_success = retrieveUnsatCore(*path, labelled_preds, unsat_core_output);
 
@@ -62,6 +62,26 @@ Option<Analysis::Path*> SMT::seekInfeasiblePaths(const Analysis::State& s)
 		return elm::none;
 	return elm::some(path);
 }
+
+Option<Analysis::Path*> SMT::seekInfeasiblePathsv2(const Analysis::State& s)
+{
+	initialize(s.getLabelledPreds());
+	initialize(s.getLocalVariables(), s.getMemoryTable(), s.getDag());
+	ELM_DBGV(1, "Checking path " << s.getPathString() << ": ")
+	if(checkPredSat())
+	{
+		if(dbg_verbose == DBG_VERBOSE_ALL) cout << color::BGre() << "SAT\n";
+		return elm::none;
+	}
+	if(dbg_verbose == DBG_VERBOSE_ALL) cout << color::BIRed() << "UNSAT\n";
+
+	// TODO!!
+	Analysis::Path *path = new Analysis::Path();
+	for(DetailedPath::EdgeIterator iter(s.getDetailedPath()); iter; iter++)
+		path->add(*iter);
+	return elm::some(path);
+}
+
 
 /**
  * @fn const elm::String SMT::printChosenSolverInfo();

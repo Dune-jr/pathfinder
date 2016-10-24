@@ -25,10 +25,29 @@ CVC4SMT::CVC4SMT(int flags): SMT(flags), smt(&em), variables(em)
 	// smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
 }
 
-void CVC4SMT::initialize(const SLList<LabelledPredicate>& labelled_preds)
+// v1: all VARIABLE_PREFIX
+// v2: TODO!! mixed? build conventions!
+void CVC4SMT::initialize(const SLList<LabelledPredicate>& labelled_preds)//, mode_t mode = VARIABLE_PREFIX)
 {
+	variables.setMode(VARIABLE_PREFIX);
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
 		exprs.addLast(getExpr(iter->pred()));
+}
+
+void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, const Operand*, ConstantHash>& mem, DAG& dag)
+{
+	variables.setMode(INITIAL_PREFIX);
+	BitVector used_regs(lv.maxRegisters(), false);
+	for(HashTable<Constant, const Operand*, ConstantHash>::PairIterator iter(mem); iter; iter++)
+	{
+		exprs += getExpr(Predicate(CONDOPR_EQ, dag.mem((*iter).fst), (*iter).snd));
+		(*iter).snd->markUsedRegisters(used_regs);
+	}
+	for(int i = 0; i < lv.maxRegisters(); i++) // registers id are [0...n[
+	{
+ 		if(used_regs[i] || lv[i])
+ 			exprs += em.mkExpr(EQUAL, getRegExpr(i), getExpr(*lv[i]));
+	}
 }
 
 // check predicates satisfiability
@@ -40,7 +59,7 @@ bool CVC4SMT::checkPredSat()
 			if(*iter)
 				smt.assertFormula(**iter, true); // second parameter to true for unsat cores
 		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
-
+// char n; cin >> n; cin >> n; // TODO!!
 		// timestamp = (clock()-timestamp)*1000*1000/CLOCKS_PER_SEC;
 		// smt.getStatistics().flushInformation((std::ostream&)std::cout);
 		/*
@@ -96,12 +115,16 @@ Option<Expr> CVC4SMT::getExpr(const Predicate& p)
 Option<Expr> CVC4SMT::getExpr(const Operand& o)
 {
 	// if(!o.isComplete())
-	// 	return elm::none; // this could cause a crash
-		
+	// 	return elm::none; // this could cause a crash		
 	CVC4OperandVisitor visitor(em, variables);
 	if(!o.accept(visitor))
 		return elm::none;
 	return elm::some(visitor.result());
+}
+
+Expr CVC4SMT::getRegExpr(t::int32 reg_id)
+{
+	return variables.getExpr(em, OperandVar(reg_id), VARIABLE_PREFIX);
 }
 
 Kind_t CVC4SMT::getKind(const Predicate& p) const
