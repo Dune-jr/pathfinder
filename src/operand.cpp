@@ -30,11 +30,6 @@
  */
 
 /**
- * @fn Operand* Operand::copy() const;
- * @brief Copy the Operand
- */
-
-/**
  * @fn unsigned int Operand::countTempVars() const;
  * @brief Count the number of temporary variables in the Operand
  * @warning This will count a variable several times if it occurs several times

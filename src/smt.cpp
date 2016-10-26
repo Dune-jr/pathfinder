@@ -5,8 +5,6 @@
 #include "smt.h"
 #include "debug.h"
 
-// using namespace elm::genstruct;
-
 /**
  * @class SMT
  * @brief Interface with the SMT solver

@@ -24,8 +24,9 @@ LabelledPredicate::LabelledPredicate(const LabelledPredicate& lp)
  */
 
 /**
- * @fn inline bool LabelledPredicate::updatePred(const Operand& opd, const Operand& expr);
+ * @fn inline bool LabelledPredicate::updatePred(DAG& dag, const Operand& opd, const Operand& expr);
  * @brief Update a Predicate by replacing all occurrences of an operand by another one
+ * @param dag DAG to use
  * @param opd Operand to replace
  * @param expr Operand to replace with
  */

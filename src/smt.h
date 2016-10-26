@@ -15,11 +15,8 @@
 	#endif
 #endif
 
-// #include <elm/genstruct/SLList.h>
 #include "analysis_state.h"
 #include "DAG.h"
-
-// using namespace elm::genstruct;
 
 class SMT
 {

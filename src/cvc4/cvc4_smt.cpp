@@ -1,9 +1,8 @@
-/*
+/**
  * Implementing CVC4 as the SMT solver
  */
 #include <cvc4/expr/command.h> // getUnsatCoreCommand
 #include <cvc4/util/unsat_core.h>
-// #include <elm/genstruct/SLList.h>
 #include <elm/util/BitVector.h>
 #include "../operand.h"
 #include "../debug.h"
@@ -21,12 +20,13 @@ CVC4SMT::CVC4SMT(int flags): SMT(flags), smt(&em), variables(em)
 	smt.setOption("rewrite-divk", CVC4::SExpr("true"));
 	// smt.setOption("dump-unsat-cores", CVC4::SExpr("true"));
 	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
-	// smt.setOption("dump", "assertions:pre-everything");
-	// smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
+	smt.setOption("dump", "assertions:pre-everything");
+	smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
 }
 
-// v1: all VARIABLE_PREFIX
-// v2: TODO!! mixed? build conventions!
+// v1: all VARIABLE_PREFIX "?k"
+// v2: INITIAL: "rk", VARIABLE: "?k". Predicates like "?0 = r0 + 1"
+// TODO!! what about the memory??
 void CVC4SMT::initialize(const SLList<LabelledPredicate>& labelled_preds)//, mode_t mode = VARIABLE_PREFIX)
 {
 	variables.setMode(VARIABLE_PREFIX);
@@ -59,7 +59,7 @@ bool CVC4SMT::checkPredSat()
 			if(*iter)
 				smt.assertFormula(**iter, true); // second parameter to true for unsat cores
 		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
-// char n; cin >> n; cin >> n; // TODO!!
+char n; cin >> n; cin >> n; // TODO!!
 		// timestamp = (clock()-timestamp)*1000*1000/CLOCKS_PER_SEC;
 		// smt.getStatistics().flushInformation((std::ostream&)std::cout);
 		/*
@@ -70,7 +70,7 @@ bool CVC4SMT::checkPredSat()
 			smt.getStatistic("smt::SmtEngine::solveTime").getValue() << "\t" <<
 			timestamp <<
 		endl;
-		//*/
+		*/
 		return isSat;
 	}
 	catch(CVC4::LogicException e)

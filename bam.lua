@@ -35,8 +35,7 @@ end
 -- OTAWA
 settings.cc.flags:Add("`" .. otawa_config .. " --cflags`")
 -- settings.link.flags:Add("`" .. otawa_config .." --libs --rpath otawa/oslice otawa/clp otawa/graphviz`")
--- settings.link.flags:Add("`" .. otawa_config .." --libs --rpath`")
-settings.link.flags:Add("`" .. otawa_config .." --libs` -Wl,-rpath -Wl,$ORIGIN/home/jruiz/o/linux-x86_64/otawa-core/lib")
+settings.link.flags:Add("`" .. otawa_config .." --libs --rpath`") -- -Wl,-rpath -Wl,$ORIGIN/home/jruiz/o/linux-x86_64/otawa-core/lib
 -- settings.cc.flags:Add("-D OSLICE") -- slice
 -- settings.cc.flags:Add("-D NDEBUG") -- optimize
 

@@ -211,36 +211,6 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 {
 	ASSERTP(paths, "merge called with empty paths vector")
 	_path.clear(); // do not take in account current path
-// #ifdef DBGG
-#if 0
-	int merge_count = 0;
-	for(Vector<DetailedPath>::Iterator iter(paths); iter; iter++)
-		cout << color::IRed() << "\tmerge[" << merge_count++ << "]=" << *iter << io::endl;
-	cout << color::RCol();
-	Edge* first_call = NULL;
-	for(Iterator this_iter(paths.first()); this_iter; this_iter++)
-	{
-		if(this_iter->isCall())
-		{
-			first_call = this_iter->getEdge();
-			break;
-		}
-	}
-	if(first_call == NULL)
-		return; // nothing to do
-	else cout << color::ICya() << "is call:" << first_call << color::RCol() << io::endl;
-	int count = 0;
-	for(Vector<DetailedPath>::Iterator paths_iter(paths); paths_iter; paths_iter++)
-	{
-		cout << "DP#" << count++ << ": ";
-		for(DetailedPath::Iterator flowinfo_iter(*paths_iter); flowinfo_iter; flowinfo_iter++)
-		{
-			if(flowinfo_iter->isCall())
-				cout << flowinfo_iter->toString() << ", ";
-		}
-		cout << io::endl;
-	}
-#endif
 	/* explanation of the algorithm:
 		Path#0: C#8, C#24, 
 		Path#1: C#8, C#24, 
@@ -288,6 +258,35 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 #	ifdef DBGG
 		// DBGG(color::IYel() << "result: " << toString())
 #	endif
+/*
+	int merge_count = 0;
+	for(Vector<DetailedPath>::Iterator iter(paths); iter; iter++)
+		cout << color::IRed() << "\tmerge[" << merge_count++ << "]=" << *iter << io::endl;
+	cout << color::RCol();
+	Edge* first_call = NULL;
+	for(Iterator this_iter(paths.first()); this_iter; this_iter++)
+	{
+		if(this_iter->isCall())
+		{
+			first_call = this_iter->getEdge();
+			break;
+		}
+	}
+	if(first_call == NULL)
+		return; // nothing to do
+	else cout << color::ICya() << "is call:" << first_call << color::RCol() << io::endl;
+	int count = 0;
+	for(Vector<DetailedPath>::Iterator paths_iter(paths); paths_iter; paths_iter++)
+	{
+		cout << "DP#" << count++ << ": ";
+		for(DetailedPath::Iterator flowinfo_iter(*paths_iter); flowinfo_iter; flowinfo_iter++)
+		{
+			if(flowinfo_iter->isCall())
+				cout << flowinfo_iter->toString() << ", ";
+		}
+		cout << io::endl;
+	}
+*/
 }
 
 bool DetailedPath::hasAnEdge() const

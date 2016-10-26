@@ -137,10 +137,11 @@ io::Output& Analysis::State::print(io::Output& out) const
  */
 
 /**
- * @brief merge all states into one (a bit brutal)
- * 
+ * @brief merge all states into one (a bit brutal). Does not take in account current state
+ *
  * @param cl Collection of States to process (accepts SLList, Vector etc.)
  */
+#define EXP0
 void Analysis::State::merge(const States& ss, Block* b)
 {
 	ASSERTP(!ss.isEmpty(), "call to Analysis::State::merge with empty ss parameter"); // maybe just leave the state empty
@@ -151,9 +152,8 @@ void Analysis::State::merge(const States& ss, Block* b)
 	labelled_preds.clear();
 	SLList<ConstantVariables> cvl;
 #ifdef EXP0
-	// const LocalVariables* lvtab[ss.count()];
-	LocalVariables lvars1(ss.first().lvars);
-	mem_t mem1(ss.first().mem);
+	lvars = ss.first().lvars;
+	mem = ss.first().mem;
 	// const mem_t* mtab[ss.count()];
 	// int i = 0;
 #endif
@@ -170,20 +170,24 @@ void Analysis::State::merge(const States& ss, Block* b)
 			first = false;
 			continue;
 		}
-		// else //TODOv2
-			cvl += (*siter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
 #ifdef EXP0
-		lvars.merge(siter->lvars);
-		for(mem_t::PairIterator iter(mem1); iter; iter++)		
-			if((*iter).snd != siter->mem[(*iter).fst])
-				mem1[(*iter).fst] = Top;
-		for(mem_t::PairIterator iter(siter->mem); iter; iter++)		
-			if((*iter).snd != mem1[(*iter).fst])
-				mem1[(*iter).fst] = Top;
+		else
+		{
+			// lvars = lvars ∩ siters->lvars
+			lvars.merge(siter->lvars);
+			// mem = mem ∩ siters->mem
+			const mem_t& smem = siter->mem;
+			for(mem_t::PairIterator i(mem); i; i++)
+				if((*i).snd != smem[(*i).fst]) // for each (k, v) in mem, if smem[k] != v, invalidate mem[k]
+					mem[(*i).fst] = Top;
+			for(mem_t::PairIterator i(smem); i; i++)
+				if((*i).snd != mem[(*i).fst]) // for each (k, v) in smem, if mem[k] != v, invalidate mem[k]
+					mem[(*i).fst] = Top;
+		}
 		// lvtab[i] = &(siter->lvars);
 		// mtab[i++] = &(siter->mem);
-
 #endif
+		cvl += (*siter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
 		// for each element of labelled_preds, we make sure it is in *siter
 		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; )
 		{

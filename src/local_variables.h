@@ -74,7 +74,8 @@ public:
 		{ u.set(getIndex(var)); }
 	inline void resetUpdatedMarks()
 		{ u.clear(); }
-		// { array::clear(u, size); }
+	 // { array::clear(u, size); }
+	void merge(const LocalVariables& lv); // this = this ∩ lv
 
 	// void merge(const SLList<ConstantVariablesCore>& cvl);
 	// elm::String printChanges() const;

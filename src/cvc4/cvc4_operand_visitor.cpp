@@ -9,7 +9,7 @@ CVC4OperandVisitor::CVC4OperandVisitor(CVC4::ExprManager &em_, CVC4VariableStack
 
 Expr CVC4OperandVisitor::result()
 {
-	assert(visited);
+	ASSERT(visited);
 	return expr;
 }
 
@@ -20,7 +20,12 @@ bool CVC4OperandVisitor::visit(const class OperandConst& o)
 	if((o.value().isAbsolute()))
 		expr = em.mkConst(CVC4::Rational(o.value().val()));
 	if((o.value().isRelative()))
-		expr = em.mkExpr(o.value().isRelativePositive() ? PLUS : MINUS, em.mkConst(CVC4::Rational(o.value().val())), variables.getExprSP());
+	{
+		if(o.value().val() == 0) // SP+0
+			expr = variables.getExprSP();
+		else
+			expr = em.mkExpr(o.value().isRelativePositive() ? PLUS : MINUS, em.mkConst(CVC4::Rational(o.value().val())), variables.getExprSP());
+	}
 	visited = true;
 	return true;
 }

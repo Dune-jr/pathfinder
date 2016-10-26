@@ -333,5 +333,5 @@ Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>&
 /**
  * @fn inline static bool Analysis::isConditional(Block* b);
  * @brief Test if a BasicBlock is conditional, i.e. has more than one edge
- * @param BasicBlock to test
+ * @param b Block to test
  */

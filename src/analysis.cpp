@@ -291,6 +291,7 @@ bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set)
 }
 
 /**
+ * @fn elm::String Analysis::pathToString(const Path& path);
  * @brief Get pretty printing for any unordered Path (Set of Edge*)
  * 
  * @param path Path to parse
