@@ -12,7 +12,7 @@
 #include <otawa/prog/WorkSpace.h>
 #include <elm/genstruct/HashTable.h>
 
-using namespace elm;
+// using namespace elm;
 using otawa::sgraph::DiGraph;
 using otawa::sgraph::Vertex;
 

@@ -3,7 +3,7 @@
  */
 #include <cvc4/expr/command.h> // getUnsatCoreCommand
 #include <cvc4/util/unsat_core.h>
-#include <elm/genstruct/SLList.h>
+// #include <elm/genstruct/SLList.h>
 #include <elm/util/BitVector.h>
 #include "../operand.h"
 #include "../debug.h"

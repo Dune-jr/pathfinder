@@ -9,7 +9,7 @@
 #include "debug.h"
 #include "oracle.h"
 
-using namespace elm;
+// using namespace elm;
 using namespace otawa;
 using namespace option;
 

@@ -3,7 +3,7 @@
 
 #include <elm/avl/Set.h>
 #include <elm/genstruct/HashTable.h>
-#include <elm/genstruct/SLList.h>
+// #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include <otawa/cfg/features.h>
 #include <otawa/dfa/State.h> // dfa::State: isInitialized(addr), get(addr, _)...
@@ -17,7 +17,7 @@
 
 using namespace otawa;
 using elm::genstruct::SLList;
-using elm::genstruct::Vector;
+// using elm::genstruct::Vector;
 using elm::genstruct::HashTable;
 
 class Analysis::State {
@@ -67,7 +67,7 @@ public:
 	// analysis_state.cpp
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
 	elm::String dumpEverything() const;
-	template<template< class _ > class C> void merge(const C<Analysis::State>& cl, Block* b);
+	void merge(const States& ss, Block* b);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e);
 	void removeConstantPredicates();
@@ -199,102 +199,29 @@ public:
 	inline State one() const { ASSERTP(s.count() <= 1, "multiple states available"); return s ? s.first() : bottom; }
 	inline bool isEmpty() const { return s.isEmpty(); }
 	inline int count() const { return s.count(); }
+	inline const State& first() const { return s.first(); }
 	inline const Vector<State>& states() const { return s; }
 	inline Vector<State>& states() { return s; }
 	inline void push(const Analysis::State& state) { return s.push(state); }
 
-	inline void onCall(SynthBlock* sb)   { for(MutableIterator iter(this->s); iter; iter++) iter.item().onCall(sb); }
-	inline void onReturn(SynthBlock* sb) { for(MutableIterator iter(this->s); iter; iter++) iter.item().onReturn(sb); }
-	inline void onLoopEntry(Block* b)    { for(MutableIterator iter(this->s); iter; iter++) iter.item().onLoopEntry(b); }
-	inline void onLoopExit (Block* b)    { for(MutableIterator iter(this->s); iter; iter++) iter.item().onLoopExit(b); }
+	inline void onCall(SynthBlock* sb)   { for(Iterator i(this->s); i; i++) s[i].onCall(sb); }
+	inline void onReturn(SynthBlock* sb) { for(Iterator i(this->s); i; i++) s[i].onReturn(sb); }
+	inline void onLoopEntry(Block* b)    { for(Iterator i(this->s); i; i++) s[i].onLoopEntry(b); }
+	inline void onLoopExit (Block* b)    { for(Iterator i(this->s); i; i++) s[i].onLoopExit(b); }
 	inline void onLoopExit (Edge* e)
 		{ Block* h = LOOP_EXIT_EDGE(e); for(LoopHeaderIter i(e->source()); i.item() != h; i++) onLoopExit(*i); onLoopExit(h); }
 
+	typedef Vector<State>::Iter Iterator;
+	inline void remove(const Iterator& i) { s.remove(i); }
+
 	inline operator Vector<State>() { return s; }
+	inline State& operator[](const Iterator& i) { return s[i]; }
 	inline States& operator=(const Vector<State>& sv) { s = sv; return *this; }
 	inline States& operator=(const States& ss) { s = ss.s; return *this; }
 	inline friend io::Output& operator<<(io::Output& out, const States& ss) { return out << ss.s; }
-
-	typedef Vector<State>::Iterator Iterator;
-	typedef Vector<State>::MutableIterator MutableIterator;
 private:
 	Vector<State> s;
 };
-
-/**
- * @brief merge all states into one (a bit brutal)
- * 
- * @param cl Collection of States to process (accepts SLList, Vector etc.)
- */
-template<template< class _ > class C> void Analysis::State::merge(const C<Analysis::State>& sc, Block* b)
-{
-	ASSERTP(!sc.isEmpty(), "call to Analysis::State::merge with empty sc parameter"); // maybe just leave the state empty
-	DBGG("-\tmerging from " << sc.count() << " state(s).")
-	// resetting stuff
-	generated_preds.clear();
-	generated_preds_taken.clear();
-	labelled_preds.clear();
-	SLList<ConstantVariables> cvl;
-#ifdef EXP0
-	// const LocalVariables* lvtab[sc.count()];
-	LocalVariables lvars1(sc.first().lvars);
-	mem_t mem1(sc.first().mem);
-	// const mem_t* mtab[sc.count()];
-	// int i = 0;
-#endif
-	// intialize to first element
-	constants = sc.first().constants;
-	// copy firstElement.labelled_preds into labelled_preds with empty labels
-	for(SLList<LabelledPredicate>::Iterator iter(sc.first().labelled_preds); iter; iter++)
-		labelled_preds += LabelledPredicate(iter->pred(), Path::null);
-	bool first = true;
-	for(typename C<State>::Iterator sc_iter(sc); sc_iter; sc_iter++)
-	{
-		if(first) // the first element is s itself, it's useless to merge s with s
-		{
-			first = false;
-			continue;
-		}
-		// else //TODOv2
-			cvl += (*sc_iter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
-#ifdef EXP0
-		lvars.merge(sc_iter->lvars);
-		for(mem_t::PairIterator iter(mem1); iter; iter++)		
-			if((*iter).snd != sc_iter->mem[(*iter).fst])
-				mem1[(*iter).fst] = Top;
-		for(mem_t::PairIterator iter(sc_iter->mem); iter; iter++)		
-			if((*iter).snd != mem1[(*iter).fst])
-				mem1[(*iter).fst] = Top;
-		// lvtab[i] = &(sc_iter->lvars);
-		// mtab[i++] = &(sc_iter->mem);
-
-#endif
-		// for each element of labelled_preds, we make sure it is in *sc_iter
-		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; )
-		{
-			// do not use 'if(s.labelled_preds.contains(*iter))' as we want to use Predicate::operator== and not LabelledPredicate::operator==
-			bool contains = false;
-			for(SLList<LabelledPredicate>::Iterator subiter((*sc_iter).labelled_preds); subiter; subiter++)
-			{
-				if((*subiter).pred() == iter->pred())
-				{
-					contains = true;
-					break;
-				}
-			}
-			if(contains)
-				iter++;
-			else
-				labelled_preds.remove(iter);
-		}
-	}
-	this->constants.merge(cvl);
-	// this->path.merge(stateListToPathVector(sc)); // merge paths as well while keeping some flow info and shrink that in this->path
-	// this-path = DetailedPath(sc.first().lastEdge()->target()->toBasic());
-	this->path.clear();
-	// this->path.fromContext(sc.first().lastEdge()->target()->toBasic());
-	this->path.fromContext(b);
-}
 
 template <class C> Vector<DetailedPath> Analysis::State::stateListToPathVector(const C& cl) const
 {
@@ -302,20 +229,6 @@ template <class C> Vector<DetailedPath> Analysis::State::stateListToPathVector(c
 	for(typename C::Iterator iter(cl); iter; iter++)
 		rtn.add(iter->getDetailedPath());
 	return rtn;
-}
-
-/**
- * @brief Remove all bottom states from a Collection of States
- */
-template<template< class _ > class C>
-void Analysis::purgeBottomStates(C<Analysis::State>& sc) const
-{
-	for(typename C<Analysis::State>::MutableIterator i(sc); i; )
-	{
-		if(i.item().isBottom())
-			sc.remove(i);
-		else i++;
-	}
 }
 
 #endif

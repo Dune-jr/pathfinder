@@ -9,7 +9,7 @@
 #include <otawa/program.h>
 #include "predicate.h"
 
-using namespace elm;
+// using namespace elm;
 using namespace otawa;
 
 // Comment / un-comment this to enable sum canonicalization (sometimes maybe time expensive)
@@ -178,7 +178,7 @@ public:
 		delete [] vars;
 		for(cst_map_t::Iterator cst(cst_map); cst; cst++)
 			delete *cst;
-		for(Vector<Operand*>::Iterator atop(tops); atop; atop++)
+		for(Vector<Operand*>::Iter atop(tops); atop; atop++)
 			delete *atop;
 		for(op_map_t::Iterator op(op_map); op; op++)
 			delete *op;

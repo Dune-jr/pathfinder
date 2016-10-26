@@ -6,7 +6,7 @@
 #include "DAG.h"
 #include "debug.h"
 
-using namespace elm;
+// using namespace elm;
 
 /**
  * @class Operand

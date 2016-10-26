@@ -13,7 +13,7 @@
 #include "EdgeDominance.h"
 #include "cfg_features.h"
 
-using namespace elm;
+// using namespace elm;
 using otawa::Block;
 
 class GlobalDominance

@@ -135,6 +135,81 @@ io::Output& Analysis::State::print(io::Output& out) const
  * @fn void Analysis::State::merge(const SLList<State>& sl);
  * Modifies the current state to be the result of the merge of an (SL)list of states 
  */
+
+/**
+ * @brief merge all states into one (a bit brutal)
+ * 
+ * @param cl Collection of States to process (accepts SLList, Vector etc.)
+ */
+void Analysis::State::merge(const States& ss, Block* b)
+{
+	ASSERTP(!ss.isEmpty(), "call to Analysis::State::merge with empty ss parameter"); // maybe just leave the state empty
+	DBGG("-\tmerging from " << ss.count() << " state(s).")
+	// resetting stuff
+	generated_preds.clear();
+	generated_preds_taken.clear();
+	labelled_preds.clear();
+	SLList<ConstantVariables> cvl;
+#ifdef EXP0
+	// const LocalVariables* lvtab[ss.count()];
+	LocalVariables lvars1(ss.first().lvars);
+	mem_t mem1(ss.first().mem);
+	// const mem_t* mtab[ss.count()];
+	// int i = 0;
+#endif
+	// intialize to first element
+	constants = ss.first().constants;
+	// copy firstElement.labelled_preds into labelled_preds with empty labels
+	for(SLList<LabelledPredicate>::Iterator iter(ss.first().labelled_preds); iter; iter++)
+		labelled_preds += LabelledPredicate(iter->pred(), Path::null);
+	bool first = true;
+	for(States::Iterator siter(ss.states()); siter; siter++)
+	{
+		if(first) // the first element is s itself, it's useless to merge s with s
+		{
+			first = false;
+			continue;
+		}
+		// else //TODOv2
+			cvl += (*siter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
+#ifdef EXP0
+		lvars.merge(siter->lvars);
+		for(mem_t::PairIterator iter(mem1); iter; iter++)		
+			if((*iter).snd != siter->mem[(*iter).fst])
+				mem1[(*iter).fst] = Top;
+		for(mem_t::PairIterator iter(siter->mem); iter; iter++)		
+			if((*iter).snd != mem1[(*iter).fst])
+				mem1[(*iter).fst] = Top;
+		// lvtab[i] = &(siter->lvars);
+		// mtab[i++] = &(siter->mem);
+
+#endif
+		// for each element of labelled_preds, we make sure it is in *siter
+		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; )
+		{
+			// do not use 'if(s.labelled_preds.contains(*iter))' as we want to use Predicate::operator== and not LabelledPredicate::operator==
+			bool contains = false;
+			for(SLList<LabelledPredicate>::Iterator subiter((*siter).labelled_preds); subiter; subiter++)
+			{
+				if((*subiter).pred() == iter->pred())
+				{
+					contains = true;
+					break;
+				}
+			}
+			if(contains)
+				iter++;
+			else
+				labelled_preds.remove(iter);
+		}
+	}
+	this->constants.merge(cvl);
+	// this->path.merge(stateListToPathVector(sc)); // merge paths as well while keeping some flow info and shrink that in this->path
+	// this-path = DetailedPath(sc.first().lastEdge()->target()->toBasic());
+	this->path.clear();
+	// this->path.fromContext(sc.first().lastEdge()->target()->toBasic());
+	this->path.fromContext(b);
+}
 /*void Analysis::State::merge(const SLList<State>& sl)
 {
 	DBGG("-\tmerging " << sl)

@@ -4,7 +4,7 @@
 #include <elm/io/OutStream.h>
 #include <elm/io/OutFileStream.h>
 #include "analysis.h"
-using namespace elm;
+// using namespace elm;
 
 class FFX
 {

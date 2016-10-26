@@ -26,7 +26,7 @@ void FFX::output(const elm::String& function_name, const elm::String& ffx_filena
 	io::OutFileStream FFXStream(ffx_filename);
 	io::Output FFXFile(FFXStream);
 
-	for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
+	for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
 		checkPathValidity(*iter);
 
 	// header
@@ -34,7 +34,7 @@ void FFX::output(const elm::String& function_name, const elm::String& ffx_filena
 	FFXFile << indent(  ) << "<flowfacts>" /*" <!-- pathfinder, " << __DATE__ << " -->"*/ << endl;
 	FFXFile << indent(  ) << "<function name=\"" << function_name << "\">" << endl; indent(+1);
 
-	for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
+	for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
 		printInfeasiblePath(FFXFile, *iter);
 
 	// footer
@@ -232,7 +232,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 void FFX::writeGraph(io::Output& GFile, const Vector<DetailedPath>& ips)
 {
 	int max = 0;
-	for(Vector<DetailedPath>::Iterator i(ips); i; i++)
+	for(Vector<DetailedPath>::Iter i(ips); i; i++)
 	{
 		int c = i->countEdges();
 		if(c > max) max = c;
@@ -241,13 +241,13 @@ void FFX::writeGraph(io::Output& GFile, const Vector<DetailedPath>& ips)
 	for(int i =0; i<max; i++)
 		vals.push(0);
 	GFile << "Length \tCount\n";
-	for(Vector<DetailedPath>::Iterator i(ips); i; i++)
+	for(Vector<DetailedPath>::Iter i(ips); i; i++)
 	{
 		int c = i->countEdges();
 		vals[c-1]++;
 	}
 	int i = 0;
-	for(Vector<int>::Iterator iter(vals); iter; iter++)
+	for(Vector<int>::Iter iter(vals); iter; iter++)
 		GFile << ++i << " \t" << *iter << endl; // output 24 1 and so on
 }
 

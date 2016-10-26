@@ -2,6 +2,8 @@
 #include "debug.h"
 #include "otawa/cfg/features.h"
 
+// using elm::genstruct::Vector;
+
 /**
  * @class DetailedPath
  * @brief A path enriched with flowfact information such as loops, calls, etc.
@@ -53,7 +55,7 @@ void DetailedPath::addLast(Edge* e)
  */
 void DetailedPath::optimize()
 {
-	removeDuplicates();
+	// removeDuplicates(); // useless (why?)
 	removeAntagonists();
 	removeCallsAtEndOfPath();
 }
@@ -69,7 +71,6 @@ void DetailedPath::removeDuplicates()
 			&& (iter->getLoopHeader() == prev->getLoopHeader()))
 		{
 			remove(iter);
-			ASSERTP(false, "curious assert false on removeDuplicates because i think it's useless... " << *iter); // TODO!! remove if it does not occur
 			return removeDuplicates(); // parse again
 		}
 	}
@@ -201,7 +202,6 @@ bool DetailedPath::weakEqualsTo(const DetailedPath& dp) const
 	return true; // all checks passed, equal
 }
 
-#define TODO
 /**
  * @fn void DetailedPath::merge(const Vector<DetailedPath>& paths);
  * Modifies the current path to be the result of the merge of a Vector of path (basically we're going to preserve info such as loop and call info)
@@ -252,7 +252,7 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 		For example, when p=Path#2, p (C#8) does not contain this->_path (C#8, C#24) does not contain p, so we remove C#24 from this->_path
 	*/ 
 	bool first = true;
-	for(Vector<DetailedPath>::Iterator paths_iter(paths); paths_iter; paths_iter++)
+	for(Vector<DetailedPath>::Iter paths_iter(paths); paths_iter; paths_iter++)
 	{
 		const DetailedPath &p = *paths_iter;
 		if(first) // Path#0: initialize this->_path

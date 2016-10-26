@@ -2,7 +2,7 @@
 #define _CONSTANT_VARIABLES_H
 
 #include <elm/avl/Set.h>
-#include <elm/genstruct/SLList.h>
+// #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include "constant_variables_core.h"
 #include "DAG.h"
@@ -10,7 +10,7 @@
 #include "labelled_predicate.h"
 
 using namespace otawa;
-using namespace elm::genstruct; 
+// using namespace elm::genstruct; 
 using namespace elm::avl;
 
 class ConstantVariables : public ConstantVariablesCore

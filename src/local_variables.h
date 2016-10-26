@@ -2,14 +2,14 @@
 #define _LOCAL_VARIABLES_H
 
 #include <elm/avl/Set.h>
-#include <elm/genstruct/SLList.h>
+// #include <elm/genstruct/SLList.h>
 #include <elm/util/BitVector.h>
 #include <otawa/cfg/Edge.h>
 #include "constant.h"
 // #include "debug.h"
 #include "operand.h"
 
-using namespace elm::genstruct; 
+// using namespace elm::genstruct; 
 using otawa::Edge;
 using elm::avl::Set;
 

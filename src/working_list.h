@@ -11,12 +11,14 @@ class BlockLoopComparator : public elm::Comparator<Block*>
 public:
 	static inline int arbitraryCompare(Block* const& b1, Block* const& b2)
 		//{ return b1 > b2 ? +1 : -1; } // this causes determinism problems
-		{ //ASSERT((b1->cfg() == b2->cfg() && b1->index() != b2->index()) || (b1->cfg() != b2->cfg() && b1->cfg()->index() != b2->cfg()->index()));
+		{
 		  	return b1->cfg() == b2->cfg()
-			? (b1->index() > b2->index() ? +1 : -1)
-			: (b1->cfg()->index() > b2->cfg()->index() ? +1 : -1); }
+				? (b1->index() > b2->index() ? +1 : -1)
+				: (b1->cfg()->index() > b2->cfg()->index() ? +1 : -1);
+		}
+
 	// says < when b1 is at a deeper loop level (so should be read first)
-	static int compare(Block* const& b1, Block* const& b2) {
+	static int compare(Block* b1, Block* b2) {
 		if(b1 == b2)
 			return 0; // ==
 		LoopHeaderIter i1(b1), i2(b2);
@@ -40,13 +42,13 @@ public:
 		// i1 is not included in i2, i2 is not included in i1. pick an arbitrary order based on block addresses
 		return arbitraryCompare(b1,b2);
 	}
-	inline int doCompare(Block* const& v1, Block* const& v2) const
+	inline int doCompare(Block* v1, Block* v2) const
 		{ return compare(v1, v2); } // TODO! why do we have to explicit this??? 
 };
 
 class WorkingList
 {
-	typedef SortedList<Block*,BlockLoopComparator> wl_t;
+	typedef SortedList<Block*, CompareManager<Block*, BlockLoopComparator> > wl_t;
 public:
 	WorkingList() { }
 	inline Block* pop(void) { DBG("popping from " << toString()); Block* b = sl.first(); sl.removeFirst(); return b; }
@@ -56,7 +58,7 @@ public:
 	elm::String toString(void) const {
 		elm::String rtn = "[";
 		bool first = true;
-		for(wl_t::Iterator iter(sl); iter; iter++)
+		for(wl_t::Iter iter(sl); iter; iter++)
 		{
 			if(first) first = false; else
 				rtn = rtn.concat(CString(", "));

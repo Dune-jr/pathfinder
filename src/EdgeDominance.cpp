@@ -6,7 +6,7 @@
 #include "EdgeDominance.h"
 #include "cfg_features.h"
 
-using namespace elm;
+// using namespace elm;
 using otawa::sgraph::Edge;
 
 io::Output& operator<<(io::Output& out, otawa::sgraph::Edge* e) {

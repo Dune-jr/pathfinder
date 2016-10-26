@@ -15,10 +15,10 @@ public:
 	SMTJob(int flags) : flags(flags) { }
 
 	void run() {
-		for(data_t::MutableIterator iter(data); iter; iter++) {
+		for(data_t::Iter iter(data); iter; iter++) {
 			SMT smt(flags);
 			const Analysis::State* s = (*iter).fst;
-			iter.item().snd = smt.seekInfeasiblePaths(*s);
+			data[iter].snd = smt.seekInfeasiblePaths(*s);
 		}
 	}
 
@@ -28,7 +28,7 @@ public:
 	const data_t& getResults() const
 		{ return data; }
 
-	typedef data_t::Iterator Iterator;
+	typedef data_t::Iter Iterator;
 
 private:
 	int flags;

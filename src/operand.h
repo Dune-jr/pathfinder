@@ -11,7 +11,7 @@
 
 using otawa::Edge;
 using elm::genstruct::SLList;
-using elm::genstruct::Vector;
+// using elm::genstruct::Vector;
 
 enum arithoperator_t
 {

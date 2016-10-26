@@ -11,7 +11,7 @@
 #include "cvc4_operand_visitor.h"
 #include "cvc4_variable_stack.h"
 
-using namespace elm::genstruct;
+// using namespace elm::genstruct;
 using namespace CVC4::kind;
 using CVC4::Expr;
 

@@ -829,7 +829,7 @@ LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, con
 	{
 		int count = 0;
 		elm::String str = "";
-		for(Vector<OperandVar>::Iterator iter(replaced_vars); iter; iter++)
+		for(Vector<OperandVar>::Iter iter(replaced_vars); iter; iter++)
 		{
 			if(count++)
 				str = _ << str << ", ";
@@ -1467,7 +1467,7 @@ bool Analysis::State::invalidateAllMemory()
  */
 void Analysis::State::updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const
 {
-	for(Vector<OperandVar>::Iterator iter(replaced_vars); iter; iter++)
+	for(Vector<OperandVar>::Iter iter(replaced_vars); iter; iter++)
 	// {
 		labels += constants.getLabels(*iter);
 		// DBG(color::IRed() << "replaced_vars:" << *iter << ", labels+=" << pathToString(constants.getLabels(*iter)))

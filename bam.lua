@@ -13,8 +13,6 @@ config:Add(OptTestExecute("otawa", "otawa-config", "", false))
 config:Add(OptLibrary("cvc4", "cvc4/cvc4.h", false))
 config:Add(OptLibrary("z3", "z3++.h", false))
 config:Add(OptString("solver", "cvc4"))
--- config:Add(OptString("oslice_cc_path", "/home/jruiz/Documents/oslice/blockBased/cfg_v2_plugin/"))
--- config:Add(OptString("oslice_link_path", "/home/jruiz/Documents/casse/otawa2/linux/lib/oslice.so"))
 config:Finalize("config.lua")
 
 
@@ -26,7 +24,7 @@ settings.cc.flags:Add("-O1")
 if ScriptArgs["otawa"] and ScriptArgs["otawa"]~="2" then
 	otawa_config = "" --v1
 else
-	otawa_config = "~/bin/otawa/otawa-config" -- v2
+	otawa_config = "otawa-config" -- v2
 end
 
 -- Wall option
@@ -36,17 +34,11 @@ end
 
 -- OTAWA
 settings.cc.flags:Add("`" .. otawa_config .. " --cflags`")
-settings.link.flags:Add("`" .. otawa_config .." --libs --rpath otawa/oslice`")
+-- settings.link.flags:Add("`" .. otawa_config .." --libs --rpath otawa/oslice otawa/clp otawa/graphviz`")
+-- settings.link.flags:Add("`" .. otawa_config .." --libs --rpath`")
+settings.link.flags:Add("`" .. otawa_config .." --libs` -Wl,-rpath -Wl,$ORIGIN/home/jruiz/o/linux-x86_64/otawa-core/lib")
+-- settings.cc.flags:Add("-D OSLICE") -- slice
 -- settings.cc.flags:Add("-D NDEBUG") -- optimize
-
--- OSLICE
--- if config.oslice_cc_path.value ~= "" and config.oslice_cc_path.value ~= "" then
--- 	settings.cc.flags:Add("-D OSLICE")
--- 	settings.cc.flags:Add("-I" .. config.oslice_cc_path.value)
-	-- settings.link.flags:Add("~/o/linux-x86_64/otawa-core-build/v2/src/oslice/oslice.so")
-	-- settings.link.flags:Add("-L~/o/linux-x86_64/otawa-core-build/v2/src/oslice/oslice.so")
--- 	-- settings.link.flags:Add("~/Documents/casse/otawa2/linux/lib/oslice.so")
--- end
 
 -- SMT choice
 -- CVC4

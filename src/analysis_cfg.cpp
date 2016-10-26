@@ -2,13 +2,13 @@
  * Macro analysis: skeleton of the analysis algorithm, defines the way we parse the CFG 
  */
 
-#include <elm/genstruct/SLList.h>
+// #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include "analysis_state.h"
 #include "progress.h"
 #include "cfg_features.h"
 
-using namespace elm::genstruct;
+// using namespace elm::genstruct;
 using namespace elm::io;
 
 Identifier<LockPtr<Analysis::States> >		Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
@@ -60,7 +60,7 @@ void Analysis::processCFG(CFG* cfg)
 			/* s ← |_|e∈pred s_e */
 			LockPtr<States> s = narrowing(pred);
 			/* for e ∈ pred */
-			for(Vector<Edge*>::Iterator e(pred); e; e++)
+			for(Vector<Edge*>::Iter e(pred); e; e++)
 				/* s_e ← nil */
 				EDGE_S.remove(e);
 			
@@ -103,7 +103,7 @@ void Analysis::processCFG(CFG* cfg)
 			I(b, *s); // update s
 			/* for e ∈ succ \ {EX_h | b ∈ L_h ∧ status_h =/ LEAVE} */
 			const Vector<Edge*> succ(propagate ? outsWithoutUnallowedExits(b) : nullVector<Edge*>());
-			for(Vector<Edge*>::Iterator e(succ); e; e++)
+			for(Vector<Edge*>::Iter e(succ); e; e++)
 			{
 				/* s_e ← I*[e](s) */
 				EDGE_S(e) = I(e, *s);
@@ -125,8 +125,8 @@ Analysis::States& Analysis::I(Block* b, States& s)
 	if(b->isBasic())
 	{
 		DBGG(color::Bold() << "-\tI(b=" << b << ") " << color::NoBold() << printFixPointStatus(b))
-		for(States::MutableIterator si(s.states()); si; si++)
-			si.item().processBB(b->toBasic(), flags&(Analysis::WITH_V1 | Analysis::WITH_V2));
+		for(States::Iterator si(s.states()); si; si++)
+			s[si].processBB(b->toBasic(), flags&(Analysis::WITH_V1 | Analysis::WITH_V2));
 	}
 	else if(b->isEntry())
 		s.onCall((*getCaller(b->cfg()))->toSynth());
@@ -146,8 +146,8 @@ LockPtr<Analysis::States> Analysis::I(Edge* e, const States& s)
 	// DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
 	LockPtr<States> rtns(new States(s));
 	if(! e->source()->isEntry()) // do not process entry: no generated preds and uninteresting edge to add (everything comes from the entry)
-		for(States::MutableIterator rtnsi(rtns->states()); rtnsi; rtnsi++)
-			rtnsi.item().appendEdge(e);
+		for(States::Iterator rtnsi(rtns->states()); rtnsi; rtnsi++)
+			rtns->states()[rtnsi].appendEdge(e);
 	if(LOOP_EXIT_EDGE(e))
 		rtns->onLoopExit(e);
 	return rtns;
@@ -161,7 +161,7 @@ LockPtr<Analysis::States> Analysis::I(Edge* e, const States& s)
  */
 bool Analysis::allEdgesHaveTrace(const Vector<Edge*>& edges) const
 {
-	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
+	for(Vector<Edge*>::Iter iter(edges); iter; iter++)
 		if(!EDGE_S.exists(*iter))
 			return false;
 	DBGG("-..." << edges)
@@ -190,7 +190,7 @@ bool Analysis::allEdgesHaveTrace(const Block::EdgeIter& biter) const
  */
 bool Analysis::anyEdgeHasTrace(const Vector<Edge*>& edges) const
 {
-	for(Vector<Edge*>::Iterator iter(edges); iter; iter++)
+	for(Vector<Edge*>::Iter iter(edges); iter; iter++)
 		if(EDGE_S.exists(*iter))
 			return true;
 	return false;
@@ -220,8 +220,8 @@ bool Analysis::anyEdgeHasTrace(const Block::EdgeIter& biter) const
 bool Analysis::checkInfeasiblePathValidity(const Vector<Analysis::State>& sv, const Vector<Option<Path*> >& sv_paths, const Path& infeasible_path, elm::String& counterexample)
 {
 	// check that all the paths going to the current BB are sound with the minimized inf. path we just found
-	Vector<Option<Path*> >::Iterator pi(sv_paths);
-	for(Vector<Analysis::State>::Iterator si(sv); si; si++, pi++) // iterate through paths at the same time
+	Vector<Option<Path*> >::Iter pi(sv_paths);
+	for(Vector<Analysis::State>::Iter si(sv); si; si++, pi++) // iterate through paths at the same time
 	{
 		// if feasible path && contained in the minimized inf. path
 		if((*pi).isNone() && isSubPath(si->getDetailedPath().toOrderedPath(), infeasible_path))

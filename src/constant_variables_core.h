@@ -2,13 +2,13 @@
 #define _CONSTANT_VARIABLES_CORE_H
 
 #include <elm/avl/Set.h>
-#include <elm/genstruct/SLList.h>
+// #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include "constant.h"
 #include "debug.h"
 
 using namespace otawa;
-using namespace elm::genstruct; 
+// using namespace elm::genstruct; 
 using namespace elm::avl;
 
 class ConstantVariablesCore {

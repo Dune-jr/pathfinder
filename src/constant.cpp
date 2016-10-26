@@ -5,8 +5,6 @@
 #include "constant.h"
 #include "debug.h"
 
-using namespace elm;
-
 /**
  * @class Constant
  * @brief A constant of the abstract interpretation analysis. Can be relative to SP0 (the initial value of the stack pointer)
@@ -14,19 +12,18 @@ using namespace elm;
 const Constant SP(0, CONSTANT_PLUS_SP);
 
 Constant::Constant() : _val(0), _kind(CONSTANT_INVALID)/*, _sign(SIGN_POSITIVE)*/ { }
-// Constant::Constant(t::int32 val, bool relative, bool sign)
+// Constant::Constant(int32 val, bool relative, bool sign)
 // 	: _val(val), _kind(relative ? (sign ? CONSTANT_PLUS_SP0 : CONSTANT_MINUS_SP0) : CONSTANT_ABSOLUTE) { }
-Constant::Constant(t::int32 val, constant_kind_t kind) : _val(val), _kind(kind) { }
+Constant::Constant(int32 val, constant_kind_t kind) : _val(val), _kind(kind) { }
 Constant::Constant(const Constant& c) : _val(c._val), _kind(c._kind)/*, _sign(c._sign)*/ { }
 
 Constant& Constant::operator=(const Constant& c)
 {
 	_val = c._val;
 	_kind = c._kind;
-	// _sign = c._sign;
 	return *this;
 }
-Constant& Constant::operator=(t::int32 val)
+Constant& Constant::operator=(int32 val)
 {
 	_val = val;
 	_kind = CONSTANT_ABSOLUTE;
@@ -50,7 +47,7 @@ bool Constant::operator==(const Constant& c) const
 }
 Constant Constant::operator+(const Constant& c) const
 {
-	t::int32 new_val = _val + c._val;
+	int32 new_val = _val + c._val;
 	switch(_kind)
 	{
 		case CONSTANT_ABSOLUTE:
@@ -214,13 +211,13 @@ bool Constant::operator>(const Constant& c) const
 	}
 }
 
-io::Output& Constant::print(io::Output& out) const
+Output& Constant::print(Output& out) const
 {
 	switch(_kind)
 	{
 		case CONSTANT_ABSOLUTE:
 			if(_val >= 64 || _val <= -63) // print large values in hex
-				return (out << "0x" << io::hex(_val));
+				return (out << "0x" << elm::io::hex(_val));
 			return (out << _val);
 		case CONSTANT_MINUS_SP:
 			out << "-";

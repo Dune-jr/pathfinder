@@ -32,7 +32,7 @@ LockPtr<Analysis::States> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) c
 	{
 		if(LOOP_HEADER(b) && LH_S.exists(b)) // also merge with the state on the loop header if it exists
 			v->push(LH_S(b));
-		purgeBottomStates(v->states());
+		purgeBottomStates(*v);
 		// ASSERTP(v, "Loop Header received only bottom state, case not handled yet. The main algorithm will use s[0] so...")
 		if(v->isEmpty())
 		{
@@ -40,7 +40,7 @@ LockPtr<Analysis::States> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) c
 			return v;
 		}
 		State s((Edge*)NULL, context, false); // entry is cleared anyway
-		s.merge(v->states(), b); // s <- widening(s0, s1, ..., sn)
+		s.merge(*v, b); // s <- widening(s0, s1, ..., sn)
 		LockPtr<States> rtnv(new States(1));
 		rtnv->push(s);
 		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v->count() > 50)
@@ -71,7 +71,7 @@ bool DefaultAnalysis::inD_ip(const otawa::Edge* e) const
 }
 
 // look for infeasible paths, add them to infeasible_paths, and removes the states from ss
-Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const
+Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& infeasible_paths) const
 // void Analysis::stateListToInfeasiblePathList(SLList<Option<Path> >& sl_paths, const SLList<Analysis::State>& sl, Edge* e, bool is_conditional)
 {
 	IPStats stats;
@@ -152,7 +152,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 		delete sprogress;
 	// analyse the conflicts found
 	ASSERTP(ss.count() == sv_paths.count(), "different size of ss and sv_paths")
-	Vector<Option<Path*> >::Iterator pi(sv_paths);
+	Vector<Option<Path*> >::Iter pi(sv_paths);
 	for(States::Iterator si(ss.states()); si; si++, pi++) // iterate on paths and states simultaneously
 	{
 		const State& s = *si;
@@ -195,8 +195,8 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, elm::genstruct::Vector<De
 			delete *pi;
 		}
 	}
-	for(Vector<Analysis::State>::MutableIterator svi(new_sv); svi; svi++)
-		svi.item().removeConstantPredicates(); // remaining constant predicates are tautologies, there is no need to keep them
+	for(Vector<Analysis::State>::Iter svi(new_sv); svi; svi++)
+		new_sv[svi].removeConstantPredicates(); // remaining constant predicates are tautologies, there is no need to keep them
 	ss = new_sv; // TODO!! this is copying states, horribly unoptimized, we only need to remove a few states!
 	return stats;
 }
@@ -214,7 +214,7 @@ LockPtr<Analysis::States> DefaultAnalysis::vectorOfS(const Vector<Edge*>& ins) c
 	if(ins.count() == 1) // opti TODO! should work now with the LockPtr
 		return EDGE_S.use(ins[0]);
 	LockPtr<States> s(new States());
-	for(Vector<Edge*>::Iterator i(ins); i; i++)
+	for(Vector<Edge*>::Iter i(ins); i; i++)
 		s->states().addAll(EDGE_S.use(*i)->states());
 	return s;
 }

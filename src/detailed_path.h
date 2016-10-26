@@ -1,7 +1,7 @@
 #ifndef _INFEASIBLE_PATH_H
 #define _INFEASIBLE_PATH_H
 
-#include <elm/genstruct/SLList.h> 
+// #include <elm/genstruct/SLList.h> 
 #include <elm/genstruct/Vector.h>
 #include <elm/string/String.h>
 #include <otawa/cfg/CFG.h>
@@ -11,7 +11,7 @@
 #include "cfg_features.h"
 
 using elm::genstruct::SLList;
-using elm::genstruct::Vector;
+// using elm::genstruct::Vector;
 using otawa::Edge;
 using otawa::Block;
 using otawa::BasicBlock;

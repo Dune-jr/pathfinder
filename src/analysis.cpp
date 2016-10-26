@@ -32,12 +32,14 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 	// MyTransformer t; t.process(ws);
 	if(flags & VIRTUALIZE_CFG)
 		ws->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
+#ifdef OSLICE
 	if(flags & SLICE_CFG) {
 		// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
 		// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
 		ws->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
 		ws->require(oslice::SLICER_FEATURE, props);
 	}
+#endif
 	gdom = new GlobalDominance(INVOLVED_CFGS(ws), GlobalDominance::EDGE_DOM | GlobalDominance::EDGE_POSTDOM); // no block dom
 	ws->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 	ws->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
@@ -235,7 +237,7 @@ Vector<Edge*> Analysis::outsWithoutUnallowedExits(Block* b)
 	ASSERTP(rtn, "outsWithoutUnallowedExits found no outs!")
 	if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
 	{
-		Vector<Edge*>::Iterator i(rtn);
+		Vector<Edge*>::Iter i(rtn);
 		// DBGG("-\toutput to " << i->source())
 		for(; i; i++)
 #ifndef NO_UTF8
@@ -385,7 +387,7 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 	if(dbg_flags&DBG_DETAILED_STATS && ipcount > 0)
 	{
 		int sum_path_lengths = 0, squaredsum_path_lengths = 0, one_edges = 0;
-		for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
+		for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
 		{
 			one_edges += iter->countEdges() == 1;
 			sum_path_lengths += iter->countEdges();
@@ -405,7 +407,7 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 void Analysis::printInfeasiblePaths() const
 {
 	if(dbg_flags&DBG_RESULT_IPS)
-		for(Vector<DetailedPath>::Iterator iter(infeasible_paths); iter; iter++)
+		for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
 		{
 			if(dbg_verbose == DBG_VERBOSE_ALL)
 				DBG(color::IGre() << "    * [" << *iter << "]")
@@ -434,9 +436,9 @@ Option<Edge*> Analysis::f_postdom(GlobalDominance* gdom, Edge* e1, Edge* e2)
 int Analysis::simplifyUsingDominance(Option<Edge*> (*f)(GlobalDominance* gdom, Edge* e1, Edge* e2))
 {
 	int changed_count = 0;
-	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
+	for(Vector<DetailedPath>::Iter dpiter(infeasible_paths); dpiter; dpiter++)
 	{
-		DetailedPath& dp = dpiter.item();
+		DetailedPath& dp = infeasible_paths.get(dpiter);
 		DBG(dp << "...")
 		bool hasChanged = false, changed = false;
 		do
@@ -486,7 +488,7 @@ void Analysis::postProcessResults(CFG *cfg)
 	DBGG("Dominance: minimized " << changed_count << " infeasible paths.")
 	changed_count = simplifyUsingDominance(&f_postdom);
 	DBGG("Post-dominance: minimized " << changed_count << " infeasible paths.")
-
+	
 	/*int changed_count = 0;
 	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
 	{
@@ -524,4 +526,19 @@ void Analysis::postProcessResults(CFG *cfg)
 			changed_count++;
 		}
 	}*/
+}
+
+/**
+ * @brief Remove all bottom states from a Collection of States
+ */
+// template<template< class _ > class C>
+// void Analysis::purgeBottomStates(C<Analysis::State>& sc) const
+void Analysis::purgeBottomStates(States& sc) const
+{
+	for(States::Iterator i(sc); i; )
+	{
+		if(i.item().isBottom())
+			sc.remove(i);
+		else i++;
+	}
 }

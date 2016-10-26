@@ -3,7 +3,7 @@
 
 #define EXP
 
-#include <elm/genstruct/SLList.h>
+// #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include <otawa/cfg/features.h>
 #include <otawa/dfa/State.h>
@@ -91,8 +91,9 @@ protected:
 	static void addDetailedInfeasiblePath(const DetailedPath& infeasible_path, Vector<DetailedPath>& infeasible_paths);
 	static bool isSubPath(const OrderedPath& included_path, const Path& path_set);
 	static void onAnyInfeasiblePath();
-	template<template< class _ > class C>
-		void purgeBottomStates(C<Analysis::State>& sc) const;
+	// template<template< class _ > class C>
+	// 	void purgeBottomStates(C<Analysis::State>& sc) const;
+	void purgeBottomStates(States& sc) const;
 
 	typedef enum 
 	{	
@@ -124,7 +125,7 @@ private:
 	// virtual pure functions to implement
 	virtual LockPtr<States> narrowing(const Vector<Edge*>& edges) const = 0;
 	virtual bool inD_ip(const otawa::Edge* e) const = 0;
-	virtual IPStats ipcheck(States& s, elm::genstruct::Vector<DetailedPath>& infeasible_paths) const = 0;
+	virtual IPStats ipcheck(States& s, Vector<DetailedPath>& infeasible_paths) const = 0;
 
 	// analysis_state.cpp
 	Analysis::State topState(Block* entry) const;
