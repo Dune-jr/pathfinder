@@ -11,7 +11,7 @@
 #include <otawa/pcg/PCGBuilder.h>
 #include "BlockDominance.h"
 #include "EdgeDominance.h"
-#include "cfg_features.h"
+#include "../cfg_features.h"
 
 // using namespace elm;
 using otawa::Block;

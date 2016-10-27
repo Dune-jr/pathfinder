@@ -10,10 +10,10 @@
 #include <otawa/prop/Identifier.h>
 #include "DAG.h"
 #include "detailed_path.h"
-#include "GlobalDominance.h"
 #include "operand.h"
 #include "pretty_printing.h"
 #include "working_list.h"
+#include "dom/GlobalDominance.h"
 
 using namespace otawa;
 using elm::genstruct::SLList;

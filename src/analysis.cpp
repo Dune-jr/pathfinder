@@ -15,10 +15,9 @@
 #include <sys/time.h>
 #include "analysis_state.h"
 #include "cfg_features.h"
-#include "GlobalDominance.h"
-#include "GlobalDominance.h"
 #include "progress.h"
 #include "smt.h"
+#include "dom/GlobalDominance.h"
 
 /**
  * @class Analysis
@@ -264,13 +263,13 @@ String Analysis::printFixPointStatus(Block* b)
 		{
 			case ENTER:
 				rtn = rtn.concat(color::IRed() + "E");
-			break;
+				break;
 			case FIX:
 				rtn = rtn.concat(color::Yel() + "F");
-			break;
+				break;
 			case LEAVE:
 				rtn = rtn.concat(color::IGre() + "L");
-			break;
+				break;
 		}
 	}
 	return rtn + color::RCol() + "]";

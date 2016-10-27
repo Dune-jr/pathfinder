@@ -4,7 +4,7 @@
 
 #include <elm/genstruct/SLList.h>
 #include "EdgeDominance.h"
-#include "cfg_features.h"
+#include "../cfg_features.h"
 
 // using namespace elm;
 using otawa::sgraph::Edge;

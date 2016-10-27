@@ -171,19 +171,21 @@ void Analysis::State::merge(const States& ss, Block* b)
 			continue;
 		}
 #ifdef EXP0
-		else
+		// lvars = lvars ∩ siters->lvars
+		lvars.merge(siter->lvars);
+		// mem = mem ∩ siters->mem
+		const mem_t& smem = siter->mem;
+		DBGG("dsfkhfdsghj")
+		for(mem_t::PairIterator i(mem); i; i++)
 		{
-			// lvars = lvars ∩ siters->lvars
-			lvars.merge(siter->lvars);
-			// mem = mem ∩ siters->mem
-			const mem_t& smem = siter->mem;
-			for(mem_t::PairIterator i(mem); i; i++)
-				if((*i).snd != smem[(*i).fst]) // for each (k, v) in mem, if smem[k] != v, invalidate mem[k]
-					mem[(*i).fst] = Top;
-			for(mem_t::PairIterator i(smem); i; i++)
-				if((*i).snd != mem[(*i).fst]) // for each (k, v) in smem, if mem[k] != v, invalidate mem[k]
-					mem[(*i).fst] = Top;
+			DBGG("fst = " << (*i).fst << ", snd = " << *(*i).snd)
+			if((*i).snd != smem.get((*i).fst, NULL)) // for each (k, v) in mem, if smem[k] != v, invalidate mem[k]
+				mem[i] = Top;
 		}
+		DBGG("sdfknhf")
+		for(mem_t::PairIterator i(smem); i; i++)
+			if((*i).snd != mem.get((*i).fst, NULL)) // for each (k, v) in smem, if mem[k] != v, invalidate mem[k]
+				mem[i] = Top;
 		// lvtab[i] = &(siter->lvars);
 		// mtab[i++] = &(siter->mem);
 #endif

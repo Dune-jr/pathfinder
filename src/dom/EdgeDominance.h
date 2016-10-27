@@ -12,7 +12,7 @@
 #include <otawa/prog/WorkSpace.h>
 // #include <elm/genstruct/SLList.h>
 #include <elm/genstruct/HashTable.h>
-#include "debug.h"
+#include "../debug.h"
 
 #define VIRTUAL_ENTRY_EDGE NULL
 

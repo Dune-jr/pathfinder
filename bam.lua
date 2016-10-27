@@ -50,14 +50,14 @@ if config.solver.value == "cvc4" then
 	settings.cc.flags:Add("-D SMT_SOLVER_CVC4")
 	-- set sources
 	-- source = Collect("src/main.cpp")
-	source = Collect("src/*.cpp", "src/cvc4/*.cpp")
+	source = Collect("src/*.cpp", "src/dom/*.cpp", "src/cvc4/*.cpp")
 -- Z3
 elseif config.solver.value == "z3" then
 	settings.link.flags:Add("-lz3")
 	-- set C++ macro
 	settings.cc.flags:Add("-D SMT_SOLVER_Z3")
 	-- set sources
-	source = Collect("src/*.cpp", "src/z3/*.cpp")
+	source = Collect("src/*.cpp", "src/dom/*.cpp", "src/z3/*.cpp")
 -- Boolector
 -- elseif config.solver.value == "boolector"
 -- 	settings.link.flags:Add("-lboolector")
