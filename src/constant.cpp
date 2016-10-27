@@ -146,7 +146,11 @@ Constant Constant::operator|(const Constant& c) const
 }
 Constant Constant::operator^(const Constant& c) const
 {
-	if(!c.isAbsolute())
+	if(c == 0)
+		return *this;
+	if(*this == 0)
+		return c;
+	if(isAbsolute() && c.isAbsolute())
 		return Constant(_val ^ c._val);
 	return Constant();
 }

@@ -59,7 +59,7 @@ bool CVC4SMT::checkPredSat()
 			if(*iter)
 				smt.assertFormula(**iter, true); // second parameter to true for unsat cores
 		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
-char n; cin >> n; cin >> n; // TODO!!
+// char n; cin >> n; cin >> n; // TODO!!
 		// timestamp = (clock()-timestamp)*1000*1000/CLOCKS_PER_SEC;
 		// smt.getStatistics().flushInformation((std::ostream&)std::cout);
 		/*

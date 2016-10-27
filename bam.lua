@@ -34,8 +34,8 @@ end
 
 -- OTAWA
 settings.cc.flags:Add("`" .. otawa_config .. " --cflags`")
--- settings.link.flags:Add("`" .. otawa_config .." --libs --rpath otawa/oslice otawa/clp otawa/graphviz`")
 settings.link.flags:Add("`" .. otawa_config .." --libs --rpath`") -- -Wl,-rpath -Wl,$ORIGIN/home/jruiz/o/linux-x86_64/otawa-core/lib
+-- settings.link.flags:Add("`" .. otawa_config .." --libs --rpath otawa/oslice otawa/clp otawa/graphviz`")
 -- settings.cc.flags:Add("-D OSLICE") -- slice
 -- settings.cc.flags:Add("-D NDEBUG") -- optimize
 
@@ -49,7 +49,6 @@ if config.solver.value == "cvc4" then
 	-- set C++ macro
 	settings.cc.flags:Add("-D SMT_SOLVER_CVC4")
 	-- set sources
-	-- source = Collect("src/main.cpp")
 	source = Collect("src/*.cpp", "src/dom/*.cpp", "src/cvc4/*.cpp")
 -- Z3
 elseif config.solver.value == "z3" then
@@ -59,10 +58,10 @@ elseif config.solver.value == "z3" then
 	-- set sources
 	source = Collect("src/*.cpp", "src/dom/*.cpp", "src/z3/*.cpp")
 -- Boolector
--- elseif config.solver.value == "boolector"
--- 	settings.link.flags:Add("-lboolector")
+elseif config.solver.value == "boolector" then
+	settings.link.flags:Add("-lboolector")
 -- 	-- lingeling
--- 	settings.link.flags:Add("-llgl")
+ 	settings.link.flags:Add("-llgl")
 else
 	error("invalid solver")
 end
