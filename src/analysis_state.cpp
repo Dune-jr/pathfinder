@@ -47,7 +47,7 @@ Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
 }
 
 Analysis::State::State(const State& s)
-	: dfa_state(s.dfa_state), sp(s.sp), dag(s.dag), lvars(s.lvars), bottom(s.bottom), path(s.path), constants(s.constants),
+	: dfa_state(s.dfa_state), sp(s.sp), dag(s.dag), lvars(s.lvars), mem(s.mem), bottom(s.bottom), path(s.path), constants(s.constants),
 	  labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
 	{ }
 
@@ -175,14 +175,11 @@ void Analysis::State::merge(const States& ss, Block* b)
 		lvars.merge(siter->lvars);
 		// mem = mem ∩ siters->mem
 		const mem_t& smem = siter->mem;
-		DBGG("dsfkhfdsghj")
 		for(mem_t::PairIterator i(mem); i; i++)
 		{
-			DBGG("fst = " << (*i).fst << ", snd = " << *(*i).snd)
 			if((*i).snd != smem.get((*i).fst, NULL)) // for each (k, v) in mem, if smem[k] != v, invalidate mem[k]
 				mem[i] = Top;
 		}
-		DBGG("sdfknhf")
 		for(mem_t::PairIterator i(smem); i; i++)
 			if((*i).snd != mem.get((*i).fst, NULL)) // for each (k, v) in smem, if mem[k] != v, invalidate mem[k]
 				mem[i] = Top;
@@ -314,7 +311,7 @@ elm::String Analysis::State::dumpEverything() const
 		<< "  * lvars= [" << endl << lvars << "]" << endl
 		<< "  * mem= [" << endl;
 	for(mem_t::PairIterator i(mem); i; i++)
-		rtn = _ << rtn << "[" << (*i).fst << "]\t| " << *(*i).snd << endl;
+		rtn = _ << rtn << "[" << (*i).fst << "] \t| " << *(*i).snd << endl;
 	return _ << rtn << "]" << endl << "\t--- END OF DUMP ---";
 }
 

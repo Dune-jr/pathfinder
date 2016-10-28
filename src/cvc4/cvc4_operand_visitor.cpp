@@ -24,7 +24,7 @@ bool CVC4OperandVisitor::visit(const class OperandConst& o)
 		if(o.value().val() == 0) // SP+0
 			expr = variables.getExprSP();
 		else
-			expr = em.mkExpr(o.value().isRelativePositive() ? PLUS : MINUS, em.mkConst(CVC4::Rational(o.value().val())), variables.getExprSP());
+			expr = em.mkExpr(o.value().isRelativePositive() ? PLUS : MINUS, variables.getExprSP(), em.mkConst(CVC4::Rational(o.value().val())));
 	}
 	visited = true;
 	return true;
@@ -49,8 +49,9 @@ bool CVC4OperandVisitor::visit(const class OperandMem& o)
 
 bool CVC4OperandVisitor::visit(const class OperandTop& o)
 {
-	ASSERT(false);
-	// expr = variables.getExpr(em, o);
+	if(o.isUnidentified()) // T should NOT be expressed in SMT. A predicate with T in it has no value
+		return false; // fail
+	expr = variables.getExpr(em, o);
 	visited = true;
 	return true;
 }

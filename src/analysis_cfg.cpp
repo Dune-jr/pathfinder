@@ -118,6 +118,9 @@ void Analysis::processCFG(CFG* cfg)
 /* end */
 }
 
+/**
+ * @brief      Interpretation function of a Block
+ */
 Analysis::States& Analysis::I(Block* b, States& s)
 {
 	if(flags&SHOW_PROGRESS)
@@ -139,6 +142,9 @@ Analysis::States& Analysis::I(Block* b, States& s)
 	return s;
 }
 
+/**
+ * @brief      Interpretation function of an Edge. Returns a processed copy of the provided states.
+ */
 LockPtr<Analysis::States> Analysis::I(Edge* e, const States& s)
 {
 	if(s.isEmpty())
@@ -257,6 +263,12 @@ DetailedPath Analysis::reorderInfeasiblePath(const Path& ip, const DetailedPath&
 	return ordered_ip;
 }
 
+/**
+ * @brief      Register a new infeasible path
+ *
+ * @param[in]  ip                The infeasible path to add
+ * @param      infeasible_paths  The collection of paths to add to
+ */
 void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<DetailedPath>& infeasible_paths)
 {
 	DetailedPath new_ip(ip);

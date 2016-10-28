@@ -39,7 +39,7 @@ bool Z3OperandVisitor::visit(const class OperandVar& o)
 
 bool Z3OperandVisitor::visit(const class OperandMem& o)
 {
-	const Constant& addr = o.getConst().value();
+	const Constant& addr = o.addr().value();
 	assert(addr.isValid());
 	int sp_factor = 0;
 	if(addr.isRelative())
@@ -62,6 +62,11 @@ bool Z3OperandVisitor::visit(const class OperandMem& o)
 	e = c.int_const(label.chars());
 	visited = true;
 	return true;
+}
+
+bool Z3OperandVisitor::visit(const class OperandTop& o)
+{
+	ASSERTP(false, "v2 not supported by z3 yet");
 }
 
 bool Z3OperandVisitor::visit(const class OperandArith& o)

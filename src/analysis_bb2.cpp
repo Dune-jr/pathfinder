@@ -29,6 +29,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 			break;
 		case LOAD: // reg <- MEM_type(addr)
 			// tip: addr is likely to be t1
+			// TODO!! warning for LOAD, assert false for STORE for unaligned accesses
 			if(lvars.isConst(addr))
 			{
 				Constant c = lvars(addr).toConstant();

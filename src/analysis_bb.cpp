@@ -111,7 +111,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 			}
 			break; // we cannot generate a predicate otherwise
 		case LOAD: // reg <- MEM_type(addr)
-			invalidateVar(reg); // TODO: shouldn't we invalidate reg later incase we LOAD ?11, ?11
+			invalidateVar(reg);
 			if(Option<OperandMem> addr_mem = getOperandMem(addr, labels))
 			{
 				// if it's a constant address of some read-only data
@@ -126,6 +126,14 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 					DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "Memory data " << *addr_mem << " simplified to " << *addr_const_value)
 					constants.set(d, ConstantVariables::LabelledValue(*addr_const_value, labels, true));
 				}
+				// or maybe it's a 1/2byte non aligned access and we can get its value via a divmod (f.e [0x8001] = [0x8000])
+				else if(!(*addr_mem).isAligned())
+				{
+					sem::type_t type = (*seminsts).type();
+					ASSERTP(getSizeOfType(type) + (*addr_mem).addr().value().val() % 4 <= 4, "unaligned access is overflowing to next memcell!")
+					DBGW("TODO: load at unaligned addr: " << *addr_mem << ", not implemented yet (could ignore)")
+				}
+				// if we can't value it, just say reg = [addr]
 				else
 				{
 					make_pred = true;
@@ -143,6 +151,12 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 			if(Option<OperandMem> addr_mem = getOperandMem(addr, labels))
 			{
 				invalidateMem(*addr_mem);
+				if(!(*addr_mem).isAligned())
+				{
+					sem::type_t type = (*seminsts).type();
+					ASSERTP(getSizeOfType(type) + (*addr_mem).addr().value().val() % 4 <= 4, "unaligned access is overflowing to next memcell!")
+					ASSERTP(false, "store at unaligned access")
+				}
 				make_pred = true;
 				opd1 = dag->var(reg);
 				opd2 = dag->mem(*addr_mem);
@@ -1521,59 +1535,73 @@ Option<Predicate> Analysis::State::getPredicateGeneratedByCondition(sem::inst co
 /*
 	Check if addr_mem is the constant address of some read-only data, if so returns the constant data value
 */
-Option<Constant> Analysis::State::getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type)
+Option<Constant> Analysis::State::getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type) const
 {
 	const Constant& addr = addr_mem.addr();
 	if(!addr.isAbsolute())
 		return none;
 	if(!dfa_state->isInitialized(addr.val()))
 		return none;
+
+#define RETURN_CONSTANT(type) {\
+		type v;\
+		dfa_state->get(addr.val(), v);\
+		return Constant(v);\
+	}
 	switch(type)
 	{
-		case INT8:
-		case INT16:
-		case INT32:
-		case INT64: // TODO: can't we just do the same as UINT and (int) convert it?
-			return none;
+		case INT8: // TODO: ok?
 		case UINT8:
-		{
-			t::uint8 v;
-			dfa_state->get(addr.val(), v);
-			return Constant(v);
-		}
+			RETURN_CONSTANT(t::uint8);
+		case INT16:
 		case UINT16:
-		{
-			t::uint16 v;
-			dfa_state->get(addr.val(), v);
-			return Constant(v);
-		}
+			RETURN_CONSTANT(t::uint16);
+		case INT32:
 		case UINT32:
-		{
-			t::uint32 v;
-			dfa_state->get(addr.val(), v);
-			return Constant(v);
-		}
+			RETURN_CONSTANT(t::uint32);
+		case INT64: 
 		case UINT64:
-		{
-			t::uint64 v;
-			dfa_state->get(addr.val(), v);
-			return Constant(v);
-		}
+			RETURN_CONSTANT(t::uint64);
 		case FLOAT32:
-		{
-			float v;
-			dfa_state->get(addr.val(), v);
-			return Constant(v);
-		}
+			RETURN_CONSTANT(float);
 		case FLOAT64:
-		{
-			double v;
-			dfa_state->get(addr.val(), v);
-			return Constant(v);
-		}
+			RETURN_CONSTANT(double);
 		case MAX_TYPE:
 		case NO_TYPE:
 			return none;
 	}
+#undef RETURN_CONSTANT
 	return none;
+}
+
+/**
+ * @brief      Returns an overestimation of the size of a type
+ *
+ * @param[in]  type  The type
+ *
+ * @return     The size of the type.
+ */
+int Analysis::State::getSizeOfType(otawa::sem::type_t type) const
+{
+	switch(type)
+	{
+		case INT8:
+		case UINT8:
+			return 1;
+		case INT16:
+		case UINT16:
+			return 2;
+		case INT32:
+		case UINT32:
+		case FLOAT32:
+			return 4;
+		case INT64:
+		case UINT64:
+		case FLOAT64:
+			return 4;
+		case MAX_TYPE:
+		case NO_TYPE:
+		default:
+			return 8;
+	}
 }

@@ -18,7 +18,7 @@ public:
 		for(data_t::Iter iter(data); iter; iter++) {
 			SMT smt(flags);
 			const Analysis::State* s = (*iter).fst;
-			data[iter].snd = smt.seekInfeasiblePaths(*s);
+			data[iter].snd = smt.seekInfeasiblePaths(*s); // TODO! make it work with v2
 		}
 	}
 

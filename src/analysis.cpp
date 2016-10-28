@@ -535,7 +535,7 @@ void Analysis::postProcessResults(CFG *cfg)
 // void Analysis::purgeBottomStates(C<Analysis::State>& sc) const
 void Analysis::purgeBottomStates(States& sc) const
 {
-	for(States::Iterator i(sc); i; )
+	for(States::Iterator i(sc.states()); i; )
 	{
 		if(i.item().isBottom())
 			sc.remove(i);

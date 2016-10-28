@@ -8,8 +8,6 @@
 #include "../analysis.h" // Analyis::Path
 #include "../smt.h" // abstract SMT class inheritance
 
-using namespace elm::genstruct;
-
 class Z3SMT : public SMT
 {
 public:
@@ -25,6 +23,7 @@ private:
 
     // SMT virtual pure methods
     void initialize(const SLList<LabelledPredicate>& labelled_preds);
+    void initialize(const LocalVariables& lv, const HashTable<Constant, const Operand*, ConstantHash>& mem, DAG& dag) { }
     bool checkPredSat();
     bool retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredicate>& labelled_preds, std::basic_string<char>& unsat_core_output);
     z3::expr getExpr(const Predicate& p);

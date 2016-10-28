@@ -132,7 +132,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 		for(States::Iterator si(ss.states()); si; si++)
 		{	// SMT call
 			chosen_smt_t smt(flags);
-			const Option<Path*> infeasible_path = smt.seekInfeasiblePaths(*si);
+			const Option<Path*> infeasible_path = (flags&WITH_V2) ? smt.seekInfeasiblePathsv2(*si) : smt.seekInfeasiblePaths(*si);
 			sv_paths.addLast(infeasible_path);
 			if(!infeasible_path)
 				new_sv.addLast(*si); // only add feasible states to new_sv

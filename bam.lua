@@ -18,7 +18,8 @@ config:Finalize("config.lua")
 
 -- Settings
 settings = NewSettings()
-settings.cc.flags:Add("-O1")
+-- settings.cc.flags:Add("-O1")
+settings.cc.flags:Add("-O0")
 -- settings.cc.flags:Add("-std=c++11")
 
 if ScriptArgs["otawa"] and ScriptArgs["otawa"]~="2" then
@@ -60,8 +61,10 @@ elseif config.solver.value == "z3" then
 -- Boolector
 elseif config.solver.value == "boolector" then
 	settings.link.flags:Add("-lboolector")
--- 	-- lingeling
+ 	-- lingeling
  	settings.link.flags:Add("-llgl")
+ 	-- no support yet
+	error("boolector not yet supported")
 else
 	error("invalid solver")
 end

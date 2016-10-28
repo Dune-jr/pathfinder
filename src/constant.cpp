@@ -229,7 +229,8 @@ Output& Constant::print(Output& out) const
 			out << "SP";
 			if(_val < 0)
 				return (out << "-" << -_val);
-			return (out << "+" << _val);
+			else
+				return (out << "+" << _val);
 		default:
 			return (out << "(invalid cst)");
 	}

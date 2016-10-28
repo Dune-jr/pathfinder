@@ -209,6 +209,7 @@ public:
 	OperandMem(); // for use in Option
 	
 	inline const OperandConst& addr() const { return _opdc; }
+	inline bool isAligned() const { return _opdc.value().val() % 4 == 0; }
 	
 	// Operand* copy() const { return new OperandMem(*this); }
 	unsigned int countTempVars() const { return 0; }
@@ -251,6 +252,7 @@ public:
 	
 	inline bool isUnidentified() const { return id == -1; } // blank Top
 	inline bool isIdentified() const { return !isUnidentified(); }
+	inline int getId() const { return id; } // shouldn't be used
 	
 	// Operand* copy() const;
 	unsigned int countTempVars() const;
@@ -266,9 +268,9 @@ public:
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
 	inline void markUsedRegisters(BitVector& uses) const { }
-	inline bool isComplete() const { return true; }
+	inline bool isComplete() const { return isIdentified(); }
 	inline bool isConstant() const { return false; }
-	inline bool isLinear()   const { ASSERT(false); return true; }
+	inline bool isLinear()   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return false; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return TOP; }

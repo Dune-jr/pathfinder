@@ -20,8 +20,8 @@ CVC4SMT::CVC4SMT(int flags): SMT(flags), smt(&em), variables(em)
 	smt.setOption("rewrite-divk", CVC4::SExpr("true"));
 	// smt.setOption("dump-unsat-cores", CVC4::SExpr("true"));
 	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
-	smt.setOption("dump", "assertions:pre-everything");
-	smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
+	// smt.setOption("dump", "assertions:pre-everything");
+	// smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
 }
 
 // v1: all VARIABLE_PREFIX "?k"
@@ -46,7 +46,8 @@ void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, con
 	for(int i = 0; i < lv.maxRegisters(); i++) // registers id are [0...n[
 	{
  		if(used_regs[i] || lv[i])
- 			exprs += em.mkExpr(EQUAL, getRegExpr(i), getExpr(*lv[i]));
+ 			if(Option<Expr> expr_right = getExpr(lv(i)))
+ 				exprs += em.mkExpr(EQUAL, getRegExpr(i), expr_right);
 	}
 }
 
@@ -56,10 +57,13 @@ bool CVC4SMT::checkPredSat()
 	try {
 		// std::time_t timestamp = clock(); // Timestamp before analysis
 		for(SLList<Option<Expr> >::Iterator iter(exprs); iter; iter++)
-			if(*iter)
+			if(*iter) {
+				// std::cout << **iter << endl;
 				smt.assertFormula(**iter, true); // second parameter to true for unsat cores
+			}
+		// std::cout << "-----" << endl; // TODO!!
 		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
-// char n; cin >> n; cin >> n; // TODO!!
+// char n; cin >> n; // TODO!!
 		// timestamp = (clock()-timestamp)*1000*1000/CLOCKS_PER_SEC;
 		// smt.getStatistics().flushInformation((std::ostream&)std::cout);
 		/*
@@ -109,13 +113,14 @@ Option<Expr> CVC4SMT::getExpr(const Predicate& p)
 {
 	if(!p.isComplete() || (flags&Analysis::SMT_CHECK_LINEAR && !p.isLinear()))
 		return elm::none;
-	return em.mkExpr(getKind(p), getExpr(p.leftOperand()), getExpr(p.rightOperand()));
+	return em.mkExpr(getKind(p), *getExpr(p.leftOperand()), *getExpr(p.rightOperand()));
 }
 
 Option<Expr> CVC4SMT::getExpr(const Operand& o)
 {
-	// if(!o.isComplete())
-	// 	return elm::none; // this could cause a crash		
+	if(flags&Analysis::SMT_CHECK_LINEAR && !o.isLinear())
+		return elm::none;
+	// cout << "\e[0;92m" << (const string)(_ << o) << "\e[0;m" << " (" << o.isLinear() << ")" << endl;
 	CVC4OperandVisitor visitor(em, variables);
 	if(!o.accept(visitor))
 		return elm::none;

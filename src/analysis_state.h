@@ -131,7 +131,8 @@ private:
 	bool invalidateAllMemory();
 	void updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const;
 	Option<Predicate> getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels);
-	Option<Constant> getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type);
+	Option<Constant> getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type) const;
+	int getSizeOfType(otawa::sem::type_t type) const;
 	inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv) const { return constants.getLabels(opdv); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv1, const OperandVar& opdv2) const { return constants.getLabels(opdv1, opdv2); }
@@ -214,11 +215,12 @@ public:
 	typedef Vector<State>::Iter Iterator;
 	inline void remove(const Iterator& i) { s.remove(i); }
 
-	inline operator Vector<State>() { return s; }
+	// inline operator Vector<State>() { return s; }
 	inline State& operator[](const Iterator& i) { return s[i]; }
 	inline States& operator=(const Vector<State>& sv) { s = sv; return *this; }
 	inline States& operator=(const States& ss) { s = ss.s; return *this; }
-	inline friend io::Output& operator<<(io::Output& out, const States& ss) { return out << ss.s; }
+	inline friend io::Output& operator<<(io::Output& out, const States& ss) { return out << ss.s; };
+
 private:
 	Vector<State> s;
 };

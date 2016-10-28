@@ -47,7 +47,7 @@ bool Z3SMT::retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredica
 		unsat_core_output += Z3_ast_to_string(c, core[i]);
 		empty = false;
 
-		Vector<unsigned int>::Iterator labels_hash_iter(labels_hash);
+		Vector<unsigned int>::Iter labels_hash_iter(labels_hash);
 		for(SLList<LabelledPredicate>::Iterator lp_iter(labelled_preds); lp_iter; lp_iter++)
 		{	
 			if(!lp_iter->pred().isComplete())
