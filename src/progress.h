@@ -101,7 +101,7 @@ private:
 			incrementStat(bb->cfg());
 		}
 	}
-	inline void onFinish() { moveUp(maxlines); maxlines = 0; }
+	inline void onFinish() { moveUp(maxlines-1); elm::cout << StringFormat(" ").width(15+2+3+1+3+2+3+2+1) << endl; moveUp(2); maxlines = 0; }
 	void print(CFG* cfg) {
 		// count number n of lines required
 		int n = 0;

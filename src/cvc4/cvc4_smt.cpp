@@ -145,6 +145,6 @@ Kind_t CVC4SMT::getKind(const Predicate& p) const
 		case CONDOPR_NE:
 			return DISTINCT;
 		default:
-			assert(false);
+			abort();
 	}
 }

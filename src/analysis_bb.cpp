@@ -56,8 +56,8 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 		invalidateTempVars();
 	}
 	DBG(dumpEverything());
-	if(! (dbg_flags&DBG_DETERMINISTIC))
-		DBG("dag:" << *dag)
+	// if(! (dbg_flags&DBG_DETERMINISTIC))
+	// 	DBG("dag:" << *dag)
 	if(dbg_verbose == DBG_VERBOSE_ALL)
 	{
 		if(generated_preds_taken)
