@@ -150,7 +150,7 @@ private:
 			return out << "<invalid>" << endl;
 		for(int i = 0; i < size; i++) {
 			if(o[i])
-				out << "  " << OperandVar(getId(i)) << "\t" << " | " << *o[i] << endl;
+				out << "        " << OperandVar(getId(i)) << "\t| " << *o[i] << endl;
 		}
 		return out;
 	}

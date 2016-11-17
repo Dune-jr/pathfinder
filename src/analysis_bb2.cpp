@@ -10,23 +10,68 @@
 
 using namespace otawa::sem;
 
-void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_condition)
+// @param last_condition If we are in a conditional segment, the sem inst corresponding to the conditional instruction, NOP otherwise
+void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst& last_condition)
 {
 	const t::int16 &a = seminsts.a(), &b = seminsts.b(), &d = seminsts.d();
 	const t::int32 &cst = seminsts.cst();
 	const t::int16 &reg = seminsts.reg(), &addr = seminsts.addr();
-	switch(seminsts.op())
+	const t::uint16 op = seminsts.op();
+
+	// parse conservatively conditional segments of the BB: set top to everything that is written there
+	if(last_condition.op != NOP && (op != IF && op != CONT && op != BRANCH))
+	{	// Instruction is within the conditional segment of BB 
+		if(affectsRegister(op)) // affects the register d
+			scratch(d);
+		if(affectsMemory(op)) // affects memory at addr
+			store(OperandVar(addr), dag->new_top());
+		return;
+	}
+	// maintain predicates
+	if(affectsRegister(op))
+		invalidateVar(d);
+	if(affectsMemory(op))
+	{
+		Constant c;
+		if(lvars.isConst(addr) && (c = lvars(addr).toConstant(), c.isValidAddress()))
+			invalidateMem(OperandMem(c));
+		else
+			invalidateAllMemory();
+	}
+	
+	switch(op)
 	{
 		case NOP:
 			break;
 		case BRANCH:
 			break;
-		case CONT:
-			// TODO
-			break;
+		// TODO! we still need to maintain predicates, even if we don't generate them anymore
 		case IF:
-			// TODO
+			{
+				const OperandVar sr = OperandVar(last_condition.sr());
+				const Operand& opd = lvars[sr] ? *lvars[sr] : sr;
+				if(opd.kind() == ARITH && opd.toArith().opr() == ARITHOPR_CMP)
+				{
+					Path labels; // empty // TODO
+					Predicate p = getConditionalPredicate(last_condition, opd.toArith().left(), opd.toArith().right(), true);
+					generated_preds += LabelledPredicate(p, labels);
+					DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
+				}
+			}
 			break;
+		case CONT:
+			{
+				const OperandVar sr = OperandVar(last_condition.sr());
+				const Operand& opd = lvars[sr] ? *lvars[sr] : sr;
+				if(opd.kind() == ARITH && opd.toArith().opr() == ARITHOPR_CMP)
+				{
+					Path labels; // empty // TODO
+					Predicate p = getConditionalPredicate(last_condition, opd.toArith().left(), opd.toArith().right(), false); // false because we need to invert condition (else branch)
+					generated_preds += LabelledPredicate(p, labels);
+					DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
+				}
+			}
+			break; // we cannot generate a predicate otherwise
 		case LOAD: // reg <- MEM_type(addr)
 			// tip: addr is likely to be t1
 			// TODO!! warning for LOAD, assert false for STORE for unaligned accesses
@@ -53,20 +98,11 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, sem::inst& last_
 			{
 				DBG(color::IYel() << "  Load address is unknown: " << OperandVar(addr) << " = " << lvars(addr))
 				scratch(reg);
-			}		
-			break;
-		case STORE:	// MEM_type(addr) <- reg
-		{
-			Constant c;
-			if(lvars.isConst(addr) && (c = lvars(addr).toConstant(), c.isValidAddress()))
-				setMem(c, getPtr(reg));
-			else
-			{
-				DBG(color::IYel() << "  Store address is unknown: " << OperandVar(addr) << " = " << lvars(addr))
-				scratchAllMemory(); // access to Top
 			}
 			break;
-		}
+		case STORE:	// MEM_type(addr) <- reg
+			store(OperandVar(addr), getPtr(reg));
+			break;
 		case SET: // d <- a
 			set(d, getPtr(a));
 			break;
@@ -238,6 +274,18 @@ void Analysis::State::scratchAllMemory()
 	DBG(color::IRed() << "  Access to Top, invalidating all memory (" << mem.count() << " items)")
 	for(mem_t::MutableIter i(mem); i; i++)
 		i.item() = dag->new_top(); // TODO! that looks costly... maybe we should rework the way Tops work in DAG.
+}
+
+void Analysis::State::store(OperandVar addr, const Operand* opd)
+{
+	Constant c;
+	if(lvars.isConst(addr) && (c = lvars(addr).toConstant(), c.isValidAddress()))
+		setMem(c, opd);
+	else
+	{
+		DBG(color::IYel() << "  Store address is unknown: " << addr << " = " << lvars(addr))
+		scratchAllMemory(); // access to Top
+	}
 }
 
 // this is minimal and a bit unoptimized
@@ -470,4 +518,63 @@ const Operand* Analysis::State::smart_muldiv(const Operand* x, Constant k, Const
 	}
 	else // give up
 		return dag->mul(dag->div(x, dag->cst(k)), dag->cst(c));
+}
+
+/**
+ * @brief      Determines the register written by the semantic instruction, if it exists
+ *
+ * @param[in]  op    The opcode of the semantic instruction
+ *
+ * @return     The register id, if it exists
+ */
+bool Analysis::State::affectsRegister(t::uint16 op)
+{
+	switch(op)
+	{
+		// instructions that do not write anything
+		case NOP:
+		case ASSUME:
+		case BRANCH:
+		case TRAP:
+		case CONT:
+		case IF:
+		// instructions that write in memory
+		case STORE:
+			return false;
+		// instructions that write in register d
+		case LOAD:
+		case SCRATCH:
+		case SET:
+		case SETI:
+		case SETP:
+		case CMP:
+		case CMPU:
+		case ADD:
+		case SUB:
+		case SHL:
+		case SHR:
+		case ASR:
+		case NEG:
+		case NOT:
+		case AND:
+		case OR:
+		case XOR:
+		case MUL:
+		case MULU:
+		case DIV:
+		case DIVU:
+		case MOD:
+		case MODU:
+		case SPEC:
+		case MULH:
+			return true;
+		// case FORK:
+		default:
+			crash();
+	}
+}
+
+bool Analysis::State::affectsMemory(t::uint16 op)
+{
+	return op == STORE; // the only op that can write in memory is STORE
 }

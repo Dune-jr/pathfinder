@@ -106,7 +106,7 @@ void Analysis::processCFG(CFG* cfg)
 			for(Vector<Edge*>::Iter e(succ); e; e++)
 			{
 				/* s_e ← I*[e](s) */
-				EDGE_S(e) = I(e, *s);
+				EDGE_S(e) = I(e, s);
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 				if(inD_ip(e))
 					ip_stats += ipcheck(*EDGE_S.ref(e), infeasible_paths);
@@ -145,18 +145,20 @@ Analysis::States& Analysis::I(Block* b, States& s)
 /**
  * @brief      Interpretation function of an Edge. Returns a processed copy of the provided states.
  */
-LockPtr<Analysis::States> Analysis::I(Edge* e, const States& s)
+LockPtr<Analysis::States> Analysis::I(const Vector<Edge*>::Iter& e, LockPtr<States> s)
 {
-	if(s.isEmpty())
+	// LockPtr<States> rtns(new States(s));
+	if(! e.ended()) // more edges to come
+		s = LockPtr<States>(new States(*s));
+	if(s->isEmpty())
 		DBGG("-\tpropagating bottom state")
 	// DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
-	LockPtr<States> rtns(new States(s));
 	if(! e->source()->isEntry()) // do not process entry: no generated preds and uninteresting edge to add (everything comes from the entry)
-		for(States::Iterator rtnsi(rtns->states()); rtnsi; rtnsi++)
-			rtns->states()[rtnsi].appendEdge(e);
+		for(States::Iterator si(s->states()); si; si++)
+			s->states()[si].appendEdge(e);
 	if(LOOP_EXIT_EDGE(e))
-		rtns->onLoopExit(e);
-	return rtns;
+		s->onLoopExit(e);
+	return s;
 }
 
 /**

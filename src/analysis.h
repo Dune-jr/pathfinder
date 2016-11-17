@@ -27,17 +27,18 @@ public:
 
 	enum // flags
 	{
-		VIRTUALIZE_CFG		= 1 <<  0,
-		SLICE_CFG			= 1 <<  1,
-		MERGE				= 1 <<  3,
-		UNMINIMIZED_PATHS	= 1 <<  4,
-		DRY_RUN				= 1 <<  5,
-		SMT_CHECK_LINEAR	= 1 <<  6,
-		SHOW_PROGRESS		= 1 <<  7,
-		POST_PROCESSING		= 1 <<  8,
-		MULTITHREADING		= 1 <<  9,
-		WITH_V1				= 1 << 10,
-		WITH_V2				= 1 << 11,
+		VIRTUALIZE_CFG		 = 1 <<  0,
+		SLICE_CFG			 = 1 <<  1,
+		MERGE				 = 1 <<  3,
+		UNMINIMIZED_PATHS	 = 1 <<  4,
+		DRY_RUN				 = 1 <<  5,
+		SMT_CHECK_LINEAR	 = 1 <<  6,
+		ALLOW_NONLINEAR_OPRS = 1 <<  7,
+		SHOW_PROGRESS		 = 1 <<  8,
+		POST_PROCESSING		 = 1 <<  9,
+		MULTITHREADING		 = 1 << 10,
+		WITH_V1				 = 1 << 11,
+		WITH_V2				 = 1 << 12,
 	};
 protected:
 	typedef struct
@@ -138,7 +139,7 @@ private:
 	// analysis_cfg.cpp
 	void processCFG(CFG *cfg);
 	States& I(Block* b, States& s); // modifies existing states
-	LockPtr<States> I(Edge* e, const States& s); // creates new states
+	LockPtr<States> I(const Vector<Edge*>::Iter& e, LockPtr<States> s); // creates new states
 	// void removeDuplicateInfeasiblePaths();
 	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	// elm::String wlToString() const;

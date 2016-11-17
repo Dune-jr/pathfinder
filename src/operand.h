@@ -90,7 +90,7 @@ public:
 	virtual void markUsedRegisters(BitVector &uses) const = 0;
 	virtual bool isComplete() const = 0;
 	virtual bool isConstant() const = 0;
-	virtual bool isLinear() const = 0;
+	virtual bool isLinear(bool only_linear_opr) const = 0;
 	virtual bool isAffine(const OperandVar& opdv) const = 0;
 	virtual void parseAffineEquation(AffineEquationState& state) const = 0;
 	virtual Option<Constant> evalConstantOperand() const = 0; // all uses commented out?
@@ -140,7 +140,7 @@ public:
 	inline void markUsedRegisters(BitVector& uses) const { }
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return true; }
-	inline bool isLinear()   const { return true; }
+	inline bool isLinear(bool only_linear_opr)   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return true; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return CST; }
@@ -186,7 +186,7 @@ public:
 	inline void markUsedRegisters(BitVector& uses) const { if(!isTempVar()) uses.set(_addr); }
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return false; }
-	inline bool isLinear()   const { return true; }
+	inline bool isLinear(bool only_linear_opr)   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return _addr == opdv.addr(); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return VAR; }
@@ -194,7 +194,7 @@ public:
 	bool operator==(const Operand& o) const;
 	bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
-	const OperandVar& toVar() const { return *this; }
+	inline const OperandVar& toVar() const { return *this; }
 private:
 	NONEW;
 	io::Output& print(io::Output& out) const;
@@ -227,7 +227,7 @@ public:
 	inline void markUsedRegisters(BitVector& uses) const { }
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return false; }
-	inline bool isLinear()   const { return true; }
+	inline bool isLinear(bool only_linear_opr)   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return false; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return MEM; }
@@ -270,7 +270,7 @@ public:
 	inline void markUsedRegisters(BitVector& uses) const { }
 	inline bool isComplete() const { return isIdentified(); }
 	inline bool isConstant() const { return false; }
-	inline bool isLinear()   const { return true; }
+	inline bool isLinear(bool only_linear_opr)   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return false; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return TOP; }
@@ -278,7 +278,7 @@ public:
 	inline bool operator==(const Operand& o) const;
 	inline bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandTop& o) { return o.print(out); }
-	const OperandTop& toTop() const { return *this; }
+	inline const OperandTop& toTop() const { return *this; }
 private:
 	// NONEW;
 	io::Output& print(io::Output& out) const;
@@ -323,7 +323,7 @@ public:
 	inline void markUsedRegisters(BitVector& uses) const { opd1->markUsedRegisters(uses); if(isBinary()) opd1->markUsedRegisters(uses); }
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
 	inline bool isConstant() const { return opd1->isConstant() && (isUnary() || opd2->isConstant()); }
-	bool isLinear() const;
+	bool isLinear(bool only_linear_opr) const;
 	inline bool isAffine(const OperandVar& opdv) const
 		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv) && opd2->isAffine(opdv); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }

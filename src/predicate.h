@@ -35,7 +35,7 @@ public:
 	inline bool isIdent() const    { return (*_opd1 == *_opd2) && _opr == CONDOPR_EQ; }
 	inline bool isComplete() const { return _opd1->isComplete() && _opd2->isComplete(); }
 	inline bool isConstant() const { return _opd1->isConstant() && _opd2->isConstant(); }
-	inline bool isLinear() const   { return _opd1->isLinear() && _opd2->isLinear(); }
+	inline bool isLinear(bool only_linear_opr) const { return _opd1->isLinear(only_linear_opr) && _opd2->isLinear(only_linear_opr); }
 	// Predicate* copy() const;
 	int involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;

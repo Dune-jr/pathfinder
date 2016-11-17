@@ -42,8 +42,9 @@ public:
 		opt_deterministic(SwitchOption::Make(*this).cmd("-D").cmd("--deterministic").description("Ensure deterministic output (two executions give the same output)")),
 		opt_nolinearcheck(SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
 		opt_nounminimized(SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
+		opt_allownonlinearoperators(SwitchOption::Make(*this).cmd("--allow-nonlinear-operators").description("assert linear predicates that use *,/,mod in the SMT solver (unsafe)")),
 		opt_slice		 (SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
-		opt_dumpoptions	 (SwitchOption::Make(*this).cmd("--dump-options").description("print the selected options for the analysis")),
+		opt_dumpoptions	 (SwitchOption::Make(*this).cmd("--dump-options").cmd("--do").description("print the selected options for the analysis")),
 		opt_virtualize	 (ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
 		opt_merge 		 (ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)),
 		opt_multithreading(ValueOption<int>::Make(*this).cmd("-j").description("enable multithreading on the given amount of cores (0/1=no multithreading, -1=autodetect)").def(0)) { }
@@ -74,7 +75,7 @@ private:
 	ValueOption<bool> opt_output;
 	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry;
 	ValueOption<bool> opt_v1, opt_v2;
-	SwitchOption opt_deterministic, opt_nolinearcheck, opt_nounminimized, opt_slice, opt_dumpoptions;
+	SwitchOption opt_deterministic, opt_nolinearcheck, opt_nounminimized, opt_allownonlinearoperators, opt_slice, opt_dumpoptions;
 	ValueOption<bool> opt_virtualize;
 	ValueOption<int> opt_merge, opt_multithreading;
 
@@ -101,6 +102,8 @@ private:
 			analysis_flags |= Analysis::SMT_CHECK_LINEAR;
 		if(! opt_nounminimized)
 			analysis_flags |= Analysis::UNMINIMIZED_PATHS;
+		if(opt_allownonlinearoperators)
+			analysis_flags |= Analysis::ALLOW_NONLINEAR_OPRS;
 		if(opt_dry)
 			analysis_flags |= Analysis::DRY_RUN;
 		if(opt_v1.get())
@@ -164,18 +167,19 @@ private:
 			cout << (i>dbg_verbose ? "=" : " ");
 		cout << "]" << color::RCol() << endl;
 		DBGOPT("DISPLAY TIME & NON-DTMSTIC INFO", !(dbg_flags&DBG_DETERMINISTIC), true)
-		DBGOPT("DISPLAY RESULT INF. PATHS", dbg_flags&DBG_RESULT_IPS, true)
-		DBGOPT("PRETTY PRINTING FOR FLOWINFO", (dbg_flags&DBG_FORMAT_FLOWINFO), true)
-		DBGOPT("DISPLAY DETAILED STATS", dbg_flags&DBG_DETAILED_STATS, false)
+		DBGOPT("DISPLAY RESULT INF. PATHS"		, dbg_flags&DBG_RESULT_IPS, true)
+		DBGOPT("PRETTY PRINTING FOR FLOWINFO"	, dbg_flags&DBG_FORMAT_FLOWINFO, true)
+		DBGOPT("DISPLAY DETAILED STATS"			, dbg_flags&DBG_DETAILED_STATS, false)
 		cout << "Analysis:" << endl;
-		DBGOPT("VIRTUALIZE", analysis_flags&Analysis::VIRTUALIZE_CFG, true)
-		DBGOPT("SLICE", analysis_flags&Analysis::SLICE_CFG, false)
-		DBGOPT("DISPLAY PROGRESS", analysis_flags&Analysis::SHOW_PROGRESS, false)
+		DBGOPT("VIRTUALIZE"						, analysis_flags&Analysis::VIRTUALIZE_CFG, true)
+		DBGOPT("SLICE"							, analysis_flags&Analysis::SLICE_CFG, false)
+		DBGOPT("DISPLAY PROGRESS"				, analysis_flags&Analysis::SHOW_PROGRESS, false)
 		DBGOPT("CHECK LINEARITY BEFORE SMT CALL", analysis_flags&Analysis::SMT_CHECK_LINEAR, true)
-		DBGOPT("KEEP UNMINIMIZED PATHS", analysis_flags&Analysis::UNMINIMIZED_PATHS, true)
-		DBGOPT("RUN DRY (NO SMT SOLVER)", analysis_flags&Analysis::DRY_RUN, false)
-		DBGOPT("RUN V1 A.I.", analysis_flags&Analysis::WITH_V1, true)
-		DBGOPT("RUN V2 A.I.", analysis_flags&Analysis::WITH_V2, true)
+		DBGOPT("ALLOW NONLINEAR OPEATORS (unsafe)", analysis_flags&Analysis::ALLOW_NONLINEAR_OPRS, false)
+		DBGOPT("KEEP UNMINIMIZED PATHS"			, analysis_flags&Analysis::UNMINIMIZED_PATHS, true)
+		DBGOPT("RUN DRY (NO SMT SOLVER)"		, analysis_flags&Analysis::DRY_RUN, false)
+		DBGOPT("RUN V1 A.I."					, analysis_flags&Analysis::WITH_V1, true)
+		DBGOPT("RUN V2 A.I."					, analysis_flags&Analysis::WITH_V2, true)
 		cout << DBGPREFIX("MERGING THRESOLD");
 		if(analysis_flags&Analysis::MERGE)
 			cout << color::IRed() << merge_thresold << color::RCol() << endl;

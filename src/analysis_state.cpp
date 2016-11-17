@@ -11,14 +11,14 @@
  */
 const Analysis::State bottom(true);
 
-Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), lvars(), mem(), bottom(bottom), constants() { }
+Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), lvars(), mem(29), bottom(bottom), constants() { }
 
 // Analysis::State::State(const context_t& context)
 	// : dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
 
 Analysis::State::State(Block* entryb, const context_t& context, bool init)
 	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(*dag, context.max_tempvars, context.max_registers),
-	mem(), bottom(false), constants(context.max_tempvars, context.max_registers)
+	mem(53), bottom(false), constants(context.max_tempvars, context.max_registers)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -34,7 +34,7 @@ Analysis::State::State(Block* entryb, const context_t& context, bool init)
 
 Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
 	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(*dag, context.max_tempvars, context.max_registers),
-	mem(), bottom(false), constants(context.max_tempvars, context.max_registers)
+	mem(53), bottom(false), constants(context.max_tempvars, context.max_registers)
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
@@ -311,7 +311,7 @@ elm::String Analysis::State::dumpEverything() const
 		<< "  * lvars= [" << endl << lvars << "]" << endl
 		<< "  * mem= [" << endl;
 	for(mem_t::PairIterator i(mem); i; i++)
-		rtn = _ << rtn << "[" << (*i).fst << "] \t| " << *(*i).snd << endl;
+		rtn = _ << rtn << "        [" << (*i).fst << "]\t| " << *(*i).snd << endl;
 	return _ << rtn << "]" << endl << "\t--- END OF DUMP ---";
 }
 

@@ -48,6 +48,8 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 	context.max_tempvars = (short)ws->process()->maxTemp(); // maximum number of tempvars used
 	context.max_registers = (short)ws->platform()->regCount(); // count of registers
 	context.dag = new DAG(context.max_tempvars, context.max_registers);
+
+	ASSERTP(!(flags&WITH_V1 && flags&WITH_V2), "v1 and v2 both selected at once - no longer permitted because v1 struggles with OperandTops")
 }
 
 Analysis::~Analysis()

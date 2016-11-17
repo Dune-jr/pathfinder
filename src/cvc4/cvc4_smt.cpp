@@ -34,13 +34,50 @@ void CVC4SMT::initialize(const SLList<LabelledPredicate>& labelled_preds)//, mod
 		exprs.addLast(getExpr(iter->pred()));
 }
 
+static int saved_useless_asserts = 0;
 void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, const Operand*, ConstantHash>& mem, DAG& dag)
 {
 	variables.setMode(INITIAL_PREFIX);
 	BitVector used_regs(lv.maxRegisters(), false);
+
+// experimental
+#ifndef DONTCHECK_USELESS_ASSERTS
+	Vector<const Operand*> v;
+	for(HashTable<Constant, const Operand*, ConstantHash>::KeyIterator iter(mem); iter; iter++)
+		v.push(dag.mem(*iter));
+	const int key_nb = v.count();
+	for(HashTable<Constant, const Operand*, ConstantHash>::Iterator iter(mem); iter; iter++)
+		for(Vector<const Operand*>::Iter vi(v); vi; )
+		{
+			if((*iter)->involvesOperand(**vi))
+				v.remove(vi); // not useless
+			else
+				vi++;
+		}
+	for(int i = 0; i < lv.maxRegisters(); i++) // registers id are [0...n[
+		for(Vector<const Operand*>::Iter vi(v); vi; )
+		{
+ 			if(lv(i).involvesOperand(**vi))
+				v.remove(vi); // not useless
+			else
+				vi++;
+		}
+	ASSERTP(key_nb == v.count(), "finally")
+	// cout << v.count() << "/" << key_nb << " useless" << endl;
+	saved_useless_asserts += v.count();
+#endif
+
 	for(HashTable<Constant, const Operand*, ConstantHash>::PairIterator iter(mem); iter; iter++)
 	{
+#ifndef DONTCHECK_USELESS_ASSERTS
+		if(v.contains(dag.mem((*iter).fst))) // useless assert
+		{
+			exprs += elm::none;
+			continue;
+		}
+#endif
 		exprs += getExpr(Predicate(CONDOPR_EQ, dag.mem((*iter).fst), (*iter).snd));
+ 		// exprs += em.mkExpr(EQUAL, dag.mem((*iter).fst), (*iter).snd); // TODO!! I forgot why... I think cuz [SP+8] = [SP+8] + 1. need example
 		(*iter).snd->markUsedRegisters(used_regs);
 	}
 	for(int i = 0; i < lv.maxRegisters(); i++) // registers id are [0...n[
@@ -58,12 +95,16 @@ bool CVC4SMT::checkPredSat()
 		// std::time_t timestamp = clock(); // Timestamp before analysis
 		for(SLList<Option<Expr> >::Iterator iter(exprs); iter; iter++)
 			if(*iter) {
-				// std::cout << **iter << endl;
 				smt.assertFormula(**iter, true); // second parameter to true for unsat cores
+				// std::cout << **iter << endl; // uncomment to print all asserted predicates
 			}
-		// std::cout << "-----" << endl; // TODO!!
 		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
-// char n; cin >> n; // TODO!!
+		                                                           // 
+// std::cout << "-----" << endl;
+// if(!isSat) { std::cout << "[[[" << smt.getUnsatCore() << "]]]" << endl;
+// abort();
+// char n; cin >> n; }
+
 		// timestamp = (clock()-timestamp)*1000*1000/CLOCKS_PER_SEC;
 		// smt.getStatistics().flushInformation((std::ostream&)std::cout);
 		/*
@@ -79,7 +120,10 @@ bool CVC4SMT::checkPredSat()
 	}
 	catch(CVC4::LogicException e)
 	{
-		DBGW("non-linear call to CVC4, defaulting to SAT.")
+		DBGW("non-linear call to CVC4, defaulting to SAT:")
+#ifdef DBG_WARNINGS
+		std::cout << e;
+#endif
 		return true;
 	}
 }
@@ -111,14 +155,14 @@ bool CVC4SMT::retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredi
 
 Option<Expr> CVC4SMT::getExpr(const Predicate& p)
 {
-	if(!p.isComplete() || (flags&Analysis::SMT_CHECK_LINEAR && !p.isLinear()))
+	if(!p.isComplete() || (flags&Analysis::SMT_CHECK_LINEAR && !p.isLinear(flags&Analysis::ALLOW_NONLINEAR_OPRS)))
 		return elm::none;
 	return em.mkExpr(getKind(p), *getExpr(p.leftOperand()), *getExpr(p.rightOperand()));
 }
 
 Option<Expr> CVC4SMT::getExpr(const Operand& o)
 {
-	if(flags&Analysis::SMT_CHECK_LINEAR && !o.isLinear())
+	if(flags&Analysis::SMT_CHECK_LINEAR && !o.isLinear(flags&Analysis::ALLOW_NONLINEAR_OPRS))
 		return elm::none;
 	// cout << "\e[0;92m" << (const string)(_ << o) << "\e[0;m" << " (" << o.isLinear() << ")" << endl;
 	CVC4OperandVisitor visitor(em, variables);

@@ -30,8 +30,8 @@ private:
 	DAG* dag;
 #ifdef EXP
 	LocalVariables lvars;
-	// LocalVariables lvars_taken;
 	mem_t mem;
+	// LocalVariables lvars_taken;
 #endif
 	bool bottom; // true=is Bottom, false= is Top
 	DetailedPath path;
@@ -74,8 +74,8 @@ public:
 
 	// analysis_bb.cpp
 	void processBB(const BasicBlock *bb, int version_flags = Analysis::WITH_V1 | Analysis::WITH_V2);
-	void processSemInst1(const otawa::sem::PathIter& seminsts, sem::inst& last_condition);
-	void processSemInst2(const otawa::sem::PathIter& seminsts, sem::inst& last_condition);
+	void processSemInst1(const otawa::sem::PathIter& seminsts, const sem::inst& last_condition);
+	void processSemInst2(const otawa::sem::PathIter& seminsts, const sem::inst& last_condition);
 	// void throwInfo();
 	int invalidateStackBelow(const Constant& stack_limit);
 
@@ -89,7 +89,7 @@ private:
 	void setPredicate(PredIterator &iter, const LabelledPredicate &labelled_predicate);
 	void movePredicateToGenerated(PredIterator &iter);
 	void removePredicate(PredIterator &iter);
-	SLList<LabelledPredicate> labelPredicateList (const SLList<LabelledPredicate>& pred_list, Edge* label);
+	SLList<LabelledPredicate> labelPredicateList(const SLList<LabelledPredicate>& pred_list, Edge* label);
 	io::Output& print(io::Output& out) const;
 
 	// analysis_bb.cpp (v2)
@@ -98,6 +98,9 @@ private:
 	inline const Operand* getPtr(t::int32 var_id) const;
 	inline void scratch(const OperandVar& var) { set(var, dag->new_top(), false); lvars.clearLabels(var); }
 	void scratchAllMemory();
+	static bool affectsRegister(t::uint16 op);
+	static bool affectsMemory(t::uint16 op);
+	void store(OperandVar addr, const Operand* b);
 	// smart functions
 	const Operand* smart_add(const Operand* a, const Operand* b);
 	const Operand* smart_add(Constant x, const Operand* y);
@@ -130,7 +133,8 @@ private:
 	Option<OperandMem> getOperandMem(const OperandVar& var, Path& labels);
 	bool invalidateAllMemory();
 	void updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const;
-	Option<Predicate> getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels);
+	// Option<Predicate> getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels);
+	Predicate getConditionalPredicate(sem::inst condition, const Operand* opd_left, const Operand* opd_right, bool taken);
 	Option<Constant> getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type) const;
 	int getSizeOfType(otawa::sem::type_t type) const;
 	inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }

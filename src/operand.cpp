@@ -564,28 +564,28 @@ Option<Constant> OperandArith::evalConstantOperand() const
 	Option<Constant> val2 = isUnary() ? elm::none : opd2->evalConstantOperand();
 	if(val1 && (val2 || isUnary()))
 	{
-#		define V1 (*val1).val()
-#		define V2 (*val2).val()
+#		define V1 (*val1)//.val()
+#		define V2 (*val2)//.val()
 		switch(_opr)
 		{
 			case ARITHOPR_NEG:
-				return Constant(-V1);
+				return -V1;
 			case ARITHOPR_ADD:
-				return Constant(V1 + V2);
+				return V1 + V2;
 			case ARITHOPR_SUB:
-				return Constant(V1 - V2);
+				return V1 - V2;
 			case ARITHOPR_MUL:
-				return Constant(V1 * V2);
+				return V1 * V2;
 			case ARITHOPR_MULH:
-				return Constant( (t::int64(V1)*t::int64(V2)) / t::int64(0x100000000ul) );
+				return Constant( (t::int64(V1.val())*t::int64(V2.val())) / t::int64(0x100000000ul) );
 			case ARITHOPR_DIV:
 				if(V2 == 0)
 					return none;
-				return Constant(V1 / V2);
+				return V1 / V2;
 			case ARITHOPR_MOD:
 				if(V2 == 0)
 					return none;
-				return Constant(V1 % V2);
+				return V1 % V2;
 			case ARITHOPR_CMP:
 				return none; // This can't be evaluated (wouldn't make much sense if this case was matched after the if anyway)
 		}
@@ -600,7 +600,7 @@ Option<const Operand*> OperandArith::simplify(DAG& dag) const
 	// before anything, test our groundness
 	if(Option<Constant> val = evalConstantOperand())
 		if((*val).isValid())
-		return some(dag.cst(*val));
+			return some(dag.cst(*val));
 	if(isUnary())
 	{
 		if(Option<const Operand*> o = opd1->simplify(dag))
@@ -644,7 +644,7 @@ Option<const Operand*> OperandArith::simplify(DAG& dag) const
 		case ARITHOPR_CMP:
 			return none;
 		case ARITHOPR_NEG:
-			ASSERT(false); // unary operators should have been handled earlier
+			crash(); // unary operators should have been handled earlier
 	}
 	// additional tests
 	// TODO: test [x + y / x - -y] and vice-versa
@@ -674,7 +674,7 @@ Option<const Operand*> OperandArith::simplify(DAG& dag) const
 		case ARITHOPR_CMP:
 			return none;
 		case ARITHOPR_NEG:
-			ASSERT(false); // unary operators should have been handled earlier
+			crash(); // unary operators should have been handled earlier
 	}
 	return none;
 }
@@ -686,24 +686,25 @@ const Operand* OperandArith::replaceConstants(DAG& dag, const ConstantVariablesC
 		return dag.autoOp(_opr, opd1->replaceConstants(dag, constants, replaced_vars));
 }
 
-bool OperandArith::isLinear() const
+bool OperandArith::isLinear(bool only_linear_opr) const
 {
 	switch(_opr)
 	{
 		// linear iff all operands are linear
 		case ARITHOPR_NEG:
+			return opd1->isLinear(only_linear_opr);
 		case ARITHOPR_ADD:
 		case ARITHOPR_SUB:
-			return opd1->isLinear() && (isUnary() || opd2->isLinear());
+			return opd1->isLinear(only_linear_opr) && opd2->isLinear(only_linear_opr);
 
 		// linear iff any operand is constant
 		case ARITHOPR_MUL:
-			return opd1->isConstant() || opd2->isConstant();
+			return !only_linear_opr && (opd1->isConstant() || opd2->isConstant());
 
 		// linear iff right operand is constant
 		case ARITHOPR_DIV:
 		case ARITHOPR_MOD:
-			return opd2->isConstant();
+			return !only_linear_opr && opd2->isConstant();
 
 		// hopeless
 		case ARITHOPR_MULH:

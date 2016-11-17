@@ -39,13 +39,16 @@ LockPtr<Analysis::States> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) c
 			DBGG("narrowing returns null vector")
 			return v;
 		}
-		State s((Edge*)NULL, context, false); // entry is cleared anyway
-		s.merge(*v, b); // s <- widening(s0, s1, ..., sn)
-		LockPtr<States> rtnv(new States(1));
-		rtnv->push(s);
-		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v->count() > 50)
-			cout << " " << v->count() << " states merged into 1 (from " << ins.count() << " ins)." << endl;
-		return rtnv;
+		else
+		{
+			State s((Edge*)NULL, context, false); // entry is cleared anyway
+			s.merge(*v, b); // s <- widening(s0, s1, ..., sn)
+			LockPtr<States> rtnv(new States(1));
+			rtnv->push(s);
+			if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v->count() > 50)
+				cout << " " << v->count() << " states merged into 1 (from " << ins.count() << " ins)." << endl;
+			return rtnv;
+		}
 	}
 	else
 		return v; // no widening
@@ -211,7 +214,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 
 LockPtr<Analysis::States> DefaultAnalysis::vectorOfS(const Vector<Edge*>& ins) const
 {
-	if(ins.count() == 1) // opti TODO! should work now with the LockPtr
+	if(ins.count() == 1) // opti 
 		return EDGE_S.use(ins[0]);
 	LockPtr<States> s(new States());
 	for(Vector<Edge*>::Iter i(ins); i; i++)

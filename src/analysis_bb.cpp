@@ -28,7 +28,7 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 		sem::Block block;
 		insts->semInsts(block);
 		
-		sem::inst last_condition;
+		sem::inst last_condition(NOP);
 		PathIter seminsts;
 		// parse semantical instructions with PathIter
 		for(seminsts.start(*insts); seminsts; seminsts++)
@@ -39,6 +39,7 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 			{	// backup the list of generated predicates before entering the condition
 				generated_preds_before_condition.addAll(generated_preds); // side effect: reverses the order of the list
 				DBG(color::IBlu() << "(Parsing taken path)")
+				last_condition = *seminsts; // save this for later
 			}
 			if(seminsts.pathEnd()) // CONT
 			{ 	// dumping the current generated_preds into the previous_paths_preds list
@@ -72,9 +73,9 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 	}
 }
 
-void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_condition)
+// @param last_condition If we are in a conditional segment, the sem inst corresponding to the conditional instruction, NOP otherwise
+void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst& last_condition)
 {
-	#if 1
 	const Operand *opd1 = NULL, *opd2 = NULL, *opd11 = NULL, *opd12 = NULL, *opd21 = NULL, *opd22 = NULL;
 	condoperator_t opr = CONDOPR_EQ; // default is =
 	Path labels; // default is {}
@@ -92,22 +93,29 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 		case BRANCH:
 			break;
 		case CONT:
-			if(Option<Predicate> p = getPredicateGeneratedByCondition(last_condition, false, labels))
 			{
-				make_pred = true;
-				opr = p.value().opr();
-				opd1 = p.value().left();
-				opd2 = p.value().right();
+				const Operand *opd_left = NULL, *opd_right = NULL;
+				if(findValueOfCompVar(OperandVar(last_condition.sr()), opd_left, opd_right, labels))
+				{
+					Predicate p = getConditionalPredicate(last_condition, opd_left, opd_right, false); // false because we need to invert condition (else branch)
+					make_pred = true;
+					opr = p.opr();
+					opd1 = p.left();
+					opd2 = p.right();
+				}
 			}
 			break; // we cannot generate a predicate otherwise
 		case IF:
-			last_condition = *seminsts; // save this for later
-			if(Option<Predicate> p = getPredicateGeneratedByCondition(last_condition, true, labels))
 			{
-				make_pred = true;
-				opr = p.value().opr();
-				opd1 = p.value().left();
-				opd2 = p.value().right();
+				const Operand *opd_left = NULL, *opd_right = NULL;
+				if(findValueOfCompVar(OperandVar(last_condition.sr()), opd_left, opd_right, labels))
+				{
+					Predicate p = getConditionalPredicate(last_condition, opd_left, opd_right, true);
+					make_pred = true;
+					opr = p.opr();
+					opd1 = p.left();
+					opd2 = p.right();
+				}
 			}
 			break; // we cannot generate a predicate otherwise
 		case LOAD: // reg <- MEM_type(addr)
@@ -130,8 +138,10 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 				else if(!(*addr_mem).isAligned())
 				{
 					sem::type_t type = (*seminsts).type();
-					ASSERTP(getSizeOfType(type) + (*addr_mem).addr().value().val() % 4 <= 4, "unaligned access is overflowing to next memcell!")
-					DBGW("TODO: load at unaligned addr: " << *addr_mem << ", not implemented yet (could ignore)")
+					const int shift = (*addr_mem).addr().value().val() % 4;
+					ASSERTP(getSizeOfType(type) + shift <= 4, "unaligned access is overflowing to next memcell!")
+					make_pred = false; // TODO! could improve with a shifted predicate
+					// DBGW("TODO: load at unaligned addr: " << *addr_mem << ", not implemented yet (probably unimpactful)")
 				}
 				// if we can't value it, just say reg = [addr]
 				else
@@ -150,16 +160,24 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 		case STORE:	// MEM_type(addr) <- reg
 			if(Option<OperandMem> addr_mem = getOperandMem(addr, labels))
 			{
-				invalidateMem(*addr_mem);
 				if(!(*addr_mem).isAligned())
 				{
+					const int shift = (*addr_mem).addr().value().val() % 4;
+					DBG(color::IYel() << "Unaligned STORE to " << *addr_mem << ", invalidating " << OperandMem((*addr_mem).addr().value() - shift))
 					sem::type_t type = (*seminsts).type();
-					ASSERTP(getSizeOfType(type) + (*addr_mem).addr().value().val() % 4 <= 4, "unaligned access is overflowing to next memcell!")
-					ASSERTP(false, "store at unaligned access")
+					ASSERTP(getSizeOfType(type) + shift <= 4, "unaligned access is overflowing to next memcell!")
+					// ASSERTP(false, "store at unaligned access")
+					
+					invalidateMem(OperandMem((*addr_mem).addr().value() - shift));
+					make_pred = false; // TODO! could improve with a shifted predicate
 				}
-				make_pred = true;
-				opd1 = dag->var(reg);
-				opd2 = dag->mem(*addr_mem);
+				else
+				{
+					invalidateMem(*addr_mem);
+					make_pred = true;
+					opd1 = dag->var(reg);
+					opd2 = dag->mem(*addr_mem);
+				}
 			}
 			else
 			{
@@ -665,8 +683,8 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 							DBG(color::BIRed() << "Untested case of operator MULH running!")
 							ASSERT(!UNTESTED_CRITICAL);
 							opd1 = dag->var(d);
-							make_pred = true;
 							opd2 = dag->mulh(dag->cst(constants[d]), dag->var(b));
+							make_pred = true;
 							constants.invalidate(d);
 						}
 					}
@@ -686,8 +704,8 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 						else
 						{
 							opd1 = dag->var(d);
-							make_pred = true;
 							opd2 = dag->mulh(dag->var(a), dag->cst(constants[d]));
+							make_pred = true;
 							constants.invalidate(d);
 						}
 					}
@@ -710,8 +728,8 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 						else
 							opd22 = dag->var(b);
 						opd1 = dag->var(d);
-						make_pred = true;
 						opd2 = dag->mulh(opd21, opd22);
+						make_pred = true;
 					}
 				}
 			}
@@ -757,10 +775,8 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 							Constant d_val = constants[d]; // remember this value to use it in predicate
 							constants.invalidate(d);
 							opd1 = dag->var(d);
-							opd21 = dag->cst(d_val);
-							opd22 = dag->var(b);
+							opd2 = dag->div(dag->cst(d_val), dag->var(b));
 							make_pred = true;
-							opd2 = dag->div(opd21, opd22);
 						}
 					}
 				}
@@ -779,10 +795,8 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 							Constant d_val = constants[d]; // remember this value to use it in predicate
 							constants.invalidate(d);
 							opd1 = dag->var(d);
-							opd21 = dag->var(a);
-							opd22 = dag->cst(d_val);
+							opd2 = dag->div(dag->var(a), dag->cst(d_val));
 							make_pred = true;
-							opd2 = dag->div(opd21, opd22);
 						}
 					}
 				}
@@ -794,9 +808,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 					else
 					{
 						opd1 = dag->var(d);
-						opd21 = dag->var(a);
-						opd22 = dag->var(b);
-						opd2 = dag->div(opd21, opd22);
+						opd2 = dag->div(dag->var(a), dag->var(b));
 						make_pred = true; // d = a / b
 					}
 				}
@@ -808,14 +820,13 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 			if(d == a || d == b)
 				break;
 			opd1 = dag->var(d);
-			{
-				opd21 = dag->var(a);
-				opd22 = dag->var(b);
-			}
-				opd2 = dag->mod(opd21, opd22);
+			opd21 = dag->var(a);
+			opd22 = dag->var(b);
+			opd2 = dag->mod(opd21, opd22);
 			if(isConstant(a) && isConstant(b))
 				constants.set(d, constants[a]%constants[b], getLabels(a, b));
-			else make_pred = true;
+			else
+				make_pred = true;
 			break;
 		default:
 			DBG(color::BIRed() << "Unknown seminst running!")
@@ -826,11 +837,18 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, sem::inst& last_
 	}
 	if(make_pred)
 		generated_preds += makeLabelledPredicate(opr, opd1, opd2, labels);
-#	endif
 }
 
-// do all the preprocessing and pretty printing job for making a predicate, then return the final labelled predicate ready to be added to the list
-// this function handles the deletion of opd1 and opd2
+/**
+ * @brief      Try to replace constants in the predicate, update labels and pretty print accordingly, then return the final labelled predicate ready to be added to the list
+ *
+ * @param      opr     The operator
+ * @param      opd1    The operand 1
+ * @param      opd2    The operand 2
+ * @param      labels  Labels to add to the generated predicate
+ *
+ * @return     The generated LabelledPredicate
+ */
 LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, const Operand* opd1, const Operand* opd2, Path& labels) const
 {
 	ASSERT(opd1 && opd2);
@@ -1488,16 +1506,21 @@ void Analysis::State::updateLabelsWithReplacedConstantsInfo(Path& labels, const 
 	// }
 }
 
-Option<Predicate> Analysis::State::getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels)
+/**
+ * @brief      warning: must be called with a suppported condition
+ *
+ * @param[in]  condition  The condition
+ * @param[in]  opd_left   The operand left
+ * @param[in]  opd_right  The operand right
+ * @param[in]  taken      The taken
+ *
+ * @return     The conditional predicate.
+ */
+Predicate Analysis::State::getConditionalPredicate(sem::inst condition, const Operand* opd_left, const Operand* opd_right, bool taken)
 {
-	cond_t kind = condition.cond();
-	t::int16 sr = condition.sr(); // ARM's r16
-	const Operand *opd_left = NULL, *opd_right = NULL;
-	if(!findValueOfCompVar(OperandVar(sr), opd_left, opd_right, labels))
-		return elm::none;
-	
 	condoperator_t opr;
 	bool reverse = false;
+	cond_t kind = condition.cond();
 	if(!taken)
 		kind = invert(kind); // kind = !kind
 	switch(kind) // TODO: handle unsigned better
@@ -1526,10 +1549,13 @@ Option<Predicate> Analysis::State::getPredicateGeneratedByCondition(sem::inst co
 		case NE:
 			opr = CONDOPR_NE;
 			break;
-		default:
-			return elm::none; // invalid condition, exit
+		default: // NO_COND, ANY_COND, MAX_COND
+			crash(); // invalid condition, exit
 	}
-	return elm::some(Predicate(opr, reverse ? opd_right : opd_left, reverse ? opd_left : opd_right));
+	if(reverse)
+		return Predicate(opr, opd_right, opd_left);
+	else
+		return Predicate(opr, opd_left, opd_right);
 }
 
 /*

@@ -16,7 +16,7 @@
 // v1:debug loop analysis and many other
 // v2: macro debugs
 // #define DBGG(str) { if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) elm::cout << elm::log::Debug::debugPrefix(__FILE__, __LINE__) << str << elm::color::RCol() << elm::io::endl; }
-#define DBG_WARNINGS
+// #define DBG_WARNINGS
 
 #define UNTESTED_CRITICAL true // Raise exceptions when executing untested code if true
 

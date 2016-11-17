@@ -112,8 +112,9 @@ Kind_t CVC4OperandVisitor::getKind(arithoperator_t opr)
 			break;
 		case ARITHOPR_CMP:
 			ASSERTP(false, "non-complete operator");
+			break;
 		default:
-			ASSERT(false);
+			crash();
 	}
 }
 
