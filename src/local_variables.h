@@ -1,17 +1,17 @@
 #ifndef _LOCAL_VARIABLES_H
 #define _LOCAL_VARIABLES_H
 
-#include <elm/avl/Set.h>
-// #include <elm/genstruct/SLList.h>
+// #include <elm/avl/Set.h>
+#include <elm/data/SortedList.h> // ListSet
 #include <elm/util/BitVector.h>
 #include <otawa/cfg/Edge.h>
 #include "constant.h"
-// #include "debug.h"
+#include "pretty_printing.h"
 #include "operand.h"
 
 // using namespace elm::genstruct; 
 using otawa::Edge;
-using elm::avl::Set;
+using elm::ListSet;
 
 /*
 	The following conventions are made:
@@ -20,14 +20,14 @@ using elm::avl::Set;
 */
 class LocalVariables {
 public:
-	typedef Set<Edge*> labels_t;
+	typedef ListSet<Edge*> labels_t;
 
 	LocalVariables() : size(0), thresold(0), o(NULL), l(NULL), u() { } // invalid
 	LocalVariables(DAG& dag, short max_tempvars, short max_registers) : size(max_tempvars + max_registers), thresold(max_registers),
 		o(new const Operand*[size]), l(new labels_t*[size]), u(size) {
 		array::clear(l, size); // array::clear call is a fast one because it's an array of pointers
-		// array::clear(u, size); // all updates to false
 		array::clear(o, size); // all operands to NULL - aka Identity
+		// array::clear(u, size); // all updates to false
 		// for(int i = 0; i < size; i++)
 		// 	o[i] = dag.var(getId(i)); // set every rx to rx, and tx to tx
 	}
@@ -54,6 +54,12 @@ private:
 		{ return getIndex(var.addr()); }
 	inline t::int32 getId(int index) const
 		{ return index < thresold ? index : thresold-index-1; }
+	void label(t::int32 id, Edge* e)
+		{ if(!l[id]) l[id] = new labels_t(); //crash();
+		  l[id]->add(e); }
+	void label(t::int32 id, const labels_t& labs)
+		{ if(!l[id]) l[id] = new labels_t(labs);
+		  else for(labels_t::Iter i(labs); i; i++) l[id]->add(*i); }
 
 public:
 	inline bool isValid() const
@@ -65,7 +71,9 @@ public:
 	inline const labels_t& labels(OperandVar var) const
 		{ return l[getIndex(var)] ? *l[getIndex(var)] : labels_t::null; }
 	inline void label(OperandVar var, Edge* e)
-		{ l[getIndex(var)]->add(e); }
+		{ label(getIndex(var), e); }
+	inline void label(OperandVar var, const labels_t& labs)
+		{ label(getIndex(var), labs); }
 	inline void clearLabels(OperandVar var)
 		{ delete l[getIndex(var)]; l[getIndex(var)] = NULL; }
 	inline bool isUpdated(OperandVar var)
@@ -74,7 +82,7 @@ public:
 		{ u.set(getIndex(var)); }
 	inline void resetUpdatedMarks()
 		{ u.clear(); }
-	 // { array::clear(u, size); }
+	void onEdge(Edge* e);
 	void merge(const LocalVariables& lv); // this = this ∩ lv
 
 	// void merge(const SLList<ConstantVariablesCore>& cvl);
@@ -84,7 +92,8 @@ public:
 	LocalVariables& operator=(const LocalVariables& lv) {
 		if(lv.isValid())
 		{
-			if(isValid()) {
+			if(isValid())
+			{
 				ASSERTP(size == lv.size && thresold == lv.thresold, "sizes or thresolds do not match ("
 				  << size << "/" << lv.size << ", " << thresold << "/" << lv.thresold << ")");
 			}
@@ -128,6 +137,32 @@ public:
 	inline friend io::Output& operator<<(io::Output& out, const LocalVariables& lv)
 		{ return lv.print(out); }
 
+	// Iter class
+	class Iter: public PreIterator<Iter, const Operand*> {
+	public:
+		// inline Iter(void) : lv { }
+		inline Iter(const LocalVariables& lv_) : lv(lv_), n(0) { }
+		inline Iter(const Iter& i) : lv(i.lv), n(i.n) { }
+		
+		inline bool ended(void) const
+			{ return n >= lv.size; }
+		inline const Operand* item(void) const
+			{ return lv.o[n]; }
+		inline void next(void)
+			{ n++; }
+
+		// returns the id of the current register/tempvar
+		inline OperandVar id() const
+			{ return OperandVar(n < lv.thresold ? n : lv.thresold-n-1); }
+		inline const Iter* operator->(void) const
+			{ return this; }
+
+	private:
+		friend class LocalVariables;
+		const LocalVariables& lv;
+		int n;
+	};
+
 private:
 	short size; // size of arrays. save space with shorts
 	short thresold; // == max_registers
@@ -142,18 +177,10 @@ private:
 		u = lv.u;
 		for(int i = 0; i < size; i++) {
 			delete l[i];
-			l[i] = lv.l[i] ? new labels_t(*lv.l[i]) : NULL;		
+			l[i] = (lv.l[i] != NULL) ? new labels_t(*lv.l[i]) : NULL;		
 		}
 	}
-	io::Output& print(io::Output& out) const {
-		if(! isValid())
-			return out << "<invalid>" << endl;
-		for(int i = 0; i < size; i++) {
-			if(o[i])
-				out << "        " << OperandVar(getId(i)) << "\t| " << *o[i] << endl;
-		}
-		return out;
-	}
+	io::Output& print(io::Output& out) const;
 }; // LocalVariables class
 
 #endif

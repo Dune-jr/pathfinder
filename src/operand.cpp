@@ -704,7 +704,8 @@ bool OperandArith::isLinear(bool only_linear_opr) const
 		// linear iff right operand is constant
 		case ARITHOPR_DIV:
 		case ARITHOPR_MOD:
-			return !only_linear_opr && opd2->isConstant();
+			// return !only_linear_opr && opd2->isConstant();
+			return opd2->isConstant(); // just mod & div should be no problem
 
 		// hopeless
 		case ARITHOPR_MULH:

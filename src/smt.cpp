@@ -19,6 +19,7 @@ SMT::SMT(int flags) : flags(flags) { }
  */
 Option<Analysis::Path*> SMT::seekInfeasiblePaths(const Analysis::State& s)
 {
+#ifdef V1
 	// add the constant info to the the list of predicates
 	SLList<LabelledPredicate> labelled_preds = s.getLabelledPreds(); // implicit copy
 	labelled_preds += s.getConstants().toPredicates(s.getDag());
@@ -59,6 +60,9 @@ Option<Analysis::Path*> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	if(path->isEmpty())
 		return elm::none;
 	return elm::some(path);
+#else
+	crash();
+#endif
 }
 
 Option<Analysis::Path*> SMT::seekInfeasiblePathsv2(const Analysis::State& s)
@@ -71,13 +75,17 @@ Option<Analysis::Path*> SMT::seekInfeasiblePathsv2(const Analysis::State& s)
 		if(dbg_verbose == DBG_VERBOSE_ALL) cout << color::BGre() << "SAT\n";
 		return elm::none;
 	}
-	if(dbg_verbose == DBG_VERBOSE_ALL) cout << color::BIRed() << "UNSAT\n";
+	else
+	{
+		if(dbg_verbose == DBG_VERBOSE_ALL) cout << color::BIRed() << "UNSAT\n";
 
-	// TODO!!
-	Analysis::Path *path = new Analysis::Path();
-	for(DetailedPath::EdgeIterator iter(s.getDetailedPath()); iter; iter++)
-		path->add(*iter);
-	return elm::some(path);
+		// TODO!! we need to implement labels on memory, and use those to minimize IPs.
+		// Also failure case should be the union of all preds, not the full path.
+		Analysis::Path *path = new Analysis::Path();
+		for(DetailedPath::EdgeIterator iter(s.getDetailedPath()); iter; iter++)
+			path->add(*iter);
+		return elm::some(path);
+	}
 }
 
 

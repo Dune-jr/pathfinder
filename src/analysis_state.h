@@ -16,6 +16,7 @@
 #include "local_variables.h"
 
 using namespace otawa;
+using otawa::sem::PathIter;
 using elm::genstruct::SLList;
 // using elm::genstruct::Vector;
 using elm::genstruct::HashTable;
@@ -27,15 +28,18 @@ private:
 
 	const dfa::State* dfa_state;
 	OperandVar sp; // the Stack Pointer register
+
+	// v2
 	DAG* dag;
-#ifdef EXP
 	LocalVariables lvars;
+	//LocalVariables lvars_taken;
 	mem_t mem;
-	// LocalVariables lvars_taken;
-#endif
+
 	bool bottom; // true=is Bottom, false= is Top
 	DetailedPath path;
+#ifdef V1
 	ConstantVariables constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
+#endif
 	SLList<LabelledPredicate> labelled_preds; // previously generated predicates
 	SLList<LabelledPredicate> generated_preds; // predicates local to the current BB
 	SLList<LabelledPredicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
@@ -44,30 +48,31 @@ private:
 
 public:
 	explicit State(bool bottom = false); // false: create an invalid state, true: create a bottom state
-	State(Block* entryb, const context_t& context, bool init = true);
-	State(Edge* entry_edge, const context_t& context, bool init = false);
+	// State(Block* entryb, const context_t& context, bool init = true);
+	State(Edge* entry_edge, const context_t& context, bool init);
 	State(const State& s);
 	inline const DetailedPath& getDetailedPath() const { return path; }
 	inline Edge* lastEdge() const { return path.lastEdge(); }
 	inline const SLList<LabelledPredicate>& getLabelledPreds() const { return labelled_preds; }
+#ifdef V1
 	inline const ConstantVariables& getConstants() const { return constants; }
-#ifdef EXP
+#endif
 	inline const LocalVariables& getLocalVariables() const { return lvars; }
 	inline const mem_t& getMemoryTable() const { return mem; }
-#endif
 	inline elm::String getPathString() const { return path.toString(); /*orderedPathToString(path.toOrderedPath());*/ }
 	inline void onLoopEntry(Block* loop_header) { path.onLoopEntry(loop_header); }
 	inline void onLoopExit(Option<Block*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }
 	inline void onCall(SynthBlock* sb)   { path.onCall(sb); }
 	inline void onReturn(SynthBlock* sb) { path.onReturn(sb); }
 	inline bool isBottom() const { return bottom; }
-	inline bool isValid() const { return dfa_state != NULL && constants.isValid(); } // this is so that we can have empty states that do not use too much memory
+	inline bool isValid() const { return dfa_state != NULL /*&& constants.isValid()*/; } // this is so that we can have empty states that do not use too much memory
 	inline DAG& getDag() const { return *dag; }
 
 	// analysis_state.cpp
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
 	elm::String dumpEverything() const;
 	void merge(const States& ss, Block* b);
+	void accel(const State& s0);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e);
 	void removeConstantPredicates();
@@ -95,9 +100,10 @@ private:
 	// analysis_bb.cpp (v2)
 	void set(const OperandVar& var, const Operand* expr, bool set_updated = true);
 	void setMem(Constant addr, const Operand* expr);
-	inline const Operand* getPtr(t::int32 var_id) const;
-	inline void scratch(const OperandVar& var) { set(var, dag->new_top(), false); lvars.clearLabels(var); }
+	inline void scratch(const OperandVar& var);
 	void scratchAllMemory();
+	inline const Operand* getPtr(t::int32 var_id) const;
+	void updateLabels(const PathIter& seminsts);
 	static bool affectsRegister(t::uint16 op);
 	static bool affectsMemory(t::uint16 op);
 	void store(OperandVar addr, const Operand* b);
@@ -132,14 +138,18 @@ private:
 	bool findValueOfCompVar(const OperandVar& var, Operand const*& opd_left, Operand const*& opd_right, Path& labels);
 	Option<OperandMem> getOperandMem(const OperandVar& var, Path& labels);
 	bool invalidateAllMemory();
+#ifdef V1
 	void updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const;
+#endif
 	// Option<Predicate> getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels);
-	Predicate getConditionalPredicate(sem::inst condition, const Operand* opd_left, const Operand* opd_right, bool taken);
+	Predicate getConditionalPredicate(sem::cond_t kind, const Operand* opd_left, const Operand* opd_right, bool taken);
 	Option<Constant> getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type) const;
 	int getSizeOfType(otawa::sem::type_t type) const;
+#ifdef V1
 	inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv) const { return constants.getLabels(opdv); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv1, const OperandVar& opdv2) const { return constants.getLabels(opdv1, opdv2); }
+#endif
 
 	// PredIterator class
 	class PredIterator: public PreIterator<PredIterator, const LabelledPredicate&> {

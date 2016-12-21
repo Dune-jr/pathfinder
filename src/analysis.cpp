@@ -6,6 +6,7 @@
 #include <ctime> // clock
 #include <iomanip> // std::setprecision
 #include <iostream> // std::cout
+#include <elm/util/BitVector.h>
 #include <otawa/cfg/Edge.h>
 #include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
 #include <otawa/dfa/State.h> // INITIAL_STATE_FEATURE
@@ -49,6 +50,8 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 	context.max_registers = (short)ws->platform()->regCount(); // count of registers
 	context.dag = new DAG(context.max_tempvars, context.max_registers);
 
+	if(!(flags&WITH_V1) && !(flags&WITH_V2))
+		DBGW("No A.I. analysis selected")
 	ASSERTP(!(flags&WITH_V1 && flags&WITH_V2), "v1 and v2 both selected at once - no longer permitted because v1 struggles with OperandTops")
 }
 
@@ -472,6 +475,35 @@ int Analysis::simplifyUsingDominance(Option<Edge*> (*f)(GlobalDominance* gdom, E
 	return changed_count;
 }
 
+/**
+ * @fn int Analysis::removeDuplicateIPs();
+ * @brief Look for infeasible paths that share the same ordered list of edges and remove duplicates 
+ * @rtn the amount of infeasible paths that were removed
+ */
+int Analysis::removeDuplicateIPs()
+{
+	const int n = infeasible_paths.count();
+	if(!n) // no infeasible paths
+		return 0;
+	BitVector bv(n, true);
+	for(int i = 0; i < n; i++)
+		for(int j = i+1; j < n; j++)
+			if(infeasible_paths[j] == infeasible_paths[i]) // found a duplicate
+			{
+				bv.set(i, false); // do not include i
+				ASSERTP(false, "it seems like we never hit this point?? rm assert if we do, this should be the case")
+				break; // do not look any further
+			}
+	const int k = bv.countBits();
+	Vector<DetailedPath> v(bv.countBits()); // the new infeasible paths vector will have the perfect size
+	for(int i = 0; i < n; i++)
+		if(bv[i])
+			v.push(infeasible_paths[i]);
+	if(k != n) // some elements have been removed
+		infeasible_paths = v;
+	return n - k;
+}
+
 void Analysis::postProcessResults(CFG *cfg)
 {
 	if(! (flags&POST_PROCESSING))
@@ -486,48 +518,12 @@ void Analysis::postProcessResults(CFG *cfg)
 		if(dp.contains(program_entry_edge))
 			dp.remove(program_entry_edge);
 	}*/ // should be removed by dominance anyway
-	int changed_count = simplifyUsingDominance(&f_dom);
-	DBGG("Dominance: minimized " << changed_count << " infeasible paths.")
-	changed_count = simplifyUsingDominance(&f_postdom);
-	DBGG("Post-dominance: minimized " << changed_count << " infeasible paths.")
-	
-	/*int changed_count = 0;
-	for(Vector<DetailedPath>::MutableIterator dpiter(infeasible_paths); dpiter; dpiter++)
-	{
-		DetailedPath& dp = dpiter.item();
-		DBG(dp << "...")
-		bool hasChanged = false, changed = false;
-		do
-		{
-			changed = false;
-			elm::Option<DetailedPath::FlowInfo> prev = elm::none;
-			for(DetailedPath::Iterator i(dp); i; i++)
-			{
-				if(i->isEdge())
-				{
-					if(prev)
-					{
-						DBG("\tdom(" << (*prev).getEdge() << ", " << i->getEdge() << "): " << 
-							DBG_TEST(gdom->dom((*prev).getEdge(), i->getEdge()), false))
-						if(gdom->dom((*prev).getEdge(), i->getEdge()))
-						{
-							dp.remove((*prev).getEdge()); // search and destroy
-							changed = true;
-							hasChanged = true;
-							break;
-						}
-					}
-					prev = elm::some(*i);
-				}
-			}
-		} while(changed);
-		if(hasChanged)
-		{
-			dp.optimize();
-			DBG("\t...to " << dp)
-			changed_count++;
-		}
-	}*/
+	int count = simplifyUsingDominance(&f_dom);
+	DBGG("Dominance: minimized " << count << " infeasible paths.")
+	count = simplifyUsingDominance(&f_postdom);
+	DBGG("Post-dominance: minimized " << count << " infeasible paths.")
+	count = removeDuplicateIPs();
+	DBGG("Removed " << count << " duplicate infeasible paths.")
 }
 
 /**

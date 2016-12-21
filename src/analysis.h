@@ -1,7 +1,7 @@
 #ifndef _ANALYSIS_H
 #define _ANALYSIS_H
 
-#define EXP
+// #define V1 // v1 support
 
 // #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
@@ -140,8 +140,7 @@ private:
 	void processCFG(CFG *cfg);
 	States& I(Block* b, States& s); // modifies existing states
 	LockPtr<States> I(const Vector<Edge*>::Iter& e, LockPtr<States> s); // creates new states
-	// void removeDuplicateInfeasiblePaths();
-	Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
+	// Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	// elm::String wlToString() const;
 
 	bool anyEdgeHasTrace(const Vector<Edge*>& edges) const;
@@ -153,6 +152,7 @@ private:
 	static Option<Edge*> f_dom(GlobalDominance* gdom, Edge* e1, Edge* e2);
 	static Option<Edge*> f_postdom(GlobalDominance* gdom, Edge* e1, Edge* e2);
 	int simplifyUsingDominance(Option<Edge*> (*f)(GlobalDominance* gdom, Edge* e1, Edge* e2));
+	int removeDuplicateIPs(void);
 
 	// bool invalidate_constant_info
 	enum {

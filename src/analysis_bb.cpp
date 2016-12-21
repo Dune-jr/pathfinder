@@ -69,13 +69,16 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 		}
 		else
 			DBG("Predicates generated: " << generated_preds)
+#ifdef V1
 		DBG("Constants updated: " << constants.printChanges()) // TODO!! check that a mess doesn't happen with constants being updated by both taken and not taken path
+#endif
 	}
 }
 
 // @param last_condition If we are in a conditional segment, the sem inst corresponding to the conditional instruction, NOP otherwise
 void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst& last_condition)
 {
+#ifdef V1
 	const Operand *opd1 = NULL, *opd2 = NULL, *opd11 = NULL, *opd12 = NULL, *opd21 = NULL, *opd22 = NULL;
 	condoperator_t opr = CONDOPR_EQ; // default is =
 	Path labels; // default is {}
@@ -97,7 +100,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 				const Operand *opd_left = NULL, *opd_right = NULL;
 				if(findValueOfCompVar(OperandVar(last_condition.sr()), opd_left, opd_right, labels))
 				{
-					Predicate p = getConditionalPredicate(last_condition, opd_left, opd_right, false); // false because we need to invert condition (else branch)
+					Predicate p = getConditionalPredicate(last_condition.cond(), opd_left, opd_right, false); // false because we need to invert condition (else branch)
 					make_pred = true;
 					opr = p.opr();
 					opd1 = p.left();
@@ -110,7 +113,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 				const Operand *opd_left = NULL, *opd_right = NULL;
 				if(findValueOfCompVar(OperandVar(last_condition.sr()), opd_left, opd_right, labels))
 				{
-					Predicate p = getConditionalPredicate(last_condition, opd_left, opd_right, true);
+					Predicate p = getConditionalPredicate(last_condition.cond(), opd_left, opd_right, true);
 					make_pred = true;
 					opr = p.opr();
 					opd1 = p.left();
@@ -219,18 +222,19 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 			{
 				if(d == b) // d <- d+d
 				{	// [d/2 / d]
-					update(OperandVar(d), dag->div(dag->var(d), dag->cst(2)), labels);
 					opd11 = dag->var(d);
 					opd12 = dag->var(2);
-					opd2 = dag->cst(0);
 					opd1 = dag->mod(opd11, opd12);
+					opd2 = dag->cst(0);
 					make_pred = true; // d % 2 = 0
 					if(isConstant(d))
 						constants.set(d, constants[d]*2, getLabels(d));
+					update(OperandVar(d), dag->div(dag->var(d), dag->cst(2)), labels);
 				}
 				else // d <- d+b
 				{	// [d-b / d]
-					update(OperandVar(d), dag->sub(dag->var(d), dag->var(b)), labels);
+					// update(OperandVar(d), dag->sub(dag->var(d), dag->var(b)), labels); //!\\ do not do this before settings constants
+					// otherwise it gives f.e. /* ?2 = ?3, ?3==2 */ ?3 := ?3+1 -> /* ?2 = [?3-1]=[2-1], ?3==3... that's bad! */
 					if(isConstant(d))
 					{
 						if(isConstant(b))
@@ -241,11 +245,12 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 							opd1 = dag->var(d);
 							opd21 = dag->cst(constants[d]);
 							opd22 = dag->var(b);
-							make_pred = true;
 							opd2 = dag->add(opd21, opd22);
+							make_pred = true;
 
 							constants.invalidate(d);
 						}
+						update(OperandVar(d), dag->sub(dag->var(d), dag->var(b)), labels);
 					}
 				}
 			}
@@ -253,7 +258,6 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 			{
 				if(d == b) // d <- d+a
 				{	// [d-a / d]
-					update(OperandVar(d), dag->sub(dag->var(d), dag->var(a)), labels);
 					if(isConstant(d))
 					{
 						if(isConstant(a))
@@ -270,6 +274,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 							constants.invalidate(d);
 						}
 					}
+					update(OperandVar(d), dag->sub(dag->var(d), dag->var(a)), labels);
 				}
 				else
 				{
@@ -299,7 +304,6 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 				}
 				else // d <- d-b
 				{	// [d+b / d]
-					update(OperandVar(d), dag->add(dag->var(d), dag->var(b)), labels);
 					if(isConstant(d))
 					{
 						if(isConstant(b))
@@ -316,13 +320,13 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 							constants.invalidate(d);
 						}
 					}
+					update(OperandVar(d), dag->add(dag->var(d), dag->var(b)), labels);
 				}
 			}
 			else
 			{
 				if(d == b) // d <- a-d
 				{	// [a-d / d], this function f has a f°f=Id property
-					update(OperandVar(d), dag->sub(dag->var(a), dag->var(d)), labels);
 					if(isConstant(d))
 					{
 						if(isConstant(a)) // everything is const, update const value of d
@@ -339,6 +343,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 							constants.invalidate(d);
 						}
 					}
+					update(OperandVar(d), dag->sub(dag->var(a), dag->var(d)), labels);
 				}
 				else // d <- a-b
 				{
@@ -377,7 +382,6 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 				if(d == a) // d <- d << b
 				{
 					labels = getLabels(b);
-					update(OperandVar(d), dag->div(dag->var(d), dag->cst(1 << b_val)), labels);
 					// we also add a predicate to say that d is now a multiple of 2^b
 					if(isConstant(d)) // we must update constant value of d
 					{
@@ -392,6 +396,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 						opd1 = dag->mod(opd11, opd12);
 						make_pred = true; // will use labels
 					}
+					update(OperandVar(d), dag->div(dag->var(d), dag->cst(1 << b_val)), labels);
 				}
 				else // d <- a << b
 				{
@@ -451,14 +456,13 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 			}
 			break;
 		case NEG: // TODO test
-			ASSERT(!UNTESTED_CRITICAL);
-			DBG(color::BIRed() << "Untested operator running!")
+			UNTESTED_CODE("operator")
 			{
 				if(a == d) // d <- -d
 				{	// [-1 * d / d]
-					update(OperandVar(d), dag->neg(dag->var(d)), labels); // TODO test
 					if(isConstant(d))
 						constants.set(d, -constants[d], getLabels(d));
+					update(OperandVar(d), dag->neg(dag->var(d)), labels); // TODO test
 				}
 				else
 				{	
@@ -554,15 +558,13 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 			}
 			break;
 		case MULU:
-			ASSERT(!UNTESTED_CRITICAL);
-			DBG(color::BIRed() << "Untested unsigned variant running!")
+			UNTESTED_CODE("unsigned variant")
 		case MUL:
 			if(d == a)
 			{
 				if(d == b) // d <- d*d
 				{
-					ASSERT(!UNTESTED_CRITICAL);
-					DBG(color::BIRed() << "Untested case of operator MUL running!")
+					UNTESTED_CODE("case of operator MUL")
 					invalidateVar(d, KEEP_CONSTANT_INFO); // we have no way to do [sqrt(d) / d], so just invalidate
 					opr = CONDOPR_LE; // and add a "0 <= d" predicate
 					opd1 = dag->cst(0);
@@ -590,7 +592,6 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 					}
 					else
 					{	// we add a predicate to say that d is now a multiple of b
-						update(OperandVar(d), dag->div(dag->var(d), dag->var(b)), labels);
 						if(isConstant(b))
 						{
 							opd11 = dag->var(d);
@@ -599,6 +600,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 							opd1 = dag->mod(opd11, opd12); // d % b (%0 is to consider!)
 							make_pred = true;
 						} // I don't think it's worth it to add this "b divides d" predicate if b is not constant... maybe I'm wrong
+						update(OperandVar(d), dag->div(dag->var(d), dag->var(b)), labels);
 					}
 				}
 			}
@@ -621,7 +623,6 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 					}
 					else
 					{	// we add a predicate to say that d is now a multiple of a
-						update(OperandVar(d), dag->div(dag->var(d), dag->var(a)), labels);
 						if(isConstant(a))
 						{
 							opd11 = dag->var(d);
@@ -630,6 +631,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 							opd1 = dag->mod(opd11, opd12); // d % a (%0 is to consider!)
 							make_pred = true;
 						} // I don't think it's worth it to add this "a divides d" predicate if a is not constant... maybe I'm wrong
+						update(OperandVar(d), dag->div(dag->var(d), dag->var(a)), labels);
 					}
 				}
 				else // d <- a*b
@@ -659,8 +661,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 			{
 				if(d == b) // d <- d*d >>32
 				{
-					DBG(color::BIRed() << "Untested case of operator MULH running!")
-					ASSERT(!UNTESTED_CRITICAL);
+					UNTESTED_CODE("case of operator MULH")
 					invalidateVar(d, KEEP_CONSTANT_INFO); // we have no way to do [sqrt(d) / d], so just invalidate
 					opr = CONDOPR_LE; // and add a "0 <= d" predicate
 					opd1 = dag->cst(0);
@@ -680,8 +681,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 							constants.set(d, (t::int64(constants[d].val())*t::int64(constants[b].val()))>>32, getLabels(d, b));
 						else
 						{
-							DBG(color::BIRed() << "Untested case of operator MULH running!")
-							ASSERT(!UNTESTED_CRITICAL);
+							UNTESTED_CODE("case of operator MULH")
 							opd1 = dag->var(d);
 							opd2 = dag->mulh(dag->cst(constants[d]), dag->var(b));
 							make_pred = true;
@@ -735,8 +735,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 			}
 			break;
 		case DIVU:
-			DBG(color::BIRed() << "Untested unsigned variant running!")
-			// ASSERT(!UNTESTED_CRITICAL);
+			UNTESTED_CODE("unsigned variant")
 		case DIV:
 			if(d == a)
 			{
@@ -744,8 +743,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 				{	// [1 / d]
 					// TODO: this should be okay to assume d != 0, right? otherwise the program is faulty?
 					// or should we use a SMT solver mode that supports / 0?
-					DBG(color::BIRed() << "Untested operator running!")
-					ASSERT(!UNTESTED_CRITICAL);
+					UNTESTED_CODE("operator")
 					invalidateVar(d);
 					opd1 = dag->var(d);
 					opd2 = dag->cst(1);
@@ -770,8 +768,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 							constants.set(d, constants[d]/constants[b], getLabels(d, b));
 						else
 						{
-							DBG(color::BIRed() << "Untested operator running!")
-							ASSERT(!UNTESTED_CRITICAL);
+							UNTESTED_CODE("operator")
 							Constant d_val = constants[d]; // remember this value to use it in predicate
 							constants.invalidate(d);
 							opd1 = dag->var(d);
@@ -837,6 +834,9 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 	}
 	if(make_pred)
 		generated_preds += makeLabelledPredicate(opr, opd1, opd2, labels);
+#else
+	crash();
+#endif
 }
 
 /**
@@ -852,8 +852,9 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, const Operand* opd1, const Operand* opd2, Path& labels) const
 {
 	ASSERT(opd1 && opd2);
-	const ConstantVariablesCore& cvc = static_cast<ConstantVariablesCore>(constants);
 	Vector<OperandVar> replaced_vars;
+#ifdef V1
+	const ConstantVariablesCore& cvc = static_cast<ConstantVariablesCore>(constants);
 	// If we have predicates such as ?16 = ?4 ~ t1, make sure none of these are identified as constants in the constantVariables table!
 	opd1 = opd1->replaceConstants(*dag, cvc, replaced_vars);
 	opd2 = opd2->replaceConstants(*dag, cvc, replaced_vars);
@@ -872,6 +873,7 @@ LabelledPredicate Analysis::State::makeLabelledPredicate(condoperator_t opr, con
 		DBG(color::IPur() << DBG_SEPARATOR << color::IBlu() << " Replaced constant" << (count>1?"s ":" ") << str)
 	}
 	updateLabelsWithReplacedConstantsInfo(labels, replaced_vars);
+#endif
 	Predicate p = Predicate(opr, opd1, opd2);
 	DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
 	return LabelledPredicate(p, labels);
@@ -937,8 +939,10 @@ bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_const
 		}
 	}
 
+#ifdef V1
 	if(invalidate_constant_info)
 		constants.invalidate(var);
+#endif
 	return rtn;
 }
 
@@ -1046,7 +1050,9 @@ bool Analysis::State::invalidateTempVars()
 {
 	bool loop, rtn = false;
 
+#ifdef V1
 	rtn |= constants.invalidateTempVars();
+#endif
 
 	// First step: try and replace everything we can
 	do {
@@ -1301,12 +1307,15 @@ bool Analysis::State::replaceMem(const OperandMem& opdm, const Operand* expr, co
 
 // returns true if a variable has been updated
 // second operand is usually an OperandArith
+// WARNING: it's important to do this only after constants have been updated, because opd_modifier WILL be replaced with constants
 bool Analysis::State::update(const OperandVar& opd_to_update, const Operand* opd_modifier, Path& labels)
 {
 	// for example instead of doing [?13+t1/?13], do [?13+4/?13]
 	Vector<OperandVar> replaced_vars;
+#ifdef V1
 	opd_modifier = opd_modifier->replaceConstants(*dag, static_cast<ConstantVariablesCore>(constants), replaced_vars);
 	updateLabelsWithReplacedConstantsInfo(labels, replaced_vars);
+#endif
 
 	// amongst other things this can simplify constant arithopr such as 8+(4-2)
 	if(Option<const Operand*> opd_modifier_simplified = opd_modifier->simplify(*dag))
@@ -1320,8 +1329,8 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand* opd
 #	else
 		DBG(color::IPur() << DBG_SEPARATOR << color::Blu() << " [" << opd_to_update << " → " << *opd_modifier << "]")
 #	endif
-	bool rtn = false;
 	
+	bool rtn = false;
 	for(PredIterator piter(*this); piter; piter++)
 	{
 		if(piter.pred().involvesOperand(opd_to_update))
@@ -1351,9 +1360,13 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand* opd
 // TODO: add a Path& labels parameter
 Option<OperandConst> Analysis::State::findConstantValueOfVar(const OperandVar& var)
 {
+#ifdef V1
 	if(!isConstant(var))
 		return none;
 	return some(OperandConst(constants[var]));
+#else
+	crash();
+#endif
 }
 
 // TODO: maybe we should improve this to handle affine equations ("[SP-12] -1 = 0" etc...)
@@ -1493,6 +1506,7 @@ bool Analysis::State::invalidateAllMemory()
 	return rtn;
 }
 
+#ifdef V1
 /*
  * Operand::replaceConstants returns a Vector of replaced constant variables,
  * then we have to process ConstantVariables constants to find the matching labels and add them to the labels list
@@ -1500,27 +1514,25 @@ bool Analysis::State::invalidateAllMemory()
 void Analysis::State::updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const
 {
 	for(Vector<OperandVar>::Iter iter(replaced_vars); iter; iter++)
-	// {
 		labels += constants.getLabels(*iter);
 		// DBG(color::IRed() << "replaced_vars:" << *iter << ", labels+=" << pathToString(constants.getLabels(*iter)))
-	// }
 }
+#endif
 
 /**
  * @brief      warning: must be called with a suppported condition
  *
- * @param[in]  condition  The condition
- * @param[in]  opd_left   The operand left
- * @param[in]  opd_right  The operand right
- * @param[in]  taken      The taken
+ * @param      kind       The condition kind
+ * @param      opd_left   The operand left
+ * @param      opd_right  The operand right
+ * @param      taken      The taken
  *
  * @return     The conditional predicate.
  */
-Predicate Analysis::State::getConditionalPredicate(sem::inst condition, const Operand* opd_left, const Operand* opd_right, bool taken)
+Predicate Analysis::State::getConditionalPredicate(cond_t kind, const Operand* opd_left, const Operand* opd_right, bool taken)
 {
 	condoperator_t opr;
 	bool reverse = false;
-	cond_t kind = condition.cond();
 	if(!taken)
 		kind = invert(kind); // kind = !kind
 	switch(kind) // TODO: handle unsigned better

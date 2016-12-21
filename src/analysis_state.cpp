@@ -11,43 +11,60 @@
  */
 const Analysis::State bottom(true);
 
-Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), lvars(), mem(29), bottom(bottom), constants() { }
+Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), lvars(), mem(53), bottom(bottom)
+#ifdef V1
+	, constants()
+#endif
+	{ }
 
 // Analysis::State::State(const context_t& context)
 	// : dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
 
-Analysis::State::State(Block* entryb, const context_t& context, bool init)
+/*Analysis::State::State(Block* entryb, const context_t& context, bool init)
 	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(*dag, context.max_tempvars, context.max_registers),
-	mem(53), bottom(false), constants(context.max_tempvars, context.max_registers)
+	mem(53), bottom(false)
+#ifdef V1
+	, constants(context.max_tempvars, context.max_registers)
+#endif
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
 	if(init)
 	{
-		Block::EdgeIter outs(entryb->outs());
-		ASSERT(outs);
-		path.addLast(*outs);
+		// Block::EdgeIter outs(entryb->outs());
+		// ASSERT(outs);
+		path.addLast(theOnly(entryb->outs()));
+#ifdef V1
 		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+#endif
 		set(sp, dag->cst(SP));
 	}
-}
+}*/
 
 Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
 	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(*dag, context.max_tempvars, context.max_registers),
-	mem(53), bottom(false), constants(context.max_tempvars, context.max_registers)
+	mem(53), bottom(false)
+#ifdef V1
+	, constants(context.max_tempvars, context.max_registers)
+#endif
 {
 	generated_preds.clear(); // generated_preds := [[]]
 	labelled_preds.clear(); // labelled_preds := [[]]
 	if(init)
 	{
 		path.addLast(entry_edge);
+#ifdef V1
 		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+#endif
 		set(sp, dag->cst(SP));
 	}
 }
 
 Analysis::State::State(const State& s)
-	: dfa_state(s.dfa_state), sp(s.sp), dag(s.dag), lvars(s.lvars), mem(s.mem), bottom(s.bottom), path(s.path), constants(s.constants),
+	: dfa_state(s.dfa_state), sp(s.sp), dag(s.dag), lvars(s.lvars), mem(s.mem), bottom(s.bottom), path(s.path),
+#ifdef V1
+	constants(s.constants),
+#endif
 	  labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
 	{ }
 
@@ -60,8 +77,12 @@ void Analysis::State::appendEdge(Edge* e)
 		? generated_preds_taken // conditional TAKEN
 		: generated_preds; // non-conditional, NOT TAKEN
 	labelled_preds += labelPredicateList(relevant_preds, e); // label our list of predicates with the current edge then append it
-	constants.label(e); // label the constants as well
+#ifdef V1
+		constants.label(e); // label the constants as well
+#endif
 	relevant_preds.clear(); // TODO!! this is too strong in case of multiple not taken...
+	// v2
+	lvars.onEdge(e);
 }
 
 
@@ -131,17 +152,53 @@ io::Output& Analysis::State::print(io::Output& out) const
 #		endif
 }
 
+
 /**
- * @fn void Analysis::State::merge(const SLList<State>& sl);
- * Modifies the current state to be the result of the merge of an (SL)list of states 
+ * @brief      This function is *this -> s -> s o *this, state composition
+ * @param[in]  s     state to apply
  */
+/*void Analysis::State::apply(const State& s)
+{
+
+}
+*/
+/**
+ * @fn void Analysis::State::accel();
+ * @param *this State after one iteration (starting from T)
+ * @param s0 Initial state (before the loop)
+ */
+/*void Analysis::State::accel(const State& s0)
+{
+	// deal with lvars
+	for(LocalVariables::Iter iter(lvars); iter; iter++)
+	{
+		if(*iter) // iter was modified
+		{
+			const OperandVar x = iter->id();
+			if(iter->isAffineIn(x))
+			{
+
+			}
+			else
+			{
+				DBG(color::IRed() << x << " too complex to accel: " << *iter)
+				lvars[x] = NULL;
+			}
+		}
+	}
+
+	// deal with memory
+	for(mem_t::PairIterator iter(mem); iter; iter++)
+	{
+		const Constant addr = mem.fst;
+	}
+}*/
 
 /**
  * @brief merge all states into one (a bit brutal). Does not take in account current state
  *
  * @param cl Collection of States to process (accepts SLList, Vector etc.)
  */
-#define EXP0
 void Analysis::State::merge(const States& ss, Block* b)
 {
 	ASSERTP(!ss.isEmpty(), "call to Analysis::State::merge with empty ss parameter"); // maybe just leave the state empty
@@ -150,15 +207,17 @@ void Analysis::State::merge(const States& ss, Block* b)
 	generated_preds.clear();
 	generated_preds_taken.clear();
 	labelled_preds.clear();
+#ifdef V1
 	SLList<ConstantVariables> cvl;
-#ifdef EXP0
+#endif
 	lvars = ss.first().lvars;
 	mem = ss.first().mem;
 	// const mem_t* mtab[ss.count()];
 	// int i = 0;
-#endif
 	// intialize to first element
+#ifdef V1
 	constants = ss.first().constants;
+#endif
 	// copy firstElement.labelled_preds into labelled_preds with empty labels
 	for(SLList<LabelledPredicate>::Iterator iter(ss.first().labelled_preds); iter; iter++)
 		labelled_preds += LabelledPredicate(iter->pred(), Path::null);
@@ -170,7 +229,7 @@ void Analysis::State::merge(const States& ss, Block* b)
 			first = false;
 			continue;
 		}
-#ifdef EXP0
+
 		// lvars = lvars ∩ siters->lvars
 		lvars.merge(siter->lvars);
 		// mem = mem ∩ siters->mem
@@ -185,8 +244,9 @@ void Analysis::State::merge(const States& ss, Block* b)
 				mem[i] = Top;
 		// lvtab[i] = &(siter->lvars);
 		// mtab[i++] = &(siter->mem);
-#endif
+#ifdef V1
 		cvl += (*siter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
+#endif
 		// for each element of labelled_preds, we make sure it is in *siter
 		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; )
 		{
@@ -206,7 +266,9 @@ void Analysis::State::merge(const States& ss, Block* b)
 				labelled_preds.remove(iter);
 		}
 	}
+#ifdef V1
 	this->constants.merge(cvl);
+#endif
 	// this->path.merge(stateListToPathVector(sc)); // merge paths as well while keeping some flow info and shrink that in this->path
 	// this-path = DetailedPath(sc.first().lastEdge()->target()->toBasic());
 	this->path.clear();
@@ -296,7 +358,7 @@ void Analysis::State::merge(const States& ss, Block* b)
  */
 Analysis::State Analysis::topState(Block* entry) const
 {
-	return Analysis::State(entry, context);
+	return Analysis::State(theOnly(entry->outs()), context, true);
 }
 
 elm::String Analysis::State::dumpEverything() const
@@ -304,14 +366,15 @@ elm::String Analysis::State::dumpEverything() const
 	elm::String rtn = _
 		<< "--- DUMPING WHOLE STATE ---" << endl
 		<< "  * path=" << getPathString() << endl
+#ifdef V1
 		<< "  * constants=" << constants << endl
+#endif
 		<< "  * labelled_preds=" << labelled_preds << endl
 		<< "  * generated_preds=" << generated_preds << endl
-		// << "  * SLList<LabelledPredicate> generated_preds_taken=" << generated_preds_taken << endl
 		<< "  * lvars= [" << endl << lvars << "]" << endl
 		<< "  * mem= [" << endl;
 	for(mem_t::PairIterator i(mem); i; i++)
-		rtn = _ << rtn << "        [" << (*i).fst << "]\t| " << *(*i).snd << endl;
+		rtn = _ << rtn << "        [" << (*i).fst << "]   \t| " << *(*i).snd << endl;
 	return _ << rtn << "]" << endl << "\t--- END OF DUMP ---";
 }
 
@@ -328,8 +391,10 @@ bool Analysis::State::equiv(const Analysis::State& s) const
 	if(generated_preds_taken != generated_preds_taken)
 		return false;
 	*/
+#ifdef V1
 	if(! this->constants.sameValuesAs(s.constants))
 		return false;
+#endif
 	// checking for this->labelled_preds.sameValuesAs(s.labelled_preds)
 	if(this->labelled_preds.count() != s.labelled_preds.count())
 		return false;

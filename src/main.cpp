@@ -19,6 +19,7 @@ using namespace option;
 
 int dbg_flags = 0b00000000; // global analysis flags for debugging
 int dbg_verbose = 0; // global verbose level (higher = less verbose)
+int dbg_ = 0;
 	
 class Pathfinder: public Application {
 public:
@@ -37,8 +38,8 @@ public:
 		opt_noformattedflowinfo(SwitchOption::Make(*this).cmd("--nffi").cmd("--no-formatted-flowinfo").description("format flowinfo in paths like a list of items instead of pretty-printing it")),
 		opt_automerge	 (SwitchOption::Make(*this).cmd("-a").cmd("--automerge").description("let the algorithm decide when to merge")),
 		opt_dry			 (SwitchOption::Make(*this).cmd("-d").cmd("--dry").description("dry run (no solver calls)")),
-		opt_v1			 (ValueOption<bool>::Make(*this).cmd("-1").cmd("--v1").description("Run v1 of abstract interpretation (symbolic predicates)").def(true)),
-		opt_v2			 (ValueOption<bool>::Make(*this).cmd("-2").cmd("--v2").description("Run v2 of abstract interpretation (smarter structs)").def(true)),
+		opt_v1			 (SwitchOption::Make(*this).cmd("-1").cmd("--v1").description("Run v1 of abstract interpretation (symbolic predicates)")),
+		opt_v2			 (SwitchOption::Make(*this).cmd("-2").cmd("--v2").description("Run v2 of abstract interpretation (smarter structs)")),
 		opt_deterministic(SwitchOption::Make(*this).cmd("-D").cmd("--deterministic").description("Ensure deterministic output (two executions give the same output)")),
 		opt_nolinearcheck(SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
 		opt_nounminimized(SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
@@ -47,7 +48,8 @@ public:
 		opt_dumpoptions	 (SwitchOption::Make(*this).cmd("--dump-options").cmd("--do").description("print the selected options for the analysis")),
 		opt_virtualize	 (ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
 		opt_merge 		 (ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)),
-		opt_multithreading(ValueOption<int>::Make(*this).cmd("-j").description("enable multithreading on the given amount of cores (0/1=no multithreading, -1=autodetect)").def(0)) { }
+		opt_multithreading(ValueOption<int>::Make(*this).cmd("-j").description("enable multithreading on the given amount of cores (0/1=no multithreading, -1=autodetect)").def(0)),
+		opt_x 			 (ValueOption<int>::Make(*this).cmd("-x").description("(for internal debugging)").def(0)) { }
 
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception)
@@ -73,11 +75,10 @@ private:
 	// option::Manager manager;
 	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats;
 	ValueOption<bool> opt_output;
-	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry;
-	ValueOption<bool> opt_v1, opt_v2;
+	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry, opt_v1, opt_v2;
 	SwitchOption opt_deterministic, opt_nolinearcheck, opt_nounminimized, opt_allownonlinearoperators, opt_slice, opt_dumpoptions;
 	ValueOption<bool> opt_virtualize;
-	ValueOption<int> opt_merge, opt_multithreading;
+	ValueOption<int> opt_merge, opt_multithreading, opt_x;
 
 	void setFlags(int& analysis_flags, int& merge_thresold, int& nb_cores) {
 		dbg_flags = analysis_flags = 0;	
@@ -106,9 +107,9 @@ private:
 			analysis_flags |= Analysis::ALLOW_NONLINEAR_OPRS;
 		if(opt_dry)
 			analysis_flags |= Analysis::DRY_RUN;
-		if(opt_v1.get())
+		if(opt_v1)
 			analysis_flags |= Analysis::WITH_V1;
-		if(opt_v2.get())
+		if(opt_v2)
 			analysis_flags |= Analysis::WITH_V2;
 		if(true)
 			analysis_flags |= Analysis::POST_PROCESSING;
@@ -117,6 +118,8 @@ private:
 		nb_cores = getNumberofCores();
 		if(nb_cores > 1)
 			analysis_flags |= Analysis::MULTITHREADING;
+		if(opt_x)
+		dbg_ = opt_x.get();
 		merge_thresold = getMergeThresold();
 	}
 	void initializeLoggingOptions() {
@@ -138,7 +141,7 @@ private:
 		if(opt_multithreading.get() == -1) { // autodetect
 			// int nb_cores = AUTODETECT();
 			int nb_cores = 4;
-			DBG("Autodetected " << nb_cores << " cores.")
+			DBG("Autodetected " << nb_cores << " cores. (TODO)")
 			return nb_cores;
 		}
 		return opt_multithreading.get(); // either no multithreading (=0/1) or the amount of desired cores

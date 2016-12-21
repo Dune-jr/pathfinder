@@ -99,11 +99,15 @@ bool CVC4SMT::checkPredSat()
 				// std::cout << **iter << endl; // uncomment to print all asserted predicates
 			}
 		bool isSat = smt.checkSat(em.mkConst(true), true).isSat(); // check satisfability, the second parameter enables unsat cores
-		                                                           // 
-// std::cout << "-----" << endl;
-// if(!isSat) { std::cout << "[[[" << smt.getUnsatCore() << "]]]" << endl;
-// abort();
-// char n; cin >> n; }
+		
+		if(!isSat) {
+			if(dbg_&0x1)
+				std::cout << "[[[" << smt.getUnsatCore() << "]]]" << endl;
+			if(dbg_&0x2)
+				{ char c; cin >> c; cin >> c; }
+			if(dbg_&0x4)
+				abort();
+		}
 
 		// timestamp = (clock()-timestamp)*1000*1000/CLOCKS_PER_SEC;
 		// smt.getStatistics().flushInformation((std::ostream&)std::cout);
@@ -155,14 +159,14 @@ bool CVC4SMT::retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredi
 
 Option<Expr> CVC4SMT::getExpr(const Predicate& p)
 {
-	if(!p.isComplete() || (flags&Analysis::SMT_CHECK_LINEAR && !p.isLinear(flags&Analysis::ALLOW_NONLINEAR_OPRS)))
+	if(!p.isComplete() || (flags&Analysis::SMT_CHECK_LINEAR && !p.isLinear(!(flags&Analysis::ALLOW_NONLINEAR_OPRS))))
 		return elm::none;
 	return em.mkExpr(getKind(p), *getExpr(p.leftOperand()), *getExpr(p.rightOperand()));
 }
 
 Option<Expr> CVC4SMT::getExpr(const Operand& o)
 {
-	if(flags&Analysis::SMT_CHECK_LINEAR && !o.isLinear(flags&Analysis::ALLOW_NONLINEAR_OPRS))
+	if(flags&Analysis::SMT_CHECK_LINEAR && !o.isLinear(!(flags&Analysis::ALLOW_NONLINEAR_OPRS)))
 		return elm::none;
 	// cout << "\e[0;92m" << (const string)(_ << o) << "\e[0;m" << " (" << o.isLinear() << ")" << endl;
 	CVC4OperandVisitor visitor(em, variables);

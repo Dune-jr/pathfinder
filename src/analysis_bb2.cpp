@@ -17,9 +17,10 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 	const t::int32 &cst = seminsts.cst();
 	const t::int16 &reg = seminsts.reg(), &addr = seminsts.addr();
 	const t::uint16 op = seminsts.op();
+	const bool in_conditional_segment = last_condition.op != NOP;
 
 	// parse conservatively conditional segments of the BB: set top to everything that is written there
-	if(last_condition.op != NOP && (op != IF && op != CONT && op != BRANCH))
+	if(in_conditional_segment && (op != IF && op != CONT && op != BRANCH))
 	{	// Instruction is within the conditional segment of BB 
 		if(affectsRegister(op)) // affects the register d
 			scratch(d);
@@ -29,7 +30,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 	}
 	// maintain predicates
 	if(affectsRegister(op))
-		invalidateVar(d);
+		invalidateVar(d, false);
 	if(affectsMemory(op))
 	{
 		Constant c;
@@ -38,6 +39,9 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 		else
 			invalidateAllMemory();
 	}
+	// set proper labels (will be removed by scratch if necessary)
+	if(! in_conditional_segment) // if we are in sequential segment of BB
+		updateLabels(seminsts);
 	
 	switch(op)
 	{
@@ -45,32 +49,31 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 			break;
 		case BRANCH:
 			break;
-		// TODO! we still need to maintain predicates, even if we don't generate them anymore
 		case IF:
+		{
+			const OperandVar sr = OperandVar(last_condition.sr());
+			const Operand& opd = lvars[sr] ? *lvars[sr] : sr;
+			if(opd.kind() == ARITH && opd.toArith().opr() == ARITHOPR_CMP)
 			{
-				const OperandVar sr = OperandVar(last_condition.sr());
-				const Operand& opd = lvars[sr] ? *lvars[sr] : sr;
-				if(opd.kind() == ARITH && opd.toArith().opr() == ARITHOPR_CMP)
-				{
-					Path labels; // empty // TODO
-					Predicate p = getConditionalPredicate(last_condition, opd.toArith().left(), opd.toArith().right(), true);
-					generated_preds += LabelledPredicate(p, labels);
-					DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
-				}
+				Path labels; // empty // TODO
+				Predicate p = getConditionalPredicate(last_condition.cond(), opd.toArith().left(), opd.toArith().right(), true);
+				generated_preds += LabelledPredicate(p, labels);
+				DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
 			}
+		}
 			break;
 		case CONT:
+		{
+			const OperandVar sr = OperandVar(last_condition.sr());
+			const Operand& opd = lvars[sr] ? *lvars[sr] : sr;
+			if(opd.kind() == ARITH && opd.toArith().opr() == ARITHOPR_CMP)
 			{
-				const OperandVar sr = OperandVar(last_condition.sr());
-				const Operand& opd = lvars[sr] ? *lvars[sr] : sr;
-				if(opd.kind() == ARITH && opd.toArith().opr() == ARITHOPR_CMP)
-				{
-					Path labels; // empty // TODO
-					Predicate p = getConditionalPredicate(last_condition, opd.toArith().left(), opd.toArith().right(), false); // false because we need to invert condition (else branch)
-					generated_preds += LabelledPredicate(p, labels);
-					DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
-				}
+				Path labels; // empty // TODO
+				Predicate p = getConditionalPredicate(last_condition.cond(), opd.toArith().left(), opd.toArith().right(), false); // false because we need to invert condition (else branch)
+				generated_preds += LabelledPredicate(p, labels);
+				DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
 			}
+		}
 			break; // we cannot generate a predicate otherwise
 		case LOAD: // reg <- MEM_type(addr)
 			// tip: addr is likely to be t1
@@ -86,12 +89,12 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 				else if(mem.exists(c))
 				{
 					DBG(color::IBlu() << "  Reading from " << OperandMem(c))
-					set(reg, mem[c]);
+					set(reg, mem[c]); // TODO! labels
 				}
 				else
 				{
 					DBG(color::IYel() << "  Loading Top from " << OperandMem(c))
-					scratch(reg); 
+					scratch(reg);
 				}
 			}
 			else
@@ -101,7 +104,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 			}
 			break;
 		case STORE:	// MEM_type(addr) <- reg
-			store(OperandVar(addr), getPtr(reg));
+			store(OperandVar(addr), getPtr(reg)); // TODO! labels
 			break;
 		case SET: // d <- a
 			set(d, getPtr(a));
@@ -113,8 +116,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 			scratch(d);
 			break;
 		case CMPU:
-			ASSERT(!UNTESTED_CRITICAL);
-			DBG(color::BIRed() << "Untested unsigned variant running!")
+			UNTESTED_CODE("unsigned variant")
 		case CMP:
 			set(d, dag->cmp(getPtr(a), getPtr(b)));
 			break;
@@ -203,8 +205,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 			break;
 		}
 		case MULU:
-			ASSERT(!UNTESTED_CRITICAL);
-			DBG(color::BIRed() << "Untested unsigned variant running!")
+			UNTESTED_CODE("unsigned variant")
 		case MUL:
 			set(d, smart_mul(getPtr(a), getPtr(b)));
 			break;
@@ -212,8 +213,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 			scratch(d); // TODO! do better
 			break;
 		case DIVU:
-			DBG(color::BIRed() << "Untested unsigned variant running!")
-			ASSERT(!UNTESTED_CRITICAL);
+			UNTESTED_CODE("unsigned variant")
 		case DIV:
 			if(Option<Constant> av = getPtr(a)->evalConstantOperand())
 				if(Option<Constant> bv = getPtr(b)->evalConstantOperand())
@@ -236,7 +236,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 		case SPEC: // special instruction (d: code, cst: sub-code)
 		default:
 			DBG(color::BIRed() << "Unknown seminst running!")
-			ASSERT(!UNTESTED_CRITICAL);
+			ASSERT(!UNTESTED_CRITICAL)
 		case SCRATCH:
 			scratch(d);
 			break;
@@ -245,28 +245,28 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 
 void Analysis::State::set(const OperandVar& x, const Operand* expr, bool set_updated)
 {
-	if(dbg_verbose == DBG_VERBOSE_ALL)
-	{
-		elm::String output = _ << color::Cya() << " {" << lvars(x) << "}";
-		lvars[x] = expr;
-		DBG(color::ICya() << " * " << x << " = " << lvars(x) << output)
-	}
-	else
-		lvars[x] = expr;
-
+	DBG(color::IGre() << " * " << x << " = " << *expr << color::Gre() << " {" << lvars(x) << "}")
+	lvars[x] = expr;
 	if(set_updated)
 		lvars.markAsUpdated(x);
 }
 
 void Analysis::State::setMem(Constant addr, const Operand* expr)
 {
-	DBG(color::ICya() << " * " << OperandMem(addr) << " = " << *expr << (mem.exists(addr) ? _ << color::Cya() << " {" << **mem[addr] << "}" : elm::String()))
+	DBG(color::IGre() << " * " << OperandMem(addr) << " = " << *expr
+		<< color::Gre() << " {" << (mem.exists(addr) ? **mem[addr] : (const Operand&)OperandMem(addr)) << "}")
 	mem[addr] = expr;
 }
 
 const Operand* Analysis::State::getPtr(t::int32 var_id) const
 {
 	return lvars[var_id] ? lvars[var_id] : dag->var(var_id);
+}
+
+void Analysis::State::scratch(const OperandVar& var)
+{
+	set(var, dag->new_top(), false);
+	lvars.clearLabels(var);
 }
 
 void Analysis::State::scratchAllMemory()
@@ -404,7 +404,7 @@ const Operand* Analysis::State::smart_mul(const Operand* a, Constant c)
 		if(k = aa.left()->evalConstantOperand())
 		{	// if a = k/x, k constant, reduce a*c=(k/x)*c to k*c/x
 			DBG(color::IBlu() << "  Simplified (" << *k << "/" << *aa.right() << ")*" << c << " to " << *k*c << "/" << *aa.right())
-			DBG(color::BIRed() << "Untested simplification!"); ASSERT(!UNTESTED_CRITICAL);
+			UNTESTED_CODE("simplification");
 			return dag->div(dag->cst(*k * c), aa.right());
 		}
 		else if(k = aa.rightOperand().evalConstantOperand())
@@ -518,6 +518,62 @@ const Operand* Analysis::State::smart_muldiv(const Operand* x, Constant k, Const
 	}
 	else // give up
 		return dag->mul(dag->div(x, dag->cst(k)), dag->cst(c));
+}
+
+void Analysis::State::updateLabels(const PathIter& seminsts)
+{
+	switch(seminsts.op())
+	{
+		// nothing to do
+		case NOP:
+		case ASSUME:
+		case BRANCH:
+		case TRAP:
+		case CONT:
+		case IF:
+		case SCRATCH:
+		case SETI:
+		case SETP:
+		case SPEC:
+		// [addr] <- f(reg)
+		case STORE:
+		// reg <- f([addr])
+		case LOAD:
+			break;
+		// d <- f(a)
+		case SET:
+		case NEG:
+		case NOT:
+			DBG(color::Cya() << "  /" << OperandVar(seminsts.a()) << "=" << lvars(seminsts.a()) << "/")
+			lvars.label(OperandVar(seminsts.d()), lvars.labels(OperandVar(seminsts.a())));
+			break;
+		// d <- f(a, b)	
+		case CMP:
+		case CMPU:
+		case ADD:
+		case SUB:
+		case SHL:
+		case SHR:
+		case ASR:
+		case AND:
+		case OR:
+		case XOR:
+		case MUL:
+		case MULU:
+		case DIV:
+		case DIVU:
+		case MOD:
+		case MODU:
+		case MULH:
+			DBG(color::Cya() << "  /" << OperandVar(seminsts.a()) << "=" << lvars(seminsts.a())
+						     << ", "  << OperandVar(seminsts.b()) << "=" << lvars(seminsts.b()) << "/")
+			lvars.label(OperandVar(seminsts.d()), lvars.labels(OperandVar(seminsts.a())));
+			lvars.label(OperandVar(seminsts.d()), lvars.labels(OperandVar(seminsts.b())));
+			break;	
+		// case FORK:
+		default:
+			crash();
+	}
 }
 
 /**

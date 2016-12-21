@@ -73,6 +73,18 @@
  * @brief      Reset all updated flags.
  */
 
+/**
+ * @brief      Label all variables that are marked as updated with an edge (and remove mark)
+ *
+ * @param      e     Edge to label with
+ */
+void LocalVariables::onEdge(Edge* e)
+{
+	for(int i = 0; i < size; i++)
+		if(u[i])
+			label(i, e);
+	resetUpdatedMarks();
+}
 
 /**
  * @brief      Merge current LocalVariables with a provided one
@@ -94,4 +106,25 @@ void LocalVariables::merge(const LocalVariables& lv) // this = this ∩ lv
 		delete l[i];
 		l[i] = NULL;
 	}
+}
+
+io::Output& LocalVariables::print(io::Output& out) const
+{
+	if(! isValid())
+		return out << "<invalid>" << endl;
+	for(int i = 0; i < size; i++) {
+		if(o[i])
+		{
+			out << "        " << OperandVar(getId(i)) << (u[i] ? "*" : " ") << "\t| " << *o[i];
+			if(l[i] && !(dbg_flags&DBG_DETERMINISTIC))
+			{
+				out << "     \t| ";
+				for(labels_t::Iter li(*l[i]); li; li++)
+				// for(labels_t::Iterator li(*l[i]); li; li++)
+					out << IntFormat((long int)(*li)).hex() << ", ";
+			}
+			out << endl;
+		}
+	}
+	return out;
 }

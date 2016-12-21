@@ -19,6 +19,10 @@
 // #define DBG_WARNINGS
 
 #define UNTESTED_CRITICAL true // Raise exceptions when executing untested code if true
+#define UNTESTED_CODE(str){\
+	DBG(color::BIRed() << "Untested " str " running!")\
+	ASSERT(!UNTESTED_CRITICAL);\
+}
 
 #define DBG_SEPARATOR " "
 
@@ -41,6 +45,7 @@ enum
 	DBG_VERBOSE_NONE		 = 3
 };
 extern int dbg_verbose;
+extern int dbg_;
 
 // #define DBG_STD(str) { if(elm::color::flags&elm::color::DEBUG) std::cout << elm::color::Debug::debugPrefix(__FILE__, __LINE__).chars() << str << elm::color::RCol << std::endl; }
  #define DBG_TEST(tested_cond, expected_cond) \

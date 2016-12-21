@@ -18,8 +18,8 @@ config:Finalize("config.lua")
 
 -- Settings
 settings = NewSettings()
+settings.cc.flags:Add("-O0")
 -- settings.cc.flags:Add("-O1")
-settings.cc.flags:Add("-O1")
 -- settings.cc.flags:Add("-std=c++11")
 
 if ScriptArgs["otawa"] and ScriptArgs["otawa"]~="2" then

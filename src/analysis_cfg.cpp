@@ -147,15 +147,14 @@ Analysis::States& Analysis::I(Block* b, States& s)
  */
 LockPtr<Analysis::States> Analysis::I(const Vector<Edge*>::Iter& e, LockPtr<States> s)
 {
-	// LockPtr<States> rtns(new States(s));
 	if(! e.ended()) // more edges to come
 		s = LockPtr<States>(new States(*s));
 	if(s->isEmpty())
 		DBGG("-\tpropagating bottom state")
 	// DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
-	if(! e->source()->isEntry()) // do not process entry: no generated preds and uninteresting edge to add (everything comes from the entry)
+	if(! e->source()->isEntry()) // do not process CFG entry: no generated preds and uninteresting edge to add (everything comes from the entry)
 		for(States::Iterator si(s->states()); si; si++)
-			s->states()[si].appendEdge(e);
+			(*s)[si].appendEdge(e);
 	if(LOOP_EXIT_EDGE(e))
 		s->onLoopExit(e);
 	return s;
@@ -284,32 +283,6 @@ void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<Detailed
 	else
 		DBG("not adding redundant IP: " << new_ip)
 }
-/**
- * @fn void Analysis::removeDuplicateInfeasiblePaths();
- * @brief Look for infeasible paths that share the same ordered list of edges and remove duplicates 
- */
-/*void Analysis::removeDuplicateInfeasiblePaths()
-{
-	Vector<DetailedPath> new_ips;
-	for(Vector<DetailedPath>::Iterator dp_iter(infeasible_paths); dp_iter; )
-	{
-		DetailedPath dp(*dp_iter);
-		infeasible_paths.remove(dp_iter);
-		bool contains = false;
-		for(Vector<DetailedPath>::Iterator dp_subiter(infeasible_paths); dp_subiter; dp_subiter++)
-		{
-			if(dp_subiter->weakEqualsTo(dp)) // if dp == *dp_subiter*
-			{
-				contains = true; // dp is equal to an element of infeasible_paths \ dp
-				break;
-			}
-		}
-		if(!contains)
-			new_ips.add(dp);
-	}
-	infeasible_paths.clear();
-	infeasible_paths = new_ips;
-}*/
 
 /**
  * @fn static void Analysis::onAnyInfeasiblePath();
@@ -323,7 +296,7 @@ void Analysis::onAnyInfeasiblePath()
 /**
  * @brief either we find SP in all the paths we merge (and the same SP), either we return elm::none
  */
-Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>& sl) const
+/*Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>& sl) const
 {
 	Option<Constant> rtn = elm::none; // also acts like a bool first = true
 	for(SLList<Analysis::State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
@@ -342,7 +315,7 @@ Option<Constant> Analysis::getCurrentStackPointer(const SLList<Analysis::State>&
 			return elm::none; // one of the paths has invalidated SP
 	}
 	return rtn;
-}
+}*/
 
 /**
  * @fn inline static bool Analysis::isConditional(Block* b);
