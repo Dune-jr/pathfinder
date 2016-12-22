@@ -24,7 +24,6 @@ using elm::genstruct::HashTable;
 class Analysis::State {
 private:
 	typedef HashTable<Constant, const Operand*, ConstantHash> mem_t;
-	// HashTable<t::int32, const Operand*> lvars;
 
 	const dfa::State* dfa_state;
 	OperandVar sp; // the Stack Pointer register
@@ -32,7 +31,6 @@ private:
 	// v2
 	DAG* dag;
 	LocalVariables lvars;
-	//LocalVariables lvars_taken;
 	mem_t mem;
 
 	bool bottom; // true=is Bottom, false= is Top
@@ -72,6 +70,7 @@ public:
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
 	elm::String dumpEverything() const;
 	void merge(const States& ss, Block* b);
+	void apply(const State& s);
 	void accel(const State& s0);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e);

@@ -3,7 +3,7 @@
  */
 
 #include "analysis_state.h"
-// #include "debug.h"
+#include "compositor.h"
 
 /**
  * @class Analysis::State
@@ -19,28 +19,7 @@ Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), 
 
 // Analysis::State::State(const context_t& context)
 	// : dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
-
-/*Analysis::State::State(Block* entryb, const context_t& context, bool init)
-	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(*dag, context.max_tempvars, context.max_registers),
-	mem(53), bottom(false)
-#ifdef V1
-	, constants(context.max_tempvars, context.max_registers)
-#endif
-{
-	generated_preds.clear(); // generated_preds := [[]]
-	labelled_preds.clear(); // labelled_preds := [[]]
-	if(init)
-	{
-		// Block::EdgeIter outs(entryb->outs());
-		// ASSERT(outs);
-		path.addLast(theOnly(entryb->outs()));
-#ifdef V1
-		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
-#endif
-		set(sp, dag->cst(SP));
-	}
-}*/
-
+// 
 Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
 	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(*dag, context.max_tempvars, context.max_registers),
 	mem(53), bottom(false)
@@ -154,45 +133,65 @@ io::Output& Analysis::State::print(io::Output& out) const
 
 
 /**
- * @brief      This function is *this -> s -> s o *this, state composition
- * @param[in]  s     state to apply
+ * @brief      This function is *this -> s -> s o *this, state composition. Does not update path.
+ * @param  s   state to apply
  */
-/*void Analysis::State::apply(const State& s)
+void Analysis::State::apply(const State& s)
 {
-
+	Compositor cc(*this);
+#define f this->lvars
+#define g s.lvars
+	// goal is lv = g o f
+	LocalVariables lv; // we need some temporary to handle cases like [r0 -> r1, r1 -> r0]
+	for(LocalVariables::Iter i(g); i; i++)
+	{
+		if(g[i]) // g[i] was modified
+			lv[i] = g[i]->accept(cc); // needs more info from f...
+		else // g[i] is identity
+			lv[i] = f[i];
+	}
+#undef f
+#undef g
+	mem_t m(this->mem); // save local mem
+	// goal is mem = n o m with n = s.mem
+	for(mem_t::PairIterator ni(s.mem); ni; ni++)
+	{
+		mem.put((*ni).fst, (*ni).snd->accept(cc));
+	}
+	// all the ni that are identity are properly handled, because mem is initialized with m
+	lvars = lv;
 }
-*/
+
 /**
  * @fn void Analysis::State::accel();
  * @param *this State after one iteration (starting from T)
  * @param s0 Initial state (before the loop)
  */
-/*void Analysis::State::accel(const State& s0)
+void Analysis::State::accel(const State& s0)
 {
 	// deal with lvars
-	for(LocalVariables::Iter iter(lvars); iter; iter++)
+	for(LocalVariables::Iter i(lvars); i; i++)
 	{
-		if(*iter) // iter was modified
+		if(lvars[i]) // i was modified
 		{
-			const OperandVar x = iter->id();
-			if(iter->isAffineIn(x))
-			{
+			// if(i->isAffineIn(x))
+			// {
 
-			}
-			else
-			{
-				DBG(color::IRed() << x << " too complex to accel: " << *iter)
-				lvars[x] = NULL;
-			}
+			// }
+			// else
+			// {
+			// 	DBG(color::IRed() << *i << " too complex to accel: " << lvars(*i))
+			// 	lvars[x] = NULL;
+			// }
 		}
 	}
 
 	// deal with memory
 	for(mem_t::PairIterator iter(mem); iter; iter++)
 	{
-		const Constant addr = mem.fst;
+		const Constant addr = (*iter).fst;
 	}
-}*/
+}
 
 /**
  * @brief merge all states into one (a bit brutal). Does not take in account current state

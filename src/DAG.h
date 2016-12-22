@@ -287,7 +287,7 @@ public:
 	inline const Operand *cmp (const Operand *arg1, const Operand *arg2) { return op(ARITHOPR_CMP, arg1, arg2); }
 
 	const Operand *autoOp(arithoperator_t op, const Operand *arg1, const Operand *arg2) {
-ASSERTP(arg1 && arg2, arg1 << arg2);
+		// ASSERTP(arg1 && arg2, arg1 << arg2);
 		switch(op) {
 			case ARITHOPR_ADD: return add(arg1, arg2);
 			case ARITHOPR_SUB: return sub(arg1, arg2);
@@ -296,6 +296,7 @@ ASSERTP(arg1 && arg2, arg1 << arg2);
 			case ARITHOPR_DIV: return div(arg1, arg2);
 			case ARITHOPR_MOD: return mod(arg1, arg2);
 			case ARITHOPR_CMP: return cmp(arg1, arg2);
+			case ARITHOPR_NEG: return neg(arg1);
 			default: elm::crash();
 		}
 	}

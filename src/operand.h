@@ -50,6 +50,7 @@ enum operandmem_kind_t
 };
 io::Output& operator<<(io::Output& out, operandmem_kind_t kind);
 
+class Operand;
 class OperandConst;
 class OperandVar;
 class OperandMem;
@@ -67,6 +68,15 @@ public:
 	virtual bool visit(const OperandMem& o) = 0;
 	virtual bool visit(const OperandTop& o) = 0;
 	virtual bool visit(const OperandArith& o) = 0;
+};
+class OperandEndoVisitor
+{
+public:
+	virtual const Operand* visit(const OperandConst& o) = 0;
+	virtual const Operand* visit(const OperandVar& o) = 0;
+	virtual const Operand* visit(const OperandMem& o) = 0;
+	virtual const Operand* visit(const OperandTop& o) = 0;
+	virtual const Operand* visit(const OperandArith& o) = 0;
 };
 
 #define NONEW\
@@ -97,6 +107,7 @@ public:
 	virtual Option<const Operand*> simplify(DAG& dag) const = 0; // Warning: Option=none does not warrant that nothing has been simplified!
 	virtual const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const = 0;
 	virtual bool accept(OperandVisitor& visitor) const = 0;
+	virtual const Operand* accept(OperandEndoVisitor& visitor) const = 0;
 	virtual operand_kind_t kind() const = 0;
 	friend inline io::Output& operator<<(io::Output& out, const Operand& o) { return o.print(out); }
 	virtual bool operator==(const Operand& o) const = 0;
@@ -143,6 +154,7 @@ public:
 	inline bool isLinear(bool only_linear_opr)   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return true; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
+	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return CST; }
 	inline operator Constant() const { return _value; }
 	OperandConst& operator=(const OperandConst& opd);
@@ -189,6 +201,7 @@ public:
 	inline bool isLinear(bool only_linear_opr)   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return _addr == opdv.addr(); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
+	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return VAR; }
 	OperandVar& operator=(const OperandVar& opd);
 	bool operator==(const Operand& o) const;
@@ -230,6 +243,7 @@ public:
 	inline bool isLinear(bool only_linear_opr)   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return false; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
+	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return MEM; }
 	OperandMem& operator=(const OperandMem& opd);
 	inline bool operator==(const Operand& o) const;
@@ -273,6 +287,7 @@ public:
 	inline bool isLinear(bool only_linear_opr)   const { return true; }
 	inline bool isAffine(const OperandVar& opdv) const { return false; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
+	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return TOP; }
 	OperandTop& operator=(const OperandTop& opd);
 	inline bool operator==(const Operand& o) const;
@@ -327,6 +342,7 @@ public:
 	inline bool isAffine(const OperandVar& opdv) const
 		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv) && opd2->isAffine(opdv); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
+	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return ARITH; }
 	// OperandArith& operator=(const OperandArith& opd);
 	inline bool operator==(const Operand& o) const;

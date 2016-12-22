@@ -96,6 +96,7 @@ public:
 			{
 				ASSERTP(size == lv.size && thresold == lv.thresold, "sizes or thresolds do not match ("
 				  << size << "/" << lv.size << ", " << thresold << "/" << lv.thresold << ")");
+				copy(lv);
 			}
 			else
 			{
@@ -104,22 +105,19 @@ public:
 				o = new Operand const*[size];
 				l = new labels_t*[size];
 				array::clear(l, size);
-				// u = new bool[size];
 				u.resize(size);
+				copy(lv);
 			}
-			copy(lv);
 		}
 		else
 		{
 			delete[] o;
-			// delete[] u;
 			for(int i = 0; i < size; i++)
 				delete l[i];
 			size = 0;
 			thresold = 0;
 			o = NULL;
 			l = NULL;
-			//u = NULL;
 			u = BitVector();
 		}
 		return *this;
@@ -138,6 +136,22 @@ public:
 		{ return lv.print(out); }
 
 	// Iter class
+	class Iter: public PreIterator<Iter, OperandVar> {
+	public:
+		inline Iter(const LocalVariables& lv) : n(0), size(lv.size), thresold(lv.thresold) { }
+		inline Iter(const Iter& i) : n(i.n), size(i.size), thresold(i.thresold) { }
+		inline bool ended(void) const { return n >= size; }
+		inline OperandVar item(void) const { return OperandVar(n < thresold ? n : thresold-n-1); }
+		inline void next(void) { n++; }
+		inline const Iter* operator->(void) const { return this; }
+	private:
+		short n;
+		short size;
+		short thresold;
+	};
+	// inline Operand const* operator[](Iter i) const
+	// 	{ return o[getIndex(*i)]; }
+	/*
 	class Iter: public PreIterator<Iter, const Operand*> {
 	public:
 		// inline Iter(void) : lv { }
@@ -162,6 +176,7 @@ public:
 		const LocalVariables& lv;
 		int n;
 	};
+	*/
 
 private:
 	short size; // size of arrays. save space with shorts
@@ -173,7 +188,6 @@ private:
 	inline void copy(const LocalVariables& lv) {
 		ASSERT(isValid());
 		array::copy(o, lv.o, size);
-		//array::copy(u, lv.u, size);
 		u = lv.u;
 		for(int i = 0; i < size; i++) {
 			delete l[i];
