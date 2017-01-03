@@ -17,7 +17,7 @@ Option<Block*> getCaller(CFG* cfg) // { return citer ? elm::some(theOnly(cfg->ca
 	if(citer)
 	{
 		Block* rtn = citer;
-		ASSERTP(!(++citer), "must be max. 1 caller (CFG not virtualized or recursive?)");
+		ASSERTP(!(++citer), cfg << " must have max. 1 caller (CFG not virtualized or recursive?)");
 		return elm::some(rtn);
 	}
 	return elm::none; // no caller: exiting main CFG
@@ -32,7 +32,7 @@ Block* getCaller(CFG* cfg, Block* def)
 	if(citer)
 	{
 		Block* rtn = citer;
-		ASSERTP(!(++citer), "must be max. 1 caller (CFG not virtualized or recursive?)");
+		ASSERTP(!(++citer), cfg << " must have max. 1 caller (CFG not virtualized or recursive?)");
 		return rtn;
 	}
 	return def; // no caller: exiting main CFG

@@ -104,10 +104,10 @@ protected:
 	} loopheader_status_t; // Fixpoint status of the loop header, for annotation
 	inline static loopheader_status_t loopStatus(const Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
 	inline static bool isConditional(Block* b) { return b->countOuts() > 1; }
-	static Block* insAlias		   (Block* b);
-	static Vector<Edge*> allIns    (Block* h);
-	static Vector<Edge*> backIns   (Block* h);
-	static Vector<Edge*> nonBackIns(Block* h);
+	Block* insAlias		   (Block* b);
+	Vector<Edge*> allIns    (Block* h);
+	Vector<Edge*> backIns   (Block* h);
+	Vector<Edge*> nonBackIns(Block* h);
 	static Vector<Edge*> outsWithoutUnallowedExits(Block* b);
 	static bool isAllowedExit(Edge* exit_edge);
 	static elm::String printFixPointStatus(Block* b);
@@ -137,7 +137,7 @@ private:
 	void postProcessResults(CFG *cfg);
 	
 	// analysis_cfg.cpp
-	void processCFG(CFG *cfg);
+	void processProg(Block* block);
 	States& I(Block* b, States& s); // modifies existing states
 	LockPtr<States> I(const Vector<Edge*>::Iter& e, LockPtr<States> s); // creates new states
 	// Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;

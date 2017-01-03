@@ -20,6 +20,8 @@
 #include "smt.h"
 #include "dom/GlobalDominance.h"
 
+bool cfg_follow_calls = false; // cfg_features.h
+
 /**
  * @class Analysis
  * @brief Perform an infeasible path analysis on a CFG 
@@ -30,8 +32,10 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 	ws->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
 	ws->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
 	// MyTransformer t; t.process(ws);
-	if(flags & VIRTUALIZE_CFG)
+	if(flags & VIRTUALIZE_CFG) {
+		cfg_follow_calls = true;
 		ws->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
+	}
 #ifdef OSLICE
 	if(flags & SLICE_CFG) {
 		// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
@@ -87,7 +91,7 @@ const Vector<DetailedPath>& Analysis::run(CFG *cfg)
     gettimeofday(&tim, NULL);
     t::int64 t1 = tim.tv_sec*1000000+tim.tv_usec;
 	
-	processCFG(cfg);
+	processProg(cfg->entry());
 
     gettimeofday(&tim, NULL);
     t::int64 t2 = tim.tv_sec*1000000+tim.tv_usec;
@@ -144,20 +148,26 @@ void Analysis::wl_push(Block* b)
 
 /**
   * @fn Block* Analysis::insAlias(Block* b);
-  * @brief Substitue a block with the appropriate block to get ingoing edges from
+  * @brief Substitue a block with the appropriate block to get ingoing edges from, in order to properly handle calls
   * @return The Block to substitute b with (by default, b)
 */
 Block* Analysis::insAlias(Block* b)
 {
-	if(b->isEntry()) // entry becomes caller
+	if(flags & VIRTUALIZE_CFG)
 	{
-		Option<Block*> rtn = getCaller(b->cfg());
-		ASSERTP(rtn, "insAlias called on main entry - no alias with ins exists")
-		return rtn;
+		if(b->isEntry()) // entry becomes caller
+		{
+			Option<Block*> rtn = getCaller(b->cfg());
+			ASSERTP(rtn, "insAlias called on main entry - no alias with ins exists")
+			return rtn;
+		}
+		else if(b->isCall()) // call becomes exit
+			return b->toSynth()->callee()->exit();
+		else
+			return b;
 	}
-	else if(b->isCall()) // call becomes exit
-		return b->toSynth()->callee()->exit();
-	return b;
+	else
+		return b; // no aliasing in case of non-virtualized CFG
 }
 /**
  * @fn static Vector<Edge*> Analysis::allIns (Block* h);
@@ -170,6 +180,7 @@ Vector<Edge*> Analysis::allIns(Block* h)
 	Vector<Edge*> rtn(4);
 	for(Block::EdgeIter i(insAlias(h)->ins()); i; i++)
 		rtn.push(*i);
+	
 	if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) cout << endl;
 	DBGG("-" << color::ICya() << h << color::RCol() << " " << printFixPointStatus(h))
 	DBG("collecting allIns...")
@@ -187,6 +198,7 @@ Vector<Edge*> Analysis::backIns(Block* h)
 	for(Block::EdgeIter i(insAlias(h)->ins()); i; i++)
 		if(BACK_EDGE(*i))
 			rtn.push(*i);
+	
 	if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) cout << endl;
 	DBGG("-" << color::ICya() << h << color::RCol() << " " << printFixPointStatus(h))
 	DBG("collecting backIns...")
@@ -204,6 +216,7 @@ Vector<Edge*> Analysis::nonBackIns(Block* h)
 	for(Block::EdgeIter i(insAlias(h)->ins()); i; i++)
 		if(!BACK_EDGE(*i))
 			rtn.push(*i);
+	
 	if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY) cout << endl;
 	DBGG("-" << color::ICya() << h << color::RCol() << " " << printFixPointStatus(h))
 	DBG("collecting nonBackIns...")

@@ -16,8 +16,15 @@ using otawa::ENCLOSING_LOOP_HEADER;
 using elm::PreIterator;
 using elm::genstruct::SLList;
 
-template <class I, class T> inline T theOnly(PreIterator<I, T>& i)
-	{ ASSERT(i); T rtn = *i; ASSERTP(!++i, "not alone, next is " << *i); return rtn; }
+extern bool cfg_follow_calls; // TODO!! dirty
+
+template <class I, class T> inline T theOnly(PreIterator<I, T>& i) {
+	ASSERT(i);
+	T rtn = *i;
+	i++;
+	ASSERTP(!i, "not alone, next is " << *i);
+	return rtn;
+}
 template <class I, class T> inline T theOnly(const PreIterator<I, T>& i) 
 	{ I j(static_cast<const I&>(i)); return theOnly(j); }
 	// { ASSERT(i); T rtn = *i; I j(static_cast<const I&>(i)); ASSERT(!++j); return rtn; }
@@ -30,16 +37,15 @@ inline Block* getCaller(Block* b, Block* def) { return getCaller(b->cfg(), def);
 // Loop Header Iterator for a virtualized CFG
 class LoopHeaderIter: public PreIterator<LoopHeaderIter, Block*> {
 public:
-	inline LoopHeaderIter(Block* b): lh(b) { if(!LOOP_HEADER(b)) next(); }
-	inline LoopHeaderIter(const LoopHeaderIter& i): lh(i.lh) { }
-	inline LoopHeaderIter& operator=(const LoopHeaderIter& i) { lh = i.lh; return *this; }
-
-	inline bool ended(void) const { return lh == NULL; }
-	Block* item(void) const { return lh; } // works even when ended()
+	inline LoopHeaderIter(Block* b, bool inlined = true): lh(b)
+		{ if(!LOOP_HEADER(b)) next(); }
+	inline bool ended(void) const
+		{ return lh == NULL; }
+	Block* item(void) const
+		{ return lh; } // works even when ended()
 	inline void next(void) {
-		while(lh && !(tmp = ENCLOSING_LOOP_HEADER.get(lh, NULL))) {
-			lh = getCaller(lh->cfg(), NULL);
-		}
+		while(lh && !(tmp = ENCLOSING_LOOP_HEADER.get(lh, NULL)))
+			lh = cfg_follow_calls ? getCaller(lh->cfg(), NULL) : lh;
 		lh = lh ? tmp : NULL;
 	}
 
