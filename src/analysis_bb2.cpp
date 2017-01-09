@@ -565,11 +565,14 @@ void Analysis::State::updateLabels(const PathIter& seminsts)
 		case MOD:
 		case MODU:
 		case MULH:
-			DBG(color::Cya() << "  /" << OperandVar(seminsts.a()) << "=" << lvars(seminsts.a())
-						     << ", "  << OperandVar(seminsts.b()) << "=" << lvars(seminsts.b()) << "/")
+		{
+			OperandVar tmp;
+			DBG(color::Cya() << "  /" << OperandVar(tmp=seminsts.a()) << "=" << (lvars(tmp=seminsts.a()))
+							 << ", "  << OperandVar(tmp=seminsts.b()) << "=" << (lvars(tmp=seminsts.b())) << "/")
 			lvars.label(OperandVar(seminsts.d()), lvars.labels(OperandVar(seminsts.a())));
 			lvars.label(OperandVar(seminsts.d()), lvars.labels(OperandVar(seminsts.b())));
-			break;	
+			break;
+		}
 		// case FORK:
 		default:
 			crash();

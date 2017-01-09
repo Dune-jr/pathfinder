@@ -128,15 +128,34 @@ const Vector<DetailedPath>& Analysis::run(CFG *cfg)
  * @fn void Analysis::wl_push(Block* b);
  * @brief push b in wl, ensuring unicity in wl
  */
-void Analysis::wl_push(Block* b)
+/*void Analysis::wl_push(Block* b)
 {
 	ASSERTP(!b->isUnknown(), "Block " << b << " is unknown, not supported by analysis.");
-	if(b->isCall()) 
-		b = b->toSynth()->callee()->entry(); // call becomes callee entry
-	if(b->isExit())
-		b = getCaller(b, b); // exit becomes caller (remains exit if no caller)
+	if(flags&VIRTUALIZE_CFG)
+	{
+		if(b->isCall()) 
+			b = b->toSynth()->callee()->entry(); // call becomes callee entry
+		if(b->isExit())
+			b = getCaller(b, b); // exit becomes caller (remains exit if no caller)
+	}
 	wl.push(b);
 	// DBGG("-\twl ← wl ∪ " << b)
+}*/
+
+Block* Analysis::outsAlias(Block* b) const
+{
+	ASSERTP(!b->isUnknown(), "Block " << b << " is unknown, not supported by analysis.");
+	if(flags&VIRTUALIZE_CFG)
+	{
+		if(b->isCall()) 
+			return b->toSynth()->callee()->entry(); // call becomes callee entry
+		else if(b->isExit())
+			return getCaller(b, b); // exit becomes caller (remains exit if no caller)
+		else
+			return b;
+	}
+	else
+		return b;
 }
 
 /**
@@ -151,7 +170,7 @@ void Analysis::wl_push(Block* b)
   * @brief Substitue a block with the appropriate block to get ingoing edges from, in order to properly handle calls
   * @return The Block to substitute b with (by default, b)
 */
-Block* Analysis::insAlias(Block* b)
+Block* Analysis::insAlias(Block* b) const
 {
 	if(flags & VIRTUALIZE_CFG)
 	{
@@ -170,12 +189,12 @@ Block* Analysis::insAlias(Block* b)
 		return b; // no aliasing in case of non-virtualized CFG
 }
 /**
- * @fn static Vector<Edge*> Analysis::allIns (Block* h);
+ * @fn static Vector<Edge*> Analysis::allIns (Block* h) const;
  * @brief Collect all edges pointing to a block
  * @param h Block to collect incoming edges from
  * @return return the vector of selected edges
  */
-Vector<Edge*> Analysis::allIns(Block* h)
+Vector<Edge*> Analysis::allIns(Block* h) const
 {
 	Vector<Edge*> rtn(4);
 	for(Block::EdgeIter i(insAlias(h)->ins()); i; i++)
@@ -187,12 +206,12 @@ Vector<Edge*> Analysis::allIns(Block* h)
 	return rtn;
 }
 /**
- * @fn static Vector<Edge*> Analysis::backIns(Block* h);
+ * @fn static Vector<Edge*> Analysis::backIns(Block* h) const;
  * @brief Collect all back-edges pointing to a block
  * @param h Block to collect incoming edges from
  * @return return the vector of selected edges
  */
-Vector<Edge*> Analysis::backIns(Block* h)
+Vector<Edge*> Analysis::backIns(Block* h) const
 {
 	Vector<Edge*> rtn(4);
 	for(Block::EdgeIter i(insAlias(h)->ins()); i; i++)
@@ -205,12 +224,12 @@ Vector<Edge*> Analysis::backIns(Block* h)
 	return rtn;
 }
 /**
- * @fn static Vector<Edge*> Analysis::nonBackIns(Block* h);
+ * @fn static Vector<Edge*> Analysis::nonBackIns(Block* h) const;
  * @brief Collect all edges pointing to a block that are not back edges of a loop
  * @param h Block to collect incoming edges from
  * @return return the vector of selected edges
  */
-Vector<Edge*> Analysis::nonBackIns(Block* h)
+Vector<Edge*> Analysis::nonBackIns(Block* h) const
 {
 	Vector<Edge*> rtn(4);
 	for(Block::EdgeIter i(insAlias(h)->ins()); i; i++)
@@ -243,10 +262,8 @@ bool Analysis::isAllowedExit(Edge* exit_edge)
 /* for e ∈ outs \ {EX_h | b ∈ L_h ∧ status_h ≠ LEAVE} */
 Vector<Edge*> Analysis::outsWithoutUnallowedExits(Block* b)
 {
-	if(b->isExit()) {
-		DBGG(color::IGre() << "Reached end of program.")
+	if(b->isExit())
 		return nullVector<Edge*>();
-	}
 	Vector<Edge*> rtn(4);
 	for(Block::EdgeIter i(b->outs()); i; i++)
 		if(! LOOP_EXIT_EDGE.exists(*i) || isAllowedExit(*i))
@@ -254,9 +271,7 @@ Vector<Edge*> Analysis::outsWithoutUnallowedExits(Block* b)
 	ASSERTP(rtn, "outsWithoutUnallowedExits found no outs!")
 	if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY)
 	{
-		Vector<Edge*>::Iter i(rtn);
-		// DBGG("-\toutput to " << i->source())
-		for(; i; i++)
+		for(Vector<Edge*>::Iter i(rtn); i; i++)
 #ifndef NO_UTF8
 			DBGG(color::Bold() << "\t\t└▶" << color::RCol() << i->target())
 #else

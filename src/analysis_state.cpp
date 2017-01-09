@@ -138,17 +138,18 @@ io::Output& Analysis::State::print(io::Output& out) const
  */
 void Analysis::State::apply(const State& s)
 {
+	DBG(this->dumpEverything() << ",\n " << s.dumpEverything())
 	Compositor cc(*this);
 #define f this->lvars
 #define g s.lvars
 	// goal is lv = g o f
-	LocalVariables lv; // we need some temporary to handle cases like [r0 -> r1, r1 -> r0]
+	LocalVariables lv(f); // we need some temporary to handle cases like [r0 -> r1, r1 -> r0]
 	for(LocalVariables::Iter i(g); i; i++)
 	{
-		if(g[i]) // g[i] was modified
+		if(g[i] != NULL) // g[i] was modified
 			lv[i] = g[i]->accept(cc); // needs more info from f...
-		else // g[i] is identity
-			lv[i] = f[i];
+		// else // g[i] is identity
+			// lv[i] = f[i];
 	}
 #undef f
 #undef g
@@ -169,6 +170,7 @@ void Analysis::State::apply(const State& s)
  */
 void Analysis::State::accel(const State& s0)
 {
+	// TODO!!
 	// deal with lvars
 	for(LocalVariables::Iter i(lvars); i; i++)
 	{
@@ -431,4 +433,21 @@ void Analysis::State::removeConstantPredicates()
 		}
 		else piter++;
 	}
+}
+
+// if this has n states and ss has m states, this will explode into n*m states
+void Analysis::States::apply(States& ss)
+{
+	int new_cap, new_length = this->count() * ss.count();
+	DBG("Applying " << ss.count() << " to " << this->count() << " states, giving " << new_length << ".")
+	for(new_cap = 1; new_cap < new_length; new_cap *= 2); // adjust to closest higher power of 2
+	if(new_cap > ss.s.capacity())
+		ss.s.grow(new_cap);
+
+	Iterator si(ss.s);
+	for(Iterator i(s); i; i++)
+		(*this)[i].apply(*si);
+	for(si++; si; si++)
+		for(Iterator i(s); i; i++)
+			(*this)[i].apply(*si);
 }

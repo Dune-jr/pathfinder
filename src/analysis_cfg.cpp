@@ -14,16 +14,32 @@ using namespace elm::io;
 Identifier<LockPtr<Analysis::States> >		Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
 Identifier<Analysis::State>					Analysis::LH_S("Trace on a loop header"); // maybe change to vector
 Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a loop (on a loop header)");
+// for non-virtualized CFGs only
+Identifier<LockPtr<Analysis::States> >		Analysis::CFG_S("Trace on a CFG");
+Identifier<LockPtr<VarMaker> >				Analysis::CFG_VARS("VarMaker of a CFG"); // VarMaker to be copied, updated, and appended on f° return
 
 /**
- * @fn void Analysis::processProg(Block* entry);
- * @brief Runs the analysis starting from the CFG entry entry
-*/
+ * @brief       Runs the analysis on a whole program
+ * @param entry Entry block of the program to analyse
+ */
 void Analysis::processProg(Block* entry)
 {
-/* begin */
 	/* ips ← {} */
 	infeasible_paths.clear();
+	/* ... */
+	processCFG(entry);
+	DBGG(color::IGre() << "Reached end of program.")
+}
+
+/**
+ * @fn void Analysis::processCFG(Block* entry);
+ * @brief Runs the analysis starting from the CFG entry entry
+*/
+void Analysis::processCFG(Block* entry)
+{
+	WorkingList wl;
+	DBGG(color::IPur() << "==>\"" << entry->cfg()->name() << "\"")
+/* begin */
 	/* for e ∈ E(G) */
 		/* s_e ← nil */
 	/* for h ∈ H(G) */
@@ -100,7 +116,7 @@ void Analysis::processProg(Block* entry)
 						break;
 				}
 			}
-			I(b, *s); // update s
+			I(b, s); // update s
 			/* for e ∈ succ \ {EX_h | b ∈ L_h ∧ status_h =/ LEAVE} */
 			const Vector<Edge*> succ(propagate ? outsWithoutUnallowedExits(b) : nullVector<Edge*>());
 			for(Vector<Edge*>::Iter e(succ); e; e++)
@@ -111,11 +127,12 @@ void Analysis::processProg(Block* entry)
 				if(inD_ip(e))
 					ip_stats += ipcheck(*EDGE_S.ref(e), infeasible_paths);
 				/* wl ← wl ∪ {sink(e)} */
-				wl_push(e->target());
+				 wl.push(outsAlias(e->sink()));
 			}
 		}
 	}
 /* end */
+	DBGG(color::IPur() << "\"" << entry->cfg()->name() << "\"==>")
 }
 
 #if 0
@@ -220,25 +237,37 @@ void Analysis::processCFG(CFG* cfg)
 /**
  * @brief      Interpretation function of a Block
  */
-Analysis::States& Analysis::I(Block* b, States& s)
+void Analysis::I(Block* b, LockPtr<States> s)
 {
 	if(flags&SHOW_PROGRESS)
 		progress->onBlock(b);
 	if(b->isBasic())
 	{
 		DBGG(color::Bold() << "-\tI(b=" << b << ") " << color::NoBold() << printFixPointStatus(b))
-		for(States::Iterator si(s.states()); si; si++)
-			s[si].processBB(b->toBasic(), flags&(Analysis::WITH_V1 | Analysis::WITH_V2));
+		for(States::Iterator si(s->states()); si; si++)
+			(*s)[si].processBB(b->toBasic(), flags&(Analysis::WITH_V1 | Analysis::WITH_V2));
 	}
 	else if(b->isEntry())
-		s.onCall((*getCaller(b->cfg()))->toSynth());
+		s->onCall((*getCaller(b->cfg()))->toSynth());
 	else if(b->isCall())
-		s.onReturn(b->toSynth());
+		s->onReturn(b->toSynth());
 	else if(b->isExit()) // main
 		{ }
 	else
 		DBGG("WARNING: not doing anything");
-	return s;
+
+	if(!(flags&VIRTUALIZE_CFG))
+	{
+		if(b->isCall())
+		{
+			CFG* called_cfg = b->toSynth()->callee();
+			if(!CFG_S.exists(called_cfg)) // if the called CFG has not been processed yet
+				processCFG(called_cfg);
+			s->apply(**CFG_S(called_cfg));
+		}
+		else if(b->isExit())
+			CFG_S(b->cfg()) = s; // we will never free this, which shouldn't be a problem because it should only be freed at the end of analysis
+	}
 }
 
 /**

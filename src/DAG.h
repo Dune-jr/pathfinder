@@ -205,7 +205,7 @@ public:
 	}
 
 	const Operand *mem(const OperandConst *addr) {
-ASSERT(addr);
+// ASSERT(addr);
 		Key k(ARITHOPR_MEM, addr);
 		Operand *r = op_map.get(k, 0);
 		if(!r) {
@@ -245,7 +245,7 @@ private:
 	}
 
 	const Operand *op(arithoperator_t op, const Operand *arg1, const Operand *arg2) {
-ASSERTP(arg1 && arg2, arg1 << arg2);
+// ASSERTP(arg1 && arg2, arg1 << arg2);
 		Key k(op, arg1, arg2);
 		Operand *r = op_map.get(
 			k, 0);

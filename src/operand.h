@@ -267,6 +267,7 @@ public:
 	inline bool isUnidentified() const { return id == -1; } // blank Top
 	inline bool isIdentified() const { return !isUnidentified(); }
 	inline int getId() const { return id; } // shouldn't be used
+	inline void scale(int offset) { id += offset; } // for internal use by VarMaker
 	
 	// Operand* copy() const;
 	unsigned int countTempVars() const;

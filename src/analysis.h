@@ -12,6 +12,7 @@
 #include "detailed_path.h"
 #include "operand.h"
 #include "pretty_printing.h"
+#include "var_maker.h"
 #include "working_list.h"
 #include "dom/GlobalDominance.h"
 
@@ -104,10 +105,11 @@ protected:
 	} loopheader_status_t; // Fixpoint status of the loop header, for annotation
 	inline static loopheader_status_t loopStatus(const Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
 	inline static bool isConditional(Block* b) { return b->countOuts() > 1; }
-	Block* insAlias		   (Block* b);
-	Vector<Edge*> allIns    (Block* h);
-	Vector<Edge*> backIns   (Block* h);
-	Vector<Edge*> nonBackIns(Block* h);
+	Block* insAlias		    (Block* b) const;
+	Block* outsAlias	    (Block* b) const;
+	Vector<Edge*> allIns    (Block* h) const;
+	Vector<Edge*> backIns   (Block* h) const;
+	Vector<Edge*> nonBackIns(Block* h) const;
 	static Vector<Edge*> outsWithoutUnallowedExits(Block* b);
 	static bool isAllowedExit(Edge* exit_edge);
 	static elm::String printFixPointStatus(Block* b);
@@ -117,8 +119,10 @@ protected:
 	static Identifier<Analysis::State>			  LH_S; // Trace on a loop header
 private:
 	static Identifier<loopheader_status_t>		  LH_STATUS; // Fixpt status of a loop header
+	static Identifier<LockPtr<Analysis::States> > CFG_S; // Trace on a CFG
+	static Identifier<LockPtr<VarMaker> > 		  CFG_VARS;
 
-	WorkingList wl; // working list
+	// WorkingList wl;
 	Vector<DetailedPath> infeasible_paths;
 	GlobalDominance* gdom;
 	elm::sys::StopWatch sw;
@@ -138,7 +142,9 @@ private:
 	
 	// analysis_cfg.cpp
 	void processProg(Block* block);
-	States& I(Block* b, States& s); // modifies existing states
+	void processCFG(Block* entry);
+	inline void processCFG(CFG* cfg) { processCFG(cfg->entry()); }
+	void I(Block* b, LockPtr<Analysis::States> s); // modifies existing states
 	LockPtr<States> I(const Vector<Edge*>::Iter& e, LockPtr<States> s); // creates new states
 	// Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	// elm::String wlToString() const;

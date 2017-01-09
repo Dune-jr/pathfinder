@@ -44,9 +44,13 @@ public:
 	Block* item(void) const
 		{ return lh; } // works even when ended()
 	inline void next(void) {
-		while(lh && !(tmp = ENCLOSING_LOOP_HEADER.get(lh, NULL)))
-			lh = cfg_follow_calls ? getCaller(lh->cfg(), NULL) : lh;
-		lh = lh ? tmp : NULL;
+		if(cfg_follow_calls) {
+			while(lh && !(tmp = ENCLOSING_LOOP_HEADER.get(lh, NULL)))
+				lh = getCaller(lh->cfg(), NULL);
+			lh = lh ? tmp : NULL;
+		}
+		else
+			lh = ENCLOSING_LOOP_HEADER.get(lh, NULL);
 	}
 
 private:

@@ -222,8 +222,14 @@ public:
 	inline void onReturn(SynthBlock* sb) { for(Iterator i(this->s); i; i++) s[i].onReturn(sb); }
 	inline void onLoopEntry(Block* b)    { for(Iterator i(this->s); i; i++) s[i].onLoopEntry(b); }
 	inline void onLoopExit (Block* b)    { for(Iterator i(this->s); i; i++) s[i].onLoopExit(b); }
-	inline void onLoopExit (Edge* e)
-		{ Block* h = LOOP_EXIT_EDGE(e); for(LoopHeaderIter i(e->source()); i.item() != h; i++) onLoopExit(*i); onLoopExit(h); }
+	inline void onLoopExit (Edge* e) {
+		Block* h = LOOP_EXIT_EDGE(e);
+		for(LoopHeaderIter i(e->source()); i.item() != h; i++) 
+			onLoopExit(*i);
+		onLoopExit(h);
+	}
+
+	void apply(States& ss);
 
 	typedef Vector<State>::Iter Iterator;
 	inline void remove(const Iterator& i) { s.remove(i); }
