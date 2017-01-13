@@ -45,7 +45,6 @@ protected:
 	typedef struct
 	{
 		const dfa::State* dfa_state;
-		DAG* dag;
 		OperandVar sp; // Stack Pointer
 		short max_tempvars;
 		short max_registers;
@@ -84,6 +83,8 @@ protected:
 	class Progress;
 	class SolverProgress;
 	context_t context;
+	DAG* dag;
+	VarMaker* vm;
 	IPStats ip_stats;
 	Analysis::Progress* progress;
 	int state_size_limit, nb_cores, flags; // read by inherited class

@@ -55,10 +55,10 @@ private:
 	inline t::int32 getId(int index) const
 		{ return index < thresold ? index : thresold-index-1; }
 	void label(t::int32 id, Edge* e)
-		{ if(!l[id]) l[id] = new labels_t(); //crash();
+		{ return; if(!l[id]) l[id] = new labels_t(); //crash();
 		  l[id]->add(e); }
 	void label(t::int32 id, const labels_t& labs)
-		{ if(!l[id]) l[id] = new labels_t(labs);
+		{ return; if(!l[id]) l[id] = new labels_t(labs);
 		  else for(labels_t::Iter i(labs); i; i++) l[id]->add(*i); }
 
 public:
@@ -149,34 +149,6 @@ public:
 		short size;
 		short thresold;
 	};
-	// inline Operand const* operator[](Iter i) const
-	// 	{ return o[getIndex(*i)]; }
-	/*
-	class Iter: public PreIterator<Iter, const Operand*> {
-	public:
-		// inline Iter(void) : lv { }
-		inline Iter(const LocalVariables& lv_) : lv(lv_), n(0) { }
-		inline Iter(const Iter& i) : lv(i.lv), n(i.n) { }
-		
-		inline bool ended(void) const
-			{ return n >= lv.size; }
-		inline const Operand* item(void) const
-			{ return lv.o[n]; }
-		inline void next(void)
-			{ n++; }
-
-		// returns the id of the current register/tempvar
-		inline OperandVar id() const
-			{ return OperandVar(n < lv.thresold ? n : lv.thresold-n-1); }
-		inline const Iter* operator->(void) const
-			{ return this; }
-
-	private:
-		friend class LocalVariables;
-		const LocalVariables& lv;
-		int n;
-	};
-	*/
 
 private:
 	short size; // size of arrays. save space with shorts

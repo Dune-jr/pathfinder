@@ -11,7 +11,8 @@
  */
 const Analysis::State bottom(true);
 
-Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), lvars(), mem(53), bottom(bottom)
+// bottom=false: it's bot. bottom=true: it's top
+Analysis::State::State(bool bottom) : context(NULL), dag(NULL), vm(NULL), lvars(), mem(53), bottom(bottom), path()
 #ifdef V1
 	, constants()
 #endif
@@ -20,11 +21,11 @@ Analysis::State::State(bool bottom) : dfa_state(NULL), sp(0), dag(null<DAG>()), 
 // Analysis::State::State(const context_t& context)
 	// : dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
 // 
-Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
-	: dfa_state(context.dfa_state), sp(context.sp), dag(context.dag), lvars(*dag, context.max_tempvars, context.max_registers),
-	mem(53), bottom(false)
+Analysis::State::State(Edge* entry_edge, const context_t& context_, DAG* dag, VarMaker* vm, bool init)
+	: context(&context_), dag(dag), vm(vm), lvars(*dag, context->max_tempvars, context->max_registers)
+	, mem(53), bottom(false), path(entry_edge ? entry_edge->target()->cfg() : NULL)
 #ifdef V1
-	, constants(context.max_tempvars, context.max_registers)
+	, constants(context->max_tempvars, context->max_registers)
 #endif
 {
 	generated_preds.clear(); // generated_preds := [[]]
@@ -33,14 +34,14 @@ Analysis::State::State(Edge* entry_edge, const context_t& context, bool init)
 	{
 		path.addLast(entry_edge);
 #ifdef V1
-		constants.set(sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
+		constants.set(context->sp, SP, Set<Edge*>::null, false); // set that ?13==SP (since SP is the value of ?13 at the beginning of the program)
 #endif
-		set(sp, dag->cst(SP));
+		set(context->sp, dag->cst(SP));
 	}
 }
 
 Analysis::State::State(const State& s)
-	: dfa_state(s.dfa_state), sp(s.sp), dag(s.dag), lvars(s.lvars), mem(s.mem), bottom(s.bottom), path(s.path),
+	: context(s.context), dag(s.dag), vm(s.vm), lvars(s.lvars), mem(s.mem), bottom(s.bottom), path(s.path),
 #ifdef V1
 	constants(s.constants),
 #endif
@@ -133,34 +134,61 @@ io::Output& Analysis::State::print(io::Output& out) const
 
 
 /**
- * @brief      This function is *this -> s -> s o *this, state composition. Does not update path.
+ * @brief      This function is *this -> s -> s o *this, state composition. Updates current state. Does not update path.
  * @param  s   state to apply
  */
 void Analysis::State::apply(const State& s)
 {
-	DBG(this->dumpEverything() << ",\n " << s.dumpEverything())
+	DBG("f="<<this->dumpEverything() << ",\ng = " << s.dumpEverything())
 	Compositor cc(*this);
-#define f this->lvars
-#define g s.lvars
+
+	// this=f, s=g
+	DBG("f = " << *this << ", g = " << s)
 	// goal is lv = g o f
-	LocalVariables lv(f); // we need some temporary to handle cases like [r0 -> r1, r1 -> r0]
-	for(LocalVariables::Iter i(g); i; i++)
+	LocalVariables lv(lvars); // we need some temporary to handle cases like [r0 -> r1, r1 -> r0]
+	for(LocalVariables::Iter i(s.lvars); i; i++)
 	{
-		if(g[i] != NULL) // g[i] was modified
-			lv[i] = g[i]->accept(cc); // needs more info from f...
+		if(s.lvars[i] != NULL) // g[i] was modified
+		{
+			ELM_DBGV(1, "\tf°g(" << *i << ") = " << "f(" << *s.lvars[i] << ") = ")
+			lv[i] = s.lvars[i]->accept(cc); // needs more info from f...
+			if(dbg_verbose == DBG_VERBOSE_ALL)
+				elm::cout << *lv[i] << endl;
+		}
 		// else // g[i] is identity
-			// lv[i] = f[i];
 	}
-#undef f
-#undef g
-	mem_t m(this->mem); // save local mem
+	DBG("")
+
 	// goal is mem = n o m with n = s.mem
-	for(mem_t::PairIterator ni(s.mem); ni; ni++)
+	ASSERTP(lvars[context->sp], "I don't think we hit that case? if we do, handle it in the arith module too")
+	if(!lvars[context->sp]->isConstant()) // we lost the SP
 	{
-		mem.put((*ni).fst, (*ni).snd->accept(cc));
+		DBGW("sp was lost, can't use mem data from function")
+		mem.clear();
 	}
-	// all the ni that are identity are properly handled, because mem is initialized with m
+	else
+	{
+		mem_t m(this->mem); // save local mem
+		for(mem_t::PairIterator ni(s.mem); ni; ni++)
+		{
+			ELM_DBGV(1, "\tf°g([" << (*ni).fst << "]) = ")
+			Constant k = (*ni).fst;
+			const Operand* updated_addr = dag->cst(k)->accept(cc);
+			ASSERTP(updated_addr->kind() == CST, "sp not a constant? It should have been checked before")
+			k = updated_addr->toConstant();
+			if(dbg_verbose == DBG_VERBOSE_ALL)
+				elm::cout << "f(g([" << k << "])) = f(" << *(*ni).snd << ") = ";
+
+			m.put(k, (*ni).snd->accept(cc));
+			if(dbg_verbose == DBG_VERBOSE_ALL)
+				elm::cout << **m[k] << endl;
+		}
+		// all the ni that are identity are properly handled, because m is initialized with mem
+		mem = m;
+	}
 	lvars = lv;
+	DBG("f o g = " << color::IBlu() << this->dumpEverything())
+	// ASSERTP(false, "need to check tops")
 }
 
 /**
@@ -359,7 +387,7 @@ void Analysis::State::merge(const States& ss, Block* b)
  */
 Analysis::State Analysis::topState(Block* entry) const
 {
-	return Analysis::State(theOnly(entry->outs()), context, true);
+	return Analysis::State(theOnly(entry->outs()), context, dag, vm, true);
 }
 
 elm::String Analysis::State::dumpEverything() const
@@ -385,7 +413,6 @@ bool Analysis::State::equiv(const Analysis::State& s) const
 {
 	if(s.isBottom())
 		return this->isBottom();
-	ASSERT(this->sp == s.sp);
 	// do not check the path or any of the edges!
 	/*if(generated_preds != generated_preds)
 		return false;

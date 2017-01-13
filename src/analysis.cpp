@@ -52,7 +52,8 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 	context.sp = ws->platform()->getSP()->number(); // id of the stack pointer
 	context.max_tempvars = (short)ws->process()->maxTemp(); // maximum number of tempvars used
 	context.max_registers = (short)ws->platform()->regCount(); // count of registers
-	context.dag = new DAG(context.max_tempvars, context.max_registers);
+	dag = new DAG(context.max_tempvars, context.max_registers);
+	// vm will be initialized on CFG init
 
 	if(!(flags&WITH_V1) && !(flags&WITH_V2))
 		DBGW("No A.I. analysis selected")
@@ -62,7 +63,7 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 Analysis::~Analysis()
 {
 	delete gdom;
-	delete context.dag;
+	delete dag;
 }
 
 /**
@@ -442,10 +443,8 @@ void Analysis::printInfeasiblePaths() const
 	if(dbg_flags&DBG_RESULT_IPS)
 		for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
 		{
-			if(dbg_verbose == DBG_VERBOSE_ALL)
-				DBG(color::IGre() << "    * [" << *iter << "]")
-			else
-				cout << "    * [" << *iter << "]" << endl;
+			CFG* f = (*iter).function();
+			cout << "    * " << (f ? _ << f << ":" : elm::String()) << "[" << *iter << "]" << endl;
 		}
 }
 

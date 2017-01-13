@@ -38,6 +38,7 @@ void Analysis::processProg(Block* entry)
 void Analysis::processCFG(Block* entry)
 {
 	WorkingList wl;
+	vm = new VarMaker();
 	DBGG(color::IPur() << "==>\"" << entry->cfg()->name() << "\"")
 /* begin */
 	/* for e ∈ E(G) */
@@ -49,9 +50,9 @@ void Analysis::processCFG(Block* entry)
 	for(Block::EdgeIter entry_outs(entry->outs()); entry_outs; entry_outs++)
 	{
 		/* s_e ← T */
-		LockPtr<States> entry_s(new States());
-		entry_s->push(topState(entry));
-		EDGE_S(*entry_outs) = entry_s;
+		LockPtr<States> s_entry(new States());
+		s_entry->push(topState(entry));
+		EDGE_S(*entry_outs) = s_entry;
 		/* wl ← sink(e) */
 		wl.push((*entry_outs)->target()); // only one outs, firstBB.
 	}
@@ -133,106 +134,8 @@ void Analysis::processCFG(Block* entry)
 	}
 /* end */
 	DBGG(color::IPur() << "\"" << entry->cfg()->name() << "\"==>")
+	CFG_VARS(entry->cfg()) = LockPtr<VarMaker>(vm);
 }
-
-#if 0
-void Analysis::processCFG(CFG* cfg)
-{
-/* begin */
-	/* for e ∈ E(G) */
-		/* s_e ← nil */
-	/* for h ∈ H(G) */
-		/* s_h ← nil */
-		/* status_h ← ENTER */
-	/* for e ∈ entry.outs */
-	for(Block::EdgeIter entry_outs(cfg->entry()->outs()); entry_outs; entry_outs++)
-	{
-		/* s_e ← T */
-		LockPtr<States> entry_s(new States());
-		entry_s->push(topState(cfg->entry()));
-		EDGE_S(*entry_outs) = entry_s;
-		/* wl ← sink(e) */
-		wl.push((*entry_outs)->target()); // only one outs, firstBB.
-	}
-
-	/* while wl ≠ {} do */
-	while(!wl.isEmpty())
-	{
-		/* b ← pop(wl) */
-		Block *b = wl.pop();
-		/* pred ← 	b.ins \ B(G) if b ∈ H(G) ∧ status_b = ENTER */
-		/* 			b.ins ∩ B(G) if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
-		/* 			b.ins 		 if b ∈/ H(G) */
-		const Vector<Edge*> pred(LOOP_HEADER(b) ? (loopStatus(b) == ENTER
-				? nonBackIns(b) /* if b ∈ H(G) ∧ status_b = ENTER */
-				: backIns(b) /* if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
-			) : allIns(b) /* if b ∉ H(G) */
-		);
-
-		/* if ∀e ∈ pred, s_e ≠ nil then */
-		if(allEdgesHaveTrace(pred))
-		{
-			/* s ← |_|e∈pred s_e */
-			LockPtr<States> s = narrowing(pred);
-			/* for e ∈ pred */
-			for(Vector<Edge*>::Iter e(pred); e; e++)
-				/* s_e ← nil */
-				EDGE_S.remove(e);
-			
-			/* succ ← b.outs */
-			bool propagate = true;
-			/* if b ∈ H(G) then */
-			if(LOOP_HEADER(b))
-			{
-				ASSERT(s->count() <= 1);
-				/* if status_b = LEAVE then */
-				if(loopStatus(b) == LEAVE)
-				{
-					/* if ∃e ∈ b.ins | s_e = nil then */
-					if(anyEdgeHasTrace(b->ins()))
-						/* wl ← wl ∪ {b} */
-						wl.push(b);
-					/* s_b ← nil */
-					LH_S.remove(b);
-					/* succ ← {} */
-					propagate = false;
-				}
-				else /* else s_b ← s */
-					LH_S(b) = s->one();
-				switch(loopStatus(b)) {
-					/* status_b ← FIX if status_b = ENTER */
-					case ENTER:
-						LH_STATUS(b) = FIX;
-						s->onLoopEntry(b);
-						break;
-					/* status_b ← LEAVE if status_b = FIX ∧ s ≡ s_b */
-					case FIX: if(s->one().equiv(LH_S(b)))
-						LH_STATUS(b) = LEAVE;
-						break;
-					/* status_b ← ENTER if status_b = LEAVE */
-					case LEAVE:
-						LH_STATUS(b).remove();
-						break;
-				}
-			}
-			I(b, *s); // update s
-			/* for e ∈ succ \ {EX_h | b ∈ L_h ∧ status_h =/ LEAVE} */
-			const Vector<Edge*> succ(propagate ? outsWithoutUnallowedExits(b) : nullVector<Edge*>());
-			for(Vector<Edge*>::Iter e(succ); e; e++)
-			{
-				/* s_e ← I*[e](s) */
-				EDGE_S(e) = I(e, s);
-				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
-				if(inD_ip(e))
-					ip_stats += ipcheck(*EDGE_S.ref(e), infeasible_paths);
-				/* wl ← wl ∪ {sink(e)} */
-				wl_push(e->target());
-			}
-		}
-	}
-/* end */
-}
-#endif
 
 /**
  * @brief      Interpretation function of a Block
@@ -243,7 +146,7 @@ void Analysis::I(Block* b, LockPtr<States> s)
 		progress->onBlock(b);
 	if(b->isBasic())
 	{
-		DBGG(color::Bold() << "-\tI(b=" << b << ") " << color::NoBold() << printFixPointStatus(b))
+		DBGG(color::Bold() << "-\tI(b=" << b << ") " << color::NoBold() << color::IYel() << "x" << s->count() << printFixPointStatus(b))
 		for(States::Iterator si(s->states()); si; si++)
 			(*s)[si].processBB(b->toBasic(), flags&(Analysis::WITH_V1 | Analysis::WITH_V2));
 	}
@@ -375,7 +278,7 @@ bool Analysis::checkInfeasiblePathValidity(const Vector<Analysis::State>& sv, co
  */
 DetailedPath Analysis::reorderInfeasiblePath(const Path& ip, const DetailedPath& full_path)
 {
-	DetailedPath ordered_ip;
+	DetailedPath ordered_ip(full_path.function());
 	// parse the detailed path and add all the edges that match the Path ip and the loop entries
 	for(DetailedPath::Iterator full_path_iter(full_path); full_path_iter; full_path_iter++)
 	{

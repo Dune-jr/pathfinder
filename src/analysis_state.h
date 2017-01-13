@@ -25,11 +25,11 @@ class Analysis::State {
 private:
 	typedef HashTable<Constant, const Operand*, ConstantHash> mem_t;
 
-	const dfa::State* dfa_state;
-	OperandVar sp; // the Stack Pointer register
+	const context_t* context;
 
 	// v2
 	DAG* dag;
+	VarMaker* vm;
 	LocalVariables lvars;
 	mem_t mem;
 
@@ -47,7 +47,7 @@ private:
 public:
 	explicit State(bool bottom = false); // false: create an invalid state, true: create a bottom state
 	// State(Block* entryb, const context_t& context, bool init = true);
-	State(Edge* entry_edge, const context_t& context, bool init);
+	State(Edge* entry_edge, const context_t& context, DAG* dag, VarMaker* vm, bool init);
 	State(const State& s);
 	inline const DetailedPath& getDetailedPath() const { return path; }
 	inline Edge* lastEdge() const { return path.lastEdge(); }
@@ -63,8 +63,9 @@ public:
 	inline void onCall(SynthBlock* sb)   { path.onCall(sb); }
 	inline void onReturn(SynthBlock* sb) { path.onReturn(sb); }
 	inline bool isBottom() const { return bottom; }
-	inline bool isValid() const { return dfa_state != NULL /*&& constants.isValid()*/; } // this is so that we can have empty states that do not use too much memory
+	inline bool isValid() const { return context != NULL; } // this is so that we can have empty states that do not use too much memory
 	inline DAG& getDag() const { return *dag; }
+	inline const OperandVar& getSP() const { return context->sp; }
 
 	// analysis_state.cpp
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
@@ -107,16 +108,16 @@ private:
 	static bool affectsMemory(t::uint16 op);
 	void store(OperandVar addr, const Operand* b);
 	// smart functions
-	const Operand* smart_add(const Operand* a, const Operand* b);
-	const Operand* smart_add(Constant x, const Operand* y);
-	const Operand* smart_sub(const Operand* a, const Operand* b);
-	const Operand* smart_sub(Constant x, const Operand* y);
-	const Operand* smart_mul(const Operand* a, const Operand* b);
-	const Operand* smart_mul(const Operand* a, Constant c);
-	const Operand* smart_div(const Operand* a, const Operand* b);
-	const Operand* smart_div(const Operand* a, Constant c);
-	const Operand* smart_divmul(const Operand* x, Constant k, Constant c);
-	const Operand* smart_muldiv(const Operand* x, Constant k, Constant c);
+	// const Operand* smart_add(const Operand* a, const Operand* b);
+	// const Operand* smart_add(Constant x, const Operand* y);
+	// const Operand* smart_sub(const Operand* a, const Operand* b);
+	// const Operand* smart_sub(Constant x, const Operand* y);
+	// const Operand* smart_mul(const Operand* a, const Operand* b);
+	// const Operand* smart_mul(const Operand* a, Constant c);
+	// const Operand* smart_div(const Operand* a, const Operand* b);
+	// const Operand* smart_div(const Operand* a, Constant c);
+	// const Operand* smart_divmul(const Operand* x, Constant k, Constant c);
+	// const Operand* smart_muldiv(const Operand* x, Constant k, Constant c);
 
 	LabelledPredicate makeLabelledPredicate(condoperator_t opr, const Operand* opd1, const Operand* opd2, Path& labels) const;
 	bool tryToKeepVar(const OperandVar& var);//, const Predicate*& removed_predicate);

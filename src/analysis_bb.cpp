@@ -1578,12 +1578,12 @@ Option<Constant> Analysis::State::getConstantValueOfReadOnlyMemCell(const Operan
 	const Constant& addr = addr_mem.addr();
 	if(!addr.isAbsolute())
 		return none;
-	if(!dfa_state->isInitialized(addr.val()))
+	if(!context->dfa_state->isInitialized(addr.val()))
 		return none;
 
 #define RETURN_CONSTANT(type) {\
 		type v;\
-		dfa_state->get(addr.val(), v);\
+		context->dfa_state->get(addr.val(), v);\
 		return Constant(v);\
 	}
 	switch(type)

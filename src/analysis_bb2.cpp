@@ -3,10 +3,11 @@
  */
 
 #include <otawa/sem/PathIter.h>
-#include "operand.h"
+#include "analysis_state.h"
+#include "arith.h"
 #include "DAG.h"
 #include "debug.h"
-#include "analysis_state.h"
+#include "operand.h"
 
 using namespace otawa::sem;
 
@@ -25,7 +26,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 		if(affectsRegister(op)) // affects the register d
 			scratch(d);
 		if(affectsMemory(op)) // affects memory at addr
-			store(OperandVar(addr), dag->new_top());
+			store(OperandVar(addr), vm->new_top());
 		return;
 	}
 	// maintain predicates
@@ -121,14 +122,14 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 			set(d, dag->cmp(getPtr(a), getPtr(b)));
 			break;
 		case ADD:
-			set(d, smart_add(getPtr(a), getPtr(b)));
+			set(d, Arith::add(dag, getPtr(a), getPtr(b)));
 			break;
 		case SUB:
-			set(d, smart_sub(getPtr(a), getPtr(b)));
+			set(d, Arith::sub(dag, getPtr(a), getPtr(b)));
 			break;
 		case SHL: // d <- a << b
 			if(lvars.isConst(b))
-				set(d, smart_mul(getPtr(a), Constant(1) << lvars(b).toConstant()));
+				set(d, Arith::mul(dag, getPtr(a), Constant(1) << lvars(b).toConstant()));
 			else
 			{
 				DBG(color::IYel() << "  SHL with unknown factor!")
@@ -142,7 +143,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 				if(lvars.isConst(a))
 					set(d, dag->cst(getPtr(a)->toConstant() / Constant(1) << lvars(b).toConstant()));
 				else
-					set(d, smart_div(getPtr(a), dag->cst(Constant(1) << lvars(b).toConstant())));
+					set(d, Arith::div(dag, getPtr(a), dag->cst(Constant(1) << lvars(b).toConstant())));
 			}
 			else
 			{
@@ -207,7 +208,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 		case MULU:
 			UNTESTED_CODE("unsigned variant")
 		case MUL:
-			set(d, smart_mul(getPtr(a), getPtr(b)));
+			set(d, Arith::mul(dag, getPtr(a), getPtr(b)));
 			break;
 		case MULH:
 			scratch(d); // TODO! do better
@@ -221,7 +222,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 					set(d, dag->cst(*av / *bv));
 					break;
 				}
-			set(d, smart_div(getPtr(a), getPtr(b)));
+			set(d, Arith::div(dag, getPtr(a), getPtr(b)));
 			break;
 		case MODU:
 		case MOD:
@@ -265,7 +266,7 @@ const Operand* Analysis::State::getPtr(t::int32 var_id) const
 
 void Analysis::State::scratch(const OperandVar& var)
 {
-	set(var, dag->new_top(), false);
+	set(var, vm->new_top(), false);
 	lvars.clearLabels(var);
 }
 
@@ -273,7 +274,7 @@ void Analysis::State::scratchAllMemory()
 {
 	DBG(color::IRed() << "  Access to Top, invalidating all memory (" << mem.count() << " items)")
 	for(mem_t::MutableIter i(mem); i; i++)
-		i.item() = dag->new_top(); // TODO! that looks costly... maybe we should rework the way Tops work in DAG.
+		i.item() = vm->new_top(); // TODO! that looks costly... maybe we should rework the way Tops work in DAG.
 }
 
 void Analysis::State::store(OperandVar addr, const Operand* opd)
@@ -286,238 +287,6 @@ void Analysis::State::store(OperandVar addr, const Operand* opd)
 		DBG(color::IYel() << "  Store address is unknown: " << addr << " = " << lvars(addr))
 		scratchAllMemory(); // access to Top
 	}
-}
-
-// this is minimal and a bit unoptimized
-const Operand* Analysis::State::smart_add(const Operand* a, const Operand* b)
-{
-	Option<Constant> av = a->evalConstantOperand(), bv = b->evalConstantOperand();
-	if(av && bv)
-		return dag->cst(*av+*bv);
-	else if(av)
-		return smart_add(*av, b);
-	else if(bv)
-		return smart_add(*bv, a);
-	else //(!av && !bv)
-		return dag->add(a, b);
-}
-
-const Operand* Analysis::State::smart_add(Constant x, const Operand* y)
-{
-	if(x == 0)
-		return y;
-	if(y->kind() == ARITH)
-	{
-		const OperandArith& z = y->toArith();
-		Option<Constant> av = z.leftOperand().evalConstantOperand();
-		Option<Constant> bv = z.rightOperand().evalConstantOperand();
-		if(z.opr() == ARITHOPR_ADD)
-		{
-			if(av) // x + (av + z2)
-				return dag->add(z.right(), dag->cst(x + *av));
-			if(bv) // x + (z1 + bv)
-				return dag->add(z.left(), dag->cst(x + *bv));
-		}
-		else if(z.opr() == ARITHOPR_SUB)
-		{
-			if(av) // x + (av - z2)
-				return dag->sub(dag->cst(x + *av), z.right());
-			if(bv) // x + (z1 - bv)
-				return dag->add(z.left(), dag->cst(x - *bv));
-		}
-	}
-	return dag->add(y, dag->cst(x));
-}
-
-const Operand* Analysis::State::smart_sub(const Operand* a, const Operand* b)
-{
-	Option<Constant> av = a->evalConstantOperand(), bv = b->evalConstantOperand();
-	if(av && bv)
-		return dag->cst(*av-*bv);
-	else if(!av && !bv)
-		return dag->sub(a, b);
-	else if(av) // k - b
-		return smart_sub(*av, b);
-	else if(bv) // a - k = a+ (-k)
-		return smart_add(-*bv, a);
-	else
-		return dag->sub(a, b);
-}
-
-const Operand* Analysis::State::smart_sub(Constant x, const Operand* y)
-{
-	if(x == 0)
-		return y;
-	if(y->kind() == ARITH)
-	{
-		const OperandArith& z = y->toArith();
-		Option<Constant> av = z.leftOperand().evalConstantOperand();
-		Option<Constant> bv = z.rightOperand().evalConstantOperand();
-		if(z.opr() == ARITHOPR_ADD)
-		{
-			if(av) // x - (av + z2)  ==>  [x-av] - z2
-				return dag->sub(dag->cst(x - *av), z.right());
-			if(bv) // x - (z1 + bv)  ==>  [x-bv] - z1
-				return dag->sub(dag->cst(x - *bv), z.left());
-		}
-		else if(z.opr() == ARITHOPR_SUB)
-		{
-			if(av) // x - (av - z2)  ==>  [x-av] + z2
-				return dag->add(dag->cst(x - *av), z.right());
-			if(bv) // x - (z1 - bv)  ==>  [x+bv] - z1
-				return dag->sub(dag->cst(x + *bv), z.left());
-		}
-	}
-	return dag->sub(dag->cst(x), y);
-}
-
-const Operand* Analysis::State::smart_mul(const Operand* a, const Operand* b)
-{
-	if(Option<Constant> av = a->evalConstantOperand())
-		return smart_mul(b, *av);
-	else if(Option<Constant> bv = b->evalConstantOperand())
-		return smart_mul(a, *bv);
-	else
-		return dag->mul(a, b);
-}
-
-const Operand* Analysis::State::smart_mul(const Operand* a, Constant c)
-{
-	if(c == 1)
-		return a;
-	if(c == 0)
-		return dag->cst(0);
-	Option<Constant> k;
-	if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_MUL)
-	{ // try to reduce a*c=(k*x)*c to [k*c]*x by exploring both operands of a and identifying one of them as a constant
-		const OperandArith& aa = a->toArith();
-		if(k = aa.left()->evalConstantOperand())
-			return dag->mul(aa.right(), dag->cst(*k * c));
-		else if(k = aa.rightOperand().evalConstantOperand())
-			return dag->mul(aa.left(), dag->cst(*k * c));
-		else
-			return dag->mul(a, dag->cst(c));
-	}
-	else if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_DIV)
-	{
-		const OperandArith& aa = a->toArith();
-		if(k = aa.left()->evalConstantOperand())
-		{	// if a = k/x, k constant, reduce a*c=(k/x)*c to k*c/x
-			DBG(color::IBlu() << "  Simplified (" << *k << "/" << *aa.right() << ")*" << c << " to " << *k*c << "/" << *aa.right())
-			UNTESTED_CODE("simplification");
-			return dag->div(dag->cst(*k * c), aa.right());
-		}
-		else if(k = aa.rightOperand().evalConstantOperand())
-		{	// if a = x/k, k constant, try to reduce a*c=(x/k)*c to x/[k/c] or x*[c/k]
-			return smart_divmul(aa.left(), *k, c);
-		}
-		else // give up
-			return dag->mul(a, dag->cst(c));
-	}
-	else if(a->kind() == CST)
-		return dag->cst(a->toConstant() * c);
-	else
-		return dag->mul(a, dag->cst(c));
-}
-
-/**
- * @brief Tries to simplify x/k * c
- * @return A (possibly) simplified form of x/k * c
- */
-const Operand* Analysis::State::smart_divmul(const Operand* x, Constant k, Constant c)
-{
-	if(c == k) // (x/k)*c = x
-	{
-		DBG(color::IBlu() << "  Simplified (" << *x << "/" << k << ")*" << c << " to " << *x << " [because " << k << " = " << c << "]")
-		return x;
-	}
-	if(k % c == 0) // k = c*K ==> (x/k)*c = (x/(c*K))*c = x/K
-	{
-		const Constant K = k/c;
-		DBG(color::IBlu() << "  Simplified (" << *x << "/" << k << ")*" << c << " to " << *x << "/" << K << " [because " << k << " = " << c << "*" << K << "]")
-		return dag->div(x, dag->cst(K));
-	}
-	else if(c % k == 0) // c = k*K ==> (x/k)*c = (x/k)*k*K = x*K
-	{
-		const Constant K = c/k;
-		DBG(color::IBlu() << "  Simplified (" << *x << "/" << k << ")*" << c << " to " << *x << "*" << K << " [because " << c << " = " << k << "*" << K << "]")
-		return dag->mul(x, dag->cst(K));
-	}
-	else // give up
-		return dag->mul(dag->div(x, dag->cst(k)), dag->cst(c));
-}
-
-/**
- * @brief Tries to simplify a/b
- * @return A (possibly) simplified form of x/k * c
- */
-const Operand* Analysis::State::smart_div(const Operand* a, const Operand* b)
-{
-	if(Option<Constant> bv = b->evalConstantOperand())
-	{
-		if(Option<Constant> av = a->evalConstantOperand())
-			return dag->cst(*av / *bv); // 2 constants, easy simplification
-		else
-			return smart_div(a, *bv);
-	}
-	else
-		return dag->div(a, b); // 0 constants, give up
-}
-
-const Operand* Analysis::State::smart_div(const Operand* a, Constant c)
-{
-	if(c == 1) // ignore division by 0 problems
-		return a;
-	Option<Constant> k;
-	if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_DIV)
-	{
-		const OperandArith& aa = a->toArith();
-		if(k = aa.left()->evalConstantOperand()) // a/c = (k/x)/c = [k/c]/x
-			return dag->div(dag->cst(*k/c), aa.right());
-		else if(k = aa.right()->evalConstantOperand()) // a/c = (x/k)/c = x/[k*c]
-			return dag->div(aa.left(), dag->cst(*k * c));
-		else
-			return dag->div(a, dag->cst(c));
-	}
-	else if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_MUL)
-	{	// a = (a1*a2)/c
-		const OperandArith& aa = a->toArith();
-		if(k = aa.left()->evalConstantOperand()) // a/c = (k*x)/c = (x*k)/c
-			return smart_muldiv(aa.right(), *k, c);
-		else if(k = aa.right()->evalConstantOperand()) // a/c = (x*k)/c
-			return smart_muldiv(aa.left(), *k, c);
-		else
-			return dag->div(a, dag->cst(c));
-	}
-	else
-		return dag->div(a, dag->cst(c));
-}
-
-/**
- * @brief Tries to simplify x*k / c
- * @return A (possibly) simplified form of x*k / c
- */
-const Operand* Analysis::State::smart_muldiv(const Operand* x, Constant k, Constant c)
-{
-	if(c == k) // (x*k)/c = x
-	{
-		DBG(color::IBlu() << "  Simplified (" << *x << "*" << k << ")/" << c << " to " << *x << " [because " << k << " = " << c << "]")
-		return x;
-	}
-	if(k % c == 0) // k = c*K ==> (x*k)/c = (x*c*K)/c = x*K
-	{
-		const Constant K = k/c;
-		DBG(color::IBlu() << "  Simplified (" << *x << "*" << k << ")/" << c << " to " << *x << "*" << K << " [because " << k << " = " << c << "*" << K << "]")
-		return dag->mul(x, dag->cst(K));
-	}
-	else if(c % k == 0) // c = k*K ==> (x*k)/c = (x/k)/(k*K) = x/K
-	{
-		const Constant K = c/k;
-		DBG(color::IBlu() << "  Simplified (" << *x << "*" << k << ")/" << c << " to " << *x << "/" << K << " [because " << c << " = " << k << "*" << K << "]")
-		return dag->div(x, dag->cst(K));
-	}
-	else // give up
-		return dag->mul(dag->div(x, dag->cst(k)), dag->cst(c));
 }
 
 void Analysis::State::updateLabels(const PathIter& seminsts)

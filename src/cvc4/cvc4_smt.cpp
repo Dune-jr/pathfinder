@@ -20,8 +20,9 @@ CVC4SMT::CVC4SMT(int flags): SMT(flags), smt(&em), variables(em)
 	smt.setOption("rewrite-divk", CVC4::SExpr("true"));
 	// smt.setOption("dump-unsat-cores", CVC4::SExpr("true"));
 	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
-	// smt.setOption("dump", "assertions:pre-everything");
-	// smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
+	// 
+	smt.setOption("dump", "assertions:pre-everything");
+	smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
 }
 
 // v1: all VARIABLE_PREFIX "?k"
@@ -34,7 +35,7 @@ void CVC4SMT::initialize(const SLList<LabelledPredicate>& labelled_preds)//, mod
 		exprs.addLast(getExpr(iter->pred()));
 }
 
-static int saved_useless_asserts = 0;
+// static int saved_useless_asserts = 0;
 void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, const Operand*, ConstantHash>& mem, DAG& dag)
 {
 	variables.setMode(INITIAL_PREFIX);
@@ -64,7 +65,7 @@ void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, con
 		}
 	ASSERTP(key_nb == v.count(), "finally")
 	// cout << v.count() << "/" << key_nb << " useless" << endl;
-	saved_useless_asserts += v.count();
+	// saved_useless_asserts += v.count();
 #endif
 
 	for(HashTable<Constant, const Operand*, ConstantHash>::PairIterator iter(mem); iter; iter++)

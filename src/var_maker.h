@@ -20,12 +20,17 @@ public:
 	}
 
 	const Operand* new_top(void) {
+		ASSERT(tops.length() < 400);
+		ASSERT(tops.length() < 4000);
+		ASSERT(tops.length() < 40000);
+		ASSERT(tops.length() < 400000);
+		ASSERT(tops.length() < 4000000);
 		OperandTop* r = new OperandTop(tops.length());
 		tops.push(r);
 		return r;
 	}
 
-private:	
+private:
 	tops_t tops;
 
 	void scale(int offset) {
@@ -35,7 +40,6 @@ private:
 };
 
 /*
- * // TODO: make it so OperandTops start at 0 in a function 
  * VarMaker vm_f;
  * CFG* g;
  * process(g);

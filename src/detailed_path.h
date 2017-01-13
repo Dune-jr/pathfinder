@@ -23,9 +23,9 @@ public:
 	class FlowInfo;
 	class Iterator;
 
-	DetailedPath();
+	DetailedPath(CFG* f = NULL);
 	DetailedPath(BasicBlock* bb); // initializes with LEn and CALL from context of b
-	DetailedPath(const SLList<Edge*>& edge_list);
+	// DetailedPath(const SLList<Edge*>& edge_list);
 	DetailedPath(const DetailedPath& dp);
 	
 	// SLList methods
@@ -58,9 +58,10 @@ public:
 	SLList<Edge*> toOrderedPath() const;
 	elm::String toString(bool colored = true) const;
 	inline const SLList<FlowInfo>& path() const { return _path; }
-	inline bool operator==(const DetailedPath& dp) const { return _path == dp._path; }
+	inline CFG* function() const { return fun; }
+	inline bool operator==(const DetailedPath& dp) const { return _path == dp._path && fun == dp.fun; }
 	inline const DetailedPath* operator->(void) const { return this; }
-	friend io::Output& operator<<(io::Output& out, const DetailedPath& dp) { return dp.print(out); }
+	friend io::Output& operator<<(io::Output& out, const DetailedPath& dp) { ASSERT(dp.fun); return dp.print(out); }
 
 	// FlowInfo class
 	class FlowInfo
@@ -152,6 +153,7 @@ private:
 	io::Output& print(io::Output& out) const;
 	
 	SLList<FlowInfo> _path;
+	CFG* fun;
 }; // DetailedPath class
 
 #endif

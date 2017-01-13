@@ -260,7 +260,7 @@ private:
 class OperandTop : public Operand
 {
 public:
-	OperandTop();
+	// OperandTop();
 	OperandTop(int id);
 	OperandTop(const OperandTop& opd);
 	
@@ -300,7 +300,7 @@ private:
 	io::Output& print(io::Output& out) const;
 
 	int id;
-	static int next_id;
+	// static int next_id;
 };
 extern OperandTop const* const Top;
 

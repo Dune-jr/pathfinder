@@ -41,7 +41,7 @@ LockPtr<Analysis::States> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) c
 		}
 		else
 		{
-			State s((Edge*)NULL, context, false); // entry is cleared anyway
+			State s((Edge*)NULL, context, dag, vm, false); // entry is cleared anyway
 			s.merge(*v, b); // s <- widening(s0, s1, ..., sn)
 			LockPtr<States> rtnv(new States(1));
 			rtnv->push(s);
@@ -169,7 +169,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 			stats.onAnyInfeasiblePath();
 			if(valid)
 			{
-				DetailedPath reordered_path = reorderInfeasiblePath(ip, s.getDetailedPath());
+				DetailedPath reordered_path(reorderInfeasiblePath(ip, s.getDetailedPath()));
 				reordered_path.optimize();
 				addDetailedInfeasiblePath(reordered_path, infeasible_paths); // infeasible_paths += order(ip); to output proprer ffx!
 				DBG(color::On_IRed() << "Inf. path found: " << reordered_path << color::RCol())

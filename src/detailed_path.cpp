@@ -21,14 +21,14 @@
  * @brief Iterator only on the actual edges of the DetailedPath
  */
 
-DetailedPath::DetailedPath() { }
-DetailedPath::DetailedPath(BasicBlock* bb) { fromContext(bb); }
-DetailedPath::DetailedPath(const SLList<Edge*>& edge_list)
-{
-	for(SLList<Edge*>::Iterator iter(edge_list); iter; iter++)
-		this->addLast(*iter);
-}
-DetailedPath::DetailedPath(const DetailedPath& dp) : _path(dp._path) { }
+DetailedPath::DetailedPath(CFG* f) : fun(f) { }
+DetailedPath::DetailedPath(BasicBlock* bb) : fun(NULL) { fromContext(bb); }
+// DetailedPath::DetailedPath(const SLList<Edge*>& edge_list) : fun(NULL)
+// {
+// 	for(SLList<Edge*>::Iterator iter(edge_list); iter; iter++)
+// 		this->addLast(*iter);
+// }
+DetailedPath::DetailedPath(const DetailedPath& dp) : _path(dp._path), fun(dp.fun) { }
 
 /**
  * @fn inline void DetailedPath::clear(void);
@@ -122,6 +122,7 @@ void DetailedPath::fromContext(Block* b)
 			b = otawa::ENCLOSING_LOOP_HEADER(b);
 			this->_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, b->toBasic()));
 		}
+		fun = b->cfg();
 	} while((b = getCaller(b->cfg(), NULL)) != NULL);
 }
 

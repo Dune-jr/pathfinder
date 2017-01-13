@@ -264,9 +264,8 @@ const Operand* OperandMem::replaceConstants(DAG& dag, const ConstantVariablesCor
 	{ return this; }
  
 // Operands: Top
-int OperandTop::next_id = 0;
-// OperandTop::OperandTop(bool identified) : id(identified ? next_id++ : -1) { (next_id >= 0); }
-OperandTop::OperandTop() : id(next_id++) { }
+// int OperandTop::next_id = 0;
+// OperandTop::OperandTop() : id(next_id++) { }
 OperandTop::OperandTop(int id) : id(id) { }
 OperandTop::OperandTop(const OperandTop& opd) : id(opd.id) { }
 // Operand* OperandTop::copy() const { return new OperandTop(id); }
