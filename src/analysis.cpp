@@ -92,7 +92,7 @@ const Vector<DetailedPath>& Analysis::run(CFG *cfg)
     gettimeofday(&tim, NULL);
     t::int64 t1 = tim.tv_sec*1000000+tim.tv_usec;
 	
-	processProg(cfg->entry());
+	processProg(cfg);
 
     gettimeofday(&tim, NULL);
     t::int64 t2 = tim.tv_sec*1000000+tim.tv_usec;

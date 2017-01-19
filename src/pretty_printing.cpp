@@ -1,3 +1,5 @@
+#include <elm/io/Output.h>
+#include <otawa/cfg/CFG.h>
 #include "pretty_printing.h"
 
 /**
@@ -10,12 +12,6 @@ void addIndents(elm::io::Output& out, int n)
 }
 
 #ifndef NO_UTF8
-	// #define UTF8_Block_start_delim "⟪"
-	// #define UTF8_Block_end_delim "⟫"
-	// #define UTF8_Block_start_delim "❮"
-	// #define UTF8_Block_start_delim "｢"
-	// #define UTF8_Block_start_delim "⌈"
-	// #define UTF8_Block_end_delim "⌋"
 	#define UTF8_Block_end_delim "⟩"
 	#define UTF8_Block_start_delim "⟨"
 #else

@@ -1,6 +1,10 @@
 #ifndef VAR_MAKER_H
 #define VAR_MAKER_H
 
+#include <elm/util/LockPtr.h>
+#include <elm/data/Vector.h>
+#include "operand.h"
+
 class VarMaker : public elm::Lock {
 	typedef Vector<OperandTop *> tops_t;
 public:
@@ -20,11 +24,9 @@ public:
 	}
 
 	const Operand* new_top(void) {
-		ASSERT(tops.length() < 400);
-		ASSERT(tops.length() < 4000);
-		ASSERT(tops.length() < 40000);
-		ASSERT(tops.length() < 400000);
-		ASSERT(tops.length() < 4000000);
+		// ASSERT(tops.length() < 400);
+		// ASSERT(tops.length() < 4000);
+		// ASSERT(tops.length() < 4000000);
 		OperandTop* r = new OperandTop(tops.length());
 		tops.push(r);
 		return r;

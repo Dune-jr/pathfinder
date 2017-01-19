@@ -385,9 +385,20 @@ void Analysis::State::merge(const States& ss, Block* b)
  * @fn inline Analysis::State Analysis::topState(Block* entry) const;
  * @brief Returns a Top state
  */
-Analysis::State Analysis::topState(Block* entry) const
+Analysis::State Analysis::topState(otawa::Block* entry) const
 {
 	return Analysis::State(theOnly(entry->outs()), context, dag, vm, true);
+}
+
+void Analysis::State::initializeWithDFA()
+{
+	for(dfa::State::MemIter mi(context->dfa_state); mi; mi++)
+	{
+		const dfa::MemCell& mc = *mi;
+		if(mc.value().isConst())
+			setMem(mc.address().offset(), dag->cst(mc.value().value()));
+		// else // let's not handle intervals and CLPs for now
+	}
 }
 
 elm::String Analysis::State::dumpEverything() const

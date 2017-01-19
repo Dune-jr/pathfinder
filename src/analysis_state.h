@@ -70,6 +70,7 @@ public:
 	// analysis_state.cpp
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
 	elm::String dumpEverything() const;
+	void initializeWithDFA();
 	void merge(const States& ss, Block* b);
 	void apply(const State& s);
 	void accel(const State& s0);
@@ -97,7 +98,7 @@ private:
 	SLList<LabelledPredicate> labelPredicateList(const SLList<LabelledPredicate>& pred_list, Edge* label);
 	io::Output& print(io::Output& out) const;
 
-	// analysis_bb.cpp (v2)
+	// analysis_bb2.cpp
 	void set(const OperandVar& var, const Operand* expr, bool set_updated = true);
 	void setMem(Constant addr, const Operand* expr);
 	inline void scratch(const OperandVar& var);

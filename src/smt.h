@@ -1,4 +1,4 @@
-	/*
+/*
  * Interfacing with the SMT solver
  */
 #ifndef _SMT_H

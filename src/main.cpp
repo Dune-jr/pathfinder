@@ -42,6 +42,7 @@ public:
 		opt_v2			 (SwitchOption::Make(*this).cmd("-2").cmd("--v2").description("Run v2 of abstract interpretation (smarter structs)")),
 		opt_deterministic(SwitchOption::Make(*this).cmd("-D").cmd("--deterministic").description("Ensure deterministic output (two executions give the same output)")),
 		opt_nolinearcheck(SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
+		opt_no_initial_data(SwitchOption::Make(*this).cmd("--nid").cmd("--no-initial-data").description("Do not include initial data from FFX (multitask mode)")),
 		opt_nounminimized(SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
 		opt_allownonlinearoperators(SwitchOption::Make(*this).cmd("--allow-nonlinear-operators").description("assert linear predicates that use *,/,mod in the SMT solver (unsafe)")),
 		opt_slice		 (SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
@@ -76,7 +77,7 @@ private:
 	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats;
 	ValueOption<bool> opt_output;
 	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry, opt_v1, opt_v2;
-	SwitchOption opt_deterministic, opt_nolinearcheck, opt_nounminimized, opt_allownonlinearoperators, opt_slice, opt_dumpoptions;
+	SwitchOption opt_deterministic, opt_nolinearcheck, opt_no_initial_data, opt_nounminimized, opt_allownonlinearoperators, opt_slice, opt_dumpoptions;
 	ValueOption<bool> opt_virtualize;
 	ValueOption<int> opt_merge, opt_multithreading, opt_x;
 
@@ -111,6 +112,8 @@ private:
 			analysis_flags |= Analysis::WITH_V1;
 		if(opt_v2)
 			analysis_flags |= Analysis::WITH_V2;
+		if(! opt_no_initial_data)
+			analysis_flags |= Analysis::USE_INITIAL_DATA;
 		if(true)
 			analysis_flags |= Analysis::POST_PROCESSING;
 		if(opt_merge || opt_automerge)
@@ -119,7 +122,7 @@ private:
 		if(nb_cores > 1)
 			analysis_flags |= Analysis::MULTITHREADING;
 		if(opt_x)
-		dbg_ = opt_x.get();
+			dbg_ = opt_x.get();
 		merge_thresold = getMergeThresold();
 	}
 	void initializeLoggingOptions() {
@@ -180,9 +183,10 @@ private:
 		DBGOPT("CHECK LINEARITY BEFORE SMT CALL", analysis_flags&Analysis::SMT_CHECK_LINEAR, true)
 		DBGOPT("ALLOW NONLINEAR OPEATORS (unsafe)", analysis_flags&Analysis::ALLOW_NONLINEAR_OPRS, false)
 		DBGOPT("KEEP UNMINIMIZED PATHS"			, analysis_flags&Analysis::UNMINIMIZED_PATHS, true)
+		DBGOPT("USE INITIAL DATA"				, analysis_flags&Analysis::USE_INITIAL_DATA, true)
 		DBGOPT("RUN DRY (NO SMT SOLVER)"		, analysis_flags&Analysis::DRY_RUN, false)
-		DBGOPT("RUN V1 A.I."					, analysis_flags&Analysis::WITH_V1, true)
-		DBGOPT("RUN V2 A.I."					, analysis_flags&Analysis::WITH_V2, true)
+		DBGOPT("RUN V1 A.I."					, analysis_flags&Analysis::WITH_V1, false)
+		DBGOPT("RUN V2 A.I."					, analysis_flags&Analysis::WITH_V2, false)
 		cout << DBGPREFIX("MERGING THRESOLD");
 		if(analysis_flags&Analysis::MERGE)
 			cout << color::IRed() << merge_thresold << color::RCol() << endl;

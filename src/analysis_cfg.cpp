@@ -22,24 +22,24 @@ Identifier<LockPtr<VarMaker> >				Analysis::CFG_VARS("VarMaker of a CFG"); // Va
  * @brief       Runs the analysis on a whole program
  * @param entry Entry block of the program to analyse
  */
-void Analysis::processProg(Block* entry)
+void Analysis::processProg(CFG* cfg)
 {
 	/* ips ← {} */
 	infeasible_paths.clear();
 	/* ... */
-	processCFG(entry);
-	DBGG(color::IGre() << "Reached end of program.")
+	processCFG(cfg, flags&USE_INITIAL_DATA);
+	DBGG(IGre() << "Reached end of program.")
 }
 
 /**
  * @fn void Analysis::processCFG(Block* entry);
  * @brief Runs the analysis starting from the CFG entry entry
 */
-void Analysis::processCFG(Block* entry)
+void Analysis::processCFG(CFG* cfg, bool use_initial_data)
 {
 	WorkingList wl;
 	vm = new VarMaker();
-	DBGG(color::IPur() << "==>\"" << entry->cfg()->name() << "\"")
+	DBGG(IPur() << "==>\"" << cfg->name() << "\"")
 /* begin */
 	/* for e ∈ E(G) */
 		/* s_e ← nil */
@@ -47,14 +47,16 @@ void Analysis::processCFG(Block* entry)
 		/* s_h ← nil */
 		/* status_h ← ENTER */
 	/* for e ∈ entry.outs */
-	for(Block::EdgeIter entry_outs(entry->outs()); entry_outs; entry_outs++)
+	for(Block::EdgeIter e(cfg->entry()->outs()); e; e++)
 	{
 		/* s_e ← T */
 		LockPtr<States> s_entry(new States());
-		s_entry->push(topState(entry));
-		EDGE_S(*entry_outs) = s_entry;
+		s_entry->push(topState(cfg->entry()));
+		if(use_initial_data)
+			s_entry->states()[0].initializeWithDFA();
+		EDGE_S(*e) = s_entry;
 		/* wl ← sink(e) */
-		wl.push((*entry_outs)->target()); // only one outs, firstBB.
+		wl.push((*e)->target()); // only one outs, firstBB.
 	}
 
 	/* while wl ≠ {} do */
@@ -133,8 +135,8 @@ void Analysis::processCFG(Block* entry)
 		}
 	}
 /* end */
-	DBGG(color::IPur() << "\"" << entry->cfg()->name() << "\"==>")
-	CFG_VARS(entry->cfg()) = LockPtr<VarMaker>(vm);
+	DBGG(IPur() << "\"" << cfg->name() << "\"==>")
+	CFG_VARS(cfg) = LockPtr<VarMaker>(vm);
 }
 
 /**
@@ -146,7 +148,7 @@ void Analysis::I(Block* b, LockPtr<States> s)
 		progress->onBlock(b);
 	if(b->isBasic())
 	{
-		DBGG(color::Bold() << "-\tI(b=" << b << ") " << color::NoBold() << color::IYel() << "x" << s->count() << printFixPointStatus(b))
+		DBGG(Bold() << "-\tI(b=" << b << ") " << NoBold() << IYel() << "x" << s->count() << RCol() << printFixPointStatus(b))
 		for(States::Iterator si(s->states()); si; si++)
 			(*s)[si].processBB(b->toBasic(), flags&(Analysis::WITH_V1 | Analysis::WITH_V2));
 	}
@@ -165,7 +167,7 @@ void Analysis::I(Block* b, LockPtr<States> s)
 		{
 			CFG* called_cfg = b->toSynth()->callee();
 			if(!CFG_S.exists(called_cfg)) // if the called CFG has not been processed yet
-				processCFG(called_cfg);
+				processCFG(called_cfg, false);
 			s->apply(**CFG_S(called_cfg));
 		}
 		else if(b->isExit())
@@ -182,7 +184,7 @@ LockPtr<Analysis::States> Analysis::I(const Vector<Edge*>::Iter& e, LockPtr<Stat
 		s = LockPtr<States>(new States(*s));
 	if(s->isEmpty())
 		DBGG("-\tpropagating bottom state")
-	// DBGG(color::Bold() << "-\tI(e= " << color::NoBold() << e << color::Bold() << " )" << color::NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
+	// DBGG(Bold() << "-\tI(e= " << NoBold() << e << Bold() << " )" << NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
 	if(! e->source()->isEntry()) // do not process CFG entry: no generated preds and uninteresting edge to add (everything comes from the entry)
 		for(States::Iterator si(s->states()); si; si++)
 			(*s)[si].appendEdge(e);
@@ -290,8 +292,8 @@ DetailedPath Analysis::reorderInfeasiblePath(const Path& ip, const DetailedPath&
 		else
 			ordered_ip.addLast(*full_path_iter);
 	}
-	// DBG("reorderInfeasiblePath(...), ip=" << pathToString(ip) << ", " << color::ICya() << "full_path=[" << full_path << "]" 
-		// << color::RCol() << ", result=" << ordered_ip);
+	// DBG("reorderInfeasiblePath(...), ip=" << pathToString(ip) << ", " << ICya() << "full_path=[" << full_path << "]" 
+		// << RCol() << ", result=" << ordered_ip);
 	return ordered_ip;
 }
 
@@ -321,7 +323,7 @@ void Analysis::addDetailedInfeasiblePath(const DetailedPath& ip, Vector<Detailed
  */
 void Analysis::onAnyInfeasiblePath()
 {
-	DBG(color::BIYel() << "Stopping current path analysis")
+	DBG(BIYel() << "Stopping current path analysis")
 }
 
 /**

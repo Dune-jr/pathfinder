@@ -40,6 +40,7 @@ public:
 		MULTITHREADING		 = 1 << 10,
 		WITH_V1				 = 1 << 11,
 		WITH_V2				 = 1 << 12,
+		USE_INITIAL_DATA 	 = 1 << 13,
 	};
 protected:
 	typedef struct
@@ -142,9 +143,8 @@ private:
 	void postProcessResults(CFG *cfg);
 	
 	// analysis_cfg.cpp
-	void processProg(Block* block);
-	void processCFG(Block* entry);
-	inline void processCFG(CFG* cfg) { processCFG(cfg->entry()); }
+	void processProg(CFG* cfg);
+	void processCFG(CFG* cfg, bool use_initial_data);
 	void I(Block* b, LockPtr<Analysis::States> s); // modifies existing states
 	LockPtr<States> I(const Vector<Edge*>::Iter& e, LockPtr<States> s); // creates new states
 	// Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
