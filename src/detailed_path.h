@@ -50,6 +50,7 @@ public:
 	void fromContext(Block* b);
 	void addEnclosingLoop(Block* loop_header);
 	void merge(const Vector<DetailedPath>& detailed_paths);
+	void apply(const DetailedPath& path);
 	void optimize();
 	bool hasAnEdge() const;
 	Edge* firstEdge() const;

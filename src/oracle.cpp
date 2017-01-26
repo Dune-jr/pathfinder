@@ -200,7 +200,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 	}
 	for(Vector<Analysis::State>::Iter svi(new_sv); svi; svi++)
 		new_sv[svi].removeConstantPredicates(); // remaining constant predicates are tautologies, there is no need to keep them
-	ss = new_sv; // TODO!! this is copying states, horribly unoptimized, we only need to remove a few states!
+	ss = new_sv; // TODO! this is copying states, horribly unoptimized, we only need to remove a few states!
 	return stats;
 }
 

@@ -2,7 +2,7 @@
 #include "debug.h"
 #include "otawa/cfg/features.h"
 
-// using elm::genstruct::Vector;
+extern bool cfg_follow_calls;
 
 /**
  * @class DetailedPath
@@ -123,7 +123,7 @@ void DetailedPath::fromContext(Block* b)
 			this->_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, b->toBasic()));
 		}
 		fun = b->cfg();
-	} while((b = getCaller(b->cfg(), NULL)) != NULL);
+	} while(cfg_follow_calls && (b = getCaller(b->cfg(), NULL)) != NULL);
 }
 
 /**
@@ -137,7 +137,6 @@ void DetailedPath::addEnclosingLoop(Block* loop_header)
 		_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic()));
 	if(!contains(FlowInfo(FlowInfo::KIND_LOOP_EXIT, loop_header->toBasic())))
 		_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, loop_header->toBasic()));
-
 }
 
 void DetailedPath::onLoopEntry(Block* loop_header)
@@ -256,9 +255,7 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 			}
 		}
 	}
-#	ifdef DBGG
 		// DBGG(color::IYel() << "result: " << toString())
-#	endif
 /*
 	int merge_count = 0;
 	for(Vector<DetailedPath>::Iterator iter(paths); iter; iter++)
@@ -288,6 +285,12 @@ void DetailedPath::merge(const Vector<DetailedPath>& paths)
 		cout << io::endl;
 	}
 */
+}
+
+void DetailedPath::apply(const DetailedPath& path)
+{
+	for(SLList<FlowInfo>::Iterator i(path._path); i; i++)
+		this->_path.addLast(*i);
 }
 
 bool DetailedPath::hasAnEdge() const

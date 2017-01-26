@@ -61,7 +61,7 @@ Option<Analysis::Path*> SMT::seekInfeasiblePaths(const Analysis::State& s)
 		return elm::none;
 	return elm::some(path);
 #else
-	crash();
+	ASSERTP(false, "v1 SMT solving triggered, but Pathfinder was not built with -D V1");
 #endif
 }
 

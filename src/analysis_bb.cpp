@@ -73,6 +73,7 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 		DBG("Constants updated: " << constants.printChanges()) // TODO!! check that a mess doesn't happen with constants being updated by both taken and not taken path
 #endif
 	}
+	ASSERTP(!(version_flags & SP_CRITICAL) || lvars(context->sp).isConstant(), "SP value was lost: " << lvars(context->sp) << ", aborting");
 }
 
 // @param last_condition If we are in a conditional segment, the sem inst corresponding to the conditional instruction, NOP otherwise

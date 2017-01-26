@@ -15,6 +15,7 @@
 
 // using namespace elm;
 using otawa::Block;
+extern bool cfg_follow_calls; // dirty hack that can be removed if we always enable CFG virtualization
 
 class GlobalDominance
 {
@@ -65,6 +66,8 @@ public:
 
 	bool dom(Block* b1, Block* b2) const {
 		while(b2->cfg() != b1->cfg()) {
+			if(!cfg_follow_calls)
+				return false;
 			b2 = getCaller(b2, NULL);
 			if(!b2) // reached main, still didn't match b1's cfg, so b2 isn't even indirectly called by b1
 				return false;
@@ -80,6 +83,8 @@ public:
 	bool dom(otawa::Edge* e1, otawa::Edge* e2) const {
 		// a nice thing with dominance is that we don't need to check that the entry dominates the edge, it's always the case
 		while(e2->source()->cfg() != e1->source()->cfg()) {
+			if(!cfg_follow_calls)
+				return false;
 			Block* b = getCaller(e2->source()->cfg(), NULL);
 			if(!b) // reached main, still didn't match e1's cfg, so e2 isn't even indirectly called by e1
 				return false;
@@ -96,6 +101,8 @@ public:
 	bool postdom(otawa::Edge* e1, otawa::Edge* e2) const {
 		// now we're going to have to check that the entry is post-dominated by the edge, everytime we go up in the caller tree
 		while(e1->source()->cfg() != e2->source()->cfg()) {
+			if(!cfg_follow_calls)
+				return false;
 			if(! postdom(e1, theOnly(e1->source()->cfg()->entry()->outs())) )
 				return false; // e1 must post-dominate the entry edge of its cfg!
 			Block* b = getCaller(e1->source()->cfg(), NULL);

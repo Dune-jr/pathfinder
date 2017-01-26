@@ -43,12 +43,13 @@ public:
 		opt_deterministic(SwitchOption::Make(*this).cmd("-D").cmd("--deterministic").description("Ensure deterministic output (two executions give the same output)")),
 		opt_nolinearcheck(SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
 		opt_no_initial_data(SwitchOption::Make(*this).cmd("--nid").cmd("--no-initial-data").description("Do not include initial data from FFX (multitask mode)")),
+		opt_sp_critical  (SwitchOption::Make(*this).cmd("--sp-critical").description("Abort analysis on loss of SP info")),
 		opt_nounminimized(SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
 		opt_allownonlinearoperators(SwitchOption::Make(*this).cmd("--allow-nonlinear-operators").description("assert linear predicates that use *,/,mod in the SMT solver (unsafe)")),
 		opt_slice		 (SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
 		opt_dumpoptions	 (SwitchOption::Make(*this).cmd("--dump-options").cmd("--do").description("print the selected options for the analysis")),
 		opt_virtualize	 (ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
-		opt_merge 		 (ValueOption<int>::Make(*this).cmd("--merge").description("merge when exceeding X states at a control point").def(0)),
+		opt_merge 		 (ValueOption<int>::Make(*this).cmd("-m").cmd("--merge").description("merge when exceeding X states at a control point").def(0)),
 		opt_multithreading(ValueOption<int>::Make(*this).cmd("-j").description("enable multithreading on the given amount of cores (0/1=no multithreading, -1=autodetect)").def(0)),
 		opt_x 			 (ValueOption<int>::Make(*this).cmd("-x").description("(for internal debugging)").def(0)) { }
 
@@ -76,8 +77,8 @@ private:
 	// option::Manager manager;
 	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats;
 	ValueOption<bool> opt_output;
-	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry, opt_v1, opt_v2;
-	SwitchOption opt_deterministic, opt_nolinearcheck, opt_no_initial_data, opt_nounminimized, opt_allownonlinearoperators, opt_slice, opt_dumpoptions;
+	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry, opt_v1, opt_v2, opt_deterministic, opt_nolinearcheck,
+			     opt_no_initial_data, opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_slice, opt_dumpoptions;
 	ValueOption<bool> opt_virtualize;
 	ValueOption<int> opt_merge, opt_multithreading, opt_x;
 
@@ -95,7 +96,7 @@ private:
 		if(opt_virtualize.get())
 			analysis_flags |= Analysis::VIRTUALIZE_CFG;
 		else
-			cerr << color::BIRed() << "WARNING: IP analysis working with non-virtualized CFG. Invalid results very likely" << color::RCol() << endl;
+			DBGW(color::BIRed() << "WARNING: IP analysis working with non-virtualized CFG. Invalid results very likely");
 		if(opt_slice)
 			analysis_flags |= Analysis::SLICE_CFG;
 		if(opt_progress)
@@ -114,6 +115,8 @@ private:
 			analysis_flags |= Analysis::WITH_V2;
 		if(! opt_no_initial_data)
 			analysis_flags |= Analysis::USE_INITIAL_DATA;
+		if(opt_sp_critical)
+			analysis_flags |= Analysis::SP_CRITICAL;
 		if(true)
 			analysis_flags |= Analysis::POST_PROCESSING;
 		if(opt_merge || opt_automerge)

@@ -13,6 +13,7 @@ public:
 	void output(const elm::String& filename, const elm::String& function_name, const elm::String& graph_filename = "");
 
 private:
+	void outputSortedInfeasiblePaths(io::Output& FFXFile);
 	void printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip);
 	void writeGraph(io::Output& GFile, const Vector<DetailedPath>& ips);
 	void checkPathValidity(const DetailedPath& ip) const;

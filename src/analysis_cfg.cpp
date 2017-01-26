@@ -11,7 +11,7 @@
 // using namespace elm::genstruct;
 using namespace elm::io;
 
-Identifier<LockPtr<Analysis::States> >		Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES  //TODO! try vector
+Identifier<LockPtr<Analysis::States> >		Analysis::EDGE_S("Trace on an edge"); // old PROCESSED_EDGES
 Identifier<Analysis::State>					Analysis::LH_S("Trace on a loop header"); // maybe change to vector
 Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a loop (on a loop header)");
 // for non-virtualized CFGs only
@@ -136,6 +136,7 @@ void Analysis::processCFG(CFG* cfg, bool use_initial_data)
 	}
 /* end */
 	DBGG(IPur() << "\"" << cfg->name() << "\"==>")
+	// vm->clean(*CFG_S(cfg));
 	CFG_VARS(cfg) = LockPtr<VarMaker>(vm);
 }
 
@@ -150,12 +151,15 @@ void Analysis::I(Block* b, LockPtr<States> s)
 	{
 		DBGG(Bold() << "-\tI(b=" << b << ") " << NoBold() << IYel() << "x" << s->count() << RCol() << printFixPointStatus(b))
 		for(States::Iterator si(s->states()); si; si++)
-			(*s)[si].processBB(b->toBasic(), flags&(Analysis::WITH_V1 | Analysis::WITH_V2));
+			(*s)[si].processBB(b->toBasic(), flags&(Analysis::WITH_V1 | Analysis::WITH_V2 | Analysis::SP_CRITICAL));
 	}
 	else if(b->isEntry())
 		s->onCall((*getCaller(b->cfg()))->toSynth());
 	else if(b->isCall())
-		s->onReturn(b->toSynth());
+	{
+		if(flags&VIRTUALIZE_CFG)
+			s->onReturn(b->toSynth());
+	}
 	else if(b->isExit()) // main
 		{ }
 	else
@@ -168,7 +172,14 @@ void Analysis::I(Block* b, LockPtr<States> s)
 			CFG* called_cfg = b->toSynth()->callee();
 			if(!CFG_S.exists(called_cfg)) // if the called CFG has not been processed yet
 				processCFG(called_cfg, false);
+
+			// merging tops
+			VarMaker called_vm_copy(**CFG_VARS(called_cfg));
+			vm->transfer(called_vm_copy); // vm receives more tops: we load the responsibility for all the pointers and clear the vector without deleting OpTops
+			// working on the paths
+			s->onCall(b->toSynth());
 			s->apply(**CFG_S(called_cfg));
+			s->onReturn(b->toSynth());
 		}
 		else if(b->isExit())
 			CFG_S(b->cfg()) = s; // we will never free this, which shouldn't be a problem because it should only be freed at the end of analysis

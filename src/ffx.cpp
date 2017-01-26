@@ -32,13 +32,14 @@ void FFX::output(const elm::String& function_name, const elm::String& ffx_filena
 	// header
 	FFXFile << indent(  ) << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" << endl;
 	FFXFile << indent(  ) << "<flowfacts>" /*" <!-- pathfinder, " << __DATE__ << " -->"*/ << endl;
-	FFXFile << indent(  ) << "<function name=\"" << function_name << "\">" << endl; indent(+1);
+	// FFXFile << indent(  ) << "<function name=\"" << function_name << "\">" << endl; indent(+1);
 
-	for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
-		printInfeasiblePath(FFXFile, *iter);
+	outputSortedInfeasiblePaths(FFXFile);
+	// for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
+	// 	printInfeasiblePath(FFXFile, *iter);
 
 	// footer
-	FFXFile << indent(-1) << "</function>" << endl;
+	// FFXFile << indent(-1) << "</function>" << endl;
 	FFXFile << indent(  ) << "</flowfacts>" << endl;
 	
 	if(dbg_verbose < DBG_VERBOSE_NONE)
@@ -54,6 +55,22 @@ void FFX::output(const elm::String& function_name, const elm::String& ffx_filena
 			cout << "graph output to " + graph_filename << endl;
 	}
 
+}
+
+void FFX::outputSortedInfeasiblePaths(io::Output& FFXFile)
+{
+	Vector<CFG*> funs;
+	for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
+		if(!funs.contains(iter->function()))
+			funs.push(iter->function());
+	for(Vector<CFG*>::Iter i(funs); i; i++)
+	{
+		FFXFile << indent(  ) << "<function name=\"" << i->name() << "\">" << endl; indent(+1);
+		for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
+			if(iter->function() == *i)
+				printInfeasiblePath(FFXFile, *iter);
+		FFXFile << indent(-1) << "</function>" << endl;
+	}
 }
 
 /**
@@ -111,7 +128,8 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				source = (*caller_exit_edges_iter)->target()->toBasic();
 				ASSERT(!(++caller_exit_edges_iter));
 				ASSERTP(!(++citer), "must be at max 1 outedge from caller")*/
-			} else ASSERT(false);
+			}
+			else crash();
 
 
 			if(e->target()->isBasic())
@@ -132,13 +150,16 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			}
 			else if(e->target()->isExit())
 			{
+				// TODO!! make sure this doesn't make problems with empty <call></call>. function MUST be called even though we remove this edge
+				FFXFile << indent(  ) << "<!-- skipped exit edge of " << e->target()->cfg()->name() << " -->" << endl;
+				continue;
 				CFG::CallerIter citer(e->target()->cfg()->callers());
 				ASSERTP(citer, "exit from main in IP???");
 				Block::EdgeIter caller_exit_edges_iter(citer->outs());
 				ASSERT(caller_exit_edges_iter);
 				target = caller_exit_edges_iter->target();
 				ASSERT(!(++caller_exit_edges_iter));
-				ASSERTP(!(++citer), "must be at max 1 outedge from caller")
+				ASSERTP(!(++citer), "max 1 outedge from caller: " << e->target())
 			}
 
 			FFXFile << indent(  ) << "<edge src=\"0x" << source->address() << "\" dst=\"0x" << target->address()
@@ -150,20 +171,16 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			BasicBlock* loop_header = iter->getLoopHeader();
 			FFXFile << indent(  ) << "<loop address=\"0x" << loop_header->address() << "\">"
 					<< " <!-- loop " << loop_header->index() << " -->" << endl; //indent(+1);
-			if(edgeAfter(ip.find(DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_LOOP_EXIT, loop_header)))) {
+			if(edgeAfter(ip.find(DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_LOOP_EXIT, loop_header))))
 				FFXFile << indent(  ) << "<iteration number=\"n\">" << endl; indent(+1);
-				// cout <<"detected iteration=n on ip:" << ip << color::RCol() << endl;
-			}
-			else {
+			else
 				FFXFile << indent(  ) << "<iteration number=\"*\">" << endl; indent(+1);
-			}
 			open_tags += FFX_TAG_LOOP;
 		}
 		else if(iter->isLoopExit())
 		{
 			if(open_tags.isEmpty()) {
-				elm::cout << "WARNING: </loop> found when no context is open" << endl;
-				continue; // TODO! we should fix this LEx that doesn't have a previous LEn, that's a bug...
+				ASSERTP(false,"WARNING: </loop> found when no context is open") // TODO! we should fix this LEx that doesn't have a previous LEn, that's a bug...
 			}
 			ASSERTP(open_tags.first() == FFX_TAG_LOOP, "</loop> found when not directly in loop context");
 /*			while(open_tags.first() != FFX_TAG_LOOP)
@@ -173,9 +190,9 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			}
 */			FFXFile << indent(-1) << "</iteration>" << endl;
 			if(const BasicBlock* loop_header = iter->getLoopHeader()) // if not NULL, we have info
-				FFXFile << indent(-1) << "</loop> <!-- loop " << loop_header->index() << "-->" << endl;
+				FFXFile << indent(  ) << "</loop> <!-- loop " << loop_header->index() << "-->" << endl;
 			else
-				FFXFile << indent(-1) << "</loop>" << endl;
+				FFXFile << indent(  ) << "</loop>" << endl;
 			open_tags.removeFirst();
 		}
 		else if(iter->isCall())
@@ -198,8 +215,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			ASSERTP(open_tags.first() == FFX_TAG_CALL, "return found when call is not the most recent open tag")
 			open_tags.removeFirst();
 		}
-		else 
-			ASSERT(false); // we should handle all kinds
+		else crash(); // we should handle all kinds
 	}
 	// close running <loop ... > environments
 	for(SLList<ffx_tag_t>::Iterator open_tags_iter(open_tags); !open_tags_iter.ended(); open_tags_iter++)
@@ -253,24 +269,32 @@ void FFX::writeGraph(io::Output& GFile, const Vector<DetailedPath>& ips)
 
 void FFX::checkPathValidity(const DetailedPath& ip) const
 {
-	SLList<DetailedPath::FlowInfo> sl;
+	Vector<DetailedPath::FlowInfo> v;
 	for(DetailedPath::Iterator iter(ip); iter; iter++)
 		switch(iter->kind())
 		{
 			case DetailedPath::FlowInfo::KIND_EDGE: // Edge
 				break;
 			case DetailedPath::FlowInfo::KIND_LOOP_ENTRY: // BasicBlock
-				sl.push(*iter);
+				v.push(*iter);
 				break;
 			case DetailedPath::FlowInfo::KIND_LOOP_EXIT: // BasicBlock
-				ASSERTP(DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_LOOP_ENTRY, iter->getBasicBlock()) == sl.pop(), "path " << ip << " invalid: Loop exit not matching loop entry");
+			{
+				ASSERTP(v, "path " << ip << " invalid: Loop exit not matching loop entry")
+			    DetailedPath::FlowInfo fi(v.pop());
+				ASSERTP(fi == DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_LOOP_ENTRY, iter->getBasicBlock()), "path " << ip << " invalid: Loop exit not matching loop entry");
 				break;
+			}
 			case DetailedPath::FlowInfo::KIND_CALL: // SynthBlock
-				sl.push(*iter);
+				v.push(*iter);
 				break;
 			case DetailedPath::FlowInfo::KIND_RETURN: // SynthBlock
-				ASSERTP(DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_CALL, iter->getSynthBlock()) == sl.pop(), "path " << ip << " invalid: Return not matching call");
+			{
+				ASSERTP(v, "path " << ip << " invalid: Return not matching call")
+			    DetailedPath::FlowInfo fi(v.pop());
+				ASSERTP(fi == DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_CALL, iter->getSynthBlock()), "path " << ip << " invalid: Return not matching call");
 				break;
+			}
 		}
 }
 

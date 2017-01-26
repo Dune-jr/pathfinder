@@ -27,7 +27,6 @@ CVC4SMT::CVC4SMT(int flags): SMT(flags), smt(&em), variables(em)
 
 // v1: all VARIABLE_PREFIX "?k"
 // v2: INITIAL: "rk", VARIABLE: "?k". Predicates like "?0 = r0 + 1"
-// TODO!! what about the memory??
 void CVC4SMT::initialize(const SLList<LabelledPredicate>& labelled_preds)//, mode_t mode = VARIABLE_PREFIX)
 {
 	variables.setMode(VARIABLE_PREFIX);
@@ -125,9 +124,9 @@ bool CVC4SMT::checkPredSat()
 	}
 	catch(CVC4::LogicException e)
 	{
-		DBGW("non-linear call to CVC4, defaulting to SAT:")
 #ifdef DBG_WARNINGS
-		std::cout << e;
+		DBGW("non-linear call to CVC4, defaulting to SAT:")
+		std::cerr << e;
 #endif
 		return true;
 	}

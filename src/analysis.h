@@ -41,6 +41,7 @@ public:
 		WITH_V1				 = 1 << 11,
 		WITH_V2				 = 1 << 12,
 		USE_INITIAL_DATA 	 = 1 << 13,
+		SP_CRITICAL			 = 1 << 14,
 	};
 protected:
 	typedef struct

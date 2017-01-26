@@ -55,7 +55,7 @@ private:
 	inline t::int32 getId(int index) const
 		{ return index < thresold ? index : thresold-index-1; }
 	void label(t::int32 id, Edge* e)
-		{ return; if(!l[id]) l[id] = new labels_t(); //crash();
+		{ return; if(!l[id]) l[id] = new labels_t();
 		  l[id]->add(e); }
 	void label(t::int32 id, const labels_t& labs)
 		{ return; if(!l[id]) l[id] = new labels_t(labs);
@@ -109,11 +109,12 @@ public:
 				copy(lv);
 			}
 		}
-		else
+		else // we're copying an invalid LV
 		{
 			delete[] o;
-			for(int i = 0; i < size; i++)
-				delete l[i];
+			if(l)
+				for(int i = 0; i < size; i++)
+					delete l[i];
 			size = 0;
 			thresold = 0;
 			o = NULL;

@@ -26,7 +26,6 @@ private:
 	typedef HashTable<Constant, const Operand*, ConstantHash> mem_t;
 
 	const context_t* context;
-
 	// v2
 	DAG* dag;
 	VarMaker* vm;
@@ -68,6 +67,7 @@ public:
 	inline const OperandVar& getSP() const { return context->sp; }
 
 	// analysis_state.cpp
+	// State& operator=(const State& s);
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
 	elm::String dumpEverything() const;
 	void initializeWithDFA();
@@ -237,6 +237,7 @@ public:
 	inline void remove(const Iterator& i) { s.remove(i); }
 
 	// inline operator Vector<State>() { return s; }
+	inline State& operator[](int i) { return s[i]; }
 	inline State& operator[](const Iterator& i) { return s[i]; }
 	inline States& operator=(const Vector<State>& sv) { s = sv; return *this; }
 	inline States& operator=(const States& ss) { s = ss.s; return *this; }

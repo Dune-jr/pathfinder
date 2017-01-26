@@ -23,6 +23,10 @@ public:
 		vm.tops.clear();
 	}
 
+	// void clean(LockPtr<States> s) {
+	// 	BitVector used(tops.count());
+	// }
+
 	const Operand* new_top(void) {
 		// ASSERT(tops.length() < 400);
 		// ASSERT(tops.length() < 4000);

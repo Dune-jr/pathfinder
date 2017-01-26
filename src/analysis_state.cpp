@@ -48,6 +48,35 @@ Analysis::State::State(const State& s)
 	  labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
 	{ }
 
+/*Analysis::State& Analysis::State::operator=(const State& s)
+{
+	this->context = s.context;
+	this->dag = s.dag;
+	this->vm = s.vm;
+	if(s.lvars.isValid())
+		for(LocalVariables::Iter i(s.lvars); i; i++)
+			if(s.lvars[i])
+			{
+				const Operand* x = s.lvars[i];
+				int k = x->kind();
+				DBGG("\t* " << *i << " " << *s.lvars[i])
+			}
+	this->lvars = s.lvars;
+	// for(mem_t::Iterator i(s.mem); i; i++)
+	// 	DBGG(color::IRed() << *i << ", ")
+	DBGG(color::IRed() << s.dumpEverything())
+	this->mem = s.mem;
+	this->bottom = s.bottom;
+	this->path = s.path;
+	this->labelled_preds = s.labelled_preds;
+	this->generated_preds = s.generated_preds;
+	this->generated_preds_taken = s.generated_preds_taken;
+#ifdef V1
+	this->constants = s.constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
+#endif
+	return *this;
+}*/
+
 void Analysis::State::appendEdge(Edge* e)
 {
 	// add edge to the end of the path
@@ -134,14 +163,15 @@ io::Output& Analysis::State::print(io::Output& out) const
 
 
 /**
- * @brief      This function is *this -> s -> s o *this, state composition. Updates current state. Does not update path.
+ * @brief      This function is *this -> s -> s o *this, state composition. Updates current state. Updates path.
  * @param  s   state to apply
  */
 void Analysis::State::apply(const State& s)
 {
-	DBG("f="<<this->dumpEverything() << ",\ng = " << s.dumpEverything())
+	// DBG("f="<<this->dumpEverything() << ",\ng = " << s.dumpEverything())
 	Compositor cc(*this);
 
+	// merging lvars
 	// this=f, s=g
 	DBG("f = " << *this << ", g = " << s)
 	// goal is lv = g o f
@@ -159,6 +189,7 @@ void Analysis::State::apply(const State& s)
 	}
 	DBG("")
 
+	// merging memory
 	// goal is mem = n o m with n = s.mem
 	ASSERTP(lvars[context->sp], "I don't think we hit that case? if we do, handle it in the arith module too")
 	if(!lvars[context->sp]->isConstant()) // we lost the SP
@@ -187,8 +218,10 @@ void Analysis::State::apply(const State& s)
 		mem = m;
 	}
 	lvars = lv;
-	DBG("f o g = " << color::IBlu() << this->dumpEverything())
-	// ASSERTP(false, "need to check tops")
+	// DBG("f o g = " << color::IBlu() << this->dumpEverything())
+
+	// merge path
+	this->path.apply(s.getDetailedPath());
 }
 
 /**
@@ -205,9 +238,7 @@ void Analysis::State::accel(const State& s0)
 		if(lvars[i]) // i was modified
 		{
 			// if(i->isAffineIn(x))
-			// {
-
-			// }
+			// { }
 			// else
 			// {
 			// 	DBG(color::IRed() << *i << " too complex to accel: " << lvars(*i))
@@ -473,19 +504,29 @@ void Analysis::State::removeConstantPredicates()
 	}
 }
 
-// if this has n states and ss has m states, this will explode into n*m states
+// if this has n states and ss has m states, this will explode into a cartesian product of n*m states
 void Analysis::States::apply(States& ss)
 {
-	int new_cap, new_length = this->count() * ss.count();
-	DBG("Applying " << ss.count() << " to " << this->count() << " states, giving " << new_length << ".")
+	int new_cap, m = this->count(), n = ss.count(), new_length = m * n;
+	DBG("Applying " << n << " to " << m << " states, giving " << new_length << ".")
 	for(new_cap = 1; new_cap < new_length; new_cap *= 2); // adjust to closest higher power of 2
-	if(new_cap > ss.s.capacity())
-		ss.s.grow(new_cap);
+	if(new_cap > this->s.capacity())
+		this->s.grow(new_cap);
 
-	Iterator si(ss.s);
-	for(Iterator i(s); i; i++)
-		(*this)[i].apply(*si);
-	for(si++; si; si++)
-		for(Iterator i(s); i; i++)
-			(*this)[i].apply(*si);
+	// copy n-1 times 
+	for(int i = 1; i < n; i++)
+		for(int j = 0; j < m; j++)
+			this->push((*this)[j]);
+
+	// ss = [i1, i2, ..., in]
+	// this = [x1, x2, x3,  x1, x2, x3,  ...] (n times)
+
+	// apply n times
+	Iterator si(ss.s);	
+	for(int i = 0; i < n; i++, si++)
+		for(int j = 0; j < m; j++)
+			(*this)[i*m + j].apply(*si);
+
+	// this = [x1*i1, x2*i1, x3*i1,  x1*i2, x2*i2, x3*i2, ...
+	ASSERT(s.length() == new_length);
 }
