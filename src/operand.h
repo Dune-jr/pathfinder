@@ -28,9 +28,6 @@ enum arithoperator_t
 	ARITHOPR_MOD, // (mod) Modulo
 	ARITHOPR_CMP, // (~)   Special operator to be used with CONDOPR_EQ and a register that indicates
                   //       that it contains information over the comparison of two other registers
-	// Should we add bit shifting operators? // Not needed, we can represent this with the existing
-	//   operators, it's just a * 2^n, n being a constant it can be reduced
-	// Should we add logical operators? (or, and, etc...)
 };
 
 enum operand_kind_t
@@ -39,6 +36,7 @@ enum operand_kind_t
 	VAR,	// Variable (register or temporary variable, for now)
 	MEM,	// Memory cell
 	TOP,	// Constant of unknown value
+	ITER,	// Induction Variable
 	ARITH,	// Arithmetic Expression
 };
 io::Output& operator<<(io::Output& out, operand_kind_t kind);
@@ -55,6 +53,7 @@ class OperandConst;
 class OperandVar;
 class OperandMem;
 class OperandTop;
+class OperandIter;
 class OperandArith;
 class AffineEquationState;
 class DAG;
@@ -67,6 +66,7 @@ public:
 	virtual bool visit(const OperandVar& o) = 0;
 	virtual bool visit(const OperandMem& o) = 0;
 	virtual bool visit(const OperandTop& o) = 0;
+	virtual bool visit(const OperandIter& o) = 0;
 	virtual bool visit(const OperandArith& o) = 0;
 };
 class OperandEndoVisitor
@@ -76,6 +76,7 @@ public:
 	virtual const Operand* visit(const OperandVar& o) = 0;
 	virtual const Operand* visit(const OperandMem& o) = 0;
 	virtual const Operand* visit(const OperandTop& o) = 0;
+	virtual const Operand* visit(const OperandIter& o) = 0;
 	virtual const Operand* visit(const OperandArith& o) = 0;
 };
 
@@ -113,11 +114,13 @@ public:
 	virtual bool operator==(const Operand& o) const = 0;
 	virtual bool operator< (const Operand& o) const = 0;
 	
+	virtual inline const bool isAConst() 		 const { return false; }
 	virtual inline const OperandConst& toConst() const { ASSERTP(false, "not an OperandConst: " << *this << " (" << kind() << ")"); }
 	virtual inline const Constant& toConstant()  const { ASSERTP(false, "not a Constant: " 		<< *this << " (" << kind() << ")"); }
 	virtual inline const OperandVar& toVar() 	 const { ASSERTP(false, "not an OperandVar: " 	<< *this << " (" << kind() << ")"); }
  	virtual inline const OperandMem& toMem() 	 const { ASSERTP(false, "not an OperandMem: " 	<< *this << " (" << kind() << ")"); }
 	virtual inline const OperandTop& toTop() 	 const { ASSERTP(false, "not an OperandTop: " 	<< *this << " (" << kind() << ")"); }
+	virtual inline const OperandIter& toIter() 	 const { ASSERTP(false, "not an OperandIter: " 	<< *this << " (" << kind() << ")"); }
 	virtual inline const OperandArith& toArith() const { ASSERTP(false, "not an OperandArith: "	<< *this << " (" << kind() << ")"); }
 	elm::String toString() const { return _ << *this; }
 private:
@@ -156,6 +159,7 @@ public:
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return CST; }
+	virtual inline const bool isAConst() const { return true; }
 	inline operator Constant() const { return _value; }
 	OperandConst& operator=(const OperandConst& opd);
 	inline bool operator==(const Operand& o) const;
@@ -304,6 +308,45 @@ private:
 };
 extern OperandTop const* const Top;
 
+// Induction variables
+class OperandIter : public Operand
+{
+public:
+	OperandIter(otawa::Block* loop) : lid(loop) { }
+	OperandIter(const OperandIter& opd) : lid(opd.lid) { }
+	
+	otawa::Block* loop() const { return lid; }
+	
+	unsigned int countTempVars() const { return 0; }
+	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const { expr = this; return false; }
+	inline int involvesVariable(const OperandVar& opdv) const { return false; }
+	Option<Constant> involvesStackBelow(const Constant& stack_limit) const { return none; }
+	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
+	bool involvesMemory() const { return false; }
+	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { crash(); return none; }
+	Option<Constant> evalConstantOperand() const { return none; }
+	Option<const Operand*> simplify(DAG& dag) const { return none; }
+	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const { return this; }
+	void parseAffineEquation(AffineEquationState& state) const { crash(); }
+	inline void markUsedRegisters(BitVector& uses) const { }
+	inline bool isComplete() const { return true; }
+	inline bool isConstant() const { return false; }
+	inline bool isLinear(bool only_linear_opr)   const { return true; }
+	inline bool isAffine(const OperandVar& opdv) const { return false; }
+	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
+	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
+	inline operand_kind_t kind() const { return ITER; }
+	OperandIter& operator=(const OperandIter& opd) { lid = opd.lid; return *this; }
+	inline bool operator==(const Operand& o) const { return o.kind() == ITER && lid == static_cast<const OperandIter&>(o).lid; }
+	inline bool operator< (const Operand& o) const;
+	friend inline io::Output& operator<<(io::Output& out, const OperandIter& o) { return o.print(out); }
+	inline const OperandIter& toIter() const { return *this; }
+private:
+	io::Output& print(io::Output& out) const;
+
+	otawa::Block* lid;
+};
+
 // Arithmetic Expressions
 class OperandArith : public Operand
 {
@@ -359,7 +402,7 @@ private:
 	const Operand* opd2; // unused if operator is unary
 };
 
-
+// for v1 only
 class AffineEquationState
 {
 public:
@@ -369,7 +412,7 @@ public:
 	inline int varCounter()  const { return sign()*_var_counter; }
 	inline void reverseSign() { _is_negative ^= 1; _delta = -_delta; _sp_counter = -_sp_counter; _var_counter = -_var_counter; }
 	inline void addToDelta(int d) { _delta += d; }
-	inline void onVarFound(const OperandVar& var) { _var_counter++; /*if(!_var) _var = elm::some(var); else ASSERT(*_var == var);*/ }
+	inline void onVarFound(const OperandVar& var) { _var_counter++; }
 	inline void onSpFound(bool sign = SIGN_POSITIVE) { if(sign == SIGN_POSITIVE) _sp_counter++; else _sp_counter--; }
 private:
 	NONEW;
@@ -379,7 +422,6 @@ private:
 	int _delta;
 	int _sp_counter;
 	int _var_counter;
-	// Option<OperandVar> _var; // removed, this is just to check consistency
 };
 
 io::Output& operator<<(io::Output& out, arithoperator_t opr);

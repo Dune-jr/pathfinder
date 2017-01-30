@@ -73,7 +73,9 @@ public:
 	void initializeWithDFA();
 	void merge(const States& ss, Block* b);
 	void apply(const State& s);
-	void accel(const State& s0);
+	void prepareFixPoint();
+	void accel(const State& s0, const Operand* n);
+	void finalize(const Operand* n, int bound, bool exact);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e);
 	void removeConstantPredicates();
@@ -82,7 +84,6 @@ public:
 	void processBB(const BasicBlock *bb, int version_flags = Analysis::WITH_V1 | Analysis::WITH_V2);
 	void processSemInst1(const otawa::sem::PathIter& seminsts, const sem::inst& last_condition);
 	void processSemInst2(const otawa::sem::PathIter& seminsts, const sem::inst& last_condition);
-	// void throwInfo();
 	int invalidateStackBelow(const Constant& stack_limit);
 
 	inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }

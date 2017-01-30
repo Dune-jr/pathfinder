@@ -56,6 +56,13 @@ bool CVC4OperandVisitor::visit(const class OperandTop& o)
 	return true;
 }
 
+bool CVC4OperandVisitor::visit(const class OperandIter& o)
+{
+	expr = variables.getExpr(em, o);
+	visited = true;
+	return true;
+}
+
 bool CVC4OperandVisitor::visit(const class OperandArith& o)
 {
 	if(!o.isComplete())

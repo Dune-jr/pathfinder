@@ -48,35 +48,6 @@ Analysis::State::State(const State& s)
 	  labelled_preds(s.labelled_preds), generated_preds(s.generated_preds), generated_preds_taken(s.generated_preds_taken)//, fixpoint(s.fixpoint)
 	{ }
 
-/*Analysis::State& Analysis::State::operator=(const State& s)
-{
-	this->context = s.context;
-	this->dag = s.dag;
-	this->vm = s.vm;
-	if(s.lvars.isValid())
-		for(LocalVariables::Iter i(s.lvars); i; i++)
-			if(s.lvars[i])
-			{
-				const Operand* x = s.lvars[i];
-				int k = x->kind();
-				DBGG("\t* " << *i << " " << *s.lvars[i])
-			}
-	this->lvars = s.lvars;
-	// for(mem_t::Iterator i(s.mem); i; i++)
-	// 	DBGG(color::IRed() << *i << ", ")
-	DBGG(color::IRed() << s.dumpEverything())
-	this->mem = s.mem;
-	this->bottom = s.bottom;
-	this->path = s.path;
-	this->labelled_preds = s.labelled_preds;
-	this->generated_preds = s.generated_preds;
-	this->generated_preds_taken = s.generated_preds_taken;
-#ifdef V1
-	this->constants = s.constants; // remember in an array the variables that have been identified to a constant (e.g. t2 = 4)
-#endif
-	return *this;
-}*/
-
 void Analysis::State::appendEdge(Edge* e)
 {
 	// add edge to the end of the path
@@ -205,7 +176,7 @@ void Analysis::State::apply(const State& s)
 			ELM_DBGV(1, "\tf°g([" << (*ni).fst << "]) = ")
 			Constant k = (*ni).fst;
 			const Operand* updated_addr = dag->cst(k)->accept(cc);
-			ASSERTP(updated_addr->kind() == CST, "sp not a constant? It should have been checked before")
+			ASSERTP(updated_addr->isAConst(), "sp not a constant? It should have been checked before")
 			k = updated_addr->toConstant();
 			if(dbg_verbose == DBG_VERBOSE_ALL)
 				elm::cout << "f(g([" << k << "])) = f(" << *(*ni).snd << ") = ";
@@ -224,34 +195,64 @@ void Analysis::State::apply(const State& s)
 	this->path.apply(s.getDetailedPath());
 }
 
+
+// loop analysis should go that way: 1) normal parses with merge & fixpt 2) prepare&parse again 3) accel, parse with SMT ON 4) finalize
+/**
+ * @brief      This takes the fixpoint state of a loop and prepares it for accelerated iteration computation
+ * 			   (so we should merge before this)
+ */
+void Analysis::State::prepareFixPoint()
+{
+	for(LocalVariables::Iter i(lvars); i; i++)
+		if(lvars[i] && !lvars[i]->isAConst())
+			lvars[i] = NULL; // here, the "Top" is the state at the beginning of the loop iteration
+	for(mem_t::PairIterator iter(mem); iter; iter++)
+		if(!(*iter).snd->isAConst())
+			mem.remove((*iter).fst);
+}
+
 /**
  * @fn void Analysis::State::accel();
- * @param *this State after one iteration (starting from T)
- * @param s0 Initial state (before the loop)
+ * @param *this State after one iteration of a prepared fixpoint state (starting from \=/x, x=x0)
+ * @param n loop iterator operand
  */
-void Analysis::State::accel(const State& s0)
+void Analysis::State::accel(const Operand* n)
 {
-	// TODO!!
-	// deal with lvars
 	for(LocalVariables::Iter i(lvars); i; i++)
 	{
 		if(lvars[i]) // i was modified
 		{
-			// if(i->isAffineIn(x))
-			// { }
-			// else
-			// {
-			// 	DBG(color::IRed() << *i << " too complex to accel: " << lvars(*i))
-			// 	lvars[x] = NULL;
-			// }
+			if(*lvars[i] == OperandVar(i)) // x = x0
+			{
+				// do nothing
+			}
+			else if(piter.pred().isAffine(OperandVar(i))) // we do not handle stuff like x=2*x yet... we'd need 2^I anyway, ouch
+			{
+				lvars[i]->parseAffineEquation(eqstate);
+				ASSERTP(eqstate.spCounter() == 0, "strange case where SP is added at every iteration... if this is not a bug, just scratch")
+				const t::int32 a = eqstate.varCounter();
+				const t::int32 b = eqstate.delta();
+				// x_n+1 = ax_n + b
+			}
+			else
+			{
+				DBG(color::IRed() << *i << " too complex to accel: " << lvars(*i))
+				lvars[?] = &Top; // I used NULL??
+			}
 		}
 	}
 
-	// deal with memory
 	for(mem_t::PairIterator iter(mem); iter; iter++)
 	{
 		const Constant addr = (*iter).fst;
 	}
+}
+
+/**
+ * @brief      use loop bounds to replace all OperandIter "n" by either an exact loop iteration count, or a new Tk with 0<=Tk and Tk<=loop bound predicates
+ */
+void Analysis::State::finalize(const Operand* n, int bound, bool exact)
+{
 }
 
 /**
@@ -396,20 +397,6 @@ void Analysis::State::merge(const States& ss, Block* b)
 	constants.label(e);
 	path.merge(stateListToPathVector(sl)); // clears up path and merge all of sl into 1
 	DBG("Merged predicates: " << generated_preds << ", " << constants)
-}*/
-
-/**
- * @fn void Analysis::State::throwInfo();
- * throw all gathered info on current state
- */
-/*void Analysis::State::throwInfo()
-{
-	DBG(color::IRed() << "throwing info from path " << getPathString())
-	path.clear();
-	constants.clear();
-	labelled_preds.clear();
-	generated_preds.clear();
-	generated_preds_taken.clear();
 }*/
 
 /**

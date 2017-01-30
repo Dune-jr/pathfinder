@@ -22,6 +22,7 @@ public:
 	Expr getExpr(CVC4::ExprManager& em, const OperandVar& o, stackmode_t mode = DEFAULT); // last parameter is to differentiate stuff like r0 = ?0 + 1 where ?0=r0_0
 	Expr getExpr(CVC4::ExprManager& em, const OperandMem& o); //, const Expr& expr_addr);
 	Expr getExpr(CVC4::ExprManager& em, const OperandTop& o); // v2 only
+	Expr getExpr(CVC4::ExprManager& em, const OperandIter& o); // v2 only
 	inline Expr getExprSP() const { return expr_sp; }
 	inline void setMode(stackmode_t mode) { def_mode = mode; }
 
@@ -32,6 +33,7 @@ private:
 	AVLMap<t::int32, Expr> regmap; // registers
 	AVLMap<Constant, Expr> memmap; // relative addresses in memory
 	AVLMap<t::int32, Expr> topmap; // tops (v2 only)
+	AVLMap<otawa::Block*, Expr> itermap; // tops (v2 only)
 	const CVC4::Type integer; // Z
 	Expr expr_sp;
 	stackmode_t def_mode; // indicates what to default to (cannot be default)

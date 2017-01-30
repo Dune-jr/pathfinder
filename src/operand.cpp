@@ -309,8 +309,20 @@ Option<Constant> OperandTop::evalConstantOperand() const { return none; }
 Option<const Operand*> OperandTop::simplify(DAG& dag) const { return none; }
 const Operand* OperandTop::replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const
 	{ return this; }
+
+// Operands: Induction variables
+io::Output& OperandIter::print(io::Output& out) const
+	{ return out << "I" << lid; }
+
+bool OperandIter::operator<(const Operand& o) const {
+	if(kind() > o.kind())
+		return true;
+	if(kind() < o.kind())
+		return false;
+	return lid < static_cast<const OperandIter&>(o).lid;
+}
  
-// Operands: Arithmetic Expressions
+// Operands: Arithmetic expressions
 OperandArith::OperandArith(arithoperator_t opr, const Operand* opd1_, const Operand* opd2_)
 	: _opr(opr), opd1(opd1_), opd2(opd2_) { }
 /*OperandArith::OperandArith(arithoperator_t opr, const Operand& opd1_)
@@ -616,8 +628,8 @@ Option<const Operand*> OperandArith::simplify(DAG& dag) const
 
 	// reminder: our arithexpr shouldn't be const (case handled by the earlier evalConstantOperand test)
 	// test neutrals
-	bool opd1_is_constant = new_opd1->kind() == CST;
-	bool opd2_is_constant = new_opd2->kind() == CST;
+	bool opd1_is_constant = new_opd1->isAConst();
+	bool opd2_is_constant = new_opd2->isAConst();
 	Constant opd1_val, opd2_val;
 	if(opd1_is_constant) opd1_val = new_opd1->toConstant();
 	if(opd2_is_constant) opd2_val = new_opd2->toConstant();
@@ -728,6 +740,7 @@ io::Output& operator<<(io::Output& out, const operand_kind_t kind)
 		case VAR:	out << "VAR";	break;
 		case MEM:	out << "MEM";	break;
 		case TOP:	out << "TOP";	break;
+		case ITER:  out << "ITER";	break;
 		case ARITH: out << "ARITH";	break;
 	}
 	return out;

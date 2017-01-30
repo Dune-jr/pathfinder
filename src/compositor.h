@@ -29,6 +29,7 @@ public:
 	const Operand* visit(const class OperandVar& g)   { return lvars[g] ? lvars[g] : &g; }
 	const Operand* visit(const class OperandMem& g)   { return mem.exists(g.addr()) ? mem[g.addr()] : &g; }
 	const Operand* visit(const class OperandTop& g)   { return &g; } // this should be handled by allocating a new top, otherwise we'll get problems
+	const Operand* visit(const class OperandIter& g)  { crash(); }
 	const Operand* visit(const class OperandArith& g)
 		{ return Arith::autoOp(&dag, g.opr(), g.leftOperand().accept(*this), g.isBinary() ? g.rightOperand().accept(*this) : NULL); }
 
