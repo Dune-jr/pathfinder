@@ -122,7 +122,30 @@ public:
 	virtual inline const OperandTop& toTop() 	 const { ASSERTP(false, "not an OperandTop: " 	<< *this << " (" << kind() << ")"); }
 	virtual inline const OperandIter& toIter() 	 const { ASSERTP(false, "not an OperandIter: " 	<< *this << " (" << kind() << ")"); }
 	virtual inline const OperandArith& toArith() const { ASSERTP(false, "not an OperandArith: "	<< *this << " (" << kind() << ")"); }
-	elm::String toString() const { return _ << *this; }
+
+	class Iter : public PreIterator<Iter, const Operand*> {
+	public:
+		enum {
+			WITH_CST = 1 << CST,
+			WITH_VAR = 1 << VAR,
+			WITH_MEM = 1 << MEM,
+			WITH_TOP = 1 << TOP,
+			WITH_ITER = 1 << ITER,
+			WITH_ARITH = 1 << ARITH,
+		};
+
+		Iter(const Operand* o, const int selector_flags = 0xffff-WITH_CST) : q(), flags(selector_flags)
+			{ q.push(o); }
+		inline bool ended() const
+			{ return q.isEmpty(); }
+		inline const Operand* item() const
+			{ return q.first(); }
+		void next();
+		
+	private:
+		SLList<const Operand*> q;
+		const int flags;
+	};
 private:
 	virtual io::Output& print(io::Output& out) const = 0;
 };

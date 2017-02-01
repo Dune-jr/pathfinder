@@ -96,9 +96,22 @@
  * @brief Returns an operand kind, in order to characterize each implementation of Operand
  */
 
-// const OperandTop Top(false);
-// const OperandTop Top(-1);
 OperandTop const* const Top = new OperandTop(-1);
+
+void Operand::Iter::next() {
+	if(!q)
+		return;
+	const Operand* cur = q.pop();
+	if(cur->kind() == ARITH)
+	{
+		if(cur->toArith().isBinary())
+			q.push(cur->toArith().right());
+		q.push(cur->toArith().left());
+	}
+	// else no children, do nothing
+	if(! (q.first()->kind() & (1 << q.first()->kind())) ) // item is unwanted
+		next();
+}
 
 // Operands: Constants
 OperandConst::OperandConst(const OperandConst& opd) : _value(opd._value) { }

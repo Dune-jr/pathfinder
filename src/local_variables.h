@@ -48,18 +48,22 @@ public:
 	}
 
 private:
+	void label(t::int32 id, Edge* e)
+		{ return;
+		  if(!l[id]) l[id] = new labels_t();
+		  l[id]->add(e); }
+	void label(t::int32 id, const labels_t& labs)
+		{ return;
+		  if(!l[id]) l[id] = new labels_t(labs);
+		  else for(labels_t::Iter i(labs); i; i++) l[id]->add(*i); }
+
 	inline int getIndex(t::int32 var_id) const
 		{ return var_id >= 0 ? var_id : thresold-var_id-1; } // tempvars id start at -1 for t1 and so forth
+public: // these are used in some methods of State like accel
 	inline int getIndex(OperandVar var) const
 		{ return getIndex(var.addr()); }
 	inline t::int32 getId(int index) const
 		{ return index < thresold ? index : thresold-index-1; }
-	void label(t::int32 id, Edge* e)
-		{ return; if(!l[id]) l[id] = new labels_t();
-		  l[id]->add(e); }
-	void label(t::int32 id, const labels_t& labs)
-		{ return; if(!l[id]) l[id] = new labels_t(labs);
-		  else for(labels_t::Iter i(labs); i; i++) l[id]->add(*i); }
 
 public:
 	inline bool isValid() const
@@ -85,44 +89,7 @@ public:
 	void onEdge(Edge* e);
 	void merge(const LocalVariables& lv); // this = this ∩ lv
 
-	// void merge(const SLList<ConstantVariablesCore>& cvl);
-	// elm::String printChanges() const;
-	// bool sameValuesAs(const ConstantVariablesCore& cv) const; // less strict (only values)
-	
-	LocalVariables& operator=(const LocalVariables& lv) {
-		if(lv.isValid())
-		{
-			if(isValid())
-			{
-				ASSERTP(size == lv.size && thresold == lv.thresold, "sizes or thresolds do not match ("
-				  << size << "/" << lv.size << ", " << thresold << "/" << lv.thresold << ")");
-				copy(lv);
-			}
-			else
-			{
-				size = lv.size;
-				thresold = lv.thresold;
-				o = new Operand const*[size];
-				l = new labels_t*[size];
-				array::clear(l, size);
-				u.resize(size);
-				copy(lv);
-			}
-		}
-		else // we're copying an invalid LV
-		{
-			delete[] o;
-			if(l)
-				for(int i = 0; i < size; i++)
-					delete l[i];
-			size = 0;
-			thresold = 0;
-			o = NULL;
-			l = NULL;
-			u = BitVector();
-		}
-		return *this;
-	}
+	LocalVariables& operator=(const LocalVariables& lv);
 	inline bool operator==(const LocalVariables& lv) const // only compares operands!
 		{ return array::cmp(o, lv.o, size) == 0; }
 	inline bool operator!=(const LocalVariables& lv) const

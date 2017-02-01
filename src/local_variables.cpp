@@ -108,6 +108,42 @@ void LocalVariables::merge(const LocalVariables& lv) // this = this ∩ lv
 	}
 }
 
+LocalVariables& LocalVariables::operator=(const LocalVariables& lv)
+{
+	if(lv.isValid())
+	{
+		if(isValid())
+		{
+			ASSERTP(size == lv.size && thresold == lv.thresold, "sizes or thresolds do not match ("
+			  << size << "/" << lv.size << ", " << thresold << "/" << lv.thresold << ")");
+			copy(lv);
+		}
+		else
+		{
+			size = lv.size;
+			thresold = lv.thresold;
+			o = new Operand const*[size];
+			l = new labels_t*[size];
+			array::clear(l, size);
+			u.resize(size);
+			copy(lv);
+		}
+	}
+	else // we're copying an invalid LV
+	{
+		delete[] o;
+		if(l)
+			for(int i = 0; i < size; i++)
+				delete l[i];
+		size = 0;
+		thresold = 0;
+		o = NULL;
+		l = NULL;
+		u = BitVector();
+	}
+	return *this;
+}
+
 io::Output& LocalVariables::print(io::Output& out) const
 {
 	if(! isValid())

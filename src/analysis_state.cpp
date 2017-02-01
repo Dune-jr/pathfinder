@@ -2,6 +2,7 @@
  * General analysis::state methods
  */
 
+#include "arith.h"
 #include "analysis_state.h"
 #include "compositor.h"
 
@@ -218,27 +219,107 @@ void Analysis::State::prepareFixPoint()
  */
 void Analysis::State::accel(const Operand* n)
 {
-	for(LocalVariables::Iter i(lvars); i; i++)
-	{
-		if(lvars[i]) // i was modified
+	enum {
+		INIT=0,
+		DONE=1,
+	};
+	const int max_size = context->max_registers + context->max_tempvars;
+	short steps[max_size] = {INIT};
+	bool fixpoint;
+	do
+	{	// TODO! should include the memory in that loop too
+		fixpoint = true;
+		for(LocalVariables::Iter i(lvars); i; i++)
 		{
-			if(*lvars[i] == OperandVar(i)) // x = x0
+			const int ii = lvars.getIndex(*i);
+			if(steps[ii] != DONE)
 			{
-				// do nothing
+				if(lvars[i]) // i was modified
+				{
+					if(*lvars[i] == *i) // x = x0
+					{
+						// do nothing
+						steps[ii] = DONE;
+						fixpoint = false;
+					}
+					else if(lvars[i]->isAffine(*i)) // we do not handle stuff like x=2*x yet... we'd need 2^I anyway, ouch
+					{
+						AffineEquationState eqstate;
+						lvars[i]->parseAffineEquation(eqstate);
+						ASSERTP(eqstate.spCounter() == 0, "strange case where SP is added at every iteration... if this is not a bug, just scratch")
+						const t::int32 a = eqstate.varCounter();
+						const t::int32 b = eqstate.delta();
+						// x_n+1 = ax_n + b
+						ASSERTP(a != -1, "treat case -1")
+						ASSERTP(a == 1, "treat case > 1 or < -1")
+						lvars[i] = Arith::add(dag, dag->var(*i), Arith::mul(dag, n, dag->cst(b)));
+						// set a flag that says we have accel'd i
+						steps[ii] = DONE;
+						fixpoint = false;
+					}
+					else if(lvars[i]->isLinear(true)) // TODO! move that to static method
+					{
+						bool ready = true;
+						int this_count = 0;
+						for(Operand::Iter j(lvars[i], 0xffff-(1<<CST)-(1<<ARITH)); j && ready; j++)
+						{
+							switch(j->kind())
+							{
+								case VAR:
+									if(**j == *i)
+										this_count++;
+									else if(steps[j->toVar().addr()] != DONE)
+										ready = false;
+									break;
+								case MEM:
+									ASSERTP(false, "//TODO!!!")
+									break;
+								case TOP:
+								case ITER:
+									ready = false;
+									break;
+								case CST:
+								case ARITH:
+									crash();
+									break;
+							}
+						}
+						ASSERTP(this_count <= 1, "handle multiple this in operand formula")
+						if(ready)
+						{
+							if(this_count == 0)
+							{
+								// easy case, everything on the right is constant. nothing to do
+							}
+							if(this_count == 1)
+							{
+								ASSERTP(false, "//TODO!!!")	
+							}
+							steps[ii] = DONE;
+						}
+					}
+					else
+					{
+						DBG(color::IRed() << *i << " too complex to accel: " << lvars(*i))
+						lvars[*i] = Top; // I used NULL??
+						steps[ii] = DONE;
+						//fixpoint = false;
+					}
+				}
+				else // lvars[i] = i
+					steps[ii] = DONE; // nothing to do: identity^n = identity	
 			}
-			else if(piter.pred().isAffine(OperandVar(i))) // we do not handle stuff like x=2*x yet... we'd need 2^I anyway, ouch
-			{
-				lvars[i]->parseAffineEquation(eqstate);
-				ASSERTP(eqstate.spCounter() == 0, "strange case where SP is added at every iteration... if this is not a bug, just scratch")
-				const t::int32 a = eqstate.varCounter();
-				const t::int32 b = eqstate.delta();
-				// x_n+1 = ax_n + b
-			}
-			else
-			{
-				DBG(color::IRed() << *i << " too complex to accel: " << lvars(*i))
-				lvars[?] = &Top; // I used NULL??
-			}
+		}
+	} while(!fixpoint);
+
+	// now set to Top all those that could not be replaced
+	for(int ii = 0; ii < max_size; ii++)
+	{
+		if(!steps[ii])
+		{
+			const OperandVar o(lvars.getId(ii));
+			DBG(color::IRed() << "In " << o << ", could not replace variables of: " << lvars(o))
+			lvars[o] = Top;
 		}
 	}
 

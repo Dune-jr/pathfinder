@@ -74,7 +74,7 @@ public:
 	void merge(const States& ss, Block* b);
 	void apply(const State& s);
 	void prepareFixPoint();
-	void accel(const State& s0, const Operand* n);
+	void accel(const Operand* n);
 	void finalize(const Operand* n, int bound, bool exact);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e);

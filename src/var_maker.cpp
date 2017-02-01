@@ -11,9 +11,3 @@
  * @brief      Make a new Tk
  * @return     The operand generated
  */
-
-/**
- * @fn void scale(int offset);
- * @brief      Scale all the Tk (increase k by an offset)
- * @param[in]  offset  The offset to add to the var identifiers
- */
