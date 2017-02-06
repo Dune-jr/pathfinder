@@ -13,6 +13,12 @@
 
 using namespace otawa::sem;
 
+/**
+ * @brief      Process a BasicBlock
+ *
+ * @param[in]  bb             The BasicBlock to parse
+ * @param[in]  version_flags  The version flags
+ */
 void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 {
 	DBG("Processing " << (otawa::Block*)bb << " (" << bb->address() << ") of path " << getPathString())
@@ -48,10 +54,10 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 				generated_preds_taken = generated_preds;
 				generated_preds = generated_preds_before_condition;
 			}
-			if(version_flags & WITH_V2)
-				processSemInst2(seminsts, last_condition);
-			if(version_flags & WITH_V1)
+			if(version_flags & IS_V1)
 				processSemInst1(seminsts, last_condition);
+			else
+				processSemInst2(seminsts, last_condition);
 		}
 		// all temporary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();
@@ -538,6 +544,10 @@ Option<OperandMem> Analysis::State::getOperandMem(const OperandVar& var, Path& l
 	return none;
 }
 
+/**
+ * @fn bool Analysis::State::invalidateAllMemory()
+ * @brief      Invalidate all predicates involving memory
+ */
 bool Analysis::State::invalidateAllMemory()
 {
 	bool rtn = false;
@@ -619,9 +629,9 @@ Predicate Analysis::State::getConditionalPredicate(cond_t kind, const Operand* o
 		return Predicate(opr, opd_left, opd_right);
 }
 
-/*
-	Check if addr_mem is the constant address of some read-only data, if so returns the constant data value
-*/
+/**
+ * @brief Check if addr_mem is the constant address of some read-only data, if so returns the constant data value
+ */
 Option<Constant> Analysis::State::getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type) const
 {
 	const Constant& addr = addr_mem.addr();
@@ -630,7 +640,8 @@ Option<Constant> Analysis::State::getConstantValueOfReadOnlyMemCell(const Operan
 	if(!context->dfa_state->isInitialized(addr.val()))
 		return none;
 
-#define RETURN_CONSTANT(type) {\
+	#define RETURN_CONSTANT(type)\
+	{\
 		type v;\
 		context->dfa_state->get(addr.val(), v);\
 		return Constant(v);\
@@ -657,7 +668,7 @@ Option<Constant> Analysis::State::getConstantValueOfReadOnlyMemCell(const Operan
 		case NO_TYPE:
 			return none;
 	}
-#undef RETURN_CONSTANT
+	#undef RETURN_CONSTANT
 	return none;
 }
 

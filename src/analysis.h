@@ -1,7 +1,14 @@
+/**
+ * Warning: there are three versions
+ * (i)   v1: cfg1, bb1, virtualized		-1z 1
+ * (ii)  v2: cfg1, bb2, virtualized		-2z 1
+ * (iii) v3: cfg2, bb2, non virtualized	-2z 0
+ */
+
 #ifndef _ANALYSIS_H
 #define _ANALYSIS_H
 
-// #define V1 // v1 support
+// #define V1 // v1 support (slows down v2 and v3)
 
 // #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
@@ -30,6 +37,7 @@ public:
 	{
 		VIRTUALIZE_CFG		 = 1 <<  0,
 		SLICE_CFG			 = 1 <<  1,
+		USE_INITIAL_DATA 	 = 1 <<  2,
 		MERGE				 = 1 <<  3,
 		UNMINIMIZED_PATHS	 = 1 <<  4,
 		DRY_RUN				 = 1 <<  5,
@@ -38,9 +46,9 @@ public:
 		SHOW_PROGRESS		 = 1 <<  8,
 		POST_PROCESSING		 = 1 <<  9,
 		MULTITHREADING		 = 1 << 10,
-		WITH_V1				 = 1 << 11,
-		WITH_V2				 = 1 << 12,
-		USE_INITIAL_DATA 	 = 1 << 13,
+		IS_V1				 = 1 << 11,
+		IS_V2				 = 1 << 12,
+		IS_V3				 = 1 << 13,
 		SP_CRITICAL			 = 1 << 14,
 	};
 protected:
@@ -77,7 +85,8 @@ public:
 	const Vector<DetailedPath>& run(const WorkSpace* ws);
 	const Vector<DetailedPath>& run(CFG *cfg);
 	inline const Vector<DetailedPath>& infeasiblePaths() const { return infeasible_paths; }
-	// static bool listOfFixpoints(const SLList<Analysis::State>& sl);
+	
+	int version() const;
 	static elm::String pathToString(const Path& path);
 	static elm::String orderedPathToString(const OrderedPath& path);
 
@@ -141,7 +150,6 @@ protected:
 	// analysis_state.cpp
 	Analysis::State topState(Block* entry) const;
 	// analysis.cpp
-	void wl_push(Block* b);
 	void printResults(int exec_time_ms, int real_time_ms) const;
 	void printInfeasiblePaths() const;
 	void postProcessResults(CFG *cfg);
@@ -151,8 +159,6 @@ protected:
 	virtual void processCFG(CFG* cfg, bool use_initial_data) = 0;
 	virtual void I(Block* b, LockPtr<Analysis::States> s) = 0; // modifies existing states
 	LockPtr<States> I(const Vector<Edge*>::Iter& e, LockPtr<States> s); // creates new states
-	// Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
-	// elm::String wlToString() const;
 
 	bool anyEdgeHasTrace(const Vector<Edge*>& edges) const;
 	bool anyEdgeHasTrace(const Block::EdgeIter& biter) const;

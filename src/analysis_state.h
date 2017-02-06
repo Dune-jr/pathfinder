@@ -81,7 +81,7 @@ public:
 	void removeConstantPredicates();
 
 	// analysis_bb.cpp
-	void processBB(const BasicBlock *bb, int version_flags = Analysis::WITH_V1 | Analysis::WITH_V2);
+	void processBB(const BasicBlock *bb, int version_flags);
 	void processSemInst1(const otawa::sem::PathIter& seminsts, const sem::inst& last_condition);
 	void processSemInst2(const otawa::sem::PathIter& seminsts, const sem::inst& last_condition);
 	int invalidateStackBelow(const Constant& stack_limit);

@@ -1,3 +1,7 @@
+/**
+ * v3
+ */
+
 #include <otawa/cfg/Edge.h>
 #include "analysis2.h"
 #include "../analysis_state.h"
@@ -6,14 +10,16 @@
 using namespace elm::io;
 
 /**
- * @fn void Analysis::processCFG(Block* entry);
- * @brief Runs the analysis starting from the CFG entry entry
+ * @fn void Analysis2::processCFG(Block* entry);
+ * @brief Runs the analysis with no virtualization
 */
 void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 {
+	ASSERT(! (flags&VIRTUALIZE_CFG));
+	DBGG(IPur() << "==>\"" << cfg->name() << "\"")
+	
 	WorkingList wl;
 	vm = new VarMaker();
-	DBGG(IPur() << "==>\"" << cfg->name() << "\"")
 /* begin */
 	/* for e ∈ E(G) */
 		/* s_e ← nil */
@@ -131,37 +137,26 @@ void Analysis2::I(Block* b, LockPtr<States> s)
 	{
 		DBGG(Bold() << "-\tI(b=" << b << ") " << NoBold() << IYel() << "x" << s->count() << RCol() << printFixPointStatus(b))
 		for(States::Iterator si(s->states()); si; si++)
-			(*s)[si].processBB(b->toBasic(), flags&(Analysis::WITH_V1 | Analysis::WITH_V2 | Analysis::SP_CRITICAL));
+			(*s)[si].processBB(b->toBasic(), flags);
 	}
 	else if(b->isEntry())
 		s->onCall((*getCaller(b->cfg()))->toSynth());
 	else if(b->isCall())
 	{
-		if(flags&VIRTUALIZE_CFG)
-			s->onReturn(b->toSynth());
+		CFG* called_cfg = b->toSynth()->callee();
+		if(!CFG_S.exists(called_cfg)) // if the called CFG has not been processed yet
+			processCFG(called_cfg, false);
+
+		// merging tops
+		VarMaker called_vm_copy(**CFG_VARS(called_cfg));
+		vm->transfer(called_vm_copy); // vm receives more tops: we load the responsibility for all the pointers and clear the vector without deleting OpTops
+		// working on the paths
+		s->onCall(b->toSynth());
+		s->apply(**CFG_S(called_cfg));
+		s->onReturn(b->toSynth());
 	}
 	else if(b->isExit()) // main
-		{ }
+		CFG_S(b->cfg()) = s; // we will never free this, which shouldn't be a problem because it should only be freed at the end of analysis
 	else
-		DBGG("WARNING: not doing anything");
-
-	if(!(flags&VIRTUALIZE_CFG))
-	{
-		if(b->isCall())
-		{
-			CFG* called_cfg = b->toSynth()->callee();
-			if(!CFG_S.exists(called_cfg)) // if the called CFG has not been processed yet
-				processCFG(called_cfg, false);
-
-			// merging tops
-			VarMaker called_vm_copy(**CFG_VARS(called_cfg));
-			vm->transfer(called_vm_copy); // vm receives more tops: we load the responsibility for all the pointers and clear the vector without deleting OpTops
-			// working on the paths
-			s->onCall(b->toSynth());
-			s->apply(**CFG_S(called_cfg));
-			s->onReturn(b->toSynth());
-		}
-		else if(b->isExit())
-			CFG_S(b->cfg()) = s; // we will never free this, which shouldn't be a problem because it should only be freed at the end of analysis
-	}
+		DBGW("not doing anything");
 }

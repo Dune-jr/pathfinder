@@ -41,6 +41,7 @@ public:
 		opt_dry			 (SwitchOption::Make(*this).cmd("-d").cmd("--dry").description("dry run (no solver calls)")),
 		opt_v1			 (SwitchOption::Make(*this).cmd("-1").cmd("--v1").description("Run v1 of abstract interpretation (symbolic predicates)")),
 		opt_v2			 (SwitchOption::Make(*this).cmd("-2").cmd("--v2").description("Run v2 of abstract interpretation (smarter structs)")),
+		opt_v3			 (SwitchOption::Make(*this).cmd("-3").cmd("--v3").description("Run v3 of abstract interpretation (no inlining)")),
 		opt_deterministic(SwitchOption::Make(*this).cmd("-D").cmd("--deterministic").description("Ensure deterministic output (two executions give the same output)")),
 		opt_nolinearcheck(SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
 		opt_no_initial_data(SwitchOption::Make(*this).cmd("--nid").cmd("--no-initial-data").description("Do not include initial data from FFX (multitask mode)")),
@@ -49,7 +50,7 @@ public:
 		opt_allownonlinearoperators(SwitchOption::Make(*this).cmd("--allow-nonlinear-operators").description("assert linear predicates that use *,/,mod in the SMT solver (unsafe)")),
 		opt_slice		 (SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
 		opt_dumpoptions	 (SwitchOption::Make(*this).cmd("--dump-options").cmd("--do").description("print the selected options for the analysis")),
-		opt_virtualize	 (ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
+		// opt_virtualize	 (ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
 		opt_merge 		 (ValueOption<int>::Make(*this).cmd("-m").cmd("--merge").description("merge when exceeding X states at a control point").def(0)),
 		opt_multithreading(ValueOption<int>::Make(*this).cmd("-j").description("enable multithreading on the given amount of cores (0/1=no multithreading, -1=autodetect)").def(0)),
 		opt_x 			 (ValueOption<int>::Make(*this).cmd("-x").description("(for internal debugging)").def(0)) { }
@@ -64,9 +65,9 @@ protected:
 			dumpOptions(analysis_flags, merge_thresold, nb_cores);
 
 		Analysis* analysis =
-			(analysis_flags & Analysis::WITH_V1)
-			? (Analysis*)new Analysis1(workspace(), props, analysis_flags, merge_thresold, nb_cores)
-			: (Analysis*)new Analysis2(workspace(), props, analysis_flags, merge_thresold, nb_cores);
+			((analysis_flags & Analysis::IS_V1) || (analysis_flags & Analysis::IS_V2))
+			? (Analysis*)new Analysis1(workspace(), props, analysis_flags, merge_thresold, nb_cores)  // v1, v2
+			: (Analysis*)new Analysis2(workspace(), props, analysis_flags, merge_thresold, nb_cores); // v3
 		analysis->run(workspace()); // TODO: make that default for (workspace) overloard fnct
 
 		// outputing to .ffx
@@ -82,9 +83,8 @@ private:
 	// option::Manager manager;
 	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats;
 	ValueOption<bool> opt_output;
-	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry, opt_v1, opt_v2, opt_deterministic, opt_nolinearcheck,
+	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck,
 			     opt_no_initial_data, opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_slice, opt_dumpoptions;
-	ValueOption<bool> opt_virtualize;
 	ValueOption<int> opt_merge, opt_multithreading, opt_x;
 
 	void setFlags(int& analysis_flags, int& merge_thresold, int& nb_cores) {
@@ -98,10 +98,6 @@ private:
 		if(opt_detailedstats)
 			dbg_flags |= DBG_DETAILED_STATS;
 
-		if(opt_virtualize.get())
-			analysis_flags |= Analysis::VIRTUALIZE_CFG;
-		else
-			DBGW(color::BIRed() << "WARNING: IP analysis working with non-virtualized CFG. Invalid results very likely");
 		if(opt_slice)
 			analysis_flags |= Analysis::SLICE_CFG;
 		if(opt_progress)
@@ -115,9 +111,13 @@ private:
 		if(opt_dry)
 			analysis_flags |= Analysis::DRY_RUN;
 		if(opt_v1)
-			analysis_flags |= Analysis::WITH_V1;
+			analysis_flags |= Analysis::IS_V1;
 		if(opt_v2)
-			analysis_flags |= Analysis::WITH_V2;
+			analysis_flags |= Analysis::IS_V2;
+		if(opt_v3)
+			analysis_flags |= Analysis::IS_V3;
+		if(opt_v1 || opt_v2)
+			analysis_flags |= Analysis::VIRTUALIZE_CFG;
 		if(! opt_no_initial_data)
 			analysis_flags |= Analysis::USE_INITIAL_DATA;
 		if(opt_sp_critical)
@@ -132,6 +132,7 @@ private:
 		if(opt_x)
 			dbg_ = opt_x.get();
 		merge_thresold = getMergeThresold();
+		ASSERTP(opt_v1 + opt_v2 + opt_v3 == 1, opt_v1 + opt_v2 + opt_v3 << " analyses selected, exactly 1 required.")
 	}
 	void initializeLoggingOptions() {
 		// high verbose numbers are more silent. TODO: that is counterintuitive
@@ -193,8 +194,9 @@ private:
 		DBGOPT("KEEP UNMINIMIZED PATHS"			, analysis_flags&Analysis::UNMINIMIZED_PATHS, true)
 		DBGOPT("USE INITIAL DATA"				, analysis_flags&Analysis::USE_INITIAL_DATA, true)
 		DBGOPT("RUN DRY (NO SMT SOLVER)"		, analysis_flags&Analysis::DRY_RUN, false)
-		DBGOPT("RUN V1 A.I."					, analysis_flags&Analysis::WITH_V1, false)
-		DBGOPT("RUN V2 A.I."					, analysis_flags&Analysis::WITH_V2, false)
+		DBGOPT("RUN V1 A.I."					, analysis_flags&Analysis::IS_V1, false)
+		DBGOPT("RUN V2 A.I."					, analysis_flags&Analysis::IS_V2, false)
+		DBGOPT("RUN V3 A.I."					, analysis_flags&Analysis::IS_V3, false)
 		cout << DBGPREFIX("MERGING THRESOLD");
 		if(analysis_flags&Analysis::MERGE)
 			cout << color::IRed() << merge_thresold << color::RCol() << endl;

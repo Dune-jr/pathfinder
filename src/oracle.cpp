@@ -43,7 +43,7 @@ LockPtr<Analysis::States> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) c
 		{
 			State s((Edge*)NULL, context, dag, vm, false); // entry is cleared anyway
 			s.merge(*v, b); // s <- widening(s0, s1, ..., sn)
-			if(LOOP_HEADER(b))
+			if(LOOP_HEADER(b) && version() == 3)
 				s.accel(LH_I(b)); // !!
 			LockPtr<States> rtnv(new States(1));
 			rtnv->push(s);
@@ -137,7 +137,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 		for(States::Iterator si(ss.states()); si; si++)
 		{	// SMT call
 			chosen_smt_t smt(flags);
-			const Option<Path*> infeasible_path = (flags&WITH_V2) ? smt.seekInfeasiblePathsv2(*si) : smt.seekInfeasiblePaths(*si);
+			const Option<Path*> infeasible_path = (flags&IS_V1) ? smt.seekInfeasiblePaths(*si) : smt.seekInfeasiblePathsv2(*si);
 			sv_paths.addLast(infeasible_path);
 			if(!infeasible_path)
 				new_sv.addLast(*si); // only add feasible states to new_sv
@@ -149,7 +149,6 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 				sprogress->onSolving(infeasible_path);
 		}
 	}
-
 
 	// cout << "["; for(Vector<Option<Path*> >::Iterator i(sv_paths); i; i++)
 	// 	if(*i) cout << pathToString(***i) << ", "; cout << "\n";

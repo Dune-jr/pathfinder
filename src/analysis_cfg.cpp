@@ -1,6 +1,12 @@
 /*
  * Macro analysis: skeleton of the analysis algorithm, defines the way we parse the CFG 
  */
+/**
+ * Warning: there are three versions
+ * (i)   v1: cfg1, bb1, virtualized		-1z 1
+ * (ii)  v2: cfg1, bb2, virtualized		-2z 1
+ * (iii) v3: cfg2, bb2, non virtualized	-2z 0
+ */
 
 #include <otawa/cfg/Edge.h>
 #include "analysis_state.h"

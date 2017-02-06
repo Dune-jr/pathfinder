@@ -12,7 +12,12 @@
 
 using namespace otawa::sem;
 
-// @param last_condition If we are in a conditional segment, the sem inst corresponding to the conditional instruction, NOP otherwise
+/**
+ * @brief      v2/v3 of abstract interpretation
+ *
+ * @param seminsts  	 The semantic instruction to parse
+ * @param last_condition If we are in a conditional segment, the sem inst corresponding to the conditional instruction, NOP otherwise
+ */
 void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst& last_condition)
 {
 	const t::int16 &a = seminsts.a(), &b = seminsts.b(), &d = seminsts.d();
@@ -212,7 +217,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 			set(d, Arith::mul(dag, getPtr(a), getPtr(b)));
 			break;
 		case MULH:
-			scratch(d); // TODO! do better
+			scratch(d); // TODO! do better, like generating a predicate
 			break;
 		case DIVU:
 			UNTESTED_CODE("unsigned variant")

@@ -55,15 +55,27 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 	dag = new DAG(context.max_tempvars, context.max_registers);
 	// vm will be initialized on CFG init
 
-	if(!(flags&WITH_V1) && !(flags&WITH_V2))
-		DBGW("No A.I. analysis selected")
-	ASSERTP(!(flags&WITH_V1 && flags&WITH_V2), "v1 and v2 both selected at once - no longer permitted because v1 struggles with OperandTops")
+	ASSERT(version() > 0)
+#ifndef V1
+	ASSERTP(version() > 1, "program was not built with v1 support")
+#endif
 }
 
 Analysis::~Analysis()
 {
 	delete gdom;
 	delete dag;
+}
+
+int Analysis::version(void) const
+{
+	if(flags & IS_V1)
+		return 1;
+	if(flags & IS_V2)
+		return 2;
+	if(flags & IS_V3)
+		return 3;
+	return -1;
 }
 
 /**
@@ -123,24 +135,6 @@ const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 			++processed_bbs; // only increase processed_bbs when we are in a state where we are no longer looking for a fixpoint
 		cout << "[" << processed_bbs*100/bb_count << "%] Processed Block #" << block_id << " of " << bb_count << "        " << endl << "\e[1A";
 	}
-}*/
-
-/*
- * @fn void Analysis::wl_push(Block* b);
- * @brief push b in wl, ensuring unicity in wl
- */
-/*void Analysis::wl_push(Block* b)
-{
-	ASSERTP(!b->isUnknown(), "Block " << b << " is unknown, not supported by analysis.");
-	if(flags&VIRTUALIZE_CFG)
-	{
-		if(b->isCall()) 
-			b = b->toSynth()->callee()->entry(); // call becomes callee entry
-		if(b->isExit())
-			b = getCaller(b, b); // exit becomes caller (remains exit if no caller)
-	}
-	wl.push(b);
-	// DBGG("-\twl ← wl ∪ " << b)
 }*/
 
 Block* Analysis::outsAlias(Block* b) const
