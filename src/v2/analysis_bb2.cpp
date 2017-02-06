@@ -3,11 +3,12 @@
  */
 
 #include <otawa/sem/PathIter.h>
-#include "analysis_state.h"
-#include "arith.h"
-#include "DAG.h"
-#include "debug.h"
-#include "operand.h"
+#include <otawa/sem/inst.h>
+#include "../analysis_state.h"
+#include "../arith.h"
+#include "../DAG.h"
+#include "../debug.h"
+#include "../operand.h"
 
 using namespace otawa::sem;
 

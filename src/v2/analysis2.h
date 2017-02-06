@@ -1,7 +1,7 @@
 #ifndef _ANALYSIS2_H
 #define _ANALYSIS2_H
 
-#include "oracle.h"
+#include "../oracle.h"
 
 class Analysis2 : public DefaultAnalysis
 {

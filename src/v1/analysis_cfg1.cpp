@@ -1,8 +1,7 @@
 #include <otawa/cfg/Edge.h>
-#include "analysis2.h"
-#include "analysis_state.h"
-#include "progress.h"
-#include "cfg_features.h"
+#include "analysis1.h"
+#include "../analysis_state.h"
+#include "../progress.h"
 
 using namespace elm::io;
 
@@ -10,7 +9,7 @@ using namespace elm::io;
  * @fn void Analysis::processCFG(Block* entry);
  * @brief Runs the analysis starting from the CFG entry entry
 */
-void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
+void Analysis1::processCFG(CFG* cfg, bool use_initial_data)
 {
 	WorkingList wl;
 	vm = new VarMaker();
@@ -84,20 +83,15 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 						LH_STATUS(b) = FIX;
 						s->onLoopEntry(b);
 						break;
-					/* status_b ← ACCEL if status_b = FIX ∧ s ≡ s_b */
+					/* status_b ← LEAVE if status_b = FIX ∧ s ≡ s_b */
 					case FIX: if(s->one().equiv(LH_S(b)))
-						LH_STATUS(b) = LEAVE;
-						// LH_STATUS(b) = ACCEL;
-						break;
-					/* ... */
-					case ACCEL:
-						ASSERTP(false, "TODO");
 						LH_STATUS(b) = LEAVE;
 						break;
 					/* status_b ← ENTER if status_b = LEAVE */
 					case LEAVE:
 						LH_STATUS(b).remove();
 						break;
+					default: crash();
 				}
 			}
 			I(b, s); // update s
@@ -124,7 +118,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 /**
  * @brief      Interpretation function of a Block
  */
-void Analysis2::I(Block* b, LockPtr<States> s)
+void Analysis1::I(Block* b, LockPtr<States> s)
 {
 	if(flags&SHOW_PROGRESS)
 		progress->onBlock(b);

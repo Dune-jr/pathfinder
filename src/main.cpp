@@ -4,8 +4,8 @@
 #include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
 #include <otawa/prog/WorkSpace.h>
 #include <otawa/app/Application.h>
-#include "analysis1.h"
-#include "analysis2.h"
+#include "v1/analysis1.h"
+#include "v2/analysis2.h"
 #include "ffx.h"
 #include "debug.h"
 #include "oracle.h"
