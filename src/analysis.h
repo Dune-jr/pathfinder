@@ -104,6 +104,7 @@ protected:
 	{	
 		ENTER, // not used: represented by no annotation, when we haven't entered the loop yet
 		FIX,
+		ACCEL,
 		LEAVE,
 	} loopheader_status_t; // Fixpoint status of the loop header, for annotation
 	inline static loopheader_status_t loopStatus(const Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
@@ -120,6 +121,7 @@ protected:
 	// static Identifier<Analysis::States> EDGE_S; // Trace on an edge
 	static Identifier<LockPtr<Analysis::States> > EDGE_S; // Trace on an edge
 	static Identifier<Analysis::State>			  LH_S; // Trace on a loop header
+	static Identifier<const Operand*>			  LH_I; // on lheaders
 private:
 	static Identifier<loopheader_status_t>		  LH_STATUS; // Fixpt status of a loop header
 	static Identifier<LockPtr<Analysis::States> > CFG_S; // Trace on a CFG

@@ -301,6 +301,9 @@ String Analysis::printFixPointStatus(Block* b)
 			case FIX:
 				rtn = rtn.concat(color::Yel() + "F");
 				break;
+			case ACCEL:
+				rtn = rtn.concat(color::IPur() + "A");
+				break;
 			case LEAVE:
 				rtn = rtn.concat(color::IGre() + "L");
 				break;

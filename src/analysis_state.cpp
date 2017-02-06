@@ -219,12 +219,13 @@ void Analysis::State::prepareFixPoint()
  */
 void Analysis::State::accel(const Operand* n)
 {
+	DBGG(IRed << "accelerating " << this->dumpEverything())
 	enum {
-		INIT=0,
-		DONE=1,
+		INIT=false,
+		DONE=true,
 	};
 	const int max_size = context->max_registers + context->max_tempvars;
-	short steps[max_size] = {INIT};
+	BitVector steps(max_size, (bool)INIT);
 	bool fixpoint;
 	do
 	{	// TODO! should include the memory in that loop too
@@ -239,10 +240,10 @@ void Analysis::State::accel(const Operand* n)
 					if(*lvars[i] == *i) // x = x0
 					{
 						// do nothing
-						steps[ii] = DONE;
+						steps.set(ii, DONE);
 						fixpoint = false;
 					}
-					else if(lvars[i]->isAffine(*i)) // we do not handle stuff like x=2*x yet... we'd need 2^I anyway, ouch
+					else if(lvars[i]->isAffine(*i) && lvars[i]->involvesVariable(*i) == 1) // we do not handle stuff like x=2*x yet... we'd need 2^I anyway, ouch
 					{
 						AffineEquationState eqstate;
 						lvars[i]->parseAffineEquation(eqstate);
@@ -251,17 +252,17 @@ void Analysis::State::accel(const Operand* n)
 						const t::int32 b = eqstate.delta();
 						// x_n+1 = ax_n + b
 						ASSERTP(a != -1, "treat case -1")
-						ASSERTP(a == 1, "treat case > 1 or < -1")
+						ASSERTP(a == 1, "lvars[" << *i << "]=" << *lvars[i] << ": treat case > 1 or < -1: " << a)
 						lvars[i] = Arith::add(dag, dag->var(*i), Arith::mul(dag, n, dag->cst(b)));
 						// set a flag that says we have accel'd i
-						steps[ii] = DONE;
+						steps.set(ii, DONE);
 						fixpoint = false;
 					}
-					else if(lvars[i]->isLinear(true)) // TODO! move that to static method
+					else if(lvars[i]->isLinear(true)) // 
 					{
 						bool ready = true;
 						int this_count = 0;
-						for(Operand::Iter j(lvars[i], 0xffff-(1<<CST)-(1<<ARITH)); j && ready; j++)
+						for(Operand::Iter j(lvars[i], 0xffff-(1<<CST)-(1<<ARITH)); j && ready; j++) // this should iter on everything but CST and ARITH
 						{
 							switch(j->kind())
 							{
@@ -280,7 +281,8 @@ void Analysis::State::accel(const Operand* n)
 									break;
 								case CST:
 								case ARITH:
-									crash();
+									ASSERTP(false, "shouldn't happen, we flagged this out.\n"
+										"lvars[" << *i << "] = " << *lvars[i] << " : j = " << **j);
 									break;
 							}
 						}
@@ -295,19 +297,19 @@ void Analysis::State::accel(const Operand* n)
 							{
 								ASSERTP(false, "//TODO!!!")	
 							}
-							steps[ii] = DONE;
+							steps.set(ii, DONE);
 						}
 					}
 					else
 					{
 						DBG(color::IRed() << *i << " too complex to accel: " << lvars(*i))
 						lvars[*i] = Top; // I used NULL??
-						steps[ii] = DONE;
+						steps.set(ii, DONE);
 						//fixpoint = false;
 					}
 				}
 				else // lvars[i] = i
-					steps[ii] = DONE; // nothing to do: identity^n = identity	
+					steps.set(ii, DONE); // nothing to do: identity^n = identity	
 			}
 		}
 	} while(!fixpoint);
@@ -327,6 +329,8 @@ void Analysis::State::accel(const Operand* n)
 	{
 		const Constant addr = (*iter).fst;
 	}
+
+	DBGG("done: " << this->dumpEverything())
 }
 
 /**
@@ -417,68 +421,6 @@ void Analysis::State::merge(const States& ss, Block* b)
 	// this->path.fromContext(sc.first().lastEdge()->target()->toBasic());
 	this->path.fromContext(b);
 }
-/*void Analysis::State::merge(const SLList<State>& sl)
-{
-	DBGG("-\tmerging " << sl)
-	// resetting stuff
-	generated_preds.clear();
-	generated_preds_taken.clear();
-	labelled_preds.clear();
-	SLList<ConstantVariables> cvl;
-	// intialize to first element
-	ASSERTP(!sl.isEmpty(), "call to Analysis::State::merge with empty sl parameter"); // maybe just leave the state empty
-	constants = sl.first().constants;
-	// copy firstElement.labelled_preds into labelled_preds with empty labels
-	for(SLList<LabelledPredicate>::Iterator iter(sl.first().labelled_preds); iter; iter++)
-		labelled_preds += LabelledPredicate(iter->pred(), Path::null);
-	bool first = true;
-	for(SLList<State>::Iterator sl_iter(sl); sl_iter; sl_iter++)
-	{
-		if(first) // the first element is s itself, it's useless to merge s with s
-		{
-			first = false;
-			continue;
-		}
-		// for each element of labelled_preds, we make sure it is in *sl_iter
-		for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; )
-		{
-			// do not use 'if(s.labelled_preds.contains(*iter))' as we want to use Predicate::operator== and not LabelledPredicate::operator==
-			bool contains = false;
-			for(SLList<LabelledPredicate>::Iterator subiter((*sl_iter).labelled_preds); subiter; subiter++)
-			{
-				if((*subiter).pred() == iter->pred())
-				{
-					contains = true;
-					break;
-				}
-			}
-			if(contains)
-				iter++;
-			else
-				labelled_preds.remove(iter);
-		}
-		cvl += (*sl_iter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
-	}
-	this->constants.merge(cvl);
-	this->path.merge(stateListToPathVector(sl)); // merge paths as well while keeping some flow info and shrink that in this->path
-#ifdef DBGG
-	// cout << color::Pur() << "result of merge, this->path=" << this->path.toString() << color::Pur() << ", *this=" << *this << color::RCol() << io::endl;
-#endif
-}*/
-
-/*
- * @fn void Analysis::State::merge(const SLList<State>& sl, Edge* e);
- * Modifies the current state to be the result of the merge of an (SL)list of states 
- */
-/*void Analysis::State::merge(const SLList<State>& sl, Edge* e)
-{
-	DBG(color::Whi() << "Merging " << sl.count() << " paths at BB " << e->source()->number())
-	merge(sl);
-	labelled_preds = labelPredicateList(labelled_preds, e);
-	constants.label(e);
-	path.merge(stateListToPathVector(sl)); // clears up path and merge all of sl into 1
-	DBG("Merged predicates: " << generated_preds << ", " << constants)
-}*/
 
 /**
  * @fn inline Analysis::State Analysis::topState(Block* entry) const;

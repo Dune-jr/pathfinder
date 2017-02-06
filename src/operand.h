@@ -134,8 +134,7 @@ public:
 			WITH_ARITH = 1 << ARITH,
 		};
 
-		Iter(const Operand* o, const int selector_flags = 0xffff-WITH_CST) : q(), flags(selector_flags)
-			{ q.push(o); }
+		Iter(const Operand* o, const int selector_flags = 0xffff-WITH_CST);
 		inline bool ended() const
 			{ return q.isEmpty(); }
 		inline const Operand* item() const
@@ -143,6 +142,8 @@ public:
 		void next();
 		
 	private:
+		inline void check();
+
 		SLList<const Operand*> q;
 		const int flags;
 	};
@@ -161,7 +162,6 @@ public:
 	
 	inline Constant value() const { return _value; }
 	
-	// Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
@@ -188,8 +188,8 @@ public:
 	inline bool operator==(const Operand& o) const;
 	inline bool operator< (const Operand& o) const;
 	inline const OperandConst& toConst() const { return *this; }
-	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 	inline const Constant& toConstant() const { return _value; }
+	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 private:
 	NONEW;
 	io::Output& print(io::Output& out) const;

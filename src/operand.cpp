@@ -98,7 +98,11 @@
 
 OperandTop const* const Top = new OperandTop(-1);
 
-void Operand::Iter::next() {
+Operand::Iter::Iter(const Operand* o, const int selector_flags) : q(), flags(selector_flags)
+	{ q.push(o); check(); }
+
+void Operand::Iter::next()
+{
 	if(!q)
 		return;
 	const Operand* cur = q.pop();
@@ -109,7 +113,15 @@ void Operand::Iter::next() {
 		q.push(cur->toArith().left());
 	}
 	// else no children, do nothing
-	if(! (q.first()->kind() & (1 << q.first()->kind())) ) // item is unwanted
+	check();
+}
+
+/**
+ * @brief      Check that the current item is OK, else do next
+ */
+inline void Operand::Iter::check()
+{
+	if(q && ! (q.first()->kind() & (1 << q.first()->kind())) ) // item is unwanted
 		next();
 }
 

@@ -41,7 +41,7 @@ void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, con
 	BitVector used_regs(lv.maxRegisters(), false);
 
 // experimental
-#ifndef DONTCHECK_USELESS_ASSERTS
+#ifndef DONTCHECK_USELESS_ASSERTS // this improves the complexity of the SMT solving by removing asserts that have no chance of creating UNSAT
 	Vector<const Operand*> v;
 	for(HashTable<Constant, const Operand*, ConstantHash>::KeyIterator iter(mem); iter; iter++)
 		v.push(dag.mem(*iter));
