@@ -4,7 +4,8 @@
 #include <otawa/cfg/features.h> // COLLECTED_CFG_FEATURE
 #include <otawa/prog/WorkSpace.h>
 #include <otawa/app/Application.h>
-#include "analysis.h"
+#include "analysis1.h"
+#include "analysis2.h"
 #include "ffx.h"
 #include "debug.h"
 #include "oracle.h"
@@ -62,15 +63,19 @@ protected:
 		if(opt_dumpoptions)
 			dumpOptions(analysis_flags, merge_thresold, nb_cores);
 
-		DefaultAnalysis analysis(workspace(), props, analysis_flags, merge_thresold, nb_cores);
-		analysis.run(workspace()); // TODO: make that default for (workspace) overloard fnct
+		Analysis* analysis =
+			(analysis_flags & Analysis::WITH_V1)
+			? (Analysis*)new Analysis1(workspace(), props, analysis_flags, merge_thresold, nb_cores)
+			: (Analysis*)new Analysis2(workspace(), props, analysis_flags, merge_thresold, nb_cores);
+		analysis->run(workspace()); // TODO: make that default for (workspace) overloard fnct
 
 		// outputing to .ffx
 		if(opt_output.get())
 		{
-			FFX ffx_output(analysis.infeasiblePaths());
+			FFX ffx_output(analysis->infeasiblePaths());
 			ffx_output.output(elm::String(entry), entry + "_ips.ffx", opt_graph_output ? entry + "_ips.tsv" : "");
 		}
+		delete analysis;
 	}
 
 private:

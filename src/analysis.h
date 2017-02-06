@@ -73,7 +73,7 @@ protected:
 public:
 	// Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold);
 	Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold, int nb_cores);
-	~Analysis();
+	virtual ~Analysis();
 	const Vector<DetailedPath>& run(const WorkSpace* ws);
 	const Vector<DetailedPath>& run(CFG *cfg);
 	inline const Vector<DetailedPath>& infeasiblePaths() const { return infeasible_paths; }
@@ -122,13 +122,13 @@ protected:
 	static Identifier<LockPtr<Analysis::States> > EDGE_S; // Trace on an edge
 	static Identifier<Analysis::State>			  LH_S; // Trace on a loop header
 	static Identifier<const Operand*>			  LH_I; // on lheaders
-private:
 	static Identifier<loopheader_status_t>		  LH_STATUS; // Fixpt status of a loop header
 	static Identifier<LockPtr<Analysis::States> > CFG_S; // Trace on a CFG
-	static Identifier<LockPtr<VarMaker> > 		  CFG_VARS;
+	static Identifier<LockPtr<VarMaker> > 		  CFG_VARS; // VarMaker on a CFG (useful?)
 
 	// WorkingList wl;
 	Vector<DetailedPath> infeasible_paths;
+private:
 	GlobalDominance* gdom;
 	elm::sys::StopWatch sw;
 
@@ -137,6 +137,7 @@ private:
 	virtual bool inD_ip(const otawa::Edge* e) const = 0;
 	virtual IPStats ipcheck(States& s, Vector<DetailedPath>& infeasible_paths) const = 0;
 
+protected:
 	// analysis_state.cpp
 	Analysis::State topState(Block* entry) const;
 	// analysis.cpp
@@ -147,8 +148,8 @@ private:
 	
 	// analysis_cfg.cpp
 	void processProg(CFG* cfg);
-	void processCFG(CFG* cfg, bool use_initial_data);
-	void I(Block* b, LockPtr<Analysis::States> s); // modifies existing states
+	virtual void processCFG(CFG* cfg, bool use_initial_data) = 0;
+	virtual void I(Block* b, LockPtr<Analysis::States> s) = 0; // modifies existing states
 	LockPtr<States> I(const Vector<Edge*>::Iter& e, LockPtr<States> s); // creates new states
 	// Option<Constant> getCurrentStackPointer(const SLList<Analysis::State>& sl) const;
 	// elm::String wlToString() const;
@@ -158,6 +159,7 @@ private:
 	bool allEdgesHaveTrace(const Vector<Edge*>& edges) const;
 	bool allEdgesHaveTrace(const Block::EdgeIter& biter) const;
 
+private:
 	// dominance stuff
 	static Option<Edge*> f_dom(GlobalDominance* gdom, Edge* e1, Edge* e2);
 	static Option<Edge*> f_postdom(GlobalDominance* gdom, Edge* e1, Edge* e2);
