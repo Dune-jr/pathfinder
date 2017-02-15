@@ -156,7 +156,7 @@ io::Output& LocalVariables::print(io::Output& out) const
 	for(int i = 0; i < size; i++) {
 		if(o[i])
 		{
-			out << "        " << OperandVar(getId(i)) << (u[i] ? "*" : " ") << "\t| " << *o[i];
+			out << "        " << OperandVar(getId(i)) << (u[i] ? "*" : " ") << "\t | " << *o[i];
 			if(l[i] && !(dbg_flags&DBG_DETERMINISTIC))
 			{
 				out << "     \t| ";

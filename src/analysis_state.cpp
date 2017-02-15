@@ -457,16 +457,16 @@ elm::String Analysis::State::dumpEverything() const
 {
 	elm::String rtn = _
 		<< "--- DUMPING STATE ---" << endl
-		<< "  * path=" << getPathString() << endl
+		<< "  * path= " << getPathString() << endl
 #ifdef V1
-		<< "  * constants=" << constants << endl
+		<< "  * constants= " << constants << endl
 #endif
-		<< "  * labelled_preds=" << labelled_preds << endl
-		<< "  * generated_preds=" << generated_preds << endl
+		<< "  * labelled_preds= " << labelled_preds << endl
+		<< "  * generated_preds= " << generated_preds << endl
 		<< "  * lvars= [" << endl << lvars << "]" << endl
 		<< "  * mem= [" << endl;
 	for(mem_t::PairIterator i(mem); i; i++)
-		rtn = _ << rtn << "        [" << (*i).fst << "]   \t| " << *(*i).snd << endl;
+		rtn = _ << rtn << "        [" << StringFormat(_ << (*i).fst << "]").width(8) << "| " << *(*i).snd << endl;
 	return _ << rtn << "]" << endl << "\t--- END OF DUMP ---";
 }
 
