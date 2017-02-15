@@ -2,6 +2,7 @@
  * v3
  */
 
+#include <elm/data/util.h> // requires elm v2
 #include <otawa/cfg/Edge.h>
 #include "analysis2.h"
 #include "../analysis_state.h"
@@ -57,7 +58,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 		if(allEdgesHaveTrace(pred))
 		{
 			/* s ← |_|e∈pred s_e */
-			LockPtr<States> s = narrowing(pred);
+			LockPtr<States> s = join(pred);
 			/* for e ∈ pred */
 			for(Vector<Edge*>::Iter e(pred); e; e++)
 				/* s_e ← nil */
@@ -70,7 +71,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 			{
 				ASSERT(s->count() <= 1);
 				/* if status_b = LEAVE then */
-				if(loopStatus(b) == LEAVE)
+				if(loopStatus(b) == LEAVE) /////
 				{
 					/* if ∃e ∈ b.ins | s_e = nil then */
 					if(anyEdgeHasTrace(b->ins()))
@@ -83,21 +84,23 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 				}
 				else /* else s_b ← s */
 					LH_S(b) = s->one();
-				switch(loopStatus(b)) {
+				switch(loopStatus(b))
+				{
 					/* status_b ← FIX if status_b = ENTER */
 					case ENTER:
 						LH_STATUS(b) = FIX;
+						LH_S0(b) = s->one();
 						s->onLoopEntry(b);
 						break;
 					/* status_b ← ACCEL if status_b = FIX ∧ s ≡ s_b */
 					case FIX: if(s->one().equiv(LH_S(b)))
-						LH_STATUS(b) = LEAVE;
-						// LH_STATUS(b) = ACCEL;
+						LH_STATUS(b) = ACCEL;
+						s->prepareFixPoint();
 						break;
 					/* ... */
 					case ACCEL:
-						ASSERTP(false, "TODO");
 						LH_STATUS(b) = LEAVE;
+						s->one().widening(loopIterOpd(b));
 						break;
 					/* status_b ← ENTER if status_b = LEAVE */
 					case LEAVE:
@@ -112,11 +115,13 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 			{
 				/* s_e ← I*[e](s) */
 				EDGE_S(e) = Analysis::I(e, s);
+				for(LoopExitIterator l(*e); l; l++)
+					EDGE_S(e)->appliedTo(LH_S0(*l));
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 				if(inD_ip(e))
 					ip_stats += ipcheck(*EDGE_S.ref(e), infeasible_paths);
 				/* wl ← wl ∪ {sink(e)} */
-				 wl.push(outsAlias(e->sink()));
+				wl.push(outsAlias(e->sink()));
 			}
 		}
 	}
@@ -124,6 +129,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 	DBGG(IPur() << "\"" << cfg->name() << "\"==>")
 	// vm->clean(*CFG_S(cfg));
 	CFG_VARS(cfg) = LockPtr<VarMaker>(vm);
+	ASSERT(elm::forall(States::Iter(**CFG_S(cfg)), SPEquals(), dag->cst(SP)));
 }
 
 /**
@@ -136,7 +142,7 @@ void Analysis2::I(Block* b, LockPtr<States> s)
 	if(b->isBasic())
 	{
 		DBGG(Bold() << "-\tI(b=" << b << ") " << NoBold() << IYel() << "x" << s->count() << RCol() << printFixPointStatus(b))
-		for(States::Iterator si(s->states()); si; si++)
+		for(States::Iter si(s->states()); si; si++)
 			(*s)[si].processBB(b->toBasic(), flags);
 	}
 	else if(b->isEntry())
@@ -152,7 +158,7 @@ void Analysis2::I(Block* b, LockPtr<States> s)
 		vm->transfer(called_vm_copy); // vm receives more tops: we load the responsibility for all the pointers and clear the vector without deleting OpTops
 		// working on the paths
 		s->onCall(b->toSynth());
-		s->apply(**CFG_S(called_cfg));
+		s->apply(**CFG_S(called_cfg), true);
 		s->onReturn(b->toSynth());
 	}
 	else if(b->isExit()) // main

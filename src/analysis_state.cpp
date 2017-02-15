@@ -138,10 +138,10 @@ io::Output& Analysis::State::print(io::Output& out) const
  * @brief      This function is *this -> s -> s o *this, state composition. Updates current state. Updates path.
  * @param  s   state to apply
  */
-void Analysis::State::apply(const State& s)
+void Analysis::State::apply(const State& s, bool local_sp)
 {
 	// DBG("f="<<this->dumpEverything() << ",\ng = " << s.dumpEverything())
-	Compositor cc(*this);
+	Compositor cc(*this, local_sp);
 
 	// merging lvars
 	// this=f, s=g
@@ -207,19 +207,24 @@ void Analysis::State::prepareFixPoint()
 	for(LocalVariables::Iter i(lvars); i; i++)
 		if(lvars[i] && !lvars[i]->isAConst())
 			lvars[i] = NULL; // here, the "Top" is the state at the beginning of the loop iteration
+	
+	Vector<Constant> todel;
 	for(mem_t::PairIterator iter(mem); iter; iter++)
 		if(!(*iter).snd->isAConst())
-			mem.remove((*iter).fst);
+			todel.push((*iter).fst);
+	for(Vector<Constant>::Iter i(todel); i; i++)
+		mem.remove(todel[i]);
+DBGG(Cya << "prepared fixpoint is " << this->dumpEverything())
 }
 
 /**
- * @fn void Analysis::State::accel();
+ * @fn void Analysis::State::widening(const Operand* n);
  * @param *this State after one iteration of a prepared fixpoint state (starting from \=/x, x=x0)
  * @param n loop iterator operand
  */
-void Analysis::State::accel(const Operand* n)
+void Analysis::State::widening(const Operand* n)
 {
-	DBGG(IRed << "accelerating " << this->dumpEverything())
+	DBGG(IRed << "widening " << this->dumpEverything())
 	enum {
 		INIT=false,
 		DONE=true,
@@ -251,8 +256,7 @@ void Analysis::State::accel(const Operand* n)
 						const t::int32 a = eqstate.varCounter();
 						const t::int32 b = eqstate.delta();
 						// x_n+1 = ax_n + b
-						ASSERTP(a != -1, "treat case -1")
-						ASSERTP(a == 1, "lvars[" << *i << "]=" << *lvars[i] << ": treat case > 1 or < -1: " << a)
+						ASSERTP(a == 1, "lvars[" << *i << "] = " << *lvars[i] << ": treat case != 1: " << a)
 						lvars[i] = Arith::add(dag, dag->var(*i), Arith::mul(dag, n, dag->cst(b)));
 						// set a flag that says we have accel'd i
 						steps.set(ii, DONE);
@@ -330,25 +334,32 @@ void Analysis::State::accel(const Operand* n)
 		const Constant addr = (*iter).fst;
 	}
 
-	DBGG("done: " << this->dumpEverything())
+	DBGG(IGre << "done: " << this->dumpEverything())
 }
 
 /**
  * @brief      use loop bounds to replace all OperandIter "n" by either an exact loop iteration count, or a new Tk with 0<=Tk and Tk<=loop bound predicates
+ * WARNING: in the leave iteration, we may not have i=max until the loop exit edges...
  */
 void Analysis::State::finalize(const Operand* n, int bound, bool exact)
 {
+
 }
 
 /**
- * @brief merge all states into one (a bit brutal). Does not take in account current state
+ * @brief merge all states into one (a bit brutal). Does not take in account current state. Should not be called with an empty list
  *
  * @param cl Collection of States to process (accepts SLList, Vector etc.)
  */
 void Analysis::State::merge(const States& ss, Block* b)
 {
-	ASSERTP(!ss.isEmpty(), "call to Analysis::State::merge with empty ss parameter"); // maybe just leave the state empty
+	ASSERTP(!ss.isEmpty(), "merging an empty list of states..."); // maybe just leave the state empty
 	DBGG("-\tmerging from " << ss.count() << " state(s).")
+	// for(States::Iterator i(ss.states()); i; i++)
+	// 	DBGG(color::IYel() << "merging" << i->dumpEverything())
+	for(States::Iter i(ss); i; i++)
+		ASSERTP(ss.first().lvars[context->sp] == i->lvars[context->sp], *ss.first().lvars[context->sp] << " =/= " << *i->lvars[context->sp]);
+
 	// resetting stuff
 	generated_preds.clear();
 	generated_preds_taken.clear();
@@ -368,7 +379,7 @@ void Analysis::State::merge(const States& ss, Block* b)
 	for(SLList<LabelledPredicate>::Iterator iter(ss.first().labelled_preds); iter; iter++)
 		labelled_preds += LabelledPredicate(iter->pred(), Path::null);
 	bool first = true;
-	for(States::Iterator siter(ss.states()); siter; siter++)
+	for(States::Iter siter(ss); siter; siter++)
 	{
 		if(first) // the first element is s itself, it's useless to merge s with s
 		{
@@ -445,7 +456,7 @@ void Analysis::State::initializeWithDFA()
 elm::String Analysis::State::dumpEverything() const
 {
 	elm::String rtn = _
-		<< "--- DUMPING WHOLE STATE ---" << endl
+		<< "--- DUMPING STATE ---" << endl
 		<< "  * path=" << getPathString() << endl
 #ifdef V1
 		<< "  * constants=" << constants << endl
@@ -502,7 +513,7 @@ bool Analysis::State::equiv(const Analysis::State& s) const
  * @brief Removes constant predicates. Useful after a SMT call returning SAT, as the constant predicates of such states must be tautologies
  */
 void Analysis::State::removeConstantPredicates()
-{	
+{
 	for(PredIterator piter(*this); piter; )
 	{
 		if(piter.pred().isConstant())
@@ -515,10 +526,12 @@ void Analysis::State::removeConstantPredicates()
 }
 
 // if this has n states and ss has m states, this will explode into a cartesian product of n*m states
-void Analysis::States::apply(States& ss)
+void Analysis::States::apply(const States& ss, bool local_sp, bool dbg)
 {
 	int new_cap, m = this->count(), n = ss.count(), new_length = m * n;
-	DBG("Applying " << n << " to " << m << " states, giving " << new_length << ".")
+	ASSERTP(n > 0, "TODO: handle empty states in entry")
+	if(dbg) DBG("Applying " << Dim() << ss.first().getDetailedPath().lastEdge()->target()->cfg() << RCol()
+		<< "(" << n << ") to " << m << " states, giving " << new_length << ".")
 	for(new_cap = 1; new_cap < new_length; new_cap *= 2); // adjust to closest higher power of 2
 	if(new_cap > this->s.capacity())
 		this->s.grow(new_cap);
@@ -532,11 +545,29 @@ void Analysis::States::apply(States& ss)
 	// this = [x1, x2, x3,  x1, x2, x3,  ...] (n times)
 
 	// apply n times
-	Iterator si(ss.s);	
+	Iter si(ss.s);	
 	for(int i = 0; i < n; i++, si++)
 		for(int j = 0; j < m; j++)
-			(*this)[i*m + j].apply(*si);
+			(*this)[i*m + j].apply(*si, local_sp);
 
 	// this = [x1*i1, x2*i1, x3*i1,  x1*i2, x2*i2, x3*i2, ...
 	ASSERT(s.length() == new_length);
 }
+
+// TODO: optimize
+/**
+ * @brief apply this to s. local_sp is set to false
+ */
+void Analysis::States::appliedTo(const State& s)
+{
+	States x(this->count());
+	x.push(s);
+	x.apply(*this, false, false); // no debug, no local sp
+	*this = x;
+}
+/*void Analysis::States::appliedTo(const States& ss)
+{
+	States s(*this);
+	s.apply(ss, false);
+	*this = s;
+}*/

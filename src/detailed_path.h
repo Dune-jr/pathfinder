@@ -39,7 +39,7 @@ public:
 	// inline void remove(Iterator &iter) { _path.remove(iter.getFlowInfoIter()); }
 	inline void removeLast() { _path.removeLast(); }
 	
-	// events	/!çtz
+	// events
 	void onLoopEntry(Block* loop_header);
 	void onLoopExit(Option<Block*> new_loop_header);
 	void onCall(otawa::SynthBlock* sb);

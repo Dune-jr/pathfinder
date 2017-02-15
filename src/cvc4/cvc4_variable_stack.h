@@ -33,7 +33,7 @@ private:
 	AVLMap<t::int32, Expr> regmap; // registers
 	AVLMap<Constant, Expr> memmap; // relative addresses in memory
 	AVLMap<t::int32, Expr> topmap; // tops (v2 only)
-	AVLMap<otawa::Block*, Expr> itermap; // tops (v2 only)
+	AVLMap<const otawa::Block*, Expr> itermap; // tops (v2 only)
 	const CVC4::Type integer; // Z
 	Expr expr_sp;
 	stackmode_t def_mode; // indicates what to default to (cannot be default)

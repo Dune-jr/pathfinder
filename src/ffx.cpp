@@ -172,10 +172,12 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			FFXFile << indent(  ) << "<loop address=\"0x" << loop_header->address() << "\">"
 					<< " <!-- loop " << loop_header->index() << " -->" << endl; //indent(+1);
 			if(edgeAfter(ip.find(DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_LOOP_EXIT, loop_header)))) {
-				FFXFile << indent(  ) << "<iteration number=\"n\">" << endl; indent(+1);
+				FFXFile << indent(  ) << "<iteration number=\"n\">" << endl;
+				indent(+1);
 			}
 			else {
-				FFXFile << indent(  ) << "<iteration number=\"*\">" << endl; indent(+1);
+				FFXFile << indent(  ) << "<iteration number=\"*\">" << endl;
+				indent(+1);
 			}
 			open_tags += FFX_TAG_LOOP;
 		}

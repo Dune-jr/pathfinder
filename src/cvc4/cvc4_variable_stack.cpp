@@ -78,7 +78,7 @@ Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandTop& o)
 
 Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandIter& o)
 {
-	otawa::Block* lid = o.loop();
+	const otawa::Block* lid = o.loop();
 	if(Option<Expr> opt_expr = itermap.get(lid))
 		return *opt_expr; // already in the stack
 	else

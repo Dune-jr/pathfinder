@@ -13,7 +13,7 @@ public:
 		: Analysis(ws, props, flags, merge_thresold, nb_cores) { }
 
 protected:
-	LockPtr<States> narrowing(const Vector<Edge*>& edges) const;
+	LockPtr<States> join(const Vector<Edge*>& edges) const;
 	bool inD_ip(const otawa::Edge* e) const;
 	IPStats ipcheck(States& ss, Vector<DetailedPath>& infeasible_paths) const;
 

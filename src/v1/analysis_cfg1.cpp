@@ -56,7 +56,7 @@ void Analysis1::processCFG(CFG* cfg, bool use_initial_data)
 		if(allEdgesHaveTrace(pred))
 		{
 			/* s ← |_|e∈pred s_e */
-			LockPtr<States> s = narrowing(pred);
+			LockPtr<States> s = join(pred);
 			/* for e ∈ pred */
 			for(Vector<Edge*>::Iter e(pred); e; e++)
 				/* s_e ← nil */
@@ -130,7 +130,7 @@ void Analysis1::I(Block* b, LockPtr<States> s)
 	if(b->isBasic())
 	{
 		DBGG(Bold() << "-\tI(b=" << b << ") " << NoBold() << IYel() << "x" << s->count() << RCol() << printFixPointStatus(b))
-		for(States::Iterator si(s->states()); si; si++)
+		for(States::Iter si(s->states()); si; si++)
 			(*s)[si].processBB(b->toBasic(), flags);
 	}
 	else if(b->isEntry())

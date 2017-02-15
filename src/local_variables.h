@@ -86,6 +86,8 @@ public:
 		{ u.set(getIndex(var)); }
 	inline void resetUpdatedMarks()
 		{ u.clear(); }
+	inline void resetTempVars()
+		{ array::clear(o+thresold, size-thresold); }
 	void onEdge(Edge* e);
 	void merge(const LocalVariables& lv); // this = this ∩ lv
 
@@ -125,7 +127,7 @@ private:
 	labels_t** l; // labels
 	BitVector  u; // updated
 
-	inline void copy(const LocalVariables& lv) {
+	void copy(const LocalVariables& lv) {
 		ASSERT(isValid());
 		array::copy(o, lv.o, size);
 		u = lv.u;

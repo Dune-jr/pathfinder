@@ -20,11 +20,12 @@
 #endif
 
 /**
- * actually... this is widening
+ * actually... this is some sort of widening
  */
-LockPtr<Analysis::States> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) const
+// note: we do this one time too much because the join when we leave is useless... maybe optimize that in the algorithm some day, it's a bit hard to do it cleanly
+LockPtr<Analysis::States> DefaultAnalysis::join(const Vector<Edge*>& ins) const
 {
-	ASSERTP(ins, "narrowing given empty ingoing edges vector")
+	ASSERTP(ins, "join given empty ingoing edges vector")
 	LockPtr<States> v = vectorOfS(ins);
 	Block* b = ins[0]->target();
 	// loop header or too big state
@@ -36,15 +37,15 @@ LockPtr<Analysis::States> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) c
 		// ASSERTP(v, "Loop Header received only bottom state, case not handled yet. The main algorithm will use s[0] so...")
 		if(v->isEmpty())
 		{
-			DBGG("narrowing returns null vector")
+			DBGG("join returns null vector")
 			return v;
 		}
 		else
 		{
 			State s((Edge*)NULL, context, dag, vm, false); // entry is cleared anyway
-			s.merge(*v, b); // s <- widening(s0, s1, ..., sn)
-			if(LOOP_HEADER(b) && version() == 3)
-				s.accel(LH_I(b)); // !!
+			s.merge(*v, b); // s <- joining(s0, s1, ..., sn)
+			// if(LOOP_HEADER(b) && version() == 3)
+			// 	s.widening(LH_I(b));
 			LockPtr<States> rtnv(new States(1));
 			rtnv->push(s);
 			if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v->count() > 50)
@@ -53,7 +54,7 @@ LockPtr<Analysis::States> DefaultAnalysis::narrowing(const Vector<Edge*>& ins) c
 		}
 	}
 	else
-		return v; // no widening
+		return v; // no joining
 }
 
 /**
@@ -96,7 +97,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 		DBGG("1) Initializing " << nb_threads << " threads")
 		Vector<elm::sys::Thread*> threads(nb_threads);
 		Vector<SMTJob<chosen_smt_t>*> jobs(nb_threads);
-		States::Iterator si(ss.states());
+		States::Iter si(ss.states());
 		for(int tid = 0, i = 0; tid < nb_threads; tid++)
 		{
 			SMTJob<chosen_smt_t>* job = new SMTJob<chosen_smt_t>(flags);
@@ -134,7 +135,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 	}
 	else
 	{	// without multithreading
-		for(States::Iterator si(ss.states()); si; si++)
+		for(States::Iter si(ss.states()); si; si++)
 		{	// SMT call
 			chosen_smt_t smt(flags);
 			const Option<Path*> infeasible_path = (flags&IS_V1) ? smt.seekInfeasiblePaths(*si) : smt.seekInfeasiblePathsv2(*si);
@@ -157,7 +158,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 	// analyse the conflicts found
 	ASSERTP(ss.count() == sv_paths.count(), "different size of ss and sv_paths")
 	Vector<Option<Path*> >::Iter pi(sv_paths);
-	for(States::Iterator si(ss.states()); si; si++, pi++) // iterate on paths and states simultaneously
+	for(States::Iter si(ss.states()); si; si++, pi++) // iterate on paths and states simultaneously
 	{
 		const State& s = *si;
 		if(*pi) // is infeasible?

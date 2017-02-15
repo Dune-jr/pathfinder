@@ -335,10 +335,10 @@ extern OperandTop const* const Top;
 class OperandIter : public Operand
 {
 public:
-	OperandIter(otawa::Block* loop) : lid(loop) { }
+	OperandIter(const otawa::Block* loop) : lid(loop) { }
 	OperandIter(const OperandIter& opd) : lid(opd.lid) { }
 	
-	otawa::Block* loop() const { return lid; }
+	const otawa::Block* loop() const { return lid; }
 	
 	unsigned int countTempVars() const { return 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const { expr = this; return false; }
@@ -367,7 +367,7 @@ public:
 private:
 	io::Output& print(io::Output& out) const;
 
-	otawa::Block* lid;
+	const otawa::Block* lid;
 };
 
 // Arithmetic Expressions

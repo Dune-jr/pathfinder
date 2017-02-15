@@ -72,9 +72,9 @@ public:
 	elm::String dumpEverything() const;
 	void initializeWithDFA();
 	void merge(const States& ss, Block* b);
-	void apply(const State& s);
+	void apply(const State& s, bool local_sp);
 	void prepareFixPoint();
-	void accel(const Operand* n);
+	void widening(const Operand* n);
 	void finalize(const Operand* n, int bound, bool exact);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e);
@@ -109,17 +109,6 @@ private:
 	static bool affectsRegister(t::uint16 op);
 	static bool affectsMemory(t::uint16 op);
 	void store(OperandVar addr, const Operand* b);
-	// smart functions
-	// const Operand* smart_add(const Operand* a, const Operand* b);
-	// const Operand* smart_add(Constant x, const Operand* y);
-	// const Operand* smart_sub(const Operand* a, const Operand* b);
-	// const Operand* smart_sub(Constant x, const Operand* y);
-	// const Operand* smart_mul(const Operand* a, const Operand* b);
-	// const Operand* smart_mul(const Operand* a, Constant c);
-	// const Operand* smart_div(const Operand* a, const Operand* b);
-	// const Operand* smart_div(const Operand* a, Constant c);
-	// const Operand* smart_divmul(const Operand* x, Constant k, Constant c);
-	// const Operand* smart_muldiv(const Operand* x, Constant k, Constant c);
 
 	LabelledPredicate makeLabelledPredicate(condoperator_t opr, const Operand* opd1, const Operand* opd2, Path& labels) const;
 	bool tryToKeepVar(const OperandVar& var);//, const Predicate*& removed_predicate);
@@ -170,15 +159,10 @@ private:
 		inline PredIterator& operator=(const PredIterator& i)
 			{ state = i.state; gp_iter = i.gp_iter; lp_iter = i.lp_iter; return *this; }
 		
-		inline bool ended(void) const { return (state == DONE); }
-		inline const LabelledPredicate& item(void) const {
-			return (state == GENERATED_PREDS) ? gp_iter.item() : lp_iter.item();
-			// switch(state) {
-			// 	case GENERATED_PREDS: return gp_iter.item();
-			// 	case LABELLED_PREDS: return lp_iter.item();
-			// 	default: ASSERT(false);
-			// }
-		}
+		inline bool ended(void) const
+			{ return (state == DONE); }
+		inline const LabelledPredicate& item(void) const
+			{ return (state == GENERATED_PREDS) ? gp_iter.item() : lp_iter.item(); }
 		// this behaves fine when called while state == DONE. We use this in the code as of 2014-11-14 (for movePredicateToGenerated)
 		void next(void) {
 			if(state == GENERATED_PREDS) gp_iter++;
@@ -195,7 +179,12 @@ private:
 		}
 
 	private:
-		void nextState() { if(state == GENERATED_PREDS) state = LABELLED_PREDS; else if (state == LABELLED_PREDS) state = DONE; }
+		void nextState() {
+			if(state == GENERATED_PREDS)
+				state = LABELLED_PREDS;
+			else if(state == LABELLED_PREDS)
+				state = DONE;
+		}
 
 		friend class Analysis::State;
 		pred_iterator_state_t state;
@@ -208,6 +197,7 @@ extern const Analysis::State bottom;
 
 class Analysis::States : public elm::Lock {
 public:
+	class Iter;
 	inline States() { }
 	inline States(int cap) : s(cap) { }
 	inline States(const Vector<Analysis::State>& state_vector) : s(state_vector) { }
@@ -221,10 +211,10 @@ public:
 	inline Vector<State>& states() { return s; }
 	inline void push(const Analysis::State& state) { return s.push(state); }
 
-	inline void onCall(SynthBlock* sb)   { for(Iterator i(this->s); i; i++) s[i].onCall(sb); }
-	inline void onReturn(SynthBlock* sb) { for(Iterator i(this->s); i; i++) s[i].onReturn(sb); }
-	inline void onLoopEntry(Block* b)    { for(Iterator i(this->s); i; i++) s[i].onLoopEntry(b); }
-	inline void onLoopExit (Block* b)    { for(Iterator i(this->s); i; i++) s[i].onLoopExit(b); }
+	inline void onCall(SynthBlock* sb)   { for(Iter i(this->s); i; i++) s[i].onCall(sb); }
+	inline void onReturn(SynthBlock* sb) { for(Iter i(this->s); i; i++) s[i].onReturn(sb); }
+	inline void onLoopEntry(Block* b)    { for(Iter i(this->s); i; i++) s[i].onLoopEntry(b); }
+	inline void onLoopExit (Block* b)    { for(Iter i(this->s); i; i++) s[i].onLoopExit(b); }
 	inline void onLoopExit (Edge* e) {
 		Block* h = LOOP_EXIT_EDGE(e);
 		for(LoopHeaderIter i(e->source()); i.item() != h; i++) 
@@ -232,20 +222,41 @@ public:
 		onLoopExit(h);
 	}
 
-	void apply(States& ss);
+	void apply(const States& ss, bool local_sp, bool dbg = true);
+	void appliedTo(const State& s);
+	inline void prepareFixPoint(void) { for(Iter i(this->s); i; i++) s[i].prepareFixPoint(); }
+	// inline void widening(const Operand* n)	{ for(Iter i(this->s); i; i++) s[i].widening(n); }
 
-	typedef Vector<State>::Iter Iterator;
-	inline void remove(const Iterator& i) { s.remove(i); }
+	inline void remove(const Iter& i) { s.remove(i); }
 
 	// inline operator Vector<State>() { return s; }
 	inline State& operator[](int i) { return s[i]; }
-	inline State& operator[](const Iterator& i) { return s[i]; }
+	inline State& operator[](const Iter& i) { return s[i]; }
 	inline States& operator=(const Vector<State>& sv) { s = sv; return *this; }
 	inline States& operator=(const States& ss) { s = ss.s; return *this; }
 	inline friend io::Output& operator<<(io::Output& out, const States& ss) { return out << ss.s; };
+	elm::String dump() const {
+		elm::String rtn;
+		for(Iter i(this->s); i; i++)
+			rtn = rtn.concat(i->dumpEverything());
+		return rtn;
+	};
+
+	class Iter: public Vector<State>::Iter {
+	public:
+		Iter(const States& ss) : Vector<State>::Iter(ss.s) { }
+		Iter(const Vector<State>& sv) : Vector<State>::Iter(sv) { }
+	};
 
 private:
 	Vector<State> s;
+};
+
+class Analysis::SPEquals
+{
+public:
+	inline bool operator()(const Analysis::State& x, const Operand* sp) const
+		{ return x.getLocalVariables()[x.getSP()] == sp; }
 };
 
 template <class C> Vector<DetailedPath> Analysis::State::stateListToPathVector(const C& cl) const

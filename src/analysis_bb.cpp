@@ -86,8 +86,8 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
  * @brief      Try to replace constants in the predicate, update labels and pretty print accordingly, then return the final labelled predicate ready to be added to the list
  *
  * @param      opr     The operator
- * @param      opd1    The operand 1
- * @param      opd2    The operand 2
+ * @param      opd1    The first operand
+ * @param      opd2    The second operand
  * @param      labels  Labels to add to the generated predicate
  *
  * @return     The generated LabelledPredicate
@@ -190,7 +190,7 @@ bool Analysis::State::invalidateVar(const OperandVar& var, bool invalidate_const
 }
 
 /**
- * This tries to find a matching OperandMem for the provided OperandVar, then calls invalidateMem(OperandMem)
+ * @brief This tries to find a matching OperandMem for the provided OperandVar, then calls invalidateMem(OperandMem)
  */
 bool Analysis::State::invalidateMem(const OperandVar& var)
 {
@@ -205,7 +205,7 @@ bool Analysis::State::invalidateMem(const OperandVar& var)
 }
 
 /**
- * Replace every occurrence of the OperandMem parameter by a constant value if possible, removes the occurrences from the predicate lists otherwise
+ * @brief Replace every occurrence of the OperandMem parameter by a constant value if possible, removes the occurrences from the predicate lists otherwise
  */
 bool Analysis::State::invalidateMem(const OperandMem& addr)
 {
@@ -227,8 +227,9 @@ bool Analysis::State::invalidateMem(const OperandMem& addr)
 	return rtn;
 }
 
-// This function will try to keep the information contained in the tempvars 
-// by replacing them by their values in other predicates before removing them
+/**
+ * @brief This function will try to keep the information contained in the tempvars by replacing them by their values in other predicates before removing them
+ */
 bool Analysis::State::invalidateTempVars()
 {
 	bool loop, rtn = false;
@@ -236,6 +237,7 @@ bool Analysis::State::invalidateTempVars()
 #ifdef V1
 	rtn |= constants.invalidateTempVars();
 #endif
+	lvars.resetTempVars();
 
 	// First step: try and replace everything we can
 	do {

@@ -18,6 +18,7 @@ Identifier<LockPtr<Analysis::States> >		Analysis::EDGE_S("Trace on an edge"); //
 Identifier<Analysis::State>					Analysis::LH_S("Trace on a loop header"); // maybe change to vector
 Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a loop (on a loop header)");
 // for non-virtualized CFGs only
+Identifier<Analysis::State>					Analysis::LH_S0("Initial trace on a loop header"); // maybe change to vector
 Identifier<const Operand*>					Analysis::LH_I("Iterator operand for the loop"); // on lheaders
 Identifier<LockPtr<Analysis::States> >		Analysis::CFG_S("Trace on a CFG");
 Identifier<LockPtr<VarMaker> >				Analysis::CFG_VARS("VarMaker of a CFG"); // VarMaker to be copied, updated, and appended on f° return
@@ -46,7 +47,7 @@ LockPtr<Analysis::States> Analysis::I(const Vector<Edge*>::Iter& e, LockPtr<Stat
 		DBGG("-\tpropagating bottom state")
 	// DBGG(Bold() << "-\tI(e= " << NoBold() << e << Bold() << " )" << NoBold() << (e->source()->isEntry() ? " (entry)" : ""))
 	if(! e->source()->isEntry()) // do not process CFG entry: no generated preds and uninteresting edge to add (everything comes from the entry)
-		for(States::Iterator si(s->states()); si; si++)
+		for(States::Iter si(s->states()); si; si++)
 			(*s)[si].appendEdge(e);
 	if(LOOP_EXIT_EDGE(e))
 		s->onLoopExit(e);

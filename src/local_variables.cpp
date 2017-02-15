@@ -87,6 +87,11 @@ void LocalVariables::onEdge(Edge* e)
 }
 
 /**
+ * @fn void LocalVariables::resetTempVars();
+ * @brief      Resets temporary variables; aka clears [thresold; size[
+ */
+
+/**
  * @brief      Merge current LocalVariables with a provided one
  *
  * @param[in]  lv    LocalVariables to merge with
