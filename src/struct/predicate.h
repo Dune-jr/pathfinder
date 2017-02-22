@@ -36,12 +36,11 @@ public:
 	inline bool isComplete() const { return _opd1->isComplete() && _opd2->isComplete(); }
 	inline bool isConstant() const { return _opd1->isConstant() && _opd2->isConstant(); }
 	inline bool isLinear(bool only_linear_opr) const { return _opd1->isLinear(only_linear_opr) && _opd2->isLinear(only_linear_opr); }
-	// Predicate* copy() const;
 	int involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
-	bool involvesMemory() const;
+	const Operand* involvesMemory() const;
 	bool isAffine(const OperandVar& opdv) const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;

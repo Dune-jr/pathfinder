@@ -5,7 +5,7 @@
  *      Author: casse
  */
 
-#include "debug.h"
+#include "../debug.h"
 #include "DAG.h"
 
 using namespace elm::color;

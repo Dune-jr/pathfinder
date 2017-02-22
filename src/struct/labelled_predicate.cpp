@@ -1,5 +1,5 @@
 #include "labelled_predicate.h"
-#include "pretty_printing.h"
+#include "../pretty_printing.h"
 
 /**
  * @class LabelledPredicate

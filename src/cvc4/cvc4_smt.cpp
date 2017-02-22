@@ -4,9 +4,11 @@
 #include <cvc4/expr/command.h> // getUnsatCoreCommand
 #include <cvc4/util/unsat_core.h>
 #include <elm/util/BitVector.h>
-#include "../operand.h"
+#include "../struct/operand.h"
 #include "../debug.h"
 #include "cvc4_smt.h"
+
+#define DONTCHECK_USELESS_ASSERTS
 
 using namespace CVC4::kind;
 using elm::BitVector;
@@ -62,7 +64,8 @@ void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, con
 			else
 				vi++;
 		}
-	ASSERTP(key_nb == v.count(), "finally")
+	if(key_nb != v.count())
+		cout << "Removed " << key_nb-v.count() << " useless asserts.";
 	// cout << v.count() << "/" << key_nb << " useless" << endl;
 	// saved_useless_asserts += v.count();
 #endif
@@ -76,8 +79,9 @@ void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, con
 			continue;
 		}
 #endif
-		exprs += getExpr(Predicate(CONDOPR_EQ, dag.mem((*iter).fst), (*iter).snd));
- 		// exprs += em.mkExpr(EQUAL, dag.mem((*iter).fst), (*iter).snd); // TODO!! I forgot why... I think cuz [SP+8] = [SP+8] + 1. need example
+		// exprs += getExpr(Predicate(CONDOPR_EQ, dag.mem((*iter).fst), (*iter).snd));
+		if(Option<Expr> e = getExpr(*(*iter).snd))
+ 			exprs += em.mkExpr(EQUAL, getMemExpr((*iter).fst), e); // TODO!! I forgot why... I think cuz [SP+8] = [SP+8] + 1. need example
 		(*iter).snd->markUsedRegisters(used_regs);
 	}
 	for(int i = 0; i < lv.maxRegisters(); i++) // registers id are [0...n[
@@ -156,7 +160,6 @@ bool CVC4SMT::retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredi
 	return !empty;
 }
 
-
 Option<Expr> CVC4SMT::getExpr(const Predicate& p)
 {
 	if(!p.isComplete() || (flags&Analysis::SMT_CHECK_LINEAR && !p.isLinear(!(flags&Analysis::ALLOW_NONLINEAR_OPRS))))
@@ -173,11 +176,6 @@ Option<Expr> CVC4SMT::getExpr(const Operand& o)
 	if(!o.accept(visitor))
 		return elm::none;
 	return elm::some(visitor.result());
-}
-
-Expr CVC4SMT::getRegExpr(t::int32 reg_id)
-{
-	return variables.getExpr(em, OperandVar(reg_id), VARIABLE_PREFIX);
 }
 
 Kind_t CVC4SMT::getKind(const Predicate& p) const

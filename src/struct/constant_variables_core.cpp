@@ -1,5 +1,5 @@
 #include "constant_variables_core.h"
-#include "debug.h"
+#include "../debug.h"
 
 /**
  * @class ConstantVariablesCore

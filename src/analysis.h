@@ -15,11 +15,11 @@
 #include <otawa/cfg/features.h>
 #include <otawa/dfa/State.h>
 #include <otawa/prop/Identifier.h>
-#include "DAG.h"
+#include "struct/DAG.h"
 #include "detailed_path.h"
-#include "operand.h"
+#include "struct/operand.h"
 #include "pretty_printing.h"
-#include "var_maker.h"
+#include "struct/var_maker.h"
 #include "working_list.h"
 #include "dom/GlobalDominance.h"
 

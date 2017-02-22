@@ -4,7 +4,7 @@
 
 #include <elm/io/Output.h>
 #include "predicate.h"
-#include "debug.h"
+#include "../debug.h"
 
 /**
  * @class Predicate
@@ -70,9 +70,12 @@ bool Predicate::involvesMemoryCell(const OperandMem& opdm) const
 {
 	return _opd1->involvesMemoryCell(opdm) || _opd2->involvesMemoryCell(opdm);
 }
-bool Predicate::involvesMemory() const
+const Operand* Predicate::involvesMemory() const
 {
-	return _opd1->involvesMemory() || _opd2->involvesMemory();
+	if(const Operand* rtn = _opd1->involvesMemory())
+		return rtn;
+	else
+		return _opd2->involvesMemory();
 }
 
 /**

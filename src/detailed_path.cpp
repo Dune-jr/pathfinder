@@ -126,31 +126,21 @@ void DetailedPath::fromContext(Block* b)
 	} while(cfg_follow_calls && (b = getCaller(b->cfg(), NULL)) != NULL);
 }
 
-/**
-  * Add missing enclosing loop headers at the beginning of the path
-  */
-void DetailedPath::addEnclosingLoop(Block* loop_header)
-{
-	// TODO: I don't think this should actually be used... onLoopEntry/onLoopExit + preserving this stuff on merges should be enough // 11may2016
-	ASSERT(loop_header->isBasic());
-	if(!contains(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic())))
-		_path.addFirst(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic()));
-	if(!contains(FlowInfo(FlowInfo::KIND_LOOP_EXIT, loop_header->toBasic())))
-		_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, loop_header->toBasic()));
-}
-
+/*
 void DetailedPath::onLoopEntry(Block* loop_header)
 {
 	ASSERT(loop_header->isBasic());
-	_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic())); // TODO! change this
-}
+	FlowInfo fi(FlowInfo::KIND_LOOP_ENTRY, loop_header->toBasic());
+	_path.addLast(fi);
+}*/
 
 void DetailedPath::onLoopExit(Option<Block*> new_loop_header) // TODO: shouldn't this be old_loop_header?
 {
 	ASSERT(!new_loop_header || (*new_loop_header)->isBasic());
 	if(new_loop_header)
 		_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, (*new_loop_header)->toBasic())); // TODO! change this
-	else _path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, (BasicBlock*)NULL));
+	else
+		_path.addLast(FlowInfo(FlowInfo::KIND_LOOP_EXIT, (BasicBlock*)NULL));
 }
 
 /**
@@ -308,7 +298,28 @@ Edge* DetailedPath::lastEdge() const
 	Edge* rtn = NULL;
 	for(EdgeIterator iter(*this); iter; iter++)
 		rtn = *iter;
-	ASSERTP(rtn != NULL, "lastEdge() called on empty DetailedPath");
+	ASSERTP(rtn != NULL, "lastEdge() called on DetailedPath empty of edges: " << *this);
+	return rtn;
+}
+
+/**
+ * @brief      Find the (virtually) last block. May use loop info. This is handy to find an id to attach to memory.
+ *
+ * @return     The Block found
+ */
+Block* DetailedPath::lastBlock() const
+{
+	Block* rtn = NULL;
+	for(SLList<FlowInfo>::Iterator iter(_path); iter; iter++)
+	{
+		if(iter->isEdgeKind())
+			rtn = iter->getEdge()->target();
+		if(iter->isBasicBlockKind())
+			rtn = iter->getBasicBlock();
+		if(iter->isSynthBlockKind())
+			rtn = iter->getSynthBlock();
+	}
+	ASSERTP(rtn != NULL, "lastBlock() called on empty DetailedPath: " << *this)
 	return rtn;
 }
 

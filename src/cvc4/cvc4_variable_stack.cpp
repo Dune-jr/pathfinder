@@ -20,23 +20,24 @@ Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandVar& o, stac
 		return *opt_expr; // already in the stack
 	else
 	{	// not in stack, create it
-		elm::String label = _ << getChar(effective_mode) << addr;
+		elm::String label = _ << getRegChar(effective_mode) << addr;
 		Expr expr = em.mkVar(label.chars(), integer);
-		regmap.put(getRegId(addr, mode), expr);
+		regmap.put(getRegId(addr, effective_mode), expr);
 		return expr;
 	}
 }
 
 // o must have valid addr
-Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, const Expr& expr_addr)
+Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o, stackmode_t mode) //, const Expr& expr_addr)
 {
 	const Constant& addr = o.addr().value();
+	const stackmode_t effective_mode = mode != DEFAULT ? mode : def_mode;
 	ASSERT(addr.isValid());
 	int sp_factor = 0;
 	if(addr.isRelative())
-		sp_factor += (addr.isRelativePositive()) ? 1 : -1;
+		sp_factor = (addr.isRelativePositive()) ? 1 : -1;
 
-	if(Option<Expr> opt_expr = memmap.get(addr))
+	if(Option<Expr> opt_expr = memmap.get(getMemId(addr, effective_mode)))
 		return *opt_expr; // already in the stack
 	else
 	{	// not in stack, create it
@@ -45,19 +46,19 @@ Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandMem& o) //, 
 		{	// these must be unique labels
 			case -1:
 				ASSERTP(false, "memory cell at -SP+k in SMT call!")
-				label = _ << "[-SP+" << addr.val() << "]";
+				label = _ << "[-SP+" << addr.val() << "]" << getMemChar(effective_mode);
 				break;
 			case 0:
-				label = _ << "[" << addr.val() << "]";
+				label = _ << "[" << addr.val() << "]" << getMemChar(effective_mode);
 				break;
 			case +1:
-				label = _ << "[SP" << (addr.val() >= 0 ? "+" : "") << addr.val() << "]";
+				label = _ << "[SP" << (addr.val() >= 0 ? "+" : "") << addr.val() << "]" << getMemChar(effective_mode);
 				break;
 			default:
 				abort();
 		}
 		Expr expr = em.mkVar(label.chars(), integer);
-		memmap.put(addr, expr);
+		memmap.put(getMemId(addr, effective_mode), expr);
 		return expr;
 	}
 }

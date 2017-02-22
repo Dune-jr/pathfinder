@@ -5,7 +5,7 @@
 #include <otawa/cfg/Edge.h>
 #include "constant_variables_core.h"
 #include "DAG.h"
-#include "debug.h"
+#include "../debug.h"
 #include "labelled_predicate.h"
 
 using namespace otawa;

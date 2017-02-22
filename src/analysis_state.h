@@ -9,11 +9,11 @@
 #include <otawa/dfa/State.h> // dfa::State: isInitialized(addr), get(addr, _)...
 #include <otawa/sem/PathIter.h>
 #include "analysis.h"
-#include "constant_variables.h"
 #include "detailed_path.h"
-// #include "halfpredicate.h"
-#include "labelled_predicate.h"
-#include "local_variables.h"
+#include "pretty_printing.h"
+#include "struct/constant_variables.h"
+#include "struct/labelled_predicate.h"
+#include "struct/local_variables.h"
 
 using namespace otawa;
 using otawa::sem::PathIter;
@@ -31,6 +31,13 @@ private:
 	VarMaker* vm;
 	LocalVariables lvars;
 	mem_t mem;
+	struct memid_t {
+		memid_t(const Block* b, short id) : b(b), id(id) { }
+		const Block* b;
+		short id;
+		friend io::Output& operator<<(io::Output& out, const memid_t& m)
+			{ return m.b ? (out << m.b->cfg() << ":" << m.b->index() << ":" << m.id) : (out << "i"); }
+	} memid;
 
 	bool bottom; // true=is Bottom, false= is Top
 	DetailedPath path;
@@ -57,7 +64,7 @@ public:
 	inline const LocalVariables& getLocalVariables() const { return lvars; }
 	inline const mem_t& getMemoryTable() const { return mem; }
 	inline elm::String getPathString() const { return path.toString(); /*orderedPathToString(path.toOrderedPath());*/ }
-	inline void onLoopEntry(Block* loop_header) { path.onLoopEntry(loop_header); }
+	// inline void onLoopEntry(Block* loop_header) { path.onLoopEntry(loop_header); }
 	inline void onLoopExit(Option<Block*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }
 	inline void onCall(SynthBlock* sb)   { path.onCall(sb); }
 	inline void onReturn(SynthBlock* sb) { path.onReturn(sb); }
@@ -82,8 +89,8 @@ public:
 
 	// analysis_bb.cpp
 	void processBB(const BasicBlock *bb, int version_flags);
-	void processSemInst1(const otawa::sem::PathIter& seminsts, const sem::inst& last_condition);
-	void processSemInst2(const otawa::sem::PathIter& seminsts, const sem::inst& last_condition);
+	void processSemInst1(const otawa::sem::inst& inst, const sem::inst& last_condition);
+	int  processSemInst2(const otawa::sem::inst& inst, const sem::inst& last_condition);
 	int invalidateStackBelow(const Constant& stack_limit);
 
 	inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
@@ -103,12 +110,13 @@ private:
 	void set(const OperandVar& var, const Operand* expr, bool set_updated = true);
 	void setMem(Constant addr, const Operand* expr);
 	inline void scratch(const OperandVar& var);
-	void scratchAllMemory();
+	void wipeMemory(void);
+	void setMemoryInitPoint(const otawa::Block* b, short id);
 	inline const Operand* getPtr(t::int32 var_id) const;
-	void updateLabels(const PathIter& seminsts);
+	void updateLabels(const sem::inst& inst);
 	static bool affectsRegister(t::uint16 op);
 	static bool affectsMemory(t::uint16 op);
-	void store(OperandVar addr, const Operand* b);
+	int store(OperandVar addr, const Operand* b);
 
 	LabelledPredicate makeLabelledPredicate(condoperator_t opr, const Operand* opd1, const Operand* opd2, Path& labels) const;
 	bool tryToKeepVar(const OperandVar& var);//, const Predicate*& removed_predicate);
@@ -179,7 +187,7 @@ private:
 		}
 
 	private:
-		void nextState() {
+		inline void nextState() {
 			if(state == GENERATED_PREDS)
 				state = LABELLED_PREDS;
 			else if(state == LABELLED_PREDS)
@@ -191,6 +199,45 @@ private:
 		SLList<LabelledPredicate>::Iterator gp_iter; // Generated predicates (local) iterator 
 		SLList<LabelledPredicate>::Iterator lp_iter; // Labelled predicates (previous BBs) iterator
 	}; // PredIterator class
+	
+	class MutablePredIterator: public PreIterator<MutablePredIterator, LabelledPredicate&> {
+		enum pred_iterator_state_t
+		{
+			GENERATED_PREDS, // must have !gp_iter.ended()
+			LABELLED_PREDS, // must have gp_iter.ended() && !lp_iter.ended()
+			DONE, // must have gp_iter.ended() && lp_iter.ended()
+		};
+
+	public:
+		inline MutablePredIterator(Analysis::State& analysis_state)
+			: state(GENERATED_PREDS), gp_iter(analysis_state.generated_preds), lp_iter(analysis_state.labelled_preds)
+			{ updateState(); }
+		inline bool ended(void) const
+			{ return (state == DONE); }
+		inline LabelledPredicate& item(void)
+			{ return (state == GENERATED_PREDS) ? gp_iter.item() : lp_iter.item(); }
+		void next(void) {
+			if(state == GENERATED_PREDS) gp_iter++;
+			if(state == LABELLED_PREDS) lp_iter++;
+			updateState();
+		}
+	private:
+		void updateState() {
+			if(state == GENERATED_PREDS && !gp_iter) { nextState(); updateState(); }
+			if(state == LABELLED_PREDS && !lp_iter) { nextState(); updateState(); }
+		}
+		inline void nextState() {
+			if(state == GENERATED_PREDS)
+				state = LABELLED_PREDS;
+			else if(state == LABELLED_PREDS)
+				state = DONE;
+		}
+
+		friend class Analysis::State;
+		pred_iterator_state_t state;
+		SLList<LabelledPredicate>::MutableIterator gp_iter;
+		SLList<LabelledPredicate>::MutableIterator lp_iter;
+	};  
 }; // State class
 
 extern const Analysis::State bottom;
@@ -213,7 +260,7 @@ public:
 
 	inline void onCall(SynthBlock* sb)   { for(Iter i(this->s); i; i++) s[i].onCall(sb); }
 	inline void onReturn(SynthBlock* sb) { for(Iter i(this->s); i; i++) s[i].onReturn(sb); }
-	inline void onLoopEntry(Block* b)    { for(Iter i(this->s); i; i++) s[i].onLoopEntry(b); }
+	// inline void onLoopEntry(Block* b)    { for(Iter i(this->s); i; i++) s[i].onLoopEntry(b); }
 	inline void onLoopExit (Block* b)    { for(Iter i(this->s); i; i++) s[i].onLoopExit(b); }
 	inline void onLoopExit (Edge* e) {
 		Block* h = LOOP_EXIT_EDGE(e);
@@ -250,13 +297,6 @@ public:
 
 private:
 	Vector<State> s;
-};
-
-class Analysis::SPEquals
-{
-public:
-	inline bool operator()(const Analysis::State& x, const Operand* sp) const
-		{ return x.getLocalVariables()[x.getSP()] == sp; }
 };
 
 template <class C> Vector<DetailedPath> Analysis::State::stateListToPathVector(const C& cl) const

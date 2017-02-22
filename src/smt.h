@@ -16,7 +16,7 @@
 #endif
 
 #include "analysis_state.h"
-#include "DAG.h"
+#include "struct/DAG.h"
 
 class SMT
 {

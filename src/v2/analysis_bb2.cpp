@@ -6,9 +6,9 @@
 #include <otawa/sem/inst.h>
 #include "../analysis_state.h"
 #include "../arith.h"
-#include "../DAG.h"
 #include "../debug.h"
-#include "../operand.h"
+#include "../struct/DAG.h"
+#include "../struct/operand.h"
 
 using namespace otawa::sem;
 
@@ -17,14 +17,15 @@ using namespace otawa::sem;
  *
  * @param seminsts  	 The semantic instruction to parse
  * @param last_condition If we are in a conditional segment, the sem inst corresponding to the conditional instruction, NOP otherwise
+ * @return 	0 by default, 1 if memory was wiped
  */
-void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst& last_condition)
+int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& last_condition)
 {
-	const t::int16 &a = seminsts.a(), &b = seminsts.b(), &d = seminsts.d();
-	const t::int32 &cst = seminsts.cst();
-	const t::int16 &reg = seminsts.reg(), &addr = seminsts.addr();
-	const t::uint16 op = seminsts.op();
-	const bool in_conditional_segment = last_condition.op != NOP;
+	const t::int16 &a = inst.a(), &b = inst.b(), &d = inst.d();
+	const t::int32 &cst = inst.cst();
+	const t::int16 &reg = inst.reg(), &addr = inst.addr();
+	const t::uint16 op = inst.op;
+	const bool in_conditional_segment = (last_condition.op != NOP);
 
 	// parse conservatively conditional segments of the BB: set top to everything that is written there
 	if(in_conditional_segment && (op != IF && op != CONT && op != BRANCH))
@@ -32,8 +33,8 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 		if(affectsRegister(op)) // affects the register d
 			scratch(d);
 		if(affectsMemory(op)) // affects memory at addr
-			store(OperandVar(addr), vm->new_top());
-		return;
+			return store(OperandVar(addr), vm->new_top());
+		return 0;
 	}
 	// maintain predicates
 	if(affectsRegister(op))
@@ -48,7 +49,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 	}
 	// set proper labels (will be removed by scratch if necessary)
 	if(! in_conditional_segment) // if we are in sequential segment of BB
-		updateLabels(seminsts);
+		updateLabels(inst);
 	
 	switch(op)
 	{
@@ -67,8 +68,8 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 				generated_preds += LabelledPredicate(p, labels);
 				DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
 			}
-		}
 			break;
+		}
 		case CONT:
 		{
 			const OperandVar sr = OperandVar(last_condition.sr());
@@ -80,28 +81,26 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 				generated_preds += LabelledPredicate(p, labels);
 				DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
 			}
-		}
 			break; // we cannot generate a predicate otherwise
+		}
 		case LOAD: // reg <- MEM_type(addr)
 			// tip: addr is likely to be t1
 			// TODO!! warning for LOAD, assert false for STORE for unaligned accesses
 			if(lvars.isConst(addr))
 			{
 				Constant c = lvars(addr).toConstant();
-				if(Option<Constant> v = getConstantValueOfReadOnlyMemCell(OperandMem(c), (*seminsts).type()))
+				if(Option<Constant> v = getConstantValueOfReadOnlyMemCell(OperandMem(c), inst.type()))
 				{
 					DBG(color::IBlu() << "  R-O memory cell " << OperandMem(c) << " simplified to " << *v)
 					set(reg, dag->cst(*v));
 				}
-				else if(mem.exists(c))
-				{
-					DBG(color::IBlu() << "  Reading from " << OperandMem(c))
-					set(reg, mem[c]); // TODO! labels
-				}
 				else
 				{
-					DBG(color::IYel() << "  Loading Top from " << OperandMem(c))
-					scratch(reg);
+					DBG(color::IBlu() << "  Reading from " << OperandMem(c))
+					if(mem.exists(c))
+						set(reg, mem[c]); // TODO! labels
+					else
+						set(reg, dag->mem(c));	
 				}
 			}
 			else
@@ -111,8 +110,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 			}
 			break;
 		case STORE:	// MEM_type(addr) <- reg
-			store(OperandVar(addr), getPtr(reg)); // TODO! labels
-			break;
+			return store(OperandVar(addr), getPtr(reg)); // TODO! labels
 		case SET: // d <- a
 			set(d, getPtr(a));
 			break;
@@ -168,7 +166,7 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 			if(lvars.isConst(a) && lvars.isConst(b)
 				&& (av = lvars(a).toConst().evalConstantOperand())
 				&& (bv = lvars(b).toConst().evalConstantOperand()) )
-				set(d, dag->cst(seminsts.op() == OR ? (*av | *bv) : (*av ^ *bv)));
+				set(d, dag->cst(op == OR ? (*av | *bv) : (*av ^ *bv)));
 			else
 				scratch(d);
 			break;
@@ -248,6 +246,9 @@ void Analysis::State::processSemInst2(const PathIter& seminsts, const sem::inst&
 			scratch(d);
 			break;
 	}
+	if(dbg_&0x8)
+		ASSERTP(lvars(context->sp).kind() == CST, "SP lost")
+	return 0;
 }
 
 void Analysis::State::set(const OperandVar& x, const Operand* expr, bool set_updated)
@@ -276,28 +277,85 @@ void Analysis::State::scratch(const OperandVar& var)
 	lvars.clearLabels(var);
 }
 
-void Analysis::State::scratchAllMemory()
+/**
+ * @brief      Empties the memory (first step of an access to Top)
+ */
+void Analysis::State::wipeMemory(void)
 {
-	DBG(color::IRed() << "  Access to Top, invalidating all memory (" << mem.count() << " items)")
-	for(mem_t::MutableIter i(mem); i; i++)
-		i.item() = vm->new_top(); // TODO! that looks costly... maybe we should rework the way Tops work in DAG.
-}
+	DBG(color::IRed() << "  Wiping the memory (" << mem.count() << " items)")
+	mem.clear();
 
-void Analysis::State::store(OperandVar addr, const Operand* opd)
-{
-	Constant c;
-	if(lvars.isConst(addr) && (c = lvars(addr).toConstant(), c.isValidAddress()))
-		setMem(c, opd);
-	else
+	// collect all OperandMems
+	avl::Map<const Operand*, const Operand*> topmap; // match a mem with a top
+	const Operand *opdm, *opdtop;
+	for(LocalVariables::Iter i(lvars); i; i++)
+		if(lvars[i])
+			while((opdm = lvars[i]->involvesMemory()))
+			{
+				opdtop = topmap.get(opdm, NULL);
+				if(! opdtop)
+				{
+					opdtop = vm->new_top();
+					topmap.put(opdm, opdtop);
+				}
+				if(Option<const Operand*> mb_newopd = lvars[i]->update(*dag, opdm, opdtop))
+					lvars[i] = *mb_newopd;
+			}
+
+	for(MutablePredIterator piter(*this); piter; piter++)
 	{
-		DBG(color::IYel() << "  Store address is unknown: " << addr << " = " << lvars(addr))
-		scratchAllMemory(); // access to Top
+		while((opdm = piter->pred().involvesMemory()))
+		{
+			opdtop = topmap.get(opdm, NULL);
+			if(! opdtop)
+			{
+				opdtop = vm->new_top();
+				topmap.put(opdm, opdtop);
+			}
+			piter.item().updatePred(*dag, opdm, opdtop);
+		}		
 	}
 }
 
-void Analysis::State::updateLabels(const PathIter& seminsts)
+/**
+ * @brief      Sets the memory initial point (what the right operands will refer to).
+ *
+ * @param[in]  b   The block
+ * @param[in]  id  The ID of the instruction
+ */
+void Analysis::State::setMemoryInitPoint(const otawa::Block* b, short id)
 {
-	switch(seminsts.op())
+	memid.b = b;
+	memid.id = id;
+}
+
+/**
+ * @brief      Perform a store at a given address, with a given value
+ *
+ * @param      addr  The address
+ * @param      opd   The operand
+ *
+ * @return     0 if success, 1 if we had to wipe the memory (access to Top)
+ */
+int Analysis::State::store(OperandVar addr, const Operand* opd)
+{
+	Constant c;
+	if(lvars.isConst(addr) && (c = lvars(addr).toConstant(), c.isValidAddress()))
+	{
+		setMem(c, opd);
+		return 0;
+	}
+	else
+	{
+		DBG(color::IYel() << "  Store address is unknown: " << addr << " = " << lvars(addr))
+		wipeMemory(); // access to Top
+		return 1;
+	}
+}
+
+void Analysis::State::updateLabels(const sem::inst& seminst)
+{
+	switch(seminst.op)
 	{
 		// nothing to do
 		case NOP:
@@ -319,8 +377,8 @@ void Analysis::State::updateLabels(const PathIter& seminsts)
 		case SET:
 		case NEG:
 		case NOT:
-			DBG(color::Cya() << "  /" << OperandVar(seminsts.a()) << "=" << lvars(seminsts.a()) << "/")
-			lvars.label(OperandVar(seminsts.d()), lvars.labels(OperandVar(seminsts.a())));
+			DBG(color::Cya() << "  /" << OperandVar(seminst.a()) << "=" << lvars(seminst.a()) << "/")
+			lvars.label(OperandVar(seminst.d()), lvars.labels(OperandVar(seminst.a())));
 			break;
 		// d <- f(a, b)	
 		case CMP:
@@ -342,10 +400,10 @@ void Analysis::State::updateLabels(const PathIter& seminsts)
 		case MULH:
 		{
 			OperandVar tmp;
-			DBG(color::Cya() << "  /" << OperandVar(tmp=seminsts.a()) << "=" << (lvars(tmp=seminsts.a()))
-							 << ", "  << OperandVar(tmp=seminsts.b()) << "=" << (lvars(tmp=seminsts.b())) << "/")
-			lvars.label(OperandVar(seminsts.d()), lvars.labels(OperandVar(seminsts.a())));
-			lvars.label(OperandVar(seminsts.d()), lvars.labels(OperandVar(seminsts.b())));
+			DBG(color::Cya() << "  /" << OperandVar(tmp=seminst.a()) << "=" << (lvars(tmp=seminst.a()))
+							 << ", "  << OperandVar(tmp=seminst.b()) << "=" << (lvars(tmp=seminst.b())) << "/")
+			lvars.label(OperandVar(seminst.d()), lvars.labels(OperandVar(seminst.a())));
+			lvars.label(OperandVar(seminst.d()), lvars.labels(OperandVar(seminst.b())));
 			break;
 		}
 		// case FORK:

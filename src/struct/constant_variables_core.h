@@ -5,7 +5,7 @@
 // #include <elm/genstruct/SLList.h>
 #include <otawa/cfg/Edge.h>
 #include "constant.h"
-#include "debug.h"
+#include "../debug.h"
 
 using namespace otawa;
 // using namespace elm::genstruct; 

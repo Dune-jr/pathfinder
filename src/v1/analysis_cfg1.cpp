@@ -86,7 +86,7 @@ void Analysis1::processCFG(CFG* cfg, bool use_initial_data)
 					/* status_b ← FIX if status_b = ENTER */
 					case ENTER:
 						LH_STATUS(b) = FIX;
-						s->onLoopEntry(b);
+						// s->onLoopEntry(b);
 						break;
 					/* status_b ← LEAVE if status_b = FIX ∧ s ≡ s_b */
 					case FIX: if(s->one().equiv(LH_S(b)))

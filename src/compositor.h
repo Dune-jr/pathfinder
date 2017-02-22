@@ -4,9 +4,9 @@
 #include <elm/genstruct/HashTable.h>
 #include "analysis_state.h"
 #include "arith.h"
-#include "DAG.h"
-#include "local_variables.h"
-#include "operand.h"
+#include "struct/DAG.h"
+#include "struct/local_variables.h"
+#include "struct/operand.h"
 
 // Compositor: a class for State composition
 class Compositor : public OperandEndoVisitor

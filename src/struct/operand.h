@@ -96,7 +96,7 @@ public:
 	virtual int involvesVariable(const OperandVar& opdv) const = 0; // TODO! rewrite using involvesOperand, if the int return thing is not critical?
 	virtual Option<Constant> involvesStackBelow(const Constant& stack_limit) const = 0;
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
-	virtual bool involvesMemory() const = 0;
+	virtual const Operand* involvesMemory() const = 0;
 	virtual Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const = 0;
 	virtual void markUsedRegisters(BitVector &uses) const = 0;
 	virtual bool isComplete() const = 0;
@@ -168,7 +168,7 @@ public:
 	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
-	bool involvesMemory() const;
+	const Operand* involvesMemory() const;
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
@@ -216,7 +216,7 @@ public:
 	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
-	bool involvesMemory() const;
+	const Operand* involvesMemory() const;
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
@@ -258,7 +258,7 @@ public:
 	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
-	bool involvesMemory() const;
+	const Operand* involvesMemory() const;
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
@@ -303,7 +303,7 @@ public:
 	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
-	bool involvesMemory() const;
+	const Operand* involvesMemory() const;
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
@@ -345,8 +345,8 @@ public:
 	inline int involvesVariable(const OperandVar& opdv) const { return false; }
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const { return none; }
 	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
-	bool involvesMemory() const { return false; }
-	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { crash(); return none; }
+	const Operand* involvesMemory() const { return NULL; }
+	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { return (this == opd) ? some(opd_modifier) : none; }
 	Option<Constant> evalConstantOperand() const { return none; }
 	Option<const Operand*> simplify(DAG& dag) const { return none; }
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const { return this; }
@@ -396,7 +396,7 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
-	bool involvesMemory() const;
+	const Operand* involvesMemory() const;
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!

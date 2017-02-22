@@ -34,7 +34,10 @@ private:
 	// bool checkPredSat(const SLList<LabelledPredicate>& labelled_preds);
 	Option<Expr> getExpr(const Predicate& p);
 	Option<Expr> getExpr(const Operand& o);
-	Expr getRegExpr(t::int32 reg_id);
+	inline Expr getRegExpr(t::int32 reg_id)
+		{ return variables.getExpr(em, OperandVar(reg_id), VARIABLE_PREFIX); }
+	inline Expr getMemExpr(Constant mem_id)
+		{ return variables.getExpr(em, OperandMem(mem_id), VARIABLE_PREFIX); }
 	Kind_t getKind(const Predicate& p) const;
 };
 

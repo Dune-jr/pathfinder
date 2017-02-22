@@ -6,8 +6,8 @@
 #include <otawa/sem/inst.h>
 #include <otawa/sem/PathIter.h>
 #include <elm/string/String.h>
-#include "predicate.h"
-#include "operand.h"
+#include "struct/predicate.h"
+#include "struct/operand.h"
 #include "debug.h"
 #include "analysis_state.h"
 
@@ -26,8 +26,9 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 	generated_preds.clear();
 	generated_preds_taken.clear();
 	
+	short inst_id = 0;
 	// parse assembly instructions
-	for(BasicBlock::InstIter insts(bb); insts; insts++)
+	for(BasicBlock::InstIter insts(bb); insts; insts++, inst_id++)
 	{
 		//DBG(color::BIPur() << *insts)
 		DBG(color::Pur() << *insts)
@@ -36,7 +37,7 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 		
 		sem::inst last_condition(NOP);
 		PathIter seminsts;
-		// parse semantical instructions with PathIter
+		// parse semantical instructions
 		for(seminsts.start(*insts); seminsts; seminsts++)
 		{
 			DBG(color::IPur() << *seminsts)
@@ -57,12 +58,13 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 			if(version_flags & IS_V1)
 				processSemInst1(seminsts, last_condition);
 			else
-				processSemInst2(seminsts, last_condition);
+				if(processSemInst2(seminsts, last_condition) != 0)
+					setMemoryInitPoint(bb, inst_id);
+
 		}
 		// all temporary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();
 	}
-	DBG(dumpEverything());
 	// if(! (dbg_flags&DBG_DETERMINISTIC))
 	// 	DBG("dag:" << *dag)
 	if(dbg_verbose == DBG_VERBOSE_ALL)
@@ -79,6 +81,7 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 		DBG("Constants updated: " << constants.printChanges()) // TODO!! check that a mess doesn't happen with constants being updated by both taken and not taken path
 #endif
 	}
+	DBG(dumpEverything());
 	ASSERTP(!(version_flags & SP_CRITICAL) || lvars(context->sp).isConstant(), "SP value was lost: " << lvars(context->sp) << ", aborting");
 }
 
@@ -560,9 +563,9 @@ bool Analysis::State::invalidateAllMemory()
 			DBG(color::IPur() << DBG_SEPARATOR << color::IYel() << " - " << *piter)
 			removePredicate(piter);
 			rtn = true;
-			continue;
 		}
-		piter++;
+		else
+			piter++;
 	}
 	return rtn;
 }

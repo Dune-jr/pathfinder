@@ -40,7 +40,7 @@ public:
 	inline void removeLast() { _path.removeLast(); }
 	
 	// events
-	void onLoopEntry(Block* loop_header);
+	// void onLoopEntry(Block* loop_header);
 	void onLoopExit(Option<Block*> new_loop_header);
 	void onCall(otawa::SynthBlock* sb);
 	void onReturn(otawa::SynthBlock* sb);
@@ -48,13 +48,14 @@ public:
 	// utility
 	bool weakEqualsTo(const DetailedPath& dp) const;
 	void fromContext(Block* b);
-	void addEnclosingLoop(Block* loop_header);
+	// void addEnclosingLoop(Block* loop_header);
 	void merge(const Vector<DetailedPath>& detailed_paths);
 	void apply(const DetailedPath& path);
 	void optimize();
 	bool hasAnEdge() const;
 	Edge* firstEdge() const;
 	Edge* lastEdge() const;
+	Block* lastBlock() const;
 	int countEdges() const;
 	SLList<Edge*> toOrderedPath() const;
 	elm::String toString(bool colored = true) const;
@@ -77,9 +78,9 @@ public:
 			KIND_RETURN, // SynthBlock
 		};
 		FlowInfo() : _kind(kind_t(-1)), _identifier(NULL) { }
-		FlowInfo(kind_t kind, BasicBlock* bb) : _kind(kind), _identifier(bb) { ASSERT(isBasicBlockKind(kind)); }
-		FlowInfo(kind_t kind, SynthBlock* sb) : _kind(kind), _identifier(sb) { ASSERT(isSynthBlockKind(kind)); }
-		FlowInfo(kind_t kind, Edge* e) : _kind(kind), _identifier(e) { ASSERT(isEdgeKind(kind)); }
+		FlowInfo(kind_t kind, BasicBlock* bb) : _kind(kind), _identifier(bb) { ASSERT(isBasicBlockKind()); }
+		FlowInfo(kind_t kind, SynthBlock* sb) : _kind(kind), _identifier(sb) { ASSERT(isSynthBlockKind()); }
+		FlowInfo(kind_t kind, Edge* e) : _kind(kind), _identifier(e) { ASSERT(isEdgeKind()); }
 		FlowInfo(Edge* e) : _kind(KIND_EDGE), _identifier(e) { }
 		FlowInfo(const FlowInfo& fi) { _kind = fi._kind; _identifier = fi._identifier; }
 		inline kind_t kind() const { return _kind; }
@@ -88,9 +89,9 @@ public:
 		inline bool isLoopExit() const { return _kind == KIND_LOOP_EXIT; }
 		inline bool isCall() const { return _kind == KIND_CALL; }
 		inline bool isReturn() const { return _kind == KIND_RETURN; }
-		inline Edge* getEdge() const { ASSERT(isEdgeKind(_kind)); return (Edge*)_identifier; } // TODO! remove the ASSERTs?
-		inline BasicBlock* getBasicBlock() const { ASSERT(isBasicBlockKind(_kind)); return (BasicBlock*)_identifier; }
-		inline SynthBlock* getSynthBlock() const { ASSERT(isSynthBlockKind(_kind)); return (SynthBlock*)_identifier; }
+		inline Edge* getEdge() const { ASSERT(isEdgeKind()); return (Edge*)_identifier; } // TODO! remove the ASSERTs?
+		inline BasicBlock* getBasicBlock() const { ASSERT(isBasicBlockKind()); return (BasicBlock*)_identifier; }
+		inline SynthBlock* getSynthBlock() const { ASSERT(isSynthBlockKind()); return (SynthBlock*)_identifier; }
 		inline BasicBlock* getLoopHeader() const { return getBasicBlock(); }
 		inline SynthBlock* getCaller() const { return getSynthBlock(); }
 		elm::String toString(bool colored = true) const;
@@ -100,13 +101,13 @@ public:
 		inline const FlowInfo* operator->(void) const { return this; }
 		friend io::Output& operator<<(io::Output& out, const FlowInfo& fi) { return fi.print(out); }
 
+		inline bool isBasicBlockKind(void) const
+			{ return (_kind == KIND_LOOP_ENTRY) || (_kind == KIND_LOOP_EXIT); }
+		inline bool isSynthBlockKind(void) const
+			{ return (_kind == KIND_CALL) || (_kind == KIND_RETURN); }
+		inline bool isEdgeKind(void) const
+			{ return (_kind == KIND_EDGE); }
 	private:
-		inline bool isBasicBlockKind(kind_t kind) const
-			{ return (kind == KIND_LOOP_ENTRY) || (kind == KIND_LOOP_EXIT); }
-		inline bool isSynthBlockKind(kind_t kind) const
-			{ return (kind == KIND_CALL) || (kind == KIND_RETURN); }
-		inline bool isEdgeKind(kind_t kind) const
-			{ return (kind == KIND_EDGE); }
 		io::Output& print(io::Output& out) const;
 
 		kind_t _kind;

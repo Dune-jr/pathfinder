@@ -79,6 +79,10 @@ Option<Analysis::Path*> SMT::seekInfeasiblePathsv2(const Analysis::State& s)
 	{
 		if(dbg_verbose == DBG_VERBOSE_ALL) cout << color::BIRed() << "UNSAT\n";
 
+		DBG("   Predicates:")
+		for(SLList<LabelledPredicate>::Iterator parse_iter(s.getLabelledPreds()); parse_iter; parse_iter++)
+			if((*parse_iter).pred().isComplete())
+				DBG("   * " << (*parse_iter))
 		// TODO!! we need to implement labels on memory, and use those to minimize IPs.
 		// Also failure case should be the union of all preds, not the full path.
 		Analysis::Path *path = new Analysis::Path();

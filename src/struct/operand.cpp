@@ -4,7 +4,7 @@
 #include <elm/io/Output.h>
 #include "operand.h"
 #include "DAG.h"
-#include "debug.h"
+#include "../debug.h"
 
 // using namespace elm;
 
@@ -54,8 +54,9 @@
  * @param opdm Memory cell to look for in the operand
  */
 /**
- * @fn bool Operand::involvesMemory() const;
- * @brief Check for any reference to a value in the stack or the heap in the Operand
+ * @fn const Operand* Operand::involvesMemory() const;
+ * @brief Check for any reference to a value in the stack or the heap in the Operand.
+ * @return NULL if nothing was found, or the first OperandMem found
  */
 /**
  * @fn Option<const Operand*> Operand::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
@@ -155,10 +156,10 @@ bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr
 	return false; // We haven't found an isolated tempvar
 }
 int OperandConst::involvesVariable(const OperandVar& opdv) const { return 0; }
+const Operand* OperandConst::involvesMemory() const { return NULL; }
 bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 Option<Constant> OperandConst::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
-bool OperandConst::involvesMemory() const { return false; }
-Option<const Operand*> OperandConst::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { return none; }
+Option<const Operand*> OperandConst::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { return (this == opd) ? some(opd_modifier) : none; }
 // pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 void OperandConst::parseAffineEquation(AffineEquationState& state) const
 {
@@ -224,7 +225,7 @@ int OperandVar::involvesVariable(const OperandVar& opdv) const
 }
 bool OperandVar::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 Option<Constant> OperandVar::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
-bool OperandVar::involvesMemory() const { return false; }
+const Operand* OperandVar::involvesMemory() const { return NULL; }
 // since the parent has to do the modification, and var has no child, return false
 Option<const Operand*> OperandVar::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
 	{ return (this == opd) ? some(opd_modifier) : none; }
@@ -275,10 +276,10 @@ Option<Constant> OperandMem::involvesStackBelow(const Constant& stack_limit) con
 		return elm::some(_opdc.value());
 	return elm::none;
 }
-bool OperandMem::involvesMemory() const
-	{ return true; }
+const Operand* OperandMem::involvesMemory() const
+	{ return this; }
 Option<const Operand*> OperandMem::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
-	{ return none; }
+	{ return (this == opd) ? some(opd_modifier) : none; }
 void OperandMem::parseAffineEquation(AffineEquationState& state) const
 	{ ASSERT(false); } // should never happen
 Option<Constant> OperandMem::evalConstantOperand() const
@@ -325,10 +326,11 @@ bool OperandTop::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) 
 	return false; // We haven't found an isolated tempvar
 }
 int OperandTop::involvesVariable(const OperandVar& opdv) const { return 0; }
+const Operand* OperandTop::involvesMemory() const { return NULL; }
 bool OperandTop::involvesMemoryCell(const OperandMem& opdm) const {	return false; }
 Option<Constant> OperandTop::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
-bool OperandTop::involvesMemory() const { return false; }
-Option<const Operand*> OperandTop::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { ASSERT(false); return none; }
+Option<const Operand*> OperandTop::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
+	{ return (this == opd) ? some(opd_modifier) : none; }
 void OperandTop::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen (for Top too?)
 Option<Constant> OperandTop::evalConstantOperand() const { return none; }
 Option<const Operand*> OperandTop::simplify(DAG& dag) const { return none; }
@@ -473,11 +475,14 @@ bool OperandArith::involvesMemoryCell(const OperandMem& opdm) const
 		return opd1->involvesMemoryCell(opdm);
 	return opd1->involvesMemoryCell(opdm) || opd2->involvesMemoryCell(opdm);
 }
-bool OperandArith::involvesMemory() const
+const Operand* OperandArith::involvesMemory() const
 {
 	if(isUnary())
 		return opd1->involvesMemory();
-	return opd1->involvesMemory() || opd2->involvesMemory();	
+	else if(const Operand* rtn = opd1->involvesMemory())
+		return rtn;
+	else
+		return opd2->involvesMemory();
 }
 Option<const Operand*> OperandArith::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
 {

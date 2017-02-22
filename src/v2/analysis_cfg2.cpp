@@ -7,6 +7,7 @@
 #include "analysis2.h"
 #include "../analysis_state.h"
 #include "../progress.h"
+#include "../assert_predicate.h"
 
 using namespace elm::io;
 
@@ -90,12 +91,14 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 					case ENTER:
 						LH_STATUS(b) = FIX;
 						LH_S0(b) = s->one();
-						s->onLoopEntry(b);
+						//s->onLoopEntry(b);
 						break;
 					/* status_b ← ACCEL if status_b = FIX ∧ s ≡ s_b */
 					case FIX: if(s->one().equiv(LH_S(b)))
+					{
 						LH_STATUS(b) = ACCEL;
 						s->prepareFixPoint();
+					}
 						break;
 					/* ... */
 					case ACCEL:
@@ -129,10 +132,11 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 	DBGG(IPur() << "\"" << cfg->name() << "\"==>")
 	// vm->clean(*CFG_S(cfg));
 	CFG_VARS(cfg) = LockPtr<VarMaker>(vm);
-	// ASSERT(elm::forall(States::Iter(**CFG_S(cfg)), SPEquals(), dag->cst(SP)));
-	SPEquals eq;
-	for(States::Iter i(**CFG_S(cfg)); i; i++)
-		ASSERTP(eq(*i, dag->cst(SP)), *(*i).getLocalVariables()[(*i).getSP()] << "=/=" << context.sp << " ; " << i->dumpEverything())
+	ASSERTP(elm::forall(States::Iter(**CFG_S(cfg)), SPCanEqual(), static_cast<const OperandConst*>(dag->cst(SP))),
+		context.sp << " is definitely not SP+0. " << Dim() << "(" << cfg->name() << ")" << RCol());
+	// SPEquals eq;
+	// for(States::Iter i(**CFG_S(cfg)); i; i++)
+	// 	ASSERTP(eq(*i, dag->cst(SP)), *(*i).getLocalVariables()[(*i).getSP()] << "=/=" << " SP+0" << " ; " << i->dumpEverything())
 }
 
 /**

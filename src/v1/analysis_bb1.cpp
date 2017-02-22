@@ -6,14 +6,17 @@
 #include <otawa/sem/inst.h>
 #include <elm/string/String.h>
 #include "../analysis_state.h"
-#include "../DAG.h"
 #include "../debug.h"
-#include "../predicate.h"
+#include "../struct/predicate.h"
+#include "../struct/DAG.h"
 
 using namespace otawa::sem;
 
-// @param last_condition If we are in a conditional segment, the sem inst corresponding to the conditional instruction, NOP otherwise
-void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst& last_condition)
+/**
+  * @brief processes a semantic instruction (v1)
+  * @param last_condition If we are in a conditional segment, the sem inst corresponding to the conditional instruction, NOP otherwise
+  */
+void Analysis::State::processSemInst1(const sem::inst& inst, const sem::inst& last_condition)
 {
 #ifdef V1
 	const Operand *opd1 = NULL, *opd2 = NULL, *opd11 = NULL, *opd12 = NULL, *opd21 = NULL, *opd22 = NULL;
@@ -21,12 +24,12 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 	Path labels; // default is {}
 	bool make_pred = false;
 	
-	// some shortcuts (the seminsts.F functions are not called at this point)
-	const t::int16 &a = seminsts.a(), &b = seminsts.b(), &d = seminsts.d();
-	const t::int32 &cst = seminsts.cst();
-	const t::int16 &reg = seminsts.reg(), &addr = seminsts.addr();
+	// some shortcuts (the inst.F functions are not called at this point)
+	const t::int16 &a = inst.a(), &b = inst.b(), &d = inst.d();
+	const t::int32 &cst = inst.cst();
+	const t::int16 &reg = inst.reg(), &addr = inst.addr();
 	
-	switch(seminsts.op())
+	switch(inst.op)
 	{
 		case NOP:
 			break;
@@ -63,7 +66,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 			if(Option<OperandMem> addr_mem = getOperandMem(addr, labels))
 			{
 				// if it's a constant address of some read-only data
-				if(Option<Constant> addr_const_value = getConstantValueOfReadOnlyMemCell(*addr_mem, (*seminsts).type()))
+				if(Option<Constant> addr_const_value = getConstantValueOfReadOnlyMemCell(*addr_mem, inst.type()))
 				{
 					DBG(color::IPur() << DBG_SEPARATOR " " << color::IBlu() << "R-O memory data " << *addr_mem << " simplified to " << *addr_const_value)
 					constants.set(d, ConstantVariables::LabelledValue(*addr_const_value, labels, true)); 
@@ -77,7 +80,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 				// or maybe it's a 1/2byte non aligned access and we can get its value via a divmod (f.e [0x8001] = [0x8000])
 				else if(!(*addr_mem).isAligned())
 				{
-					sem::type_t type = (*seminsts).type();
+					sem::type_t type = inst.type();
 					const int shift = (*addr_mem).addr().value().val() % 4;
 					ASSERTP(getSizeOfType(type) + shift <= 4, "unaligned access is overflowing to next memcell!")
 					make_pred = false; // TODO! could improve with a shifted predicate
@@ -104,7 +107,7 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 				{
 					const int shift = (*addr_mem).addr().value().val() % 4;
 					DBG(color::IYel() << "Unaligned STORE to " << *addr_mem << ", invalidating " << OperandMem((*addr_mem).addr().value() - shift))
-					sem::type_t type = (*seminsts).type();
+					sem::type_t type = inst.type();
 					ASSERTP(getSizeOfType(type) + shift <= 4, "unaligned access is overflowing to next memcell!")
 					// ASSERTP(false, "store at unaligned access")
 					
@@ -435,17 +438,17 @@ void Analysis::State::processSemInst1(const PathIter& seminsts, const sem::inst&
 			if(isConstant(a) && isConstant(b) && constants[a].isAbsolute() && constants[b].isAbsolute())
 			{
 				t::int32 val;
-				if(seminsts.op() == AND)
+				if(inst.op == AND)
 					val = constants[a].val() & constants[b].val();
-				else if(seminsts.op() == XOR)
+				else if(inst.op == XOR)
 					val = constants[a].val() ^ constants[b].val();
-				else //if(seminsts.op() == OR)
+				else //if(inst.op == OR)
 					val = constants[a].val() | constants[b].val();
 				labels = getLabels(a, b);
 				invalidateVar(d); // don't do this earlier in case d==a or d==b
 				constants.set(d, val, labels);
 			}
-			else if(seminsts.op() == AND && (
+			else if(inst.op == AND && (
 					(isConstant(a) && constants[a].isAbsolute() && !isConstant(b))
 				 || (isConstant(b) && constants[b].isAbsolute() && !isConstant(a)) ))
 			{

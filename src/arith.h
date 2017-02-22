@@ -5,8 +5,8 @@
 #ifndef _ARITH_H
 #define _ARITH_H
 
-#include "DAG.h"
-#include "operand.h"
+#include "struct/DAG.h"
+#include "struct/operand.h"
 
 class Arith
 {

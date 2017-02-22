@@ -3,7 +3,7 @@
  */
 
 #include "constant.h"
-#include "debug.h"
+#include "../debug.h"
 
 /**
  * @class Constant

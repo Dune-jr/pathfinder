@@ -53,9 +53,9 @@ extern int dbg_;
 
 // DBG a warning
 #ifdef DBG_WARNINGS
-	#define DBGW(str) elm::cout << color::IYel() << "WARNING: " << str << color::RCol() << endl;
+	#define DBGW(str) { elm::cout << color::IYel() << "WARNING: " << str << color::RCol() << endl; }
 #else
-	#define DBGW(str) DBGG(color::IYel() << "WARNING: " << str)
+	#define DBGW(str) { DBGG(color::IYel() << "WARNING: " << str) }
 #endif
 
 #endif

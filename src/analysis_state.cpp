@@ -13,7 +13,7 @@
 const Analysis::State bottom(true);
 
 // bottom=false: it's bot. bottom=true: it's top
-Analysis::State::State(bool bottom) : context(NULL), dag(NULL), vm(NULL), lvars(), mem(53), bottom(bottom), path()
+Analysis::State::State(bool bottom) : context(NULL), dag(NULL), vm(NULL), lvars(), mem(53), memid(NULL, 0), bottom(bottom), path()
 #ifdef V1
 	, constants()
 #endif
@@ -24,7 +24,7 @@ Analysis::State::State(bool bottom) : context(NULL), dag(NULL), vm(NULL), lvars(
 // 
 Analysis::State::State(Edge* entry_edge, const context_t& context_, DAG* dag, VarMaker* vm, bool init)
 	: context(&context_), dag(dag), vm(vm), lvars(*dag, context->max_tempvars, context->max_registers)
-	, mem(53), bottom(false), path(entry_edge ? entry_edge->target()->cfg() : NULL)
+	, mem(53), memid(NULL, 0), bottom(false), path(entry_edge ? entry_edge->target()->cfg() : NULL)
 #ifdef V1
 	, constants(context->max_tempvars, context->max_registers)
 #endif
@@ -42,7 +42,7 @@ Analysis::State::State(Edge* entry_edge, const context_t& context_, DAG* dag, Va
 }
 
 Analysis::State::State(const State& s)
-	: context(s.context), dag(s.dag), vm(s.vm), lvars(s.lvars), mem(s.mem), bottom(s.bottom), path(s.path),
+	: context(s.context), dag(s.dag), vm(s.vm), lvars(s.lvars), mem(s.mem), memid(s.memid), bottom(s.bottom), path(s.path),
 #ifdef V1
 	constants(s.constants),
 #endif
@@ -75,7 +75,8 @@ void Analysis::State::setPredicate(PredIterator &iter, const LabelledPredicate &
 		generated_preds.set(iter.gp_iter, labelled_predicate);
 	else if(iter.state == PredIterator::LABELLED_PREDS)
 		labelled_preds.set(iter.lp_iter, labelled_predicate);
-	else ASSERTP(false, "Analysis::setPredicate(): unhandled iter.state!")
+	else
+		ASSERTP(false, "Analysis::setPredicate(): unhandled iter.state!")
 }
 
 /**
@@ -163,11 +164,16 @@ void Analysis::State::apply(const State& s, bool local_sp)
 
 	// merging memory
 	// goal is mem = n o m with n = s.mem
-	ASSERTP(lvars[context->sp], "I don't think we hit that case? if we do, handle it in the arith module too")
-	if(!lvars[context->sp]->isConstant()) // we lost the SP
+	if(!lvars[context->sp] || !lvars[context->sp]->isConstant() || s.memid.b != NULL)
 	{
-		DBGW("sp was lost, can't use mem data from function")
-		mem.clear();
+		static CFG* last_fun_warning = NULL;
+		if(s->path.function() != last_fun_warning)
+		{
+			DBGW("can't use mem data from function " << s->path.function())
+			last_fun_warning = s->path.function();
+		}
+		wipeMemory();
+		setMemoryInitPoint(this->path.lastBlock(), 0);
 	}
 	else
 	{
@@ -214,7 +220,6 @@ void Analysis::State::prepareFixPoint()
 			todel.push((*iter).fst);
 	for(Vector<Constant>::Iter i(todel); i; i++)
 		mem.remove(todel[i]);
-DBGG(Cya << "prepared fixpoint is " << this->dumpEverything())
 }
 
 /**
@@ -224,7 +229,6 @@ DBGG(Cya << "prepared fixpoint is " << this->dumpEverything())
  */
 void Analysis::State::widening(const Operand* n)
 {
-	DBGG(IRed << "widening " << this->dumpEverything())
 	enum {
 		INIT=false,
 		DONE=true,
@@ -233,7 +237,7 @@ void Analysis::State::widening(const Operand* n)
 	BitVector steps(max_size, (bool)INIT);
 	bool fixpoint;
 	do
-	{	// TODO! should include the memory in that loop too
+	{	// TODO!! should include the memory in that loop too
 		fixpoint = true;
 		for(LocalVariables::Iter i(lvars); i; i++)
 		{
@@ -358,7 +362,7 @@ void Analysis::State::merge(const States& ss, Block* b)
 	// for(States::Iterator i(ss.states()); i; i++)
 	// 	DBGG(color::IYel() << "merging" << i->dumpEverything())
 	for(States::Iter i(ss); i; i++)
-		ASSERTP(ss.first().lvars[context->sp] == i->lvars[context->sp], *ss.first().lvars[context->sp] << " =/= " << *i->lvars[context->sp]);
+		ASSERTP(ss.first().lvars[context->sp] == i->lvars[context->sp], "merging different SPs... " << *ss.first().lvars[context->sp] << " =/= " << *i->lvars[context->sp]);
 
 	// resetting stuff
 	generated_preds.clear();
@@ -366,15 +370,15 @@ void Analysis::State::merge(const States& ss, Block* b)
 	labelled_preds.clear();
 #ifdef V1
 	SLList<ConstantVariables> cvl;
+	constants = ss.first().constants;
 #endif
 	lvars = ss.first().lvars;
 	mem = ss.first().mem;
+	memid = ss.first().memid;
+	bool wipe_memory = false;
 	// const mem_t* mtab[ss.count()];
 	// int i = 0;
 	// intialize to first element
-#ifdef V1
-	constants = ss.first().constants;
-#endif
 	// copy firstElement.labelled_preds into labelled_preds with empty labels
 	for(SLList<LabelledPredicate>::Iterator iter(ss.first().labelled_preds); iter; iter++)
 		labelled_preds += LabelledPredicate(iter->pred(), Path::null);
@@ -390,17 +394,20 @@ void Analysis::State::merge(const States& ss, Block* b)
 		// lvars = lvars ∩ siters->lvars
 		lvars.merge(siter->lvars);
 		// mem = mem ∩ siters->mem
-		const mem_t& smem = siter->mem;
-		for(mem_t::PairIterator i(mem); i; i++)
+		if(wipe_memory || siter->memid.b != this->memid.b)
+			wipe_memory = true;
+		else
 		{
-			if((*i).snd != smem.get((*i).fst, NULL)) // for each (k, v) in mem, if smem[k] != v, invalidate mem[k]
-				mem[i] = Top;
+			const mem_t& smem = siter->mem;
+			for(mem_t::PairIterator i(mem); i; i++)
+			{
+				if((*i).snd != smem.get((*i).fst, NULL)) // for each (k, v) in mem, if smem[k] != v, invalidate mem[k]
+					mem[i] = Top;
+			}
+			for(mem_t::PairIterator i(smem); i; i++)
+				if((*i).snd != mem.get((*i).fst, NULL)) // for each (k, v) in smem, if mem[k] != v, invalidate mem[k]
+					mem[i] = Top;
 		}
-		for(mem_t::PairIterator i(smem); i; i++)
-			if((*i).snd != mem.get((*i).fst, NULL)) // for each (k, v) in smem, if mem[k] != v, invalidate mem[k]
-				mem[i] = Top;
-		// lvtab[i] = &(siter->lvars);
-		// mtab[i++] = &(siter->mem);
 #ifdef V1
 		cvl += (*siter).constants; // constants.merge(...) uses the info from "constants" so it's useless to add it at the first iteration
 #endif
@@ -423,14 +430,18 @@ void Analysis::State::merge(const States& ss, Block* b)
 				labelled_preds.remove(iter);
 		}
 	}
+
 #ifdef V1
 	this->constants.merge(cvl);
 #endif
 	// this->path.merge(stateListToPathVector(sc)); // merge paths as well while keeping some flow info and shrink that in this->path
-	// this-path = DetailedPath(sc.first().lastEdge()->target()->toBasic());
 	this->path.clear();
-	// this->path.fromContext(sc.first().lastEdge()->target()->toBasic());
 	this->path.fromContext(b);
+	if(wipe_memory)
+	{
+		wipeMemory();
+		setMemoryInitPoint(path->lastBlock(), 0);
+	}
 }
 
 /**
@@ -464,7 +475,7 @@ elm::String Analysis::State::dumpEverything() const
 		<< "  * labelled_preds= " << labelled_preds << endl
 		<< "  * generated_preds= " << generated_preds << endl
 		<< "  * lvars= [" << endl << lvars << "]" << endl
-		<< "  * mem= [" << endl;
+		<< "  * mem= " << memid << ", [" << endl;
 	for(mem_t::PairIterator i(mem); i; i++)
 		rtn = _ << rtn << "        [" << StringFormat(_ << (*i).fst << "]").width(8) << "| " << *(*i).snd << endl;
 	return _ << rtn << "]" << endl << "\t--- END OF DUMP ---";

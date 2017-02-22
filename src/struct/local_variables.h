@@ -6,8 +6,8 @@
 #include <elm/util/BitVector.h>
 #include <otawa/cfg/Edge.h>
 #include "constant.h"
-#include "pretty_printing.h"
 #include "operand.h"
+#include "../pretty_printing.h"
 
 // using namespace elm::genstruct; 
 using otawa::Edge;
