@@ -15,13 +15,15 @@
 #include <otawa/cfg/features.h>
 #include <otawa/dfa/State.h>
 #include <otawa/prop/Identifier.h>
-#include "struct/DAG.h"
 #include "detailed_path.h"
-#include "struct/operand.h"
+#include "dom/GlobalDominance.h"
 #include "pretty_printing.h"
+#include "struct/DAG.h"
+#include "struct/operand.h"
 #include "struct/var_maker.h"
 #include "working_list.h"
-#include "dom/GlobalDominance.h"
+
+typedef VarMaker xwkjcxjk;
 
 using namespace otawa;
 using elm::genstruct::SLList;
@@ -51,6 +53,8 @@ public:
 		IS_V2				 = 1 << 12,
 		IS_V3				 = 1 << 13,
 		SP_CRITICAL			 = 1 << 14,
+		CLEAN_TOPS			 = 1 << 15,
+		ASSUME_IDENTICAL_SP	 = 1 << 16,
 	};
 protected:
 	typedef struct

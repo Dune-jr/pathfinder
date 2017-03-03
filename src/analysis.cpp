@@ -94,7 +94,7 @@ const Vector<DetailedPath>& Analysis::run(const WorkSpace* ws)
   */
 const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 {
-	if(flags&SHOW_PROGRESS) progress = new Progress(cfg);
+	if(flags&SHOW_PROGRESS) progress = new Progress(cfg, flags&Analysis::IS_V3);
 	DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
 	DBG("Stack pointer identified to " << context.sp)
 
@@ -530,7 +530,7 @@ int Analysis::removeDuplicateIPs()
 			v.push(infeasible_paths[i]);
 	if(k != n) // some elements have been removed
 		infeasible_paths = v;
-	return n - k;
+	return k - n;
 }
 
 void Analysis::postProcessResults(CFG *cfg)

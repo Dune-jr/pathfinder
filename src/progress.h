@@ -57,7 +57,7 @@ private:
 	};
 
 public:
-	Progress(CFG* main) : lines(0), maxlines(-1) { onEntry(main); }
+	Progress(CFG* main, bool v2 = false) : lines(0), maxlines(-1), v2(v2) { onEntry(main); }
 	void onBlock(Block* b) {
 		bool all_leave = true; // enable when on sequential level
 		for(LoopHeaderIter lh(b); lh; lh++) {
@@ -87,8 +87,8 @@ public:
 	}
 
 private:
-	inline void onEntry(CFG* cfg) { ASSERT(!tab.exists(cfg)); tab.put(cfg, Stats(0, cfg->count()-2)); }
-	inline void onExit (CFG* cfg) { ASSERT(tab.exists(cfg));  tab.remove(cfg); }
+	inline void onEntry(CFG* cfg) { ASSERT(!cfgs.contains(cfg)); cfgs.push(cfg); stats.push(Stats(0, cfg->count()-2)); }
+	inline void onExit (CFG* cfg) { if(cfgs.pop() != cfg && !v2) crash(); }
 	inline void onBasic(BasicBlock* bb) { 
 		bool all_leave = true;
 		for(LoopHeaderIter lh(bb); lh; lh++)
@@ -97,7 +97,16 @@ private:
 				break;
 			}
 		if(all_leave){
-			ASSERTP(tab.exists(bb->cfg()), "reading block in CFG " << bb->cfg() << " after exiting (or before entering)")
+			if(!cfgs.contains(bb->cfg()))
+			{
+				if(!v2)
+					crash();
+				else
+				{
+					cfgs.push(bb->cfg());
+					stats.push(Stats(0, bb->cfg()->count()-1));
+				}
+			}
 			incrementStat(bb->cfg());
 		}
 	}
@@ -105,26 +114,48 @@ private:
 	void print(CFG* cfg) {
 		// count number n of lines required
 		int n = 0;
-		for(Block* b = cfg->entry(); b; b = getCaller(b, NULL))
-			n++;
+		if(!v2)
+		{
+			for(Block* b = cfg->entry(); b; b = getCaller(b, NULL))
+				n++;
+		}
+		else
+			n = cfgs.length();
 		if(n > maxlines)
 			newLines(n-maxlines);
 		eraseAboveLines(lines);
 		moveUp(n);
 		lines = 0;
-		for(Block* b = cfg->entry(); b; b = getCaller(b, NULL))
+		if(!v2)
 		{
-			CFG* k = b->cfg();
-			ASSERTP(tab.get(k), "parsing callee after caller has exited!")
-			elm::cout << StringFormat(k->name()).width(15)
-				<< ": " << IntFormat((*tab.get(k)).curr).width(3).right() << "/" << IntFormat((*tab.get(k)).tot).width(3)
-				<< " (" << IntFormat((*tab.get(k)).curr * 100/ (*tab.get(k)).tot).width(3) << "%)" << endl;
-			lines++;
+			for(Block* b = cfg->entry(); b; b = getCaller(b, NULL))
+			{
+				CFG* k = b->cfg();
+				ASSERTP(cfgs.contains(k), "parsing callee after caller has exited!")
+				int i = cfgs.indexOf(k);
+				// elm::cout << StringFormat(k->name()).width(15)
+				// 	<< ": " << IntFormat((*tab.get(k)).curr).width(3).right() << "/" << IntFormat((*tab.get(k)).tot).width(3)
+				// 	<< " (" << IntFormat((*tab.get(k)).curr * 100/ (*tab.get(k)).tot).width(3) << "%)" << endl;
+				elm::cout << StringFormat(k->name()).width(15)
+					<< ": " << IntFormat((stats[i]).curr).width(3).right() << "/" << IntFormat((stats[i]).tot).width(3)
+					<< " (" << IntFormat((stats[i]).curr * 100/ (stats[i]).tot).width(3) << "%)" << endl;
+				lines++;
+			}
+		}
+		else
+		{
+			for(int i = 0; i < cfgs.length(); i++)
+			{
+				elm::cout << StringFormat(cfgs[i]->name()).width(15)
+					<< ": " << IntFormat((stats[i]).curr).width(3).right() << "/" << IntFormat((stats[i]).tot).width(3)
+					<< " (" << IntFormat((stats[i]).curr * 100/ (stats[i]).tot).width(3) << "%)" << endl;
+				lines++;
+			}
 		}
 		maxlines = max(maxlines, lines);	
 	}
 	inline void incrementStat(CFG* cfg)
-		{ tab.put(cfg, *tab.get(cfg) + Stats(1, 0)); }
+		{ stats[cfgs.indexOf(cfg)] = stats[cfgs.indexOf(cfg)] + Stats(1, 0); }
 	inline elm::String indent(int n) const 
 		{ String str; for(int i = 0; i < n; i++) str=str+"\t"; return str; }
 	inline void moveUp(int n) const
@@ -134,8 +165,11 @@ private:
 	inline void eraseAboveLines(int n) const
 		{ moveUp(n); for(int i = 0; i < n; i++) elm::cout << "\e[K\e[1B"; }
 
-	HashTable<CFG*, Stats> tab;
+	// HashTable<CFG*, Stats> tab;
+	Vector<CFG*> cfgs;
+	Vector<Stats> stats;
 	int lines, maxlines;
+	bool v2;
 };
 
 #endif

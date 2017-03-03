@@ -42,8 +42,8 @@ LockPtr<Analysis::States> DefaultAnalysis::join(const Vector<Edge*>& ins) const
 		}
 		else
 		{
-			State s((Edge*)NULL, context, dag, vm, false); // entry is cleared anyway
-			s.merge(*v, b); // s <- joining(s0, s1, ..., sn)
+			State s((Edge*)NULL, context, dag, false); // entry is cleared anyway
+			s.merge(*v, b, *vm); // s <- joining(s0, s1, ..., sn)
 			// if(LOOP_HEADER(b) && version() == 3)
 			// 	s.widening(LH_I(b));
 			LockPtr<States> rtnv(new States(1));
@@ -135,6 +135,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 	}
 	else
 	{	// without multithreading
+	 	DBGG("\t" << chosen_smt_t::name() << "(" << ss.count() << " states)")
 		for(States::Iter si(ss.states()); si; si++)
 		{	// SMT call
 			chosen_smt_t smt(flags);

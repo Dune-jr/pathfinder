@@ -8,6 +8,7 @@
 #include <elm/util/Option.h>
 #include "constant.h"
 #include "constant_variables_core.h"
+#include "var_collector.h"
 
 using otawa::Edge;
 using elm::genstruct::SLList;
@@ -97,6 +98,7 @@ public:
 	virtual Option<Constant> involvesStackBelow(const Constant& stack_limit) const = 0;
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
 	virtual const Operand* involvesMemory() const = 0;
+	virtual void collectTops(VarCollector& vc) const = 0;
 	virtual Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const = 0;
 	virtual void markUsedRegisters(BitVector &uses) const = 0;
 	virtual bool isComplete() const = 0;
@@ -114,7 +116,7 @@ public:
 	virtual bool operator==(const Operand& o) const = 0;
 	virtual bool operator< (const Operand& o) const = 0;
 	
-	virtual inline const bool isAConst() 		 const { return false; }
+	inline const bool isAConst() const { return kind() == CST; }
 	virtual inline const OperandConst& toConst() const { ASSERTP(false, "not an OperandConst: " << *this << " (" << kind() << ")"); }
 	virtual inline const Constant& toConstant()  const { ASSERTP(false, "not a Constant: " 		<< *this << " (" << kind() << ")"); }
 	virtual inline const OperandVar& toVar() 	 const { ASSERTP(false, "not an OperandVar: " 	<< *this << " (" << kind() << ")"); }
@@ -169,6 +171,7 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	const Operand* involvesMemory() const;
+	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
@@ -182,7 +185,6 @@ public:
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return CST; }
-	virtual inline const bool isAConst() const { return true; }
 	inline operator Constant() const { return _value; }
 	OperandConst& operator=(const OperandConst& opd);
 	inline bool operator==(const Operand& o) const;
@@ -217,6 +219,7 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	const Operand* involvesMemory() const;
+	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
@@ -259,6 +262,7 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	const Operand* involvesMemory() const;
+	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
@@ -290,20 +294,21 @@ public:
 	// OperandTop();
 	OperandTop(int id);
 	OperandTop(const OperandTop& opd);
+	OperandTop(const OperandTop& opd, int offset);
 	
 	inline bool isUnidentified() const { return id == -1; } // blank Top
 	inline bool isIdentified() const { return !isUnidentified(); }
 	inline int getId() const { return id; } // shouldn't be used
 	inline void scale(int offset) { id += offset; } // for internal use by VarMaker
 	
-	// Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
-	// int involvesOperand(const Operand& opd) const;
 	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	const Operand* involvesMemory() const;
+	// TODO!!! check why id>length sometimes
+	inline void collectTops(VarCollector& vc) const { vc.collect(id); }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
@@ -346,6 +351,7 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const { return none; }
 	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
 	const Operand* involvesMemory() const { return NULL; }
+	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { return (this == opd) ? some(opd_modifier) : none; }
 	Option<Constant> evalConstantOperand() const { return none; }
 	Option<const Operand*> simplify(DAG& dag) const { return none; }
@@ -397,6 +403,7 @@ public:
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	const Operand* involvesMemory() const;
+	inline void collectTops(VarCollector& vc) const { opd1->collectTops(vc); if(isBinary()) opd2->collectTops(vc); }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!

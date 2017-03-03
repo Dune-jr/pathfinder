@@ -17,23 +17,23 @@ using namespace otawa::sem;
  *
  * @param seminsts  	 The semantic instruction to parse
  * @param last_condition If we are in a conditional segment, the sem inst corresponding to the conditional instruction, NOP otherwise
- * @return 	0 by default, 1 if memory was wiped
+ * @return 	0 by default, 1 if memory needs to be wiped
  */
-int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& last_condition)
+int Analysis::State::processSemInst2(SemanticParser& semp)
 {
-	const t::int16 &a = inst.a(), &b = inst.b(), &d = inst.d();
-	const t::int32 &cst = inst.cst();
-	const t::int16 &reg = inst.reg(), &addr = inst.addr();
-	const t::uint16 op = inst.op;
-	const bool in_conditional_segment = (last_condition.op != NOP);
+	const t::int16 &a = semp.inst().a(), &b = semp.inst().b(), &d = semp.inst().d();
+	const t::int32 &cst = semp.inst().cst();
+	const t::int16 &reg = semp.inst().reg(), &addr = semp.inst().addr();
+	const t::uint16 op = semp.inst().op;
+	const bool in_conditional_segment = (semp.lastCond().op != NOP);
 
 	// parse conservatively conditional segments of the BB: set top to everything that is written there
 	if(in_conditional_segment && (op != IF && op != CONT && op != BRANCH))
 	{	// Instruction is within the conditional segment of BB 
 		if(affectsRegister(op)) // affects the register d
-			scratch(d);
+			semp.scratch(d);
 		if(affectsMemory(op)) // affects memory at addr
-			return store(OperandVar(addr), vm->new_top());
+			return store(OperandVar(addr), semp.new_top());
 		return 0;
 	}
 	// maintain predicates
@@ -49,7 +49,7 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 	}
 	// set proper labels (will be removed by scratch if necessary)
 	if(! in_conditional_segment) // if we are in sequential segment of BB
-		updateLabels(inst);
+		updateLabels(semp.inst());
 	
 	switch(op)
 	{
@@ -59,12 +59,12 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 			break;
 		case IF:
 		{
-			const OperandVar sr = OperandVar(last_condition.sr());
+			const OperandVar sr = OperandVar(semp.lastCond().sr());
 			const Operand& opd = lvars[sr] ? *lvars[sr] : sr;
 			if(opd.kind() == ARITH && opd.toArith().opr() == ARITHOPR_CMP)
 			{
 				Path labels; // empty // TODO
-				Predicate p = getConditionalPredicate(last_condition.cond(), opd.toArith().left(), opd.toArith().right(), true);
+				Predicate p = getConditionalPredicate(semp.lastCond().cond(), opd.toArith().left(), opd.toArith().right(), true);
 				generated_preds += LabelledPredicate(p, labels);
 				DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
 			}
@@ -72,12 +72,12 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 		}
 		case CONT:
 		{
-			const OperandVar sr = OperandVar(last_condition.sr());
+			const OperandVar sr = OperandVar(semp.lastCond().sr());
 			const Operand& opd = lvars[sr] ? *lvars[sr] : sr;
 			if(opd.kind() == ARITH && opd.toArith().opr() == ARITHOPR_CMP)
 			{
 				Path labels; // empty // TODO
-				Predicate p = getConditionalPredicate(last_condition.cond(), opd.toArith().left(), opd.toArith().right(), false); // false because we need to invert condition (else branch)
+				Predicate p = getConditionalPredicate(semp.lastCond().cond(), opd.toArith().left(), opd.toArith().right(), false); // false because we need to invert condition (else branch)
 				generated_preds += LabelledPredicate(p, labels);
 				DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
 			}
@@ -89,7 +89,7 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 			if(lvars.isConst(addr))
 			{
 				Constant c = lvars(addr).toConstant();
-				if(Option<Constant> v = getConstantValueOfReadOnlyMemCell(OperandMem(c), inst.type()))
+				if(Option<Constant> v = getConstantValueOfReadOnlyMemCell(OperandMem(c), semp.inst().type()))
 				{
 					DBG(color::IBlu() << "  R-O memory cell " << OperandMem(c) << " simplified to " << *v)
 					set(reg, dag->cst(*v));
@@ -106,7 +106,7 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 			else
 			{
 				DBG(color::IYel() << "  Load address is unknown: " << OperandVar(addr) << " = " << lvars(addr))
-				scratch(reg);
+				semp.scratch(reg);
 			}
 			break;
 		case STORE:	// MEM_type(addr) <- reg
@@ -118,7 +118,7 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 			set(d, dag->cst(cst));
 			break;
 		case SETP:
-			scratch(d);
+			semp.scratch(d);
 			break;
 		case CMPU:
 			UNTESTED_CODE("unsigned variant")
@@ -137,7 +137,7 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 			else
 			{
 				DBG(color::IYel() << "  SHL with unknown factor!")
-				scratch(d);
+				semp.scratch(d);
 			}
 			break;
 		case ASR:
@@ -152,7 +152,7 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 			else
 			{
 				DBG(color::IYel() << "  SHL with unknown factor!")
-				scratch(d);
+				semp.scratch(d);
 			}
 			break;
 		case NEG:
@@ -168,7 +168,7 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 				&& (bv = lvars(b).toConst().evalConstantOperand()) )
 				set(d, dag->cst(op == OR ? (*av | *bv) : (*av ^ *bv)));
 			else
-				scratch(d);
+				semp.scratch(d);
 			break;
 		}
 		case AND: // d <- a & b
@@ -185,7 +185,7 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 				if(cstv < 0)
 				{
 					DBG(color::IYel() << "  [Right operand of AND affects MSB]") // Most Significant Bit
-					scratch(d);
+					semp.scratch(d);
 				}
 				else
 				{
@@ -202,11 +202,11 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 						set(d, dag->mod(o, dag->cst(mod_factor)));
 					}
 					else
-						scratch(d);
+						semp.scratch(d);
 				}
 			}
 			else
-				scratch(d);
+				semp.scratch(d);
 			break;
 		}
 		case MULU:
@@ -215,7 +215,7 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 			set(d, Arith::mul(dag, getPtr(a), getPtr(b)));
 			break;
 		case MULH:
-			scratch(d); // TODO! do better, like generating a predicate
+			semp.scratch(d); // TODO! do better, like generating a predicate
 			break;
 		case DIVU:
 			UNTESTED_CODE("unsigned variant")
@@ -243,11 +243,11 @@ int Analysis::State::processSemInst2(const sem::inst& inst, const sem::inst& las
 			DBG(color::BIRed() << "Unknown seminst running!")
 			ASSERT(!UNTESTED_CRITICAL)
 		case SCRATCH:
-			scratch(d);
+			semp.scratch(d);
 			break;
 	}
 	if(dbg_&0x8)
-		ASSERTP(lvars(context->sp).kind() == CST, "SP lost")
+		ASSERTP(lvars(context->sp).kind() != CST || lvars(context->sp).toConstant().isRelativePositive(), "SP lost: " << lvars(context->sp))
 	return 0;
 }
 
@@ -266,21 +266,22 @@ void Analysis::State::setMem(Constant addr, const Operand* expr)
 	mem[addr] = expr;
 }
 
+void Analysis::State::SemanticParser::scratch(const OperandVar& var)
+{
+	s.set(var, new_top(), false);
+	s.lvars.clearLabels(var);
+}
+
 const Operand* Analysis::State::getPtr(t::int32 var_id) const
 {
 	return lvars[var_id] ? lvars[var_id] : dag->var(var_id);
 }
 
-void Analysis::State::scratch(const OperandVar& var)
-{
-	set(var, vm->new_top(), false);
-	lvars.clearLabels(var);
-}
-
 /**
  * @brief      Empties the memory (first step of an access to Top)
+ * @warning    This must always be followed by a call to setMemoryInitPoint
  */
-void Analysis::State::wipeMemory(void)
+void Analysis::State::wipeMemory(VarMaker& vm)
 {
 	DBG(color::IRed() << "  Wiping the memory (" << mem.count() << " items)")
 	mem.clear();
@@ -295,7 +296,7 @@ void Analysis::State::wipeMemory(void)
 				opdtop = topmap.get(opdm, NULL);
 				if(! opdtop)
 				{
-					opdtop = vm->new_top();
+					opdtop = vm.new_top();
 					topmap.put(opdm, opdtop);
 				}
 				if(Option<const Operand*> mb_newopd = lvars[i]->update(*dag, opdm, opdtop))
@@ -309,7 +310,7 @@ void Analysis::State::wipeMemory(void)
 			opdtop = topmap.get(opdm, NULL);
 			if(! opdtop)
 			{
-				opdtop = vm->new_top();
+				opdtop = vm.new_top();
 				topmap.put(opdm, opdtop);
 			}
 			piter.item().updatePred(*dag, opdm, opdtop);
@@ -348,8 +349,7 @@ int Analysis::State::store(OperandVar addr, const Operand* opd)
 	else
 	{
 		DBG(color::IYel() << "  Store address is unknown: " << addr << " = " << lvars(addr))
-		wipeMemory(); // access to Top
-		return 1;
+		return 1; // Memory will be wiped
 	}
 }
 

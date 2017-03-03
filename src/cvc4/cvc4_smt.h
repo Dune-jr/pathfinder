@@ -19,6 +19,7 @@ class CVC4SMT : public SMT
 {
 public:
 	CVC4SMT(int flags);
+	static inline elm::String name() { return "cvc4"; }
 	
 private:
 	CVC4::ExprManager em;
@@ -39,6 +40,7 @@ private:
 	inline Expr getMemExpr(Constant mem_id)
 		{ return variables.getExpr(em, OperandMem(mem_id), VARIABLE_PREFIX); }
 	Kind_t getKind(const Predicate& p) const;
+
 };
 
 #endif

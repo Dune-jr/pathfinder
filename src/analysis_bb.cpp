@@ -19,7 +19,7 @@ using namespace otawa::sem;
  * @param[in]  bb             The BasicBlock to parse
  * @param[in]  version_flags  The version flags
  */
-void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
+void Analysis::State::processBB(const BasicBlock *bb, VarMaker& vm, int version_flags)
 {
 	DBG("Processing " << (otawa::Block*)bb << " (" << bb->address() << ") of path " << getPathString())
 	SLList<LabelledPredicate> generated_preds_before_condition;
@@ -37,6 +37,7 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 		
 		sem::inst last_condition(NOP);
 		PathIter seminsts;
+		SemanticParser semp(*this, vm);
 		// parse semantical instructions
 		for(seminsts.start(*insts); seminsts; seminsts++)
 		{
@@ -57,9 +58,11 @@ void Analysis::State::processBB(const BasicBlock *bb, int version_flags)
 			}
 			if(version_flags & IS_V1)
 				processSemInst1(seminsts, last_condition);
-			else
-				if(processSemInst2(seminsts, last_condition) != 0)
-					setMemoryInitPoint(bb, inst_id);
+			else if(semp.process(seminsts) != 0)
+			{
+				wipeMemory(vm);
+				setMemoryInitPoint(bb, inst_id);
+			}
 
 		}
 		// all temporary variables are freed at the end of any assembly instruction, so invalidate them

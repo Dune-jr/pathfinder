@@ -290,11 +290,10 @@ const Operand* OperandMem::replaceConstants(DAG& dag, const ConstantVariablesCor
 	{ return this; }
  
 // Operands: Top
-// int OperandTop::next_id = 0;
 // OperandTop::OperandTop() : id(next_id++) { }
 OperandTop::OperandTop(int id) : id(id) { }
 OperandTop::OperandTop(const OperandTop& opd) : id(opd.id) { }
-// Operand* OperandTop::copy() const { return new OperandTop(id); }
+OperandTop::OperandTop(const OperandTop& opd, int offset) : id(opd.id + offset) { }
 io::Output& OperandTop::print(io::Output& out) const
 {
 	if(id == -1)

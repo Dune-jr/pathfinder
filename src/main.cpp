@@ -10,13 +10,8 @@
 #include "debug.h"
 #include "oracle.h"
 
-// using namespace elm;
 using namespace otawa;
 using namespace option;
-
-// void testPredicates();
-// void testOperands();
-// void testSimplify();	
 
 int dbg_flags = 0b00000000; // global analysis flags for debugging
 int dbg_verbose = 0; // global verbose level (higher = less verbose)
@@ -24,7 +19,7 @@ int dbg_ = 0;
 	
 class Pathfinder: public Application {
 public:
-	Pathfinder(void): Application("pathfinder", Version(1, 0, 0), "An infeasible path detection program", "J. Ruiz"),
+	Pathfinder(void): Application("Pathfinder", Version(1, 0, 0), "An infeasible path detection analysis", "J. Ruiz"),
 		opt_s0 			 (SwitchOption::Make(*this).cmd("-V").cmd("--vv").cmd("--s0").cmd("--nosilent").description("run with maximal output")),
 		opt_s1 			 (SwitchOption::Make(*this).cmd("-s").cmd("--s1").description("only display results")),
 		opt_s2	  		 (SwitchOption::Make(*this).cmd("-S").cmd("--s2").cmd("--fullsilent").description("run with zero output")),
@@ -48,6 +43,8 @@ public:
 		opt_sp_critical  (SwitchOption::Make(*this).cmd("--sp-critical").description("Abort analysis on loss of SP info")),
 		opt_nounminimized(SwitchOption::Make(*this).cmd("--no-unminimized-paths").description("do not output infeasible paths for which minimization job failed")),
 		opt_allownonlinearoperators(SwitchOption::Make(*this).cmd("--allow-nonlinear-operators").description("assert linear predicates that use *,/,mod in the SMT solver (unsafe)")),
+		opt_nocleantops  (SwitchOption::Make(*this).cmd("--no-clean-tops").description("do not clean introduced variables Tk (unstable as of early 2017)")),
+		opt_dontassumeidsp(SwitchOption::Make(*this).cmd("--dasp").cmd("--dont-assume-id-sp").description("do not assume sp = SP0 at the end of a function")),
 		opt_slice		 (SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
 		opt_dumpoptions	 (SwitchOption::Make(*this).cmd("--dump-options").cmd("--do").description("print the selected options for the analysis")),
 		// opt_virtualize	 (ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
@@ -84,55 +81,41 @@ private:
 	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats;
 	ValueOption<bool> opt_output;
 	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck,
-			     opt_no_initial_data, opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_slice, opt_dumpoptions;
+			     opt_no_initial_data, opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_nocleantops, opt_dontassumeidsp, opt_slice, opt_dumpoptions;
 	ValueOption<int> opt_merge, opt_multithreading, opt_x;
 
 	void setFlags(int& analysis_flags, int& merge_thresold, int& nb_cores) {
-		dbg_flags = analysis_flags = 0;	
-		if(opt_deterministic)
-			dbg_flags |= DBG_DETERMINISTIC;
-		if(! opt_noipresults)
-			dbg_flags |= DBG_RESULT_IPS;
-		if(! opt_noformattedflowinfo)
-			dbg_flags |= DBG_FORMAT_FLOWINFO;
-		if(opt_detailedstats)
-			dbg_flags |= DBG_DETAILED_STATS;
-
-		if(opt_slice)
-			analysis_flags |= Analysis::SLICE_CFG;
-		if(opt_progress)
-			analysis_flags |= Analysis::SHOW_PROGRESS;
-		if(! opt_nolinearcheck)
-			analysis_flags |= Analysis::SMT_CHECK_LINEAR;
-		if(! opt_nounminimized)
-			analysis_flags |= Analysis::UNMINIMIZED_PATHS;
-		if(opt_allownonlinearoperators)
-			analysis_flags |= Analysis::ALLOW_NONLINEAR_OPRS;
-		if(opt_dry)
-			analysis_flags |= Analysis::DRY_RUN;
-		if(opt_v1)
-			analysis_flags |= Analysis::IS_V1;
-		if(opt_v2)
-			analysis_flags |= Analysis::IS_V2;
-		if(opt_v3)
-			analysis_flags |= Analysis::IS_V3;
-		if(opt_v1 || opt_v2)
-			analysis_flags |= Analysis::VIRTUALIZE_CFG;
-		if(! opt_no_initial_data)
-			analysis_flags |= Analysis::USE_INITIAL_DATA;
-		if(opt_sp_critical)
-			analysis_flags |= Analysis::SP_CRITICAL;
-		if(true)
-			analysis_flags |= Analysis::POST_PROCESSING;
-		if(opt_merge || opt_automerge)
-			analysis_flags |= Analysis::MERGE;
 		nb_cores = getNumberofCores();
-		if(nb_cores > 1)
-			analysis_flags |= Analysis::MULTITHREADING;
+		merge_thresold = getMergeThresold();
+		dbg_flags = 
+			  (opt_deterministic 		? DBG_DETERMINISTIC : 0)
+			| (opt_deterministic 		? DBG_DETERMINISTIC : 0)
+			| (!opt_noipresults 		? DBG_RESULT_IPS : 0)
+			| (!opt_noformattedflowinfo ? DBG_FORMAT_FLOWINFO : 0)
+			| (opt_detailedstats 		? DBG_DETAILED_STATS : 0)
+		;
+		analysis_flags =
+			  (opt_slice					? Analysis::SLICE_CFG : 0)
+			| (opt_progress					? Analysis::SHOW_PROGRESS : 0)
+			| (!opt_nolinearcheck			? Analysis::SMT_CHECK_LINEAR : 0)
+			| (!opt_nounminimized			? Analysis::UNMINIMIZED_PATHS : 0)
+			| (opt_allownonlinearoperators	? Analysis::ALLOW_NONLINEAR_OPRS : 0)
+			| (!opt_nocleantops				? Analysis::CLEAN_TOPS : 0)
+			| (!opt_dontassumeidsp			? Analysis::ASSUME_IDENTICAL_SP : 0)
+			| (opt_dry						? Analysis::DRY_RUN : 0)
+			| (opt_v1						? Analysis::IS_V1 : 0)
+			| (opt_v2						? Analysis::IS_V2 : 0)
+			| (opt_v3						? Analysis::IS_V3 : 0)
+			| ((opt_v1||opt_v2)				? Analysis::VIRTUALIZE_CFG : 0)
+			| (!opt_no_initial_data			? Analysis::USE_INITIAL_DATA : 0)
+			| (opt_sp_critical				? Analysis::SP_CRITICAL : 0)
+			| (nb_cores > 1					? Analysis::MULTITHREADING : 0)
+			| ((opt_merge || opt_automerge)	? Analysis::MERGE : 0)
+			| (true 						? Analysis::POST_PROCESSING : 0)
+		;
 		if(opt_x)
 			dbg_ = opt_x.get();
-		merge_thresold = getMergeThresold();
-		ASSERTP(opt_v1 + opt_v2 + opt_v3 == 1, opt_v1 + opt_v2 + opt_v3 << " analyses selected, exactly 1 required.")
+		ASSERTP(opt_v1 + opt_v2 + opt_v3 == 1, "One analysis must be selected (-1, -2 or -3).")
 	}
 	void initializeLoggingOptions() {
 		// high verbose numbers are more silent. TODO: that is counterintuitive
@@ -190,7 +173,8 @@ private:
 		DBGOPT("SLICE"							, analysis_flags&Analysis::SLICE_CFG, false)
 		DBGOPT("DISPLAY PROGRESS"				, analysis_flags&Analysis::SHOW_PROGRESS, false)
 		DBGOPT("CHECK LINEARITY BEFORE SMT CALL", analysis_flags&Analysis::SMT_CHECK_LINEAR, true)
-		DBGOPT("ALLOW NONLINEAR OPEATORS (unsafe)", analysis_flags&Analysis::ALLOW_NONLINEAR_OPRS, false)
+		DBGOPT("ALLOW NONLINEAR OPERATORS (unsafe)", analysis_flags&Analysis::ALLOW_NONLINEAR_OPRS, false)
+		DBGOPT("CLEAN TOPS" 					, analysis_flags&Analysis::CLEAN_TOPS, true)
 		DBGOPT("KEEP UNMINIMIZED PATHS"			, analysis_flags&Analysis::UNMINIMIZED_PATHS, true)
 		DBGOPT("USE INITIAL DATA"				, analysis_flags&Analysis::USE_INITIAL_DATA, true)
 		DBGOPT("RUN DRY (NO SMT SOLVER)"		, analysis_flags&Analysis::DRY_RUN, false)

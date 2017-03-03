@@ -12,6 +12,7 @@ class Z3SMT : public SMT
 {
 public:
     Z3SMT(int flags);
+    static inline elm::String name() { return "z3"; }
     
 private:
     z3::context c;

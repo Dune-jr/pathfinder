@@ -55,7 +55,7 @@ public:
 	bool hasAnEdge() const;
 	Edge* firstEdge() const;
 	Edge* lastEdge() const;
-	Block* lastBlock() const;
+	Option<Block*> lastBlock() const;
 	int countEdges() const;
 	SLList<Edge*> toOrderedPath() const;
 	elm::String toString(bool colored = true) const;

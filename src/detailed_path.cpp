@@ -307,19 +307,18 @@ Edge* DetailedPath::lastEdge() const
  *
  * @return     The Block found
  */
-Block* DetailedPath::lastBlock() const
+Option<Block*> DetailedPath::lastBlock() const
 {
-	Block* rtn = NULL;
+	Option<Block*> rtn = none;
 	for(SLList<FlowInfo>::Iterator iter(_path); iter; iter++)
 	{
 		if(iter->isEdgeKind())
-			rtn = iter->getEdge()->target();
+			rtn = some(iter->getEdge()->target());
 		if(iter->isBasicBlockKind())
-			rtn = iter->getBasicBlock();
+			rtn = some(iter->getBasicBlock());
 		if(iter->isSynthBlockKind())
-			rtn = iter->getSynthBlock();
+			rtn = some(iter->getSynthBlock());
 	}
-	ASSERTP(rtn != NULL, "lastBlock() called on empty DetailedPath: " << *this)
 	return rtn;
 }
 

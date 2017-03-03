@@ -4,6 +4,7 @@
 // this is minimal and a bit unoptimized
 const Operand* Arith::add(DAG* dag, const Operand* a, const Operand* b)
 {
+	if(a == Top || b == Top) return Top;
 	Option<Constant> av = a->evalConstantOperand(), bv = b->evalConstantOperand();
 	if(av && bv)
 		return dag->cst(*av+*bv);
@@ -44,7 +45,9 @@ const Operand* Arith::add(DAG* dag, Constant x, const Operand* y)
 
 const Operand* Arith::sub(DAG* dag, const Operand* a, const Operand* b)
 {
-	Option<Constant> av = a->evalConstantOperand(), bv = b->evalConstantOperand();
+	if(a == Top || b == Top) return Top;
+	Option<Constant> av = a->evalConstantOperand();
+	Option<Constant> bv = b->evalConstantOperand();
 	if(av && bv)
 		return dag->cst(*av-*bv);
 	else if(!av && !bv)
@@ -53,6 +56,8 @@ const Operand* Arith::sub(DAG* dag, const Operand* a, const Operand* b)
 		return Arith::sub(dag, *av, b);
 	else if(bv) // a - k = a+ (-k)
 		return Arith::add(dag, -*bv, a);
+	else if(a == b)
+		return dag->cst(0);
 	else
 		return dag->sub(a, b);
 }
@@ -86,6 +91,7 @@ const Operand* Arith::sub(DAG* dag, Constant x, const Operand* y)
 
 const Operand* Arith::mul(DAG* dag, const Operand* a, const Operand* b)
 {
+	if(a == Top || b == Top) return Top;
 	if(Option<Constant> av = a->evalConstantOperand())
 		return Arith::mul(dag, b, *av);
 	else if(Option<Constant> bv = b->evalConstantOperand())
@@ -166,6 +172,7 @@ const Operand* Arith::divmul(DAG* dag, const Operand* x, Constant k, Constant c)
  */
 const Operand* Arith::div(DAG* dag, const Operand* a, const Operand* b)
 {
+	if(a == Top || b == Top) return Top;
 	if(Option<Constant> bv = b->evalConstantOperand())
 	{
 		if(Option<Constant> av = a->evalConstantOperand())

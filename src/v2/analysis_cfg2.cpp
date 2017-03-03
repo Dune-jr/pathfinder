@@ -8,6 +8,7 @@
 #include "../analysis_state.h"
 #include "../progress.h"
 #include "../assert_predicate.h"
+#include "../struct/var_maker.h"
 
 using namespace elm::io;
 
@@ -60,6 +61,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 		{
 			/* s ← |_|e∈pred s_e */
 			LockPtr<States> s = join(pred);
+
 			/* for e ∈ pred */
 			for(Vector<Edge*>::Iter e(pred); e; e++)
 				/* s_e ← nil */
@@ -103,7 +105,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 					/* ... */
 					case ACCEL:
 						LH_STATUS(b) = LEAVE;
-						s->one().widening(loopIterOpd(b));
+						s->widening(loopIterOpd(b));
 						break;
 					/* status_b ← ENTER if status_b = LEAVE */
 					case LEAVE:
@@ -119,7 +121,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 				/* s_e ← I*[e](s) */
 				EDGE_S(e) = Analysis::I(e, s);
 				for(LoopExitIterator l(*e); l; l++)
-					EDGE_S(e)->appliedTo(LH_S0(*l));
+					EDGE_S(e)->appliedTo(LH_S0(*l), *vm);
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 				if(inD_ip(e))
 					ip_stats += ipcheck(*EDGE_S.ref(e), infeasible_paths);
@@ -129,14 +131,14 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 		}
 	}
 /* end */
+	DBG(cfg->name() << ".vm = " << *vm)
 	DBGG(IPur() << "\"" << cfg->name() << "\"==>")
-	// vm->clean(*CFG_S(cfg));
+	CFG_S(cfg)->minimize(*vm, flags&CLEAN_TOPS); // reduces the VarMaker to the minimum
 	CFG_VARS(cfg) = LockPtr<VarMaker>(vm);
 	ASSERTP(elm::forall(States::Iter(**CFG_S(cfg)), SPCanEqual(), static_cast<const OperandConst*>(dag->cst(SP))),
 		context.sp << " is definitely not SP+0. " << Dim() << "(" << cfg->name() << ")" << RCol());
-	// SPEquals eq;
-	// for(States::Iter i(**CFG_S(cfg)); i; i++)
-	// 	ASSERTP(eq(*i, dag->cst(SP)), *(*i).getLocalVariables()[(*i).getSP()] << "=/=" << " SP+0" << " ; " << i->dumpEverything())
+	if(flags&ASSUME_IDENTICAL_SP)
+		CFG_S(cfg)->resetSP();
 }
 
 /**
@@ -150,7 +152,7 @@ void Analysis2::I(Block* b, LockPtr<States> s)
 	{
 		DBGG(Bold() << "-\tI(b=" << b << ") " << NoBold() << IYel() << "x" << s->count() << RCol() << printFixPointStatus(b))
 		for(States::Iter si(s->states()); si; si++)
-			(*s)[si].processBB(b->toBasic(), flags);
+			(*s)[si].processBB(b->toBasic(), *vm, flags);
 	}
 	else if(b->isEntry())
 		s->onCall((*getCaller(b->cfg()))->toSynth());
@@ -161,11 +163,12 @@ void Analysis2::I(Block* b, LockPtr<States> s)
 			processCFG(called_cfg, false);
 
 		// merging tops
-		VarMaker called_vm_copy(**CFG_VARS(called_cfg));
-		vm->transfer(called_vm_copy); // vm receives more tops: we load the responsibility for all the pointers and clear the vector without deleting OpTops
+		DBG("Importing " << CFG_VARS(called_cfg)->length() << " tops... ")
+		vm->import((const VarMaker&)**CFG_VARS(called_cfg));
+
 		// working on the paths
 		s->onCall(b->toSynth());
-		s->apply(**CFG_S(called_cfg), true);
+		s->apply(**CFG_S(called_cfg), *vm, true);
 		s->onReturn(b->toSynth());
 	}
 	else if(b->isExit()) // main

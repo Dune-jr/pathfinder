@@ -14,6 +14,7 @@
 #include "struct/constant_variables.h"
 #include "struct/labelled_predicate.h"
 #include "struct/local_variables.h"
+#include "struct/var_maker.h"
 
 using namespace otawa;
 using otawa::sem::PathIter;
@@ -28,7 +29,6 @@ private:
 	const context_t* context;
 	// v2
 	DAG* dag;
-	VarMaker* vm;
 	LocalVariables lvars;
 	mem_t mem;
 	struct memid_t {
@@ -49,11 +49,12 @@ private:
 	SLList<LabelledPredicate> generated_preds_taken; // if there is a conditional, the taken preds will be saved here and the not taken preds will stay in generated_preds
 		// that have been updated and need to have their labels list updated (add the next edge to the LabelledPreds struct)
 	class PredIterator;
+	class SemanticParser;
 
 public:
 	explicit State(bool bottom = false); // false: create an invalid state, true: create a bottom state
 	// State(Block* entryb, const context_t& context, bool init = true);
-	State(Edge* entry_edge, const context_t& context, DAG* dag, VarMaker* vm, bool init);
+	State(Edge* entry_edge, const context_t& context, DAG* dag, bool init);
 	State(const State& s);
 	inline const DetailedPath& getDetailedPath() const { return path; }
 	inline Edge* lastEdge() const { return path.lastEdge(); }
@@ -78,19 +79,21 @@ public:
 	template <class C> Vector<DetailedPath> stateListToPathVector(const C& sl) const;
 	elm::String dumpEverything() const;
 	void initializeWithDFA();
-	void merge(const States& ss, Block* b);
-	void apply(const State& s, bool local_sp);
+	void merge(const States& ss, Block* b, VarMaker& vm);
+	void apply(const State& s, VarMaker& vm, bool local_sp);
 	void prepareFixPoint();
 	void widening(const Operand* n);
 	void finalize(const Operand* n, int bound, bool exact);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e);
 	void removeConstantPredicates();
+	void collectTops(VarCollector &bv) const;
+	inline void resetSP() { lvars[context->sp] = dag->cst(SP); }
 
 	// analysis_bb.cpp
-	void processBB(const BasicBlock *bb, int version_flags);
+	void processBB(const BasicBlock *bb, VarMaker& vm, int version_flags);
 	void processSemInst1(const otawa::sem::inst& inst, const sem::inst& last_condition);
-	int  processSemInst2(const otawa::sem::inst& inst, const sem::inst& last_condition);
+	int  processSemInst2(SemanticParser& semp);
 	int invalidateStackBelow(const Constant& stack_limit);
 
 	inline void dumpPredicates() const { for(PredIterator iter(*this); iter; iter++) DBG(*iter); }
@@ -109,8 +112,7 @@ private:
 	// analysis_bb2.cpp
 	void set(const OperandVar& var, const Operand* expr, bool set_updated = true);
 	void setMem(Constant addr, const Operand* expr);
-	inline void scratch(const OperandVar& var);
-	void wipeMemory(void);
+	void wipeMemory(VarMaker& vm);
 	void setMemoryInitPoint(const otawa::Block* b, short id);
 	inline const Operand* getPtr(t::int32 var_id) const;
 	void updateLabels(const sem::inst& inst);
@@ -150,6 +152,29 @@ private:
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv1, const OperandVar& opdv2) const { return constants.getLabels(opdv1, opdv2); }
 #endif
 
+	class SemanticParser
+	{	// TODO: move more functions there, make it act like an Iterator, and make a SemanticParser for v1 too
+	public:
+		SemanticParser(State& s, VarMaker& vm) : s(s), vm(vm), last_condition(sem::NOP) { }
+		int process(const sem::PathIter& seminsts) {
+			_inst = *seminsts;
+			if(seminsts.isCond())
+				last_condition = _inst;
+			return s.processSemInst2(*this);
+		}
+		int process();
+		void scratch(const OperandVar& var);
+		inline const sem::inst& lastCond() const { return last_condition; }
+		inline const sem::inst& inst() const { return _inst; }
+		inline const Operand* new_top() const { return vm.new_top(); }
+
+	private:
+		State& s;
+		VarMaker& vm;
+		sem::inst last_condition;
+		sem::inst _inst;
+	};
+
 	// PredIterator class
 	class PredIterator: public PreIterator<PredIterator, const LabelledPredicate&> {
 		enum pred_iterator_state_t
@@ -177,23 +202,17 @@ private:
 			if(state == LABELLED_PREDS) lp_iter++;
 			updateState();
 		}
-
 		inline const Predicate& pred(void) const { return item().pred(); }
 		inline const Path& labels(void) const { return item().labels(); }
-
 		void updateState() {
 			if(state == GENERATED_PREDS && !gp_iter) { nextState(); updateState(); }
 			if(state == LABELLED_PREDS && !lp_iter) { nextState(); updateState(); }
 		}
-
 	private:
 		inline void nextState() {
-			if(state == GENERATED_PREDS)
-				state = LABELLED_PREDS;
-			else if(state == LABELLED_PREDS)
-				state = DONE;
+			if(state == GENERATED_PREDS) state = LABELLED_PREDS;
+			else if(state == LABELLED_PREDS) state = DONE;
 		}
-
 		friend class Analysis::State;
 		pred_iterator_state_t state;
 		SLList<LabelledPredicate>::Iterator gp_iter; // Generated predicates (local) iterator 
@@ -201,8 +220,7 @@ private:
 	}; // PredIterator class
 	
 	class MutablePredIterator: public PreIterator<MutablePredIterator, LabelledPredicate&> {
-		enum pred_iterator_state_t
-		{
+		enum pred_iterator_state_t {
 			GENERATED_PREDS, // must have !gp_iter.ended()
 			LABELLED_PREDS, // must have gp_iter.ended() && !lp_iter.ended()
 			DONE, // must have gp_iter.ended() && lp_iter.ended()
@@ -250,31 +268,35 @@ public:
 	inline States(const Vector<Analysis::State>& state_vector) : s(state_vector) { }
 	inline States(const States& ss) : s(ss.s) { }
 	// return the unique state, or bottom if none. it is an error to call this when s.count() > 1
-	inline State one() const { ASSERTP(s.count() <= 1, "multiple states available"); return s ? s.first() : bottom; }
+	inline const State& one() const { ASSERT(s.count() <= 1); return s ? s.first() : bottom; }
+	// inline State& one() { ASSERT(s.count() <= 1); return s ? s.first() : bottom; }
 	inline bool isEmpty() const { return s.isEmpty(); }
 	inline int count() const { return s.count(); }
 	inline const State& first() const { return s.first(); }
 	inline const Vector<State>& states() const { return s; }
 	inline Vector<State>& states() { return s; }
 	inline void push(const Analysis::State& state) { return s.push(state); }
+	inline void remove(const Iter& i) { s.remove(i); }
 
+	void apply(const States& ss, VarMaker& vm, bool local_sp, bool dbg = true);
+	void appliedTo(const State& s, VarMaker& vm);
+	void minimize(VarMaker& vm, bool clean) const;
+	inline void prepareFixPoint(void) { for(Iter i(this->s); i; i++) s[i].prepareFixPoint(); }
+	inline void widening(const Operand* n) { ASSERT(s.count() <= 1); if(s.count() == 1) s[0].widening(n); } // needs max one state
+	void checkForSatisfiableSP() const;
+
+	inline void resetSP() { for(Iter i(this->s); i; i++) s[i].resetSP(); }
 	inline void onCall(SynthBlock* sb)   { for(Iter i(this->s); i; i++) s[i].onCall(sb); }
 	inline void onReturn(SynthBlock* sb) { for(Iter i(this->s); i; i++) s[i].onReturn(sb); }
 	// inline void onLoopEntry(Block* b)    { for(Iter i(this->s); i; i++) s[i].onLoopEntry(b); }
 	inline void onLoopExit (Block* b)    { for(Iter i(this->s); i; i++) s[i].onLoopExit(b); }
-	inline void onLoopExit (Edge* e) {
+	void onLoopExit (Edge* e) {
 		Block* h = LOOP_EXIT_EDGE(e);
 		for(LoopHeaderIter i(e->source()); i.item() != h; i++) 
 			onLoopExit(*i);
 		onLoopExit(h);
 	}
 
-	void apply(const States& ss, bool local_sp, bool dbg = true);
-	void appliedTo(const State& s);
-	inline void prepareFixPoint(void) { for(Iter i(this->s); i; i++) s[i].prepareFixPoint(); }
-	// inline void widening(const Operand* n)	{ for(Iter i(this->s); i; i++) s[i].widening(n); }
-
-	inline void remove(const Iter& i) { s.remove(i); }
 
 	// inline operator Vector<State>() { return s; }
 	inline State& operator[](int i) { return s[i]; }

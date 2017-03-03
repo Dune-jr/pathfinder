@@ -131,7 +131,7 @@ void Analysis1::I(Block* b, LockPtr<States> s)
 	{
 		DBGG(Bold() << "-\tI(b=" << b << ") " << NoBold() << IYel() << "x" << s->count() << RCol() << printFixPointStatus(b))
 		for(States::Iter si(s->states()); si; si++)
-			(*s)[si].processBB(b->toBasic(), flags);
+			(*s)[si].processBB(b->toBasic(), *vm, flags);
 	}
 	else if(b->isEntry())
 		s->onCall((*getCaller(b->cfg()))->toSynth());

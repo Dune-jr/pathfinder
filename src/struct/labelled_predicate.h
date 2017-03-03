@@ -14,9 +14,13 @@ class LabelledPredicate {
 public:
 	LabelledPredicate(const Predicate& pred, const Set<Edge*>& labels); // TODO!!!
 	LabelledPredicate(const LabelledPredicate& lp);
+	inline Predicate& pred()
+		{ return _pred; }
 	inline const Predicate& pred() const
 		{ return _pred; }
 	inline const Set<Edge*>& labels() const
+		{ return _labels; }
+	inline Set<Edge*>& labels()
 		{ return _labels; }
 	inline bool updatePred(DAG& dag, const Operand* opd, const Operand* expr)
 		{ return _pred.update(dag, opd, expr); }
@@ -24,6 +28,8 @@ public:
 		{ _labels += label; }
 	inline void addLabels(const Set<Edge*>& labels)
 		{ _labels.addAll(labels); }
+	inline void collectTops(VarCollector& vc) const
+		{ _pred.leftOperand().collectTops(vc); _pred.rightOperand().collectTops(vc); }
 
 	LabelledPredicate& operator=(const LabelledPredicate& lp);
 	bool operator==(const LabelledPredicate& lp) const;

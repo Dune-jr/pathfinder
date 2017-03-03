@@ -13,7 +13,7 @@
 const Analysis::State bottom(true);
 
 // bottom=false: it's bot. bottom=true: it's top
-Analysis::State::State(bool bottom) : context(NULL), dag(NULL), vm(NULL), lvars(), mem(53), memid(NULL, 0), bottom(bottom), path()
+Analysis::State::State(bool bottom) : context(NULL), dag(NULL), lvars(), mem(53), memid(NULL, 0), bottom(bottom), path()
 #ifdef V1
 	, constants()
 #endif
@@ -22,8 +22,8 @@ Analysis::State::State(bool bottom) : context(NULL), dag(NULL), vm(NULL), lvars(
 // Analysis::State::State(const context_t& context)
 	// : dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
 // 
-Analysis::State::State(Edge* entry_edge, const context_t& context_, DAG* dag, VarMaker* vm, bool init)
-	: context(&context_), dag(dag), vm(vm), lvars(*dag, context->max_tempvars, context->max_registers)
+Analysis::State::State(Edge* entry_edge, const context_t& context_, DAG* dag, bool init)
+	: context(&context_), dag(dag), lvars(*dag, context->max_tempvars, context->max_registers)
 	, mem(53), memid(NULL, 0), bottom(false), path(entry_edge ? entry_edge->target()->cfg() : NULL)
 #ifdef V1
 	, constants(context->max_tempvars, context->max_registers)
@@ -42,7 +42,7 @@ Analysis::State::State(Edge* entry_edge, const context_t& context_, DAG* dag, Va
 }
 
 Analysis::State::State(const State& s)
-	: context(s.context), dag(s.dag), vm(s.vm), lvars(s.lvars), mem(s.mem), memid(s.memid), bottom(s.bottom), path(s.path),
+	: context(s.context), dag(s.dag), lvars(s.lvars), mem(s.mem), memid(s.memid), bottom(s.bottom), path(s.path),
 #ifdef V1
 	constants(s.constants),
 #endif
@@ -139,12 +139,14 @@ io::Output& Analysis::State::print(io::Output& out) const
  * @brief      This function is *this -> s -> s o *this, state composition. Updates current state. Updates path.
  * @param  s   state to apply
  */
-void Analysis::State::apply(const State& s, bool local_sp)
+#warning we shouldn't use ANY predicate relevant to memory coming from a function that doesn't have initial memory... including in lvars! this is an issue
+void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 {
 	// DBG("f="<<this->dumpEverything() << ",\ng = " << s.dumpEverything())
+	// cout << "f="<<this->labelled_preds << ",\ng = " << s.labelled_preds << endl;
 	Compositor cc(*this, local_sp);
 
-	// merging lvars
+	// applying lvars
 	// this=f, s=g
 	DBG("f = " << *this << ", g = " << s)
 	// goal is lv = g o f
@@ -154,25 +156,27 @@ void Analysis::State::apply(const State& s, bool local_sp)
 		if(s.lvars[i] != NULL) // g[i] was modified
 		{
 			ELM_DBGV(1, "\tf°g(" << *i << ") = " << "f(" << *s.lvars[i] << ") = ")
+			// cout << "\tf°g(" << *i << ") = " << "f(" << *s.lvars[i] << ") = ";
+s.lvars[i]->accept(cc);
 			lv[i] = s.lvars[i]->accept(cc); // needs more info from f...
 			if(dbg_verbose == DBG_VERBOSE_ALL)
-				elm::cout << *lv[i] << endl;
+				cout << *lv[i] << endl;
 		}
 		// else // g[i] is identity
 	}
 	DBG("")
 
-	// merging memory
+	// applying memory
 	// goal is mem = n o m with n = s.mem
 	if(!lvars[context->sp] || !lvars[context->sp]->isConstant() || s.memid.b != NULL)
 	{
 		static CFG* last_fun_warning = NULL;
 		if(s->path.function() != last_fun_warning)
 		{
-			DBGW("can't use mem data from function " << s->path.function())
+			DBGW("can't use mem data from function " << s->path.function() << ", sp is " << lvars(context->sp))
 			last_fun_warning = s->path.function();
 		}
-		wipeMemory();
+		wipeMemory(vm);
 		setMemoryInitPoint(this->path.lastBlock(), 0);
 	}
 	else
@@ -197,6 +201,21 @@ void Analysis::State::apply(const State& s, bool local_sp)
 	}
 	lvars = lv;
 	// DBG("f o g = " << color::IBlu() << this->dumpEverything())
+	
+
+	// be careful about multiplying per negative numbers?
+	// update our predicates
+	for(MutablePredIterator pi(*this); pi; pi++)
+	{
+		// Predicate& p = pi.item().pred();
+		// p.left() = p.left()->accept(cc); 
+	}
+
+	// update their predicates
+	for(PredIterator pi(s); pi; pi++)
+	{
+
+	}
 
 	// merge path
 	this->path.apply(s.getDetailedPath());
@@ -335,7 +354,8 @@ void Analysis::State::widening(const Operand* n)
 
 	for(mem_t::PairIterator iter(mem); iter; iter++)
 	{
-		const Constant addr = (*iter).fst;
+		#warning TODO widening
+		// const Constant addr = (*iter).fst;
 	}
 
 	DBGG(IGre << "done: " << this->dumpEverything())
@@ -355,14 +375,12 @@ void Analysis::State::finalize(const Operand* n, int bound, bool exact)
  *
  * @param cl Collection of States to process (accepts SLList, Vector etc.)
  */
-void Analysis::State::merge(const States& ss, Block* b)
+void Analysis::State::merge(const States& ss, Block* b, VarMaker& vm)
 {
 	ASSERTP(!ss.isEmpty(), "merging an empty list of states..."); // maybe just leave the state empty
 	DBGG("-\tmerging from " << ss.count() << " state(s).")
-	// for(States::Iterator i(ss.states()); i; i++)
-	// 	DBGG(color::IYel() << "merging" << i->dumpEverything())
-	for(States::Iter i(ss); i; i++)
-		ASSERTP(ss.first().lvars[context->sp] == i->lvars[context->sp], "merging different SPs... " << *ss.first().lvars[context->sp] << " =/= " << *i->lvars[context->sp]);
+
+	ss.checkForSatisfiableSP(); // check if there is a problem, like if one state has SP+4, another has SP+8
 
 	// resetting stuff
 	generated_preds.clear();
@@ -439,9 +457,23 @@ void Analysis::State::merge(const States& ss, Block* b)
 	this->path.fromContext(b);
 	if(wipe_memory)
 	{
-		wipeMemory();
-		setMemoryInitPoint(path->lastBlock(), 0);
+		wipeMemory(vm);
+		if(Option<Block*> lb = path->lastBlock())
+			setMemoryInitPoint(*lb, 0);
+		else
+			setMemoryInitPoint(b, 0); // this isn't in the case of an optional merge that wipes memory
 	}
+}
+
+void Analysis::State::collectTops(VarCollector& vc) const
+{
+	for(LocalVariables::Iter i(lvars); i; i++)
+		if(lvars[i])
+			lvars[i]->collectTops(vc);
+	for(mem_t::Iterator i(mem); i; i++)
+		i->collectTops(vc);
+	for(PredIterator pi(*this); pi; pi++)
+		pi->collectTops(vc);
 }
 
 /**
@@ -450,7 +482,7 @@ void Analysis::State::merge(const States& ss, Block* b)
  */
 Analysis::State Analysis::topState(otawa::Block* entry) const
 {
-	return Analysis::State(theOnly(entry->outs()), context, dag, vm, true);
+	return Analysis::State(theOnly(entry->outs()), context, dag, true);
 }
 
 void Analysis::State::initializeWithDFA()
@@ -537,12 +569,14 @@ void Analysis::State::removeConstantPredicates()
 }
 
 // if this has n states and ss has m states, this will explode into a cartesian product of n*m states
-void Analysis::States::apply(const States& ss, bool local_sp, bool dbg)
+void Analysis::States::apply(const States& ss, VarMaker& vm, bool local_sp, bool dbg)
 {
 	int new_cap, m = this->count(), n = ss.count(), new_length = m * n;
 	ASSERTP(n > 0, "TODO: handle empty states in entry")
-	if(dbg) DBG("Applying " << Dim() << ss.first().getDetailedPath().lastEdge()->target()->cfg() << RCol()
-		<< "(" << n << ") to " << m << " states, giving " << new_length << ".")
+	if(dbg && ss.first().getDetailedPath().hasAnEdge())
+		DBGG("Applying " << Dim() << ss.first().getDetailedPath().lastEdge()->target()->cfg() << RCol()
+			<< "(" << n << ") to " << m << " states, giving " << new_length << ".")
+
 	for(new_cap = 1; new_cap < new_length; new_cap *= 2); // adjust to closest higher power of 2
 	if(new_cap > this->s.capacity())
 		this->s.grow(new_cap);
@@ -559,7 +593,7 @@ void Analysis::States::apply(const States& ss, bool local_sp, bool dbg)
 	Iter si(ss.s);	
 	for(int i = 0; i < n; i++, si++)
 		for(int j = 0; j < m; j++)
-			(*this)[i*m + j].apply(*si, local_sp);
+			(*this)[i*m + j].apply(*si, vm, local_sp);
 
 	// this = [x1*i1, x2*i1, x3*i1,  x1*i2, x2*i2, x3*i2, ...
 	ASSERT(s.length() == new_length);
@@ -569,11 +603,11 @@ void Analysis::States::apply(const States& ss, bool local_sp, bool dbg)
 /**
  * @brief apply this to s. local_sp is set to false
  */
-void Analysis::States::appliedTo(const State& s)
+void Analysis::States::appliedTo(const State& s, VarMaker& vm)
 {
 	States x(this->count());
 	x.push(s);
-	x.apply(*this, false, false); // no debug, no local sp
+	x.apply(*this, vm, false, false); // no debug, no local sp
 	*this = x;
 }
 /*void Analysis::States::appliedTo(const States& ss)
@@ -582,3 +616,29 @@ void Analysis::States::appliedTo(const State& s)
 	s.apply(ss, false);
 	*this = s;
 }*/
+
+void Analysis::States::minimize(VarMaker& vm, bool clean) const
+{
+	if(vm.isEmpty())
+		return;
+	VarCollector vc(vm.sizes());
+	for(Vector<State>::Iter i(s); i; i++)
+		s[i].collectTops(vc);
+	DBG("Collecting Tops... " << vc)
+	vm.shrink(vc, clean);
+}
+
+void Analysis::States::checkForSatisfiableSP(void) const
+{
+	Option<Constant> sp = none;
+	for(States::Iter i(*this); i; i++)
+	{
+		if(i->getLocalVariables()[i->getSP()] && i->getLocalVariables()[i->getSP()]->kind() == CST)
+		{
+			Constant x = i->getLocalVariables()[i->getSP()]->toConstant();
+			ASSERTP(!sp || *sp == x, "Merging definitely different SPs: " << *sp << "=/=" << x)
+			sp = x;
+		}
+	}
+}
+
