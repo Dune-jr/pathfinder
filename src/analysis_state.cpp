@@ -3,7 +3,7 @@
  */
 
 #include "arith.h"
-#include "analysis_state.h"
+#include "analysis_states.h"
 #include "compositor.h"
 
 /**
@@ -19,9 +19,6 @@ Analysis::State::State(bool bottom) : context(NULL), dag(NULL), lvars(), mem(53)
 #endif
 	{ }
 
-// Analysis::State::State(const context_t& context)
-	// : dfa_state(context.dfa_state), sp(context.sp), bottom(true), constants(context.max_tempvars, context.max_registers) { }
-// 
 Analysis::State::State(Edge* entry_edge, const context_t& context_, DAG* dag, bool init)
 	: context(&context_), dag(dag), lvars(*dag, context->max_tempvars, context->max_registers)
 	, mem(53), memid(NULL, 0), bottom(false), path(entry_edge ? entry_edge->target()->cfg() : NULL)
@@ -243,7 +240,7 @@ void Analysis::State::prepareFixPoint()
 
 /**
  * @fn void Analysis::State::widening(const Operand* n);
- * @param *this State after one iteration of a prepared fixpoint state (starting from \=/x, x=x0)
+ * @brief this = State after one iteration of a prepared fixpoint state (starting from \=/x, x=x0)
  * @param n loop iterator operand
  */
 void Analysis::State::widening(const Operand* n)
@@ -280,7 +277,7 @@ void Analysis::State::widening(const Operand* n)
 						const t::int32 b = eqstate.delta();
 						// x_n+1 = ax_n + b
 						ASSERTP(a == 1, "lvars[" << *i << "] = " << *lvars[i] << ": treat case != 1: " << a)
-						lvars[i] = Arith::add(dag, dag->var(*i), Arith::mul(dag, n, dag->cst(b)));
+						lvars[i] = Arith::add(*dag, dag->var(*i), Arith::mul(*dag, n, dag->cst(b)));
 						// set a flag that says we have accel'd i
 						steps.set(ii, DONE);
 						fixpoint = false;
@@ -359,6 +356,18 @@ void Analysis::State::widening(const Operand* n)
 	}
 
 	DBGG(IGre << "done: " << this->dumpEverything())
+}
+
+/**
+ * @brief      Sets the memory initial point (what the right operands will refer to).
+ *
+ * @param      b   The block
+ * @param      id  The ID of the instruction
+ */
+void Analysis::State::setMemoryInitPoint(const otawa::Block* b, short id)
+{
+	memid.b = b;
+	memid.id = id;
 }
 
 /**
@@ -567,78 +576,3 @@ void Analysis::State::removeConstantPredicates()
 		else piter++;
 	}
 }
-
-// if this has n states and ss has m states, this will explode into a cartesian product of n*m states
-void Analysis::States::apply(const States& ss, VarMaker& vm, bool local_sp, bool dbg)
-{
-	int new_cap, m = this->count(), n = ss.count(), new_length = m * n;
-	ASSERTP(n > 0, "TODO: handle empty states in entry")
-	if(dbg && ss.first().getDetailedPath().hasAnEdge())
-		DBGG("Applying " << Dim() << ss.first().getDetailedPath().lastEdge()->target()->cfg() << RCol()
-			<< "(" << n << ") to " << m << " states, giving " << new_length << ".")
-
-	for(new_cap = 1; new_cap < new_length; new_cap *= 2); // adjust to closest higher power of 2
-	if(new_cap > this->s.capacity())
-		this->s.grow(new_cap);
-
-	// copy n-1 times 
-	for(int i = 1; i < n; i++)
-		for(int j = 0; j < m; j++)
-			this->push((*this)[j]);
-
-	// ss = [i1, i2, ..., in]
-	// this = [x1, x2, x3,  x1, x2, x3,  ...] (n times)
-
-	// apply n times
-	Iter si(ss.s);	
-	for(int i = 0; i < n; i++, si++)
-		for(int j = 0; j < m; j++)
-			(*this)[i*m + j].apply(*si, vm, local_sp);
-
-	// this = [x1*i1, x2*i1, x3*i1,  x1*i2, x2*i2, x3*i2, ...
-	ASSERT(s.length() == new_length);
-}
-
-// TODO: optimize
-/**
- * @brief apply this to s. local_sp is set to false
- */
-void Analysis::States::appliedTo(const State& s, VarMaker& vm)
-{
-	States x(this->count());
-	x.push(s);
-	x.apply(*this, vm, false, false); // no debug, no local sp
-	*this = x;
-}
-/*void Analysis::States::appliedTo(const States& ss)
-{
-	States s(*this);
-	s.apply(ss, false);
-	*this = s;
-}*/
-
-void Analysis::States::minimize(VarMaker& vm, bool clean) const
-{
-	if(vm.isEmpty())
-		return;
-	VarCollector vc(vm.sizes());
-	for(Vector<State>::Iter i(s); i; i++)
-		s[i].collectTops(vc);
-	DBG("Collecting Tops... " << vc)
-	vm.shrink(vc, clean);
-}
-
-void Analysis::States::checkForSatisfiableSP(void) const
-{
-	Option<Constant> sp = none;
-	for(States::Iter i(*this); i; i++)
-	{
-		if(i->getLocalVariables()[i->getSP()] && i->getLocalVariables()[i->getSP()]->kind() == CST)
-		{
-			Constant x = i->getLocalVariables()[i->getSP()]->toConstant();
-			ASSERTP(!sp || *sp == x, "Merging definitely different SPs: " << *sp << "=/=" << x)
-			sp = x;
-		}
-	}
-}
-

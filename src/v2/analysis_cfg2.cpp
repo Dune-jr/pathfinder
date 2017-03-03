@@ -5,7 +5,7 @@
 #include <elm/data/util.h> // requires elm v2
 #include <otawa/cfg/Edge.h>
 #include "analysis2.h"
-#include "../analysis_state.h"
+#include "../analysis_states.h"
 #include "../progress.h"
 #include "../assert_predicate.h"
 #include "../struct/var_maker.h"

@@ -14,7 +14,7 @@
 #include <otawa/oslice/features.h>
 #include <otawa/prog/WorkSpace.h>
 #include <sys/time.h>
-#include "analysis_state.h"
+#include "analysis_states.h"
 #include "cfg_features.h"
 #include "progress.h"
 #include "smt.h"

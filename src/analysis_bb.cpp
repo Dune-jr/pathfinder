@@ -10,6 +10,7 @@
 #include "struct/operand.h"
 #include "debug.h"
 #include "analysis_state.h"
+#include "v2/analysis_sem2.h"
 
 using namespace otawa::sem;
 
@@ -63,7 +64,6 @@ void Analysis::State::processBB(const BasicBlock *bb, VarMaker& vm, int version_
 				wipeMemory(vm);
 				setMemoryInitPoint(bb, inst_id);
 			}
-
 		}
 		// all temporary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();

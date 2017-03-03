@@ -4,7 +4,7 @@
 
 #include <otawa/cfg/Edge.h>
 #include "analysis1.h"
-#include "../analysis_state.h"
+#include "../analysis_states.h"
 #include "../progress.h"
 
 using namespace elm::io;

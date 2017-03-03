@@ -30,16 +30,16 @@ public:
 		if(g.value().isAbsolute())
 			return &g;
 		else if(g.value().isRelativePositive())
-			return Arith::add(&dag, sp, dag.cst(g.value().val()));
+			return Arith::add(dag, sp, dag.cst(g.value().val()));
 		else
-			return Arith::sub(&dag, dag.cst(g.value().val()), sp);
+			return Arith::sub(dag, dag.cst(g.value().val()), sp);
 	}
 	const Operand* visit(const class OperandVar& g)  { return lvars[g] ? lvars[g] : &g; }
 	const Operand* visit(const class OperandMem& g)  { return mem.exists(g.addr()) ? mem[g.addr()] : &g; }
 	const Operand* visit(const class OperandTop& g)  { return &g; } // this should be handled by allocating a new top, otherwise we'll get problems
 	const Operand* visit(const class OperandIter& g) { crash(); }
 	const Operand* visit(const class OperandArith& g)
-		{ return Arith::autoOp(&dag, g.opr(), g.leftOperand().accept(*this), g.isBinary() ? g.rightOperand().accept(*this) : NULL); }
+		{ return Arith::autoOp(dag, g.opr(), g.leftOperand().accept(*this), g.isBinary() ? g.rightOperand().accept(*this) : NULL); }
 
 private:
 	DAG &dag;

@@ -1,12 +1,6 @@
 #include "var_maker.h"
 
 /**
- * @fn void VarMaker::transfer(VarMaker& vm);
- * @brief      Transfer all tops from a vm to this, and clear the vm
- * @param      vm    The var maker to use
- */
-
-/**
  * @fn const Operand* VarMaker::new_top(void);
  * @brief      Make a new Tk
  * @return     The operand generated
@@ -44,16 +38,22 @@ void VarMaker::import(const VarMaker& vm)
 DBGG(color::Gre() << "VarMaker is now " << *this)
 }
 
-void VarMaker::shrink(const VarCollector& bc, bool clean)
+/**
+ * @brief      Shrinks the VarMaker to a minimal size according a list of used OperandTops
+ *
+ * @param      vc     A variable collector, describing which variables to keep
+ * @param      clean  Whether to delete variables or not
+ */
+void VarMaker::shrink(const VarCollector& vc, bool clean)
 {
 DBGG("VarMaker is " << *this)
 	const int n = tops.length();
-	ASSERTP(bc.size() == n, "BitCollection size is different than tops size: " << bc.size() << "=/=" << n)
+	ASSERTP(vc.size() == n, "BitCollection size is different than tops size: " << vc.size() << "=/=" << n)
 
 	int j = 0;
 	for(int i = 0; i < n; i++)
 	{
-		if(bc[i]) // used variable
+		if(vc[i]) // used variable
 		{
 			tops[j] = tops[i];
 			tops[j]->scale(-i+j);

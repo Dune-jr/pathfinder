@@ -28,8 +28,6 @@ public:
 		array::clear(l, size); // array::clear call is a fast one because it's an array of pointers
 		array::clear(o, size); // all operands to NULL - aka Identity
 		// array::clear(u, size); // all updates to false
-		// for(int i = 0; i < size; i++)
-		// 	o[i] = dag.var(getId(i)); // set every rx to rx, and tx to tx
 	}
 	LocalVariables(const LocalVariables& lv) : size(lv.size), thresold(lv.thresold),
 		o(size ? new const Operand*[size] : NULL), l(size ? new labels_t*[size] : NULL), u() {

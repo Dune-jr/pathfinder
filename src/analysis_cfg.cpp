@@ -9,7 +9,7 @@
  */
 
 #include <otawa/cfg/Edge.h>
-#include "analysis_state.h"
+#include "analysis_states.h"
 #include "cfg_features.h"
 
 using namespace elm::io;
