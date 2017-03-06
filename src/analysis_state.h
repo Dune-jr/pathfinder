@@ -101,6 +101,20 @@ public:
 
 private:
 	// Private methods
+	// DAG stuff
+	inline const Operand *Cst(const Constant& cst)    { return dag->cst(cst); }
+	inline const Operand *Var(const OperandVar& opdv) { return dag->var(opdv); }
+	inline const Operand *Mem(const Constant& cst) 	  { return dag->mem(cst); }
+	inline const Operand *Mem(const OperandMem& opdm) { return dag->mem(opdm); }
+	inline const Operand *neg (const Operand *arg) 						 { return dag->neg(arg); }
+	inline const Operand *add (const Operand *arg1, const Operand *arg2) { return dag->add(arg1, arg2); }
+	inline const Operand *sub (const Operand *arg1, const Operand *arg2) { return dag->sub(arg1, arg2); }
+	inline const Operand *mul (const Operand *arg1, const Operand *arg2) { return dag->mul(arg1, arg2); }
+	inline const Operand *mulh(const Operand *arg1, const Operand *arg2) { return dag->mulh(arg1, arg2); }
+	inline const Operand *div (const Operand *arg1, const Operand *arg2) { return dag->div(arg1, arg2); }
+	inline const Operand *mod (const Operand *arg1, const Operand *arg2) { return dag->mod(arg1, arg2); }
+	inline const Operand *cmp (const Operand *arg1, const Operand *arg2) { return dag->cmp(arg1, arg2); }
+
 	// analysis.cpp
 	void setPredicate(PredIterator &iter, const LabelledPredicate &labelled_predicate);
 	void movePredicateToGenerated(PredIterator &iter);
@@ -129,7 +143,6 @@ private:
 	bool replaceTempVar(const OperandVar& temp_var, const Operand* expr);
 	bool replaceTempVar(const OperandMem& mem, const Operand* expr);
 	bool update(const OperandVar& opd_to_update, const Operand* opd_modifier, Path& labels);
-	Option<OperandConst> findConstantValueOfVar(const OperandVar& var); // changed to a simple lookup to "constants"
 	Option<Constant> findConstantValueOfMemCell(const OperandMem& mem, Path &labels);
 	Option<t::int32> findStackRelativeValueOfVar(const OperandVar& var, Path& labels);
 	bool findValueOfCompVar(const OperandVar& var, Operand const*& opd_left, Operand const*& opd_right, Path& labels);

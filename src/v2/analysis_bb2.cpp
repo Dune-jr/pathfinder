@@ -61,18 +61,6 @@ int Analysis::State::SemanticParser::process(const sem::PathIter& inst)
 		case BRANCH:
 			break;
 		case IF:
-		{
-			const OperandVar sr = OperandVar(lastCond().sr());
-			const Operand& opd = lvars[sr] ? *lvars[sr] : sr;
-			if(opd.kind() == ARITH && opd.toArith().opr() == ARITHOPR_CMP)
-			{
-				Path labels; // empty // TODO
-				Predicate p = s.getConditionalPredicate(lastCond().cond(), opd.toArith().left(), opd.toArith().right(), true);
-				s.generated_preds += LabelledPredicate(p, labels);
-				DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
-			}
-			break;
-		}
 		case CONT:
 		{
 			const OperandVar sr = OperandVar(lastCond().sr());
@@ -80,11 +68,11 @@ int Analysis::State::SemanticParser::process(const sem::PathIter& inst)
 			if(opd.kind() == ARITH && opd.toArith().opr() == ARITHOPR_CMP)
 			{
 				Path labels; // empty // TODO
-				Predicate p = s.getConditionalPredicate(lastCond().cond(), opd.toArith().left(), opd.toArith().right(), false); // false because we need to invert condition (else branch)
+				Predicate p = s.getConditionalPredicate(lastCond().cond(), opd.toArith().left(), opd.toArith().right(), op == IF); // false inverts the condition (else branch)
 				s.generated_preds += LabelledPredicate(p, labels);
 				DBG(color::IPur() << DBG_SEPARATOR << color::IGre() << " + " << p)
 			}
-			break; // we cannot generate a predicate otherwise
+			break;
 		}
 		case LOAD: // reg <- MEM_type(addr)
 			// tip: addr is likely to be t1
@@ -219,17 +207,11 @@ int Analysis::State::SemanticParser::process(const sem::PathIter& inst)
 			set(d, Arith::mul(dag, getPtr(a), getPtr(b)));
 			break;
 		case MULH:
-			scratch(d); // TODO! do better, like generating a predicate
+			scratch(d); // TODO! do better, like generating a predicate?
 			break;
 		case DIVU:
 			UNTESTED_CODE("unsigned variant")
 		case DIV:
-			if(Option<Constant> av = getPtr(a)->evalConstantOperand())
-				if(Option<Constant> bv = getPtr(b)->evalConstantOperand())
-				{
-					set(d, dag.cst(*av / *bv));
-					break;
-				}
 			set(d, Arith::div(dag, getPtr(a), getPtr(b)));
 			break;
 		case MODU:
@@ -340,7 +322,7 @@ void Analysis::State::wipeMemory(VarMaker& vm)
 					topmap.put(opdm, opdtop);
 				}
 				if(Option<const Operand*> mb_newopd = lvars[i]->update(*dag, opdm, opdtop))
-					lvars[i] = *mb_newopd;
+					set(i, *mb_newopd);
 			}
 
 	for(MutablePredIterator piter(*this); piter; piter++)

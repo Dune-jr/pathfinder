@@ -23,8 +23,6 @@
 #include "struct/var_maker.h"
 #include "working_list.h"
 
-typedef VarMaker xwkjcxjk;
-
 using namespace otawa;
 using elm::genstruct::SLList;
 

@@ -542,16 +542,6 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand* opd
 	return rtn;
 }
 
-Option<OperandMem> Analysis::State::getOperandMem(const OperandVar& var, Path& labels)
-{
-	if(Option<OperandConst> val = findConstantValueOfVar(var))
-		return some(OperandMem(*val));
-	if(Option<t::int32> val = findStackRelativeValueOfVar(var, labels))
-		return some(OperandMem(OperandConst(SP+*val)));
-		//return some(OperandMem(OperandConst(*val), true));
-	return none;
-}
-
 /**
  * @fn bool Analysis::State::invalidateAllMemory()
  * @brief      Invalidate all predicates involving memory
