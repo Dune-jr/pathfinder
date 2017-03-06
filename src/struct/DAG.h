@@ -178,8 +178,6 @@ public:
 		delete [] vars;
 		for(cst_map_t::Iterator cst(cst_map); cst; cst++)
 			delete *cst;
-		// for(Vector<Operand*>::Iter atop(tops); atop; atop++)
-		// 	delete *atop;
 		for(op_map_t::Iterator op(op_map); op; op++)
 			delete *op;
 		for(pred_map_t::Iterator pred(pred_map); pred; pred++)
@@ -205,7 +203,7 @@ public:
 	}
 
 	const Operand *mem(const OperandConst *addr) {
-// ASSERT(addr);
+		// ASSERT(addr);
 		Key k(ARITHOPR_MEM, addr);
 		Operand *r = op_map.get(k, 0);
 		if(!r) {
@@ -220,13 +218,6 @@ public:
 	inline const Operand *mem(const OperandMem& opd_mem)
 		{ return mem(opd_mem.addr().value()); }
 
-	// creates a new top
-	// const Operand* new_top(void) {
-	// 	Operand* r = new OperandTop(tops.length());
-	// 	tops.push(r);
-	// 	return r;
-	// }
-
 private:
 	const Operand *op(arithoperator_t op, const Operand *arg) {
 		Key k(op, arg);
@@ -239,7 +230,7 @@ private:
 	}
 
 	const Operand *op(arithoperator_t op, const Operand *arg1, const Operand *arg2) {
-// ASSERTP(arg1 && arg2, arg1 << arg2);
+		// ASSERTP(arg1 && arg2, arg1 << arg2);
 		Key k(op, arg1, arg2);
 		Operand *r = op_map.get(
 			k, 0);
@@ -331,31 +322,23 @@ private:
 	io::Output& print(io::Output& out) const {
 		bool first = true;
 		out << "DAG\n\t-> cst:  ";
-		for(cst_map_t::PairIterator i(cst_map); i; i++) {
+		for(cst_map_t::PairIterator i(cst_map); i; i++, first = false)
 			out << (first?"":",  ") << (*i).fst;
-			first = false;
 			// for(int i = 0; i < int(sizeof(Constant)); i++)
 			// 	out << io::hex(((unsigned char *)&c)[i]).pad('0').right().width(2) << " ";
-		}
 		first = true;
 		out << "\n\t-> op:   ";
-		for(op_map_t::PairIterator i(op_map); i; i++) {
+		for(op_map_t::PairIterator i(op_map); i; i++, first = false)
 			out << (first?"":",  ") << *(*i).snd;
-			first = false;
-			// out << "\t[op]  " << *(*i).fst.argument1() << (arithoperator_t)(*i).fst.operation() << ((*i).fst.argument2()?*(*i).fst.argument2():*(*i).fst.argument1()) << ", " << *(*i).snd << endl;
-		}
 		first = true;
 		out << "\n\t-> pred: ";
-		for(pred_map_t::PairIterator i(pred_map); i; i++) {
+		for(pred_map_t::PairIterator i(pred_map); i; i++, first = false)
 			out << (first?"":",  ") << *(*i).snd;
-			first = false;
-		}
 		return out;
 	}
 
 	int tmp_cnt, var_cnt;
 	Operand **vars;
-	// Vector<Operand *> tops;
  	cst_map_t 	cst_map;
  	op_map_t 	op_map;
  	pred_map_t 	pred_map;

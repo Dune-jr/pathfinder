@@ -131,8 +131,8 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 		}
 	}
 /* end */
-	DBG(cfg->name() << ".vm = " << *vm)
-	DBGG(IPur() << "\"" << cfg->name() << "\"==>")
+DBGG(color::IRed() << cfg->name() << ".vm = " << *vm)
+	DBGG(IPur() << "<==\"" << cfg->name() << "\"")
 	CFG_S(cfg)->minimize(*vm, flags&CLEAN_TOPS); // reduces the VarMaker to the minimum
 	CFG_VARS(cfg) = LockPtr<VarMaker>(vm);
 	ASSERTP(elm::forall(States::Iter(**CFG_S(cfg)), SPCanEqual(), static_cast<const OperandConst*>(dag->cst(SP))),

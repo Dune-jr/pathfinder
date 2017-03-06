@@ -159,28 +159,29 @@ int Analysis::State::SemanticParser::process(const sem::PathIter& inst)
 			}
 			break;
 		case NEG:
+			set(d, Arith::mul(dag, getPtr(b), Constant(-1)));
 			break;
 		case NOT: // d <- ~a
+		    if(lvars.isConst(a))
+		    	set(d, dag.cst(~ lvars(a).toConstant()));
+		    else
+		    	scratch(d);
 			break;
 		case OR:  // d <- a | b
 		case XOR: // d <- a ^ b
 		{
-			Option<Constant> av, bv;
-			if(lvars.isConst(a) && lvars.isConst(b)
-				&& (av = lvars(a).toConst().evalConstantOperand())
-				&& (bv = lvars(b).toConst().evalConstantOperand()) )
-				set(d, dag.cst(op == OR ? (*av | *bv) : (*av ^ *bv)));
+			if(lvars.isConst(a) && lvars.isConst(b))
+				set(d, dag.cst(op == OR 
+					? (lvars(a).toConstant() | lvars(b).toConstant())
+					: (lvars(a).toConstant() ^ lvars(b).toConstant())));
 			else
 				scratch(d);
 			break;
 		}
 		case AND: // d <- a & b
 		{
-			Option<Constant> av, bv;
-			if(lvars.isConst(a) && lvars.isConst(b)
-				&& (av = lvars(a).toConst().evalConstantOperand())
-				&& (bv = lvars(b).toConst().evalConstantOperand()) )
-				set(d, dag.cst(*av & *bv));
+			if(lvars.isConst(a) && lvars.isConst(b))
+				set(d, dag.cst(lvars(a).toConstant() & lvars(b).toConstant()));
 			else if(lvars.isConst(a) || lvars.isConst(b)) // test MODULO 2^x
 			{
 				const t::int32 cstv = lvars(lvars.isConst(a) ? a : b).toConstant().val();
