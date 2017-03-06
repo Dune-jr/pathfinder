@@ -1,8 +1,8 @@
 /**
  * Warning: there are three versions
- * (i)   v1: cfg1, bb1, virtualized		-1z 1
- * (ii)  v2: cfg1, bb2, virtualized		-2z 1
- * (iii) v3: cfg2, bb2, non virtualized	-2z 0
+ * (i)   v1: cfg1, bb1, virtualized		-1
+ * (ii)  v2: cfg1, bb2, virtualized		-2
+ * (iii) v3: cfg2, bb2, non virtualized	-3
  */
 
 #ifndef _ANALYSIS_H

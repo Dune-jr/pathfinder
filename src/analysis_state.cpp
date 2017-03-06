@@ -360,11 +360,6 @@ void Analysis::State::widening(const Operand* n)
  * @param      b   The block
  * @param      id  The ID of the instruction
  */
-void Analysis::State::setMemoryInitPoint(const otawa::Block* b, short id)
-{
-	memid.b = b;
-	memid.id = id;
-}
 
 /**
  * @brief      use loop bounds to replace all OperandIter "n" by either an exact loop iteration count, or a new Tk with 0<=Tk and Tk<=loop bound predicates
@@ -539,6 +534,8 @@ bool Analysis::State::equiv(const Analysis::State& s) const
 	if(! this->constants.sameValuesAs(s.constants))
 		return false;
 #endif
+	if(lvars != s.lvars)
+		return false;
 	// checking for this->labelled_preds.sameValuesAs(s.labelled_preds)
 	if(this->labelled_preds.count() != s.labelled_preds.count())
 		return false;

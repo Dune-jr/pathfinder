@@ -25,7 +25,7 @@ Option<Analysis::Path*> SMT::seekInfeasiblePaths(const Analysis::State& s)
 	labelled_preds += s.getConstants().toPredicates(s.getDag());
 	
 	initialize(labelled_preds);
-	ELM_DBGV(1, "Checking path " << s.getPathString() << ": ")
+	ELM_DBGV(1, "Checking path " << s.dumpPath() << ": ")
 	if(checkPredSat())
 	{
 		if(dbg_verbose == DBG_VERBOSE_ALL) cout << color::BGre() << "SAT\n";

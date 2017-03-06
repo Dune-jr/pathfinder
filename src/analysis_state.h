@@ -113,7 +113,7 @@ private:
 	void set(const OperandVar& var, const Operand* expr, bool set_updated = true);
 	void setMem(Constant addr, const Operand* expr);
 	void wipeMemory(VarMaker& vm);
-	void setMemoryInitPoint(const otawa::Block* b, short id);
+	inline void setMemoryInitPoint(const otawa::Block* b, short id) { memid = memid_t(b, id); }
 	const Operand* getPtr(t::int32 var_id) const;
 	void updateLabels(const sem::inst& inst);
 
