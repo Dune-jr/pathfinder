@@ -196,6 +196,8 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr)
 		case CONDOPR_NE:
 			return out << "!=";
 #endif
+		default:
+			crash();
 	}
 }
 

@@ -1,0 +1,25 @@
+=== REQUIREMENTS ===
+ * bam
+    Get it at https://github.com/matricks/bam or use the Debian package:
+	    apt-get install bam
+ * Otawa
+    Get it at http://otawa.fr/
+ * an SMT solver
+    You can get CVC4 with an automated script (admin install):
+	    ./get_cvc4
+    You may want to try a local install with
+        ./get_cvc4_local/all.sh
+	
+
+=== INSTALL ===
+To install, type
+	bam
+and follow the instructions.
+
+bam config will run a default config, you can reset it by removing the config.lua file.
+
+Alternatively, you can use
+    ./make_cvc4
+or
+    ./make_z3
+

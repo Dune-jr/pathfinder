@@ -75,11 +75,12 @@ function NewConfig(on_configured_callback)
 		local options_func = loadfile(filename)
 		local options_table = {}
 
-		if not options_func then
-			print("auto configuration")
-			self:Config(filename)
-			options_func = loadfile(filename)
-		end
+		-- Jordy: disabled the automatic stuff
+		-- if not options_func then
+		-- 	print("auto configuration")
+		-- 	self:Config(filename)
+		-- 	options_func = loadfile(filename)
+		-- end
 
 		if options_func then
 			-- Setup the options tables
@@ -303,8 +304,10 @@ function OptToggle(name, default_value, desc)
 		if ScriptArgs[option.name] then
 			if IsNegativeTerm(ScriptArgs[option.name]) then
 				option.value = false
+				option.auto_detected = false
 			elseif IsPositiveTerm(ScriptArgs[option.name]) then
 				option.value = true
+				option.auto_detected = false
 			else
 				error(ScriptArgs[option.name].." is not a valid value for option "..option.name)
 			end
@@ -330,6 +333,7 @@ function OptInteger(name, default_value, desc)
 	local check = function(option, settings)
 		if ScriptArgs[option.name] then
 			option.value = tonumber(ScriptArgs[option.name])
+			option.auto_detected = false
 		end
 	end
 
@@ -353,6 +357,7 @@ function OptString(name, default_value, desc)
 	local check = function(option, settings)
 		if ScriptArgs[option.name] then
 			option.value = ScriptArgs[option.name]
+			option.auto_detected = false
 		end
 	end
 

@@ -1,0 +1,1 @@
+./configure LDFLAGS="-L$HOME/system/lib" CFLAGS="-I$HOME/system/include" CXXFLAGS="-I$HOME/system/include" --prefix=$HOME/system/ --with-boost=$HOME/system --with-antlr-dir=$HOME/system --enable-fast-install --enable-proof --enable-portfolio
