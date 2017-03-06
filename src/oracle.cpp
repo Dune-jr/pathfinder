@@ -166,7 +166,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 		{
 			const Path& ip = ***pi;
 			elm::String counterexample;
-			DBG("Path " << s.getPathString() << color::Bold() << " minimized to " << color::NoBold() << pathToString(ip))
+			DBG("Path " << s.dumpPath() << color::Bold() << " minimized to " << color::NoBold() << pathToString(ip))
 			bool valid = checkInfeasiblePathValidity(ss.states(), sv_paths, ip, counterexample);
 			DBG(color::BIWhi() << "B)" << color::RCol() << " Verifying minimized path validity... " << (valid?color::IGre():color::IRed()) << (valid?"SUCCESS!":"FAILED!"))
 			stats.onAnyInfeasiblePath();

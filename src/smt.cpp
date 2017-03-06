@@ -69,7 +69,7 @@ Option<Analysis::Path*> SMT::seekInfeasiblePathsv2(const Analysis::State& s)
 {
 	initialize(s.getLabelledPreds());
 	initialize(s.getLocalVariables(), s.getMemoryTable(), s.getDag());
-	ELM_DBGV(1, "Checking path " << s.getPathString() << ": ")
+	ELM_DBGV(1, "Checking path " << s.dumpPath() << ": ")
 	if(checkPredSat())
 	{
 		if(dbg_verbose == DBG_VERBOSE_ALL) cout << color::BGre() << "SAT\n";

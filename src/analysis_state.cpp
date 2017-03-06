@@ -140,7 +140,6 @@ io::Output& Analysis::State::print(io::Output& out) const
 void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 {
 	// DBG("f="<<this->dumpEverything() << ",\ng = " << s.dumpEverything())
-	// cout << "f="<<this->labelled_preds << ",\ng = " << s.labelled_preds << endl;
 	Compositor cc(*this, local_sp);
 
 	// applying lvars
@@ -153,7 +152,6 @@ void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 		if(s.lvars[i] != NULL) // g[i] was modified
 		{
 			ELM_DBGV(1, "\tf°g(" << *i << ") = " << "f(" << *s.lvars[i] << ") = ")
-			// cout << "\tf°g(" << *i << ") = " << "f(" << *s.lvars[i] << ") = ";
 s.lvars[i]->accept(cc);
 			lv[i] = s.lvars[i]->accept(cc); // needs more info from f...
 			if(dbg_verbose == DBG_VERBOSE_ALL)
@@ -199,20 +197,18 @@ s.lvars[i]->accept(cc);
 	lvars = lv;
 	// DBG("f o g = " << color::IBlu() << this->dumpEverything())
 	
-
-	// be careful about multiplying per negative numbers?
-	// update our predicates
-	for(MutablePredIterator pi(*this); pi; pi++)
+	// update their predicates then add them to us
+	// be careful about multiplying per negative numbers? or not actually. I think it's a simple substitution
+	for(SLList<LabelledPredicate>::Iterator pi(s.labelled_preds); pi; pi++)
 	{
-		// Predicate& p = pi.item().pred();
-		// p.left() = p.left()->accept(cc); 
+		Predicate p = pi->pred();
+		LabelledPredicate lp = LabelledPredicate(cc.visit(p), pi->labels());
+		DBG(color::IGre() << " + " << lp.pred() << color::Gre() << " {composed from " << p << "}")
+		this->labelled_preds += lp; // then add them
 	}
 
-	// update their predicates
-	for(PredIterator pi(s); pi; pi++)
-	{
-
-	}
+	// nothing to do for our predicates actually
+	//for(MutablePredIterator pi(*this); pi; pi++)
 
 	// merge path
 	this->path.apply(s.getDetailedPath());
@@ -355,7 +351,7 @@ void Analysis::State::widening(const Operand* n)
 		// const Constant addr = (*iter).fst;
 	}
 
-	DBGG(IGre << "done: " << this->dumpEverything())
+	DBGG(IGre() << "done: " << this->dumpEverything())
 }
 
 /**
@@ -505,21 +501,31 @@ void Analysis::State::initializeWithDFA()
 	}
 }
 
+elm::String Analysis::State::dumpMem() const
+{
+	SortedList<MemCell> meml;
+	for(mem_t::PairIterator i(mem); i; i++)
+		meml.add(MemCell((*i).fst, (*i).snd));
+
+	elm::String rtn = _ << memid << ", [" << endl;
+	for(SortedList<MemCell>::Iter i(meml); i; i++)
+		rtn = _ << rtn << "        [" << StringFormat(_ << (*i).addr << "]").width(8) << "| " << *(*i).val << endl;
+	return rtn << "]";
+}
+
 elm::String Analysis::State::dumpEverything() const
 {
-	elm::String rtn = _
+	return _
 		<< "--- DUMPING STATE ---" << endl
-		<< "  * path= " << getPathString() << endl
+		<< "  * path= " << dumpPath() << endl
 #ifdef V1
 		<< "  * constants= " << constants << endl
 #endif
 		<< "  * labelled_preds= " << labelled_preds << endl
 		<< "  * generated_preds= " << generated_preds << endl
 		<< "  * lvars= [" << endl << lvars << "]" << endl
-		<< "  * mem= " << memid << ", [" << endl;
-	for(mem_t::PairIterator i(mem); i; i++)
-		rtn = _ << rtn << "        [" << StringFormat(_ << (*i).fst << "]").width(8) << "| " << *(*i).snd << endl;
-	return _ << rtn << "]" << endl << "\t--- END OF DUMP ---";
+		<< "  * mem= " << dumpMem() << endl
+		<< "\t--- END OF DUMP ---";
 }
 
 // this is not Leibniz equality, but a test to check for a fixpoint!
@@ -529,11 +535,6 @@ bool Analysis::State::equiv(const Analysis::State& s) const
 	if(s.isBottom())
 		return this->isBottom();
 	// do not check the path or any of the edges!
-	/*if(generated_preds != generated_preds)
-		return false;
-	if(generated_preds_taken != generated_preds_taken)
-		return false;
-	*/
 #ifdef V1
 	if(! this->constants.sameValuesAs(s.constants))
 		return false;

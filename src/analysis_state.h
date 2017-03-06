@@ -64,7 +64,6 @@ public:
 #endif
 	inline const LocalVariables& getLocalVariables() const { return lvars; }
 	inline const mem_t& getMemoryTable() const { return mem; }
-	inline elm::String getPathString() const { return path.toString(); /*orderedPathToString(path.toOrderedPath());*/ }
 	// inline void onLoopEntry(Block* loop_header) { path.onLoopEntry(loop_header); }
 	inline void onLoopExit(Option<Block*> maybe_loop_header = elm::none) { path.onLoopExit(maybe_loop_header); }
 	inline void onCall(SynthBlock* sb)   { path.onCall(sb); }
@@ -76,6 +75,8 @@ public:
 
 	// analysis_state.cpp
 	// State& operator=(const State& s);
+	inline elm::String dumpPath() const { return path.toString(); }
+	elm::String dumpMem() const;
 	elm::String dumpEverything() const;
 	void initializeWithDFA();
 	void merge(const States& ss, Block* b, VarMaker& vm);
@@ -101,20 +102,6 @@ public:
 
 private:
 	// Private methods
-	// DAG stuff
-	inline const Operand *Cst(const Constant& cst)    { return dag->cst(cst); }
-	inline const Operand *Var(const OperandVar& opdv) { return dag->var(opdv); }
-	inline const Operand *Mem(const Constant& cst) 	  { return dag->mem(cst); }
-	inline const Operand *Mem(const OperandMem& opdm) { return dag->mem(opdm); }
-	inline const Operand *neg (const Operand *arg) 						 { return dag->neg(arg); }
-	inline const Operand *add (const Operand *arg1, const Operand *arg2) { return dag->add(arg1, arg2); }
-	inline const Operand *sub (const Operand *arg1, const Operand *arg2) { return dag->sub(arg1, arg2); }
-	inline const Operand *mul (const Operand *arg1, const Operand *arg2) { return dag->mul(arg1, arg2); }
-	inline const Operand *mulh(const Operand *arg1, const Operand *arg2) { return dag->mulh(arg1, arg2); }
-	inline const Operand *div (const Operand *arg1, const Operand *arg2) { return dag->div(arg1, arg2); }
-	inline const Operand *mod (const Operand *arg1, const Operand *arg2) { return dag->mod(arg1, arg2); }
-	inline const Operand *cmp (const Operand *arg1, const Operand *arg2) { return dag->cmp(arg1, arg2); }
-
 	// analysis.cpp
 	void setPredicate(PredIterator &iter, const LabelledPredicate &labelled_predicate);
 	void movePredicateToGenerated(PredIterator &iter);
@@ -160,6 +147,20 @@ private:
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv) const { return constants.getLabels(opdv); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv1, const OperandVar& opdv2) const { return constants.getLabels(opdv1, opdv2); }
 #endif
+
+	// DAG stuff
+	inline const Operand *Cst(const Constant& cst)    { return dag->cst(cst); }
+	inline const Operand *Var(const OperandVar& opdv) { return dag->var(opdv); }
+	inline const Operand *Mem(const Constant& cst) 	  { return dag->mem(cst); }
+	inline const Operand *Mem(const OperandMem& opdm) { return dag->mem(opdm); }
+	inline const Operand *neg (const Operand *arg) 						 { return dag->neg(arg); }
+	inline const Operand *add (const Operand *arg1, const Operand *arg2) { return dag->add(arg1, arg2); }
+	inline const Operand *sub (const Operand *arg1, const Operand *arg2) { return dag->sub(arg1, arg2); }
+	inline const Operand *mul (const Operand *arg1, const Operand *arg2) { return dag->mul(arg1, arg2); }
+	inline const Operand *mulh(const Operand *arg1, const Operand *arg2) { return dag->mulh(arg1, arg2); }
+	inline const Operand *div (const Operand *arg1, const Operand *arg2) { return dag->div(arg1, arg2); }
+	inline const Operand *mod (const Operand *arg1, const Operand *arg2) { return dag->mod(arg1, arg2); }
+	inline const Operand *cmp (const Operand *arg1, const Operand *arg2) { return dag->cmp(arg1, arg2); }
 
 	// PredIterator class
 	class PredIterator: public PreIterator<PredIterator, const LabelledPredicate&> {
@@ -242,6 +243,15 @@ private:
 		SLList<LabelledPredicate>::MutableIterator gp_iter;
 		SLList<LabelledPredicate>::MutableIterator lp_iter;
 	};  
+
+	struct MemCell {
+		MemCell(Constant addr, const Operand* val) : addr(addr), val(val) { }
+		Constant addr;
+		const Operand* val;
+
+		inline bool operator>(const MemCell& mc) const { return this->addr < mc.addr; } // opposite
+		inline bool operator==(const MemCell& mc) const { return this->addr == mc.addr && this->val == mc.val; }
+	};
 }; // State class
 
 extern const Analysis::State bottom;

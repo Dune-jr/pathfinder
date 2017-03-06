@@ -153,10 +153,15 @@ io::Output& LocalVariables::print(io::Output& out) const
 {
 	if(! isValid())
 		return out << "<invalid>" << endl;
-	for(int i = 0; i < size; i++) {
+	for(int i = 0; i < size; i++)
+	{
 		if(o[i])
 		{
-			out << "        " << OperandVar(getId(i)) << (u[i] ? "*" : " ") << "\t | " << *o[i];
+			out << "        " << OperandVar(getId(i)) << (u[i] ? "*" : " ") << "\t | ";
+			if(*o[i] == OperandVar(getId(i)))
+				out << " ✓";
+			else
+				out << *o[i];
 			if(l[i] && !(dbg_flags&DBG_DETERMINISTIC))
 			{
 				out << "     \t| ";

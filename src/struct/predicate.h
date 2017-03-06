@@ -20,11 +20,8 @@ io::Output& operator<<(io::Output& out, const condoperator_t& opr);
 class Predicate
 {
 public:
-	Predicate(); // for option
+	Predicate(); // for elm::Option
 	Predicate(condoperator_t opr, const Operand* opd1, const Operand* opd2);
-	// Predicate(condoperator_t opr, const Operand& opd1, const Operand& opd2);
-	// Predicate(const Predicate& p);
-	~Predicate();
 	
 	inline condoperator_t opr() const { return (condoperator_t)_opr; }
 	inline const Operand* left() const { return _opd1; }
@@ -46,8 +43,7 @@ public:
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	bool update(DAG& dag, const Operand* opd, const Operand* opd_modifier);
 
-	Predicate& operator=(const Predicate& p);
-	bool operator==(const Predicate& p) const;
+	bool operator==(const Predicate& p) const; // semantic equality (I don't like this)
 	inline bool operator!=(const Predicate& p) const { return !(*this == p); }
 	friend io::Output& operator<<(io::Output& out, const Predicate& p);
 	

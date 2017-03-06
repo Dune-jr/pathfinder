@@ -22,7 +22,7 @@ using namespace otawa::sem;
  */
 void Analysis::State::processBB(const BasicBlock *bb, VarMaker& vm, int version_flags)
 {
-	DBG("Processing " << (otawa::Block*)bb << " (" << bb->address() << ") of path " << getPathString())
+	DBG("Processing " << (otawa::Block*)bb << " (" << bb->address() << ") of path " << dumpPath())
 	SLList<LabelledPredicate> generated_preds_before_condition;
 	generated_preds.clear();
 	generated_preds_taken.clear();

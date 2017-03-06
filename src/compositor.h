@@ -7,6 +7,7 @@
 #include "struct/DAG.h"
 #include "struct/local_variables.h"
 #include "struct/operand.h"
+#include "struct/predicate.h"
 
 // Compositor: a class for State composition
 class Compositor : public OperandEndoVisitor
@@ -17,14 +18,10 @@ public:
 		: dag(s.getDag()), sp(NULL), lvars(s.getLocalVariables()), mem(s.getMemoryTable())
 	{
 		if(sp_is_local)
-			sp = lvars[s.getSP()];
+			sp = lvars[s.getSP()] ? lvars[s.getSP()] : dag.var(s.getSP());
 		else
 			sp = dag.cst(SP);
-		if(!sp)
-			sp = dag.var(s.getSP());
-	} // sp is not necessary because we have Top already
-	// Compositor(DAG& dag, const LocalVariables& lv, const mem_t& m) : lvars(lv), mem(m), app(NULL), r(NULL) { }
-
+	}
 	const Operand* visit(const class OperandConst& g) {
 		ASSERT(g.value().isValid());
 		if(g.value().isAbsolute())
@@ -36,10 +33,11 @@ public:
 	}
 	const Operand* visit(const class OperandVar& g)  { return lvars[g] ? lvars[g] : &g; }
 	const Operand* visit(const class OperandMem& g)  { return mem.exists(g.addr()) ? mem[g.addr()] : &g; }
-	const Operand* visit(const class OperandTop& g)  { return &g; } // this should be handled by allocating a new top, otherwise we'll get problems
-	const Operand* visit(const class OperandIter& g) { crash(); }
+	const Operand* visit(const class OperandTop& g)  { return &g; } // this will be handled elsewhere by allocating a new top
+	const Operand* visit(const class OperandIter& g) { ASSERTP(false, "OperandIter found by the Compositor"); }
 	const Operand* visit(const class OperandArith& g)
 		{ return Arith::autoOp(dag, g.opr(), g.leftOperand().accept(*this), g.isBinary() ? g.rightOperand().accept(*this) : NULL); }
+	inline Predicate visit(const Predicate& p) { return Predicate(p.opr(), p.left()->accept(*this), p.right()->accept(*this)); }
 
 private:
 	DAG &dag;

@@ -127,7 +127,7 @@ bool Analysis::checkInfeasiblePathValidity(const Vector<Analysis::State>& sv, co
 		// if feasible path && contained in the minimized inf. path
 		if((*pi).isNone() && isSubPath(si->getDetailedPath().toOrderedPath(), infeasible_path))
 		{
-			counterexample = si->getPathString();
+			counterexample = si->dumpPath();
 			return false;
 		}
 	}

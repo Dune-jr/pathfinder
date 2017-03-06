@@ -12,21 +12,6 @@
  */
 Predicate::Predicate() :_opr(0), _opd1(NULL), _opd2(NULL) { }
 Predicate::Predicate(condoperator_t opr, const Operand* opd1, const Operand* opd2) : _opr(opr), _opd1(opd1), _opd2(opd2) { }
-/*Predicate::Predicate(condoperator_t opr, const Operand& opd1, const Operand& opd2) : _opr(opr)
-{
-	_opd1 = opd1.copy();
-	_opd2 = opd2.copy();
-}
-Predicate::Predicate(const Predicate& p) : _opr(p._opr)
-{
-	_opd1 = p._opd1->copy();
-	_opd2 = p._opd2->copy();
-}*/
-Predicate::~Predicate()
-{
-	// delete _opd1;
-	// delete _opd2;
-}
 
 /**
  * @fn inline bool Predicate::isIdent(void);
@@ -38,11 +23,11 @@ Predicate::~Predicate()
  * the program analysis that does not make sense in a solver (for example X = Y ~ Z).
  */
 
-// Predicate* Predicate::copy() const
-// {
-// 	return new Predicate(*this);
-// }
-
+/**
+ * @brief      Checks that the predicate involves an operand, and gives the count
+ * @param      opd   The operand
+ * @return     The amount of matching operands founds
+ */
 int Predicate::involvesOperand(const Operand& opd) const
 {
 	return _opd1->involvesOperand(opd) + _opd2->involvesOperand(opd);
@@ -60,16 +45,32 @@ int Predicate::involvesVariable(const OperandVar& opdv) const
 	return _opd1->involvesVariable(opdv) + _opd2->involvesVariable(opdv);
 }
 
+/**
+ * @brief      Checks if a predicate involves memory cells in stack that are below a defined value
+ * @param      stack_limit  The stack thresold
+ * @return     I think this returns the address of a memory cell that does not match
+ */
 Option<Constant> Predicate::involvesStackBelow(const Constant& stack_limit) const
 {
 	if(const Option<Constant>& opd1_rtn = _opd1->involvesStackBelow(stack_limit))
 		return opd1_rtn;
 	else return _opd2->involvesStackBelow(stack_limit);
 }
+
+/**
+ * @brief      Checks if the Predicate involves the given memory cell
+ * @param      opdm  The memory cell
+ * @return     True if the memory cell opdm was found, False otherwise
+ */
 bool Predicate::involvesMemoryCell(const OperandMem& opdm) const
 {
 	return _opd1->involvesMemoryCell(opdm) || _opd2->involvesMemoryCell(opdm);
 }
+
+/**
+ * @brief      Checks if this involves any memory at all
+ * @return     I think it returns NULL if it found no memory, and the OperandMem if it found it
+ */
 const Operand* Predicate::involvesMemory() const
 {
 	if(const Operand* rtn = _opd1->involvesMemory())
@@ -117,7 +118,16 @@ bool Predicate::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) c
 	return true;
 }
 
-// returns true if something was updated
+/**
+ * @fn bool Predicate::update(DAG& dag, const Operand* opd, const Operand* opd_modifier)
+ * @brief      Updates the predicate by replacing all opd with opd_modifier
+ *
+ * @param      dag           The dag
+ * @param      opd           The operand to be replaced
+ * @param      opd_modifier  The operand to replace with
+ *
+ * @return     True if something was updated, False otherwise
+ */
 bool Predicate::update(DAG& dag, const Operand* opd, const Operand* opd_modifier)
 {
 	// we need to replace the matching children as they can't do it themselves since the parent has to do the modification
@@ -145,14 +155,14 @@ bool Predicate::update(DAG& dag, const Operand* opd, const Operand* opd_modifier
 	return rtn;
 }
 
-// copy p
-Predicate& Predicate::operator=(const Predicate& p)
+// copy p (useless now)
+/*Predicate& Predicate::operator=(const Predicate& p)
 {
 	_opr = p._opr;
 	_opd1 = p._opd1;
 	_opd2 = p._opd2;
 	return *this;
-}
+}*/
 
 /**
   * @fn bool Predicate::operator==(const Predicate& p) const;
@@ -169,29 +179,24 @@ bool Predicate::operator==(const Predicate& p) const
 
 io::Output& operator<<(io::Output& out, const condoperator_t& opr)
 {	
-	switch(opr) {
+	switch(opr)
+	{
 		case CONDOPR_LT:
-			out << "<";
-			break;
-		case CONDOPR_LE:
-#			ifndef NO_UTF8
-				out << "≤";
-#			else
-				out << "<=";
-#			endif
-			break;
+			return out << "<";
 		case CONDOPR_EQ:
-			out << "=";
-			break;
+			return out << "=";
+#ifndef NO_UTF8
+		case CONDOPR_LE:
+			return out << "≤";
 		case CONDOPR_NE:
-#			ifndef NO_UTF8
-				out << "≠";
-#			else
-				out << "!=";
-#			endif
-			break;
+			return out << "≠";
+#else
+		case CONDOPR_LE:
+			return out << "<=";
+		case CONDOPR_NE:
+			return out << "!=";
+#endif
 	}
-	return out;
 }
 
 io::Output& operator<<(io::Output& out, const Predicate& p)
