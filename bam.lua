@@ -23,9 +23,9 @@ config:Add(OptLibrary("z3", "z3++.h", "Set to path to z3"))
 config:Add(OptString("solver", "cvc4", "Select an SMT solver"))
 config:Add(OptString("O", "0", "Set optimization level (0/1/2/3)"))
 config:Add(OptToggle("Wall", 	true, 	"Enable all GCC warnings"))
-config:Add(OptToggle("slice", 	false, 	"Enable slicing"))
+config:Add(OptToggle("slice", 	false, 	"Enable support for slicing"))
 config:Add(OptToggle("debug", 	true, 	"Enable OTAWA debugging"))
-config:Add(OptToggle("warnings",true, 	"Enable PathFinder warnings"))
+config:Add(OptToggle("warnings",false, 	"Enable PathFinder warnings"))
 config:Add(OptToggle("v1", 		false, 	"Enable support for v1 analysis"))
 config:Finalize("config.lua")
 
@@ -48,12 +48,13 @@ if config.debug.value == false then
 	settings.cc.flags:Add("-D NDEBUG")
 end
 if config.warnings.value then
-	settings.cc.flags:Add("-D WARNINGS")
+	settings.cc.flags:Add("-D DBG_WARNINGS")
 end
 if config.v1.value then
 	settings.cc.flags:Add("-D V1")
 end
 settings.cc.flags:Add("-O" .. config.O.value)
+settings.cc.flags:Add("-Wno-maybe-uninitialized")
 
 -- OTAWA
 settings.cc.flags:Add("`" .. otawa_config .. " --cflags`")
