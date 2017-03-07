@@ -105,7 +105,7 @@ protected:
 	class SolverProgress;
 	context_t context;
 	DAG* dag;
-	VarMaker* vm;
+	LockPtr<VarMaker> vm;
 	IPStats ip_stats;
 	Analysis::Progress* progress;
 	int state_size_limit, nb_cores, flags; // read by inherited class
@@ -149,6 +149,7 @@ protected:
 	void printInfeasiblePaths() const;
 	void postProcessResults(CFG *cfg);
 	void purgeBottomStates(States& sc) const;
+	int countIPsOf(CFG* cfg) const;
 	static Vector<Edge*> outsWithoutUnallowedExits(Block* b);
 	static bool isAllowedExit(Edge* exit_edge);
 	static elm::String printFixPointStatus(Block* b);

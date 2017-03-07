@@ -278,6 +278,7 @@ int Analysis::State::SemanticParser::store(OperandVar addr, const Operand* opd)
 	Constant c;
 	if(s.lvars.isConst(addr) && (c = s.lvars(addr).toConstant(), c.isValidAddress()))
 	{
+		DBG(color::IBlu() << "  Storing at " << OperandMem(c))
 		setMem(c, opd);
 		return 0;
 	}
@@ -347,6 +348,7 @@ void Analysis::State::updateLabels(const sem::inst& seminst)
 		case NOP: case ASSUME: case BRANCH: case TRAP: case CONT: case IF: case SCRATCH: case SETI: case SETP: case SPEC: // nothing to do
 		case STORE: // [addr] <- f(reg)
 		case LOAD: // reg <- f([addr])
+			// DBG(color::Cya() << "  /" << OperandVar(seminst.reg()) << "=" << lvars(seminst.reg()) << "/")
 			break;
 		case SET: case NEG: case NOT: // d <- f(a)
 			DBG(color::Cya() << "  /" << OperandVar(seminst.a()) << "=" << lvars(seminst.a()) << "/")

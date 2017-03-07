@@ -22,8 +22,8 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 	DBGG(IPur() << "==>\"" << cfg->name() << "\"")
 	
 	WorkingList wl;
-	VarMaker* vm_backup = vm;
-	vm = new VarMaker();
+	const LockPtr<VarMaker> vm_backup = vm;
+	vm = LockPtr<VarMaker>(new VarMaker());
 /* begin */
 	/* for e ∈ E(G) */
 		/* s_e ← nil */
@@ -123,7 +123,6 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 				EDGE_S(e) = Analysis::I(e, s);
 				for(LoopExitIterator l(*e); l; l++)
 					EDGE_S(e)->appliedTo(LH_S0(*l), *vm);
-// DBGG(color::IRed() << cfg->name() << ".vm = " << *vm << " -- " << vm)
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 				if(inD_ip(e))
 					ip_stats += ipcheck(*EDGE_S.ref(e), infeasible_paths);
@@ -133,13 +132,18 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 		}
 	}
 /* end */
+	// Pretty printing
+	if(dbg_flags&DBG_DETAILED_STATS)
+		cout << " " << StringFormat(cfg->name()).width(20) << ": " << IntFormat(CFG_S(cfg)->count()).right().width(5) << " states, " << IntFormat(vm->sizes().fst).right().width(5) << " tops, " << countIPsOf(cfg) << " IPs." << endl;
+	// VarMaker stuff
 	DBG(cfg->name() << ".vm = " << *vm << " (" << vm << ")")
 	DBGG(IPur() << "<==\"" << cfg->name() << "\"")
 	CFG_S(cfg)->minimize(*vm, flags&CLEAN_TOPS); // reduces the VarMaker to the minimum
-	CFG_VARS(cfg) = LockPtr<VarMaker>(vm);
+	CFG_VARS(cfg) = vm;
 	vm = vm_backup;
-	ASSERTP(elm::forall(States::Iter(**CFG_S(cfg)), SPCanEqual(), static_cast<const OperandConst*>(dag->cst(SP))),
-		context.sp << " is definitely not SP+0. " << Dim() << "(" << cfg->name() << ")" << RCol());
+	// Check all sp are valid
+	ASSERTP(elm::forall(States::Iter(**CFG_S(cfg)), SPCanEqual(), static_cast<const OperandConst*>(dag->cst(SP))), context.sp << " is definitely not SP+0. " << Dim() << "(" << cfg->name() << ")" << RCol());
+	// Reset SP if it got scratch'd
 	if(flags&ASSUME_IDENTICAL_SP)
 		CFG_S(cfg)->resetSP();
 }

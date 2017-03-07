@@ -416,27 +416,23 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 		elm::cout << endl;
 	// cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << ipcount-ip_stats.getUnminimizedIPCount() << color::RCol() <<
 	// 		"+" << color::Yel() << ip_stats.getUnminimizedIPCount() << color::RCol() << " => " << color::IRed() << ip_stats.getIPCount() << color::RCol() << endl;
-	if(dbg_flags&DBG_DETAILED_STATS)
+	if(dbg_flags&DBG_DETAILED_STATS && ipcount > 0)
 	{
-		if(ipcount > 0)
+		int sum_path_lengths = 0, squaredsum_path_lengths = 0, one_edges = 0;
+		for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
 		{
-			int sum_path_lengths = 0, squaredsum_path_lengths = 0, one_edges = 0;
-			for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
-			{
-				one_edges += iter->countEdges() == 1;
-				sum_path_lengths += iter->countEdges();
-				squaredsum_path_lengths += iter->countEdges() * iter->countEdges();
-			}
-			float average_length = (float)sum_path_lengths / (float)ipcount;
-			float norm2 = sqrt((float)squaredsum_path_lengths / (float)ipcount);
-		    std::ios_base::fmtflags oldflags = std::cout.flags();
-		    std::streamsize oldprecision = std::cout.precision();
-			std::cout << std::fixed << std::setprecision(2) << " (Average: " << average_length << ", Norm2: " << norm2
-				<< ", #1edge: " << one_edges << "/" << ipcount << ")" << endl;
-			std::cout.flags(oldflags);
-			std::cout.precision(oldprecision);
+			one_edges += iter->countEdges() == 1;
+			sum_path_lengths += iter->countEdges();
+			squaredsum_path_lengths += iter->countEdges() * iter->countEdges();
 		}
-		std::cout << vm->new_top()->toTop().getId() << " tops." << endl;
+		float average_length = (float)sum_path_lengths / (float)ipcount;
+		float norm2 = sqrt((float)squaredsum_path_lengths / (float)ipcount);
+	    std::ios_base::fmtflags oldflags = std::cout.flags();
+	    std::streamsize oldprecision = std::cout.precision();
+		std::cout << std::fixed << std::setprecision(2) << " (Average: " << average_length << ", Norm2: " << norm2
+			<< ", #1edge: " << one_edges << "/" << ipcount << ")" << endl;
+		std::cout.flags(oldflags);
+		std::cout.precision(oldprecision);
 	}
 }
 
@@ -448,6 +444,15 @@ void Analysis::printInfeasiblePaths() const
 			CFG* f = (*iter).function();
 			cout << "    * " << (f ? _ << f << ":" : elm::String()) << "[" << *iter << "]" << endl;
 		}
+}
+
+int Analysis::countIPsOf(CFG* cfg) const
+{
+	int rtn = 0;
+	for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
+		if((*iter).function() == cfg)
+			rtn++;
+	return rtn;
 }
 
 // returns edge to remove
