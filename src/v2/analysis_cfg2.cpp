@@ -24,7 +24,6 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 	WorkingList wl;
 	VarMaker* vm_backup = vm;
 	vm = new VarMaker();
-DBGG(color::IBlu() << "nyu! " << cfg->name() << "  " << vm)
 /* begin */
 	/* for e ∈ E(G) */
 		/* s_e ← nil */
