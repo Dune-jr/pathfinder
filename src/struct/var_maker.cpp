@@ -35,7 +35,6 @@ void VarMaker::import(const VarMaker& vm)
 	// now, scale the by +n
 	for(tops_t::Iter i(tops); i; i++)
 		tops[i]->scale(+n);
-DBGG(color::Gre() << "VarMaker is now " << *this)
 }
 
 /**
@@ -46,7 +45,6 @@ DBGG(color::Gre() << "VarMaker is now " << *this)
  */
 void VarMaker::shrink(const VarCollector& vc, bool clean)
 {
-DBGG("VarMaker is " << *this)
 	const int n = tops.length();
 	ASSERTP(vc.size() == n, "BitCollection size is different than tops size: " << vc.size() << "=/=" << n)
 
@@ -65,7 +63,6 @@ DBGG("VarMaker is " << *this)
 	}
 	DBGG("Shrinking VarMaker's " << n << " tops to " << j << ".")
 	tops.shrink(j);
-DBGG("VarMaker is now " << *this)
 }
 
 /**

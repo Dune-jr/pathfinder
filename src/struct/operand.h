@@ -164,13 +164,12 @@ public:
 	
 	inline Constant value() const { return _value; }
 	
-	unsigned int countTempVars() const;
+	unsigned int countTempVars() const { return 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
-	// int involvesOperand(const Operand& opd) const;
-	inline int involvesVariable(const OperandVar& opdv) const;
+	inline int involvesVariable(const OperandVar& opdv) const { return 0; }
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
-	bool involvesMemoryCell(const OperandMem& opdm) const;
-	const Operand* involvesMemory() const;
+	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
+	const Operand* involvesMemory() const { return NULL; }
 	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
@@ -187,8 +186,8 @@ public:
 	inline operand_kind_t kind() const { return CST; }
 	inline operator Constant() const { return _value; }
 	OperandConst& operator=(const OperandConst& opd);
-	inline bool operator==(const Operand& o) const;
-	inline bool operator< (const Operand& o) const;
+	inline bool operator==(const Operand& o) const { return (o.kind() == kind()) && toConstant() == o.toConstant(); }
+	bool operator< (const Operand& o) const;
 	inline const OperandConst& toConst() const { return *this; }
 	inline const Constant& toConstant() const { return _value; }
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
@@ -212,12 +211,12 @@ public:
 	inline bool isTempVar() const { return _addr < 0; }
 	
 	// Operand* copy() const;
-	unsigned int countTempVars() const;
+	unsigned int countTempVars() const { return isTempVar() ? 1 : 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	// int involvesOperand(const Operand& opd) const;
-	inline int involvesVariable(const OperandVar& opdv) const;
+	inline int involvesVariable(const OperandVar& opdv) const { return (int)(opdv == *this); }
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
-	bool involvesMemoryCell(const OperandMem& opdm) const;
+	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
 	const Operand* involvesMemory() const;
 	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
@@ -278,7 +277,7 @@ public:
 	inline operand_kind_t kind() const { return MEM; }
 	OperandMem& operator=(const OperandMem& opd);
 	inline bool operator==(const Operand& o) const;
-	inline bool operator< (const Operand& o) const;
+	bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandMem& o) { return o.print(out); }
 	inline const OperandMem& toMem() const { return *this; }
 private:
@@ -301,13 +300,12 @@ public:
 	inline int getId() const { return id; } // shouldn't be used
 	inline void scale(int offset) { id += offset; } // for internal use by VarMaker
 	
-	unsigned int countTempVars() const;
+	unsigned int countTempVars() const { return 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
-	inline int involvesVariable(const OperandVar& opdv) const;
-	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
-	bool involvesMemoryCell(const OperandMem& opdm) const;
-	const Operand* involvesMemory() const;
-	// TODO!!! check why id>length sometimes
+	Option<Constant> involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
+	inline int involvesVariable(const OperandVar& opdv) const { return 0; }
+	const Operand* involvesMemory() const { return NULL; }
+	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
 	inline void collectTops(VarCollector& vc) const { vc.collect(id); }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
@@ -323,8 +321,8 @@ public:
 	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return TOP; }
 	OperandTop& operator=(const OperandTop& opd);
-	inline bool operator==(const Operand& o) const;
-	inline bool operator< (const Operand& o) const;
+	inline bool operator==(const Operand& o) const { return kind() == o.kind() && id == ((OperandTop&)o).id; }
+	bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandTop& o) { return o.print(out); }
 	inline const OperandTop& toTop() const { return *this; }
 private:
@@ -367,7 +365,7 @@ public:
 	inline operand_kind_t kind() const { return ITER; }
 	OperandIter& operator=(const OperandIter& opd) { lid = opd.lid; return *this; }
 	inline bool operator==(const Operand& o) const { return o.kind() == ITER && lid == static_cast<const OperandIter&>(o).lid; }
-	inline bool operator< (const Operand& o) const;
+	bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandIter& o) { return o.print(out); }
 	inline const OperandIter& toIter() const { return *this; }
 private:
@@ -420,7 +418,7 @@ public:
 	inline operand_kind_t kind() const { return ARITH; }
 	// OperandArith& operator=(const OperandArith& opd);
 	inline bool operator==(const Operand& o) const;
-	inline bool operator< (const Operand& o) const;
+	bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandArith& o) { return o.print(out); }
 	inline const OperandArith& toArith() const { return *this; }
 private:

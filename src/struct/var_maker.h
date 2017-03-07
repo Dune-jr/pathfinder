@@ -31,10 +31,16 @@ public:
 	}
 	inline const Operand* new_top(void) {
 		OperandTop* r = new OperandTop(length());
+		ASSERTP(length() >= 0, "OperandTop ids overflowing")
 		DBG("  " << color::IBlu() << "Introducing " << *r)
 		// ASSERT(tops.length() < 40000);
 		tops.push(r);
 		return r;
+	}
+	inline VarMaker& operator=(const VarMaker& vm) {
+		tops = vm.tops;
+		start = vm.start;
+		return *this;
 	}
 	friend inline io::Output& operator<<(io::Output& out, const VarMaker& vm) {
 		return vm.print(out);

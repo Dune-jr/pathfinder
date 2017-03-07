@@ -118,6 +118,7 @@ void Operand::Iter::next()
 }
 
 /**
+ * @fn 		   inline void Operand::Iter::check()
  * @brief      Check that the current item is OK, else do next
  */
 inline void Operand::Iter::check()
@@ -145,22 +146,13 @@ bool OperandConst::operator<(const Operand& o) const
 		return false;
 	return _value < o.toConst()._value;
 }
-bool OperandConst::operator==(const Operand& o) const
-{
-	return (o.kind() == kind()) && _value == ((OperandConst&)o)._value;
-}
-unsigned int OperandConst::countTempVars() const { return 0; }
 bool OperandConst::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
 {
 	expr = this; // Assume we are the expr
 	return false; // We haven't found an isolated tempvar
 }
-int OperandConst::involvesVariable(const OperandVar& opdv) const { return 0; }
-const Operand* OperandConst::involvesMemory() const { return NULL; }
-bool OperandConst::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 Option<Constant> OperandConst::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
 Option<const Operand*> OperandConst::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { return (this == opd) ? some(opd_modifier) : none; }
-// pop_result_t OperandConst::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 void OperandConst::parseAffineEquation(AffineEquationState& state) const
 {
 	ASSERT(_value.isValid());
@@ -205,7 +197,6 @@ bool OperandVar::operator==(const Operand& o) const
 {
 	return (o.kind() == kind()) && _addr == ((OperandVar&)o)._addr;
 }
-unsigned int OperandVar::countTempVars() const { return isTempVar() ? 1 : 0; }
 bool OperandVar::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
 {
 	if(isTempVar()) // temporary
@@ -219,17 +210,11 @@ bool OperandVar::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) 
 		return false;
 	}
 }
-int OperandVar::involvesVariable(const OperandVar& opdv) const
-{
-	return (int)(opdv == *this);
-}
-bool OperandVar::involvesMemoryCell(const OperandMem& opdm) const { return false; }
 Option<Constant> OperandVar::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
 const Operand* OperandVar::involvesMemory() const { return NULL; }
 // since the parent has to do the modification, and var has no child, return false
 Option<const Operand*> OperandVar::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
 	{ return (this == opd) ? some(opd_modifier) : none; }
-// pop_result_t OperandVar::doAffinePop(Operand*& opd_result, Operand*& new_opd) { opd_result = this->copy(); return POPRESULT_DONE; }
 void OperandVar::parseAffineEquation(AffineEquationState& state) const { state.onVarFound(this->_addr); }
 Option<Constant> OperandVar::evalConstantOperand() const { return none; }
 Option<const Operand*> OperandVar::simplify(DAG& dag) const { return none; }
@@ -270,24 +255,24 @@ int OperandMem::involvesVariable(const OperandVar& opdv) const
 	{ return 0; }
 bool OperandMem::involvesMemoryCell(const OperandMem& opdm) const
 	{ return *this == opdm; }
-Option<Constant> OperandMem::involvesStackBelow(const Constant& stack_limit) const 
-{
-	if(_opdc.value().isRelative() && (_opdc.value().val() < stack_limit.val()))
-		return elm::some(_opdc.value());
-	return elm::none;
-}
 const Operand* OperandMem::involvesMemory() const
 	{ return this; }
 Option<const Operand*> OperandMem::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
 	{ return (this == opd) ? some(opd_modifier) : none; }
 void OperandMem::parseAffineEquation(AffineEquationState& state) const
-	{ ASSERT(false); } // should never happen
+	{ crash(); } // should never happen
 Option<Constant> OperandMem::evalConstantOperand() const
 	{ return none; }
 Option<const Operand*> OperandMem::simplify(DAG& dag) const
 	{ return none; }
 const Operand* OperandMem::replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const
 	{ return this; }
+Option<Constant> OperandMem::involvesStackBelow(const Constant& stack_limit) const 
+{
+	if(_opdc.value().isRelative() && (_opdc.value().val() < stack_limit.val()))
+		return elm::some(_opdc.value());
+	return elm::none;
+}
  
 // Operands: Top
 // OperandTop::OperandTop() : id(next_id++) { }
@@ -314,20 +299,11 @@ bool OperandTop::operator<(const Operand& o) const
 		return false;
 	return id < o.toTop().id;
 }
-bool OperandTop::operator==(const Operand& o) const
-{
-	return kind() == o.kind() && id == ((OperandTop&)o).id;
-}
-unsigned int OperandTop::countTempVars() const { return 0; }
 bool OperandTop::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
 {
 	expr = this; // Assume we are the expr
 	return false; // We haven't found an isolated tempvar
 }
-int OperandTop::involvesVariable(const OperandVar& opdv) const { return 0; }
-const Operand* OperandTop::involvesMemory() const { return NULL; }
-bool OperandTop::involvesMemoryCell(const OperandMem& opdm) const {	return false; }
-Option<Constant> OperandTop::involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
 Option<const Operand*> OperandTop::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
 	{ return (this == opd) ? some(opd_modifier) : none; }
 void OperandTop::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen (for Top too?)
@@ -351,36 +327,6 @@ bool OperandIter::operator<(const Operand& o) const {
 // Operands: Arithmetic expressions
 OperandArith::OperandArith(arithoperator_t opr, const Operand* opd1_, const Operand* opd2_)
 	: _opr(opr), opd1(opd1_), opd2(opd2_) { }
-/*OperandArith::OperandArith(arithoperator_t opr, const Operand& opd1_)
-	: _opr(opr)
-{
-	opd1 = opd1_.copy();
-}
-OperandArith::OperandArith(arithoperator_t opr, const Operand& opd1_, const Operand& opd2_)
-	: _opr(opr)
-{
-	opd1 = opd1_.copy();
-	opd2 = opd2_.copy();
-}
-OperandArith::OperandArith(const OperandArith& x)
-	: _opr(x._opr)
-{
-	opd1 = x.opd1->copy();
-	if(x.isBinary())
-		opd2 = x.opd2->copy();
-}
-OperandArith::~OperandArith()
-{
-	delete opd1;
-	if(isBinary())
-		delete opd2;
-}
-Operand* OperandArith::copy() const
-{
-	if(isUnary())
-		return new OperandArith(_opr, *opd1);	
-	return new OperandArith(_opr, *opd1, *opd2);
-}*/
 io::Output& OperandArith::print(io::Output& out) const
 {
 	if(isUnary())
@@ -405,18 +351,6 @@ io::Output& OperandArith::print(io::Output& out) const
 	}
 	return out;
 }
-/*OperandArith& OperandArith::operator=(const OperandArith& opd)
-{
-	_opr = opd._opr;
-	delete opd1;
-	opd1 = opd.opd1->copy();
-	if(isBinary())
-	{
-		delete opd2;
-		opd2 = opd.opd2->copy();
-	}
-	return *this;
-}*/
 bool OperandArith::operator<(const Operand& o) const
 {
 	if(kind() > o.kind())
@@ -430,12 +364,9 @@ bool OperandArith::operator<(const Operand& o) const
 	if(*opd1 < *(o.toArith().opd1))
 		return true;
 	// *opd1 >= *o.opd1
-	if(isUnary())
-		return false; // it's over
-	if(*opd1 == *(o.toArith().opd1))
+	if(isBinary() && *opd1 == *(o.toArith().opd1))
 		return *opd2 < *(o.toArith().opd2);
-	else // > or == but unary
-		return false;
+	return false; // > or == but unary
 }
 bool OperandArith::operator==(const Operand& o) const
 {
@@ -514,64 +445,6 @@ Option<const Operand*> OperandArith::update(DAG& dag, const Operand* opd, const 
 	else
 		return rtn ? some(dag.autoOp(_opr, n1)) : none;		
 }
-/*
-// TO*DO handle ARITHOPR_NEG _and_ replace in isAffine() the (_opr == +) || (_opr == -) statements by adding the NEG case! Handle unary everywhere!
-pop_result_t OperandArith::doAffinePop(Operand*& opd_result, Operand*& new_opd)
-{
-	// it's important to pop the items to the right side of the operator (otherwise problems with operator -)
-	pop_result_t result = opd2->doAffinePop(opd_result, new_opd);
-	switch(result)
-	{
-		case POPRESULT_FAIL:
-			return POPRESULT_FAIL;
-		case POPRESULT_DONE: // opd2 is an OperandConst / OperandVar, so case (.1.) + X
-			// opd_result already contains X
-			// and new_opd will contain (.1.)
-			new_opd = opd1->copy();
-			switch(_opr)
-			{
-				case ARITHOPR_ADD: // this is all fine and easy
-					return POPRESULT_CONTINUE;
-				case ARITHOPR_SUB:
-					if(opd_result->kind() == CST)
-					{
-						opd_result = new OperandConst(-((OperandConst*)opd_result)->value()); // opposite of the value
-						return POPRESULT_CONTINUE;
-					}
-					else // 
-V
-VAR
-						return POPRESULT_FAIL; // we do not handle X - t1 or X - sp (TO*DO: is it bad? maybe we should improve this)
-				default:
-					return POPRESULT_FAIL; // this case shouldn't happen
-			}
-		case POPRESULT_CONTINUE: // opd2 is an OperandArith, so case (.1.) +- (.2.)
-			// opd_result already contains some X into (.2.)
-			// new_opd already contains the new righ-handside (.2.)
-			new_opd = new OperandArith(_opr, *opd1, *new_opd); // so return (.1.) +- (.2.)
-			switch(_opr)
-			{
-				case ARITHOPR_ADD: // all fine and easy, again
-					return POPRESULT_CONTINUE;
-				case ARITHOPR_SUB:
-					if(opd_result->kind() == CST)
-					{
-						opd_result = new OperandConst(-((OperandConst*)opd_result)->value()); // we have to take opposite of the value every time
-						return POPRESULT_CONTINUE;
-					}
-					// example of why we had  to do this: if we have (...) - (t1 + 2)
-					// (t1+2).doAffinePop() will return +2 even though it's actually -2
-					else // 
-V
-VAR
-						return POPRESULT_FAIL; // TO*DO: maybe improve this, see above
-				default:
-					return POPRESULT_FAIL; // this case shouldn't happen
-			}
-	}
-	return POPRESULT_FAIL;
-}
-*/
 
 void OperandArith::parseAffineEquation(AffineEquationState& state) const
 {
@@ -604,33 +477,33 @@ Option<Constant> OperandArith::evalConstantOperand() const
 	Option<Constant> val2 = isUnary() ? elm::none : opd2->evalConstantOperand();
 	if(val1 && (val2 || isUnary()))
 	{
-#		define V1 (*val1)//.val()
-#		define V2 (*val2)//.val()
+#		define VAL1 (*val1)//.val()
+#		define VAL2 (*val2)//.val()
 		switch(_opr)
 		{
 			case ARITHOPR_NEG:
-				return -V1;
+				return -VAL1;
 			case ARITHOPR_ADD:
-				return V1 + V2;
+				return VAL1 + VAL2;
 			case ARITHOPR_SUB:
-				return V1 - V2;
+				return VAL1 - VAL2;
 			case ARITHOPR_MUL:
-				return V1 * V2;
+				return VAL1 * VAL2;
 			case ARITHOPR_MULH:
-				return Constant( (t::int64(V1.val())*t::int64(V2.val())) / t::int64(0x100000000ul) );
+				return Constant( (t::int64(VAL1.val())*t::int64(VAL2.val())) / t::int64(0x100000000ul) );
 			case ARITHOPR_DIV:
-				if(V2 == 0)
+				if(VAL2 == 0)
 					return none;
-				return V1 / V2;
+				return VAL1 / VAL2;
 			case ARITHOPR_MOD:
-				if(V2 == 0)
+				if(VAL2 == 0)
 					return none;
-				return V1 % V2;
+				return VAL1 % VAL2;
 			case ARITHOPR_CMP:
 				return none; // This can't be evaluated (wouldn't make much sense if this case was matched after the if anyway)
 		}
-#		undef V1 
-#		undef V2
+#		undef VAL1 
+#		undef VAL2
 	}
 	return none; // one of the operands is not constant or we failed to evaluate it
 }
@@ -720,12 +593,18 @@ Option<const Operand*> OperandArith::simplify(DAG& dag) const
 }
 const Operand* OperandArith::replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const
 {
-	if(isBinary())
-		return dag.autoOp(_opr, opd1->replaceConstants(dag, constants, replaced_vars), opd2->replaceConstants(dag, constants, replaced_vars));
-	else
-		return dag.autoOp(_opr, opd1->replaceConstants(dag, constants, replaced_vars));
+	return dag.autoOp(
+		_opr,
+		opd1->replaceConstants(dag, constants, replaced_vars),
+		isBinary() ? opd2->replaceConstants(dag, constants, replaced_vars) : NULL);
 }
 
+/**
+ * @fn bool OperandArith::isLinear(bool only_linear_opr) const
+ * @brief      Determines if the operandlinear.
+ * @param      only_linear_opr  Only allow linear operators
+ * @return     True if linear, False otherwise.
+ */
 bool OperandArith::isLinear(bool only_linear_opr) const
 {
 	switch(_opr)

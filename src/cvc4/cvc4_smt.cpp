@@ -8,7 +8,7 @@
 #include "../debug.h"
 #include "cvc4_smt.h"
 
-#define DONTCHECK_USELESS_ASSERTS
+#define DONT_REMOVE_USELESS_ASSERTS
 
 using namespace CVC4::kind;
 using elm::BitVector;
@@ -43,7 +43,7 @@ void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, con
 	BitVector used_regs(lv.maxRegisters(), false);
 
 // experimental
-#ifndef DONTCHECK_USELESS_ASSERTS // this improves the complexity of the SMT solving by removing asserts that have no chance of creating UNSAT
+#ifndef DONT_REMOVE_USELESS_ASSERTS // this improves the complexity of the SMT solving by removing asserts that have no chance of creating UNSAT
 	Vector<const Operand*> v;
 	for(HashTable<Constant, const Operand*, ConstantHash>::KeyIterator iter(mem); iter; iter++)
 		v.push(dag.mem(*iter));
@@ -72,7 +72,7 @@ void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, con
 
 	for(HashTable<Constant, const Operand*, ConstantHash>::PairIterator iter(mem); iter; iter++)
 	{
-#ifndef DONTCHECK_USELESS_ASSERTS
+#ifndef DONT_REMOVE_USELESS_ASSERTS
 		if(v.contains(dag.mem((*iter).fst))) // useless assert
 		{
 			exprs += elm::none;
@@ -108,7 +108,7 @@ bool CVC4SMT::checkPredSat()
 			if(dbg_&0x1)
 				std::cout << "[[[" << smt.getUnsatCore() << "]]]" << endl;
 			if(dbg_&0x2)
-				{ char c; cin >> c; cin >> c; }
+				{ char c; cin >> c >> c; }
 			if(dbg_&0x4)
 				abort();
 		}

@@ -271,6 +271,7 @@ public:
 	inline const Operand *mod (const Operand *arg1, const Operand *arg2) { return op(ARITHOPR_MOD, arg1, arg2); }
 	inline const Operand *cmp (const Operand *arg1, const Operand *arg2) { return op(ARITHOPR_CMP, arg1, arg2); }
 
+	// accepts non-binary calls with NULL second argument
 	const Operand *autoOp(arithoperator_t op, const Operand *arg1, const Operand *arg2) {
 		// ASSERTP(arg1 && arg2, arg1 << arg2);
 		switch(op) {

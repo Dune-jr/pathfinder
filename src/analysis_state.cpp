@@ -5,6 +5,7 @@
 #include "arith.h"
 #include "analysis_states.h"
 #include "compositor.h"
+#include "cfg_features.h"
 
 /**
  * @class Analysis::State
@@ -163,12 +164,16 @@ s.lvars[i]->accept(cc);
 
 	// applying memory
 	// goal is mem = n o m with n = s.mem
-	if(!lvars[context->sp] || !lvars[context->sp]->isConstant() || s.memid.b != NULL)
+	if(!lvars[context->sp] || !lvars[context->sp]->isAConst() || s.memid.b != NULL)
 	{
+		ASSERTP(lvars[context->sp]->isAConst() || !lvars[context->sp]->isConstant(), "more simplifications required: " << *lvars[context->sp])
 		static CFG* last_fun_warning = NULL;
 		if(s->path.function() != last_fun_warning)
 		{
-			DBGW("can't use mem data from function " << s->path.function() << ", sp is " << lvars(context->sp))
+			if(s.memid.b == NULL)
+				DBGW("can't use mem data from \"" << s->path.function() << "\" because sp is " << lvars(context->sp))
+			else
+				DBGW("can't use mem data from \"" << s->path.function() << "\" because mem was reset at " << (Block*)s.memid.b)
 			last_fun_warning = s->path.function();
 		}
 		wipeMemory(vm);
