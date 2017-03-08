@@ -23,8 +23,9 @@ config:Add(OptLibrary("z3", "z3++.h", "Set to path to z3"))
 config:Add(OptString("solver", "cvc4", "Select an SMT solver"))
 config:Add(OptString("O", "0", "Set optimization level (0/1/2/3)"))
 config:Add(OptToggle("Wall", 	true, 	"Enable all GCC warnings"))
-config:Add(OptToggle("slice", 	false, 	"Enable support for slicing"))
 config:Add(OptToggle("debug", 	true, 	"Enable OTAWA debugging"))
+config:Add(OptToggle("utf8",	true, 	"Enable UTF-8 pretty printing"))
+config:Add(OptToggle("slice", 	false, 	"Enable support for slicing"))
 config:Add(OptToggle("warnings",false, 	"Enable PathFinder warnings"))
 config:Add(OptToggle("v1", 		false, 	"Enable support for v1 analysis"))
 config:Finalize("config.lua")
@@ -46,6 +47,9 @@ if config.slice.value then
 end
 if config.debug.value == false then
 	settings.cc.flags:Add("-D NDEBUG")
+end
+if config.utf8.value == false then
+	settings.cc.flags:Add("-D NO_UTF8")
 end
 if config.warnings.value then
 	settings.cc.flags:Add("-D DBG_WARNINGS")
