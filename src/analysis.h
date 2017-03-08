@@ -102,6 +102,8 @@ public:
 
 protected:
 	class Progress;
+	class Progressv1;
+	class Progressv2;
 	class SolverProgress;
 	context_t context;
 	DAG* dag;

@@ -83,10 +83,12 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 	IPStats stats;
 	if(flags&DRY_RUN) // no SMT call
 		return stats;
+
 	const int state_count = ss.count();
 	SolverProgress* sprogress;
 	if(flags&SHOW_PROGRESS)
 		sprogress = new SolverProgress(state_count);
+
 	// find the conflicts
 	Vector<Option<Path*> > sv_paths;
 	Vector<Analysis::State> new_sv(state_count); // safer to do it this way than remove on the fly (i think more convenient later too)
@@ -143,10 +145,8 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 			sv_paths.addLast(infeasible_path);
 			if(!infeasible_path)
 				new_sv.addLast(*si); // only add feasible states to new_sv
-#			ifdef DBG_WARNINGS
-				else if(! (*infeasible_path)->contains(si->lastEdge())) // make sure the last edge was relevant in this path
-					cerr << "WARNING: !infeasible_path->contains(s.lastEdge())" << endl;
-#			endif
+			// else if(! (*infeasible_path)->contains(si->lastEdge())) // make sure the last edge was relevant in this path
+			// 	cerr << "WARNING: !infeasible_path->contains(s.lastEdge())" << endl;
 			if(flags&SHOW_PROGRESS)
 				sprogress->onSolving(infeasible_path);
 		}

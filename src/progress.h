@@ -1,6 +1,7 @@
 #ifndef _PROGRESS_H
 #define _PROGRESS_H
 
+#include <ctime> // clock
 #include <elm/genstruct/HashTable.h>
 #include <elm/string/String.h>
 #include <otawa/cfg/CFG.h>
@@ -9,7 +10,7 @@
 #include "cfg_features.h"
 
 using elm::genstruct::HashTable;
-using otawa::CFG;
+using otawa::Block;
 
 // solver progress bar
 /* example: [■■       ] 4 states */
@@ -35,15 +36,37 @@ private:
 	const int n;
 };
 
+
+class Analysis::Progress
+{
+public:
+	virtual void onBlock(Block* b) { }
+	virtual void enter(CFG* cfg) { }
+	virtual void exit(CFG* cfg, int states_count, int tops_count, int ip_count) { }
+	virtual ~Progress() { }
+protected:
+	Progress() { }
+	static inline void moveUp(int n)
+		{ elm::cout << "\e[" << n << "A"; }
+	static inline void moveDown(int n)
+		{ elm::cout << "\e[" << n << "B"; }
+	static inline void moveRight(int n)
+		{ elm::cout << "\e[" << n << "C"; }
+	static inline void newLines(int n)
+		{ for(int i = 0; i < n; i++) elm::cout << endl; }
+	static inline void eraseAboveLines(int n)
+		{ moveUp(n); for(int i = 0; i < n; i++) moveDown(1); }
+};
+
 /**
-  * @class Analysis::Progress
+  * @class Progress
   * @brief call tree with progress.
   * example:
   *	getbit         :   5/9   (55 %)
   *	des            :  18/40  (45 %)
   *	main           :   1/3   (33 %)
 */
-class Analysis::Progress
+class Analysis::Progressv1 : public Analysis::Progress
 {
 private:
 	struct Stats
@@ -57,7 +80,7 @@ private:
 	};
 
 public:
-	Progress(CFG* main, bool v2 = false) : lines(0), maxlines(-1), v2(v2) { onEntry(main); }
+	Progressv1(CFG* main, bool v2 = false) : lines(0), maxlines(-1), v2(v2) { onEntry(main); }
 	void onBlock(Block* b) {
 		bool all_leave = true; // enable when on sequential level
 		for(LoopHeaderIter lh(b); lh; lh++) {
@@ -89,7 +112,7 @@ public:
 private:
 	inline void onEntry(CFG* cfg) { ASSERT(!cfgs.contains(cfg)); cfgs.push(cfg); stats.push(Stats(0, cfg->count()-2)); }
 	inline void onExit (CFG* cfg) { if(cfgs.pop() != cfg && !v2) crash(); }
-	inline void onBasic(BasicBlock* bb) { 
+	void onBasic(BasicBlock* bb) { 
 		bool all_leave = true;
 		for(LoopHeaderIter lh(bb); lh; lh++)
 			if(loopStatus(lh) != LEAVE)	{
@@ -154,22 +177,83 @@ private:
 		}
 		maxlines = max(maxlines, lines);	
 	}
+	static inline elm::String indent(int n)
+		{ String str; for(int i = 0; i < n; i++) str= _ << str << "\t"; return str; }
 	inline void incrementStat(CFG* cfg)
 		{ stats[cfgs.indexOf(cfg)] = stats[cfgs.indexOf(cfg)] + Stats(1, 0); }
-	inline elm::String indent(int n) const 
-		{ String str; for(int i = 0; i < n; i++) str=str+"\t"; return str; }
-	inline void moveUp(int n) const
-		{ elm::cout << "\e[" << n << "A"; }
-	inline void newLines(int n) const 
-		{ for(int i = 0; i < n; i++) elm::cout << endl; }
-	inline void eraseAboveLines(int n) const
-		{ moveUp(n); for(int i = 0; i < n; i++) elm::cout << "\e[K\e[1B"; }
 
 	// HashTable<CFG*, Stats> tab;
 	Vector<CFG*> cfgs;
 	Vector<Stats> stats;
 	int lines, maxlines;
 	bool v2;
+};
+
+class Analysis::Progressv2 : public Analysis::Progress
+{
+private:
+	struct Stats
+	{
+		Stats() : cfg(NULL), x(0) { }
+		Stats(CFG* cfg, int x = 0) : cfg(cfg), x(x), timestamp(clock()) { }
+		Stats& operator++(void) { this->x++; return *this; }
+		Stats& operator++(int)  { this->x++; return *this; }
+		friend io::Output& operator<<(io::Output& out, const Stats& s){ out << s.cfg->name() << "-" << s.x; return out; }
+
+		CFG* cfg;
+		int x; // how far it is
+		std::time_t timestamp;
+	};
+
+public:
+	Progressv2(void) : depth(0) { }
+	void enter(CFG* cfg) {
+		flush();
+		prefix();
+		depth++;
+		elm::cout << cfg->name() << endl;
+
+		funs.push(Stats(cfg));
+		increaseFuns();
+	};
+	void exit(CFG* cfg, int states_count, int tops_count, int ip_count) {
+		flush();
+		depth--;
+
+		int x = 0;
+		float t;
+		for(Vector<Stats>::Iter i(funs); i; i++)
+			if(funs[i].cfg == cfg)
+			{
+				x = funs[i].x;
+				t = (clock()-funs[i].timestamp)*1.f/CLOCKS_PER_SEC;
+				funs.remove(i);
+				break;
+			}
+		moveUp(x);
+		moveRight(25);
+		cout << ":" << IntFormat(states_count).right().width(5) << " states,"
+					<< IntFormat(ip_count).right().width(4) << " IPs,"
+					<< IntFormat(tops_count).right().width(5)  << " tops. ("
+					<< FloatFormat(t).decimal().width(0,3) << "s)" << endl;
+		moveDown(x);
+	}
+	void onBlock(Block* b) {
+		flush();
+		cout << b;
+	}
+
+private:
+	void prefix(void) { if(depth) { indent(elm::cout, depth-1); elm::cout << "└▶"; } }
+	static inline void flush()
+		{ elm::cout << "\e[1A\n\e[K"; }
+	static inline void indent(io::Output& out, int n)
+		{ for(int i = 0; i < n; i++) out << " "; }
+	inline void increaseFuns()
+		{ for(Vector<Stats>::Iter i(funs); i; i++) funs[i]++; }
+
+	int depth;
+	Vector<Stats> funs;
 };
 
 #endif

@@ -20,6 +20,8 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 {
 	ASSERT(! (flags&VIRTUALIZE_CFG));
 	DBGG(IPur() << "==>\"" << cfg->name() << "\"")
+	if(flags&SHOW_PROGRESS)
+		progress->enter(cfg);
 	
 	WorkingList wl;
 	const LockPtr<VarMaker> vm_backup = vm;
@@ -133,8 +135,8 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 	}
 /* end */
 	// Pretty printing
-	if(dbg_flags&DBG_DETAILED_STATS)
-		cout << " " << StringFormat(cfg->name()).width(20) << ": " << IntFormat(CFG_S(cfg)->count()).right().width(5) << " states, " << IntFormat(vm->sizes().fst).right().width(5) << " tops, " << countIPsOf(cfg) << " IPs." << endl;
+	if(flags&SHOW_PROGRESS)
+		progress->exit(cfg, CFG_S(cfg)->count(), vm->sizes().fst, countIPsOf(cfg));
 	// VarMaker stuff
 	DBG(cfg->name() << ".vm = " << *vm << " (" << vm << ")")
 	DBGG(IPur() << "<==\"" << cfg->name() << "\"")

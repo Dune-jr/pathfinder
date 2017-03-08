@@ -94,7 +94,7 @@ const Vector<DetailedPath>& Analysis::run(const WorkSpace* ws)
   */
 const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 {
-	if(flags&SHOW_PROGRESS) progress = new Progress(cfg, flags&Analysis::IS_V3);
+	if(flags&SHOW_PROGRESS) progress = (flags&Analysis::IS_V3) ? (Progress*)new Progressv2() : (Progress*)new Progressv1(cfg);
 	DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
 	DBG("Stack pointer identified to " << context.sp)
 
