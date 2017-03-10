@@ -88,6 +88,7 @@ public:
 	void appendEdge(Edge* e);
 	void removeConstantPredicates();
 	void collectTops(VarCollector &bv) const;
+	void removeTautologies();
 	inline void resetSP() { lvars[context->sp] = dag->cst(SP); }
 
 	// analysis_bb.cpp

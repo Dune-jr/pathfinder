@@ -155,14 +155,33 @@ bool Predicate::update(DAG& dag, const Operand* opd, const Operand* opd_modifier
 	return rtn;
 }
 
-// copy p (useless now)
-/*Predicate& Predicate::operator=(const Predicate& p)
+/**
+ * @fn bool Predicate::isTautology(void) const
+ * @brief      Determines if the predicate is a tautology.
+ */
+bool Predicate::isTautology(void) const
 {
-	_opr = p._opr;
-	_opd1 = p._opd1;
-	_opd2 = p._opd2;
-	return *this;
-}*/
+	if(_opr == CONDOPR_EQ)
+		return _opd1 == _opd2;
+	if(_opr == CONDOPR_LE && _opd1 == _opd2)
+		return true;
+	else if(_opd1->isAConst() && _opd2->isAConst() && _opd1->toConstant().isAbsolute() && _opd2->toConstant().isAbsolute())
+	{
+		t::int32 v = _opd1->toConstant().val(), w = _opd2->toConstant().val();
+		switch(_opr)
+		{
+			case CONDOPR_LT:
+				return v < w;
+			case CONDOPR_LE:
+				return v <= w;
+			case CONDOPR_NE:
+				return v != w;
+			default:
+				break;
+		}
+	}
+	return false;
+}
 
 /**
   * @fn bool Predicate::operator==(const Predicate& p) const;

@@ -75,46 +75,45 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 			/* if b ∈ H(G) then */
 			if(LOOP_HEADER(b))
 			{
-				ASSERT(s->count() <= 1);
-				/* if status_b = LEAVE then */
-				if(loopStatus(b) == LEAVE) /////
-				{
-					/* if ∃e ∈ b.ins | s_e = nil then */
-					if(anyEdgeHasTrace(b->ins()))
-						/* wl ← wl ∪ {b} */
-						wl.push(b);
-					/* s_b ← nil */
-					LH_S.remove(b);
-					/* succ ← {} */
-					propagate = false;
-				}
-				else /* else s_b ← s */
-					LH_S(b) = s->one();
 				switch(loopStatus(b))
 				{
-					/* status_b ← FIX if status_b = ENTER */
 					case ENTER:
-						LH_STATUS(b) = FIX;
 						LH_S0(b) = s->one();
-						//s->onLoopEntry(b);
 						break;
-					/* status_b ← ACCEL if status_b = FIX ∧ s ≡ s_b */
-					case FIX: if(s->one().equiv(LH_S(b)))
-						{
-							LH_STATUS(b) = ACCEL;
+					case FIX:
+						if(s->one().equiv(LH_S(b)))
 							s->prepareFixPoint();
-						}
 						break;
-					/* ... */
 					case ACCEL:
-						LH_STATUS(b) = LEAVE;
 						s->widening(loopIterOpd(b));
 						break;
-					/* status_b ← ENTER if status_b = LEAVE */
 					case LEAVE:
-						LH_STATUS(b).remove();
+						if(anyEdgeHasTrace(b->ins())) /* if ∃e ∈ b.ins | s_e = nil then */
+							wl.push(b); /* wl ← wl ∪ {b} */
+						propagate = false; /* succ ← {} */
 						break;
 				}
+
+				switch(loopStatus(b)) // update automaton
+				{
+					case ENTER:
+						setLoopStatus(b, FIX); /* status_b ← FIX if status_b = ENTER */
+						break;
+					case FIX: if(s->one().equiv(LH_S(b)))
+						setLoopStatus(b, ACCEL); /* status_b ← ACCEL if status_b = FIX ∧ s ≡ s_b */
+						break;
+					case ACCEL:
+						setLoopStatus(b, LEAVE); /* status_b ← LEAVE if status_b = ACCEL */
+						break;
+					case LEAVE:
+						setLoopStatus(b, ENTER); /* status_b ← ENTER if status_b = LEAVE */
+						break;
+				}
+
+				if(loopStatus(b) == LEAVE) /* if status_b == LEAVE */
+					LH_S.remove(b); /* s_b ← nil */
+				else
+					LH_S(b) = s->one(); // save the status
 			}
 			I(b, s); // update s
 			/* for e ∈ succ \ {EX_h | b ∈ L_h ∧ status_h =/ LEAVE} */
@@ -141,6 +140,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 	DBG(cfg->name() << ".vm = " << *vm << " (" << vm << ")")
 	DBGG(IPur() << "<==\"" << cfg->name() << "\"")
 	CFG_S(cfg)->minimize(*vm, flags&CLEAN_TOPS); // reduces the VarMaker to the minimum
+	CFG_S(cfg)->removeTautologies();
 	CFG_VARS(cfg) = vm;
 	vm = vm_backup;
 	// Check all sp are valid

@@ -213,7 +213,7 @@ void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 		if(wipe_memory && p.involvesMemory())
 			continue; // Do not add
 		LabelledPredicate lp = LabelledPredicate(cc.visit(p), pi->labels());
-		DBG(color::IGre() << " + " << lp.pred() << color::Gre() << " {composed from " << p << "}")
+		DBG(color::IGre() << " + " << lp.pred() << color::Gre() << " {from " << p << "}")
 		this->labelled_preds += lp; // then add them
 	}
 
@@ -493,6 +493,23 @@ void Analysis::State::collectTops(VarCollector& vc) const
 }
 
 /**
+ * @brief      Removes all tautologies from lvars/preds AND also predicates that involve T
+ */
+void Analysis::State::removeTautologies(void)
+{
+	for(LocalVariables::Iter i(lvars); i; i++)
+		if(lvars[i] && *lvars[i] == *i)
+			lvars[i] = NULL;
+	for(PredIterator piter(*this); piter; )
+	{
+		if(piter->pred().isTautology() || piter->pred().involvesOperand(*Top))
+			removePredicate(piter);
+		else
+			piter++;
+	}
+}
+
+/**
  * @fn inline Analysis::State Analysis::topState(Block* entry) const;
  * @brief Returns a Top state
  */
@@ -552,9 +569,8 @@ bool Analysis::State::equiv(const Analysis::State& s) const
 #endif
 	if(lvars != s.lvars)
 		return false;
-	// checking for this->labelled_preds.sameValuesAs(s.labelled_preds)
-	if(this->labelled_preds.count() != s.labelled_preds.count())
-		return false;
+	// if(this->labelled_preds.count() != s.labelled_preds.count()) // This doesn't work because we sometimes add true values at each iteration
+	// 	return false;
 	for(SLList<LabelledPredicate>::Iterator self_iter(this->labelled_preds); self_iter; self_iter++)
 	{
 		bool contains = false;

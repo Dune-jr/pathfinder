@@ -64,7 +64,7 @@ protected:
 	} context_t;
 	typedef enum 
 	{	
-		ENTER, // not used: represented by no annotation, when we haven't entered the loop yet
+		ENTER=0, // not used: represented by no annotation, when we haven't entered the loop yet
 		FIX,
 		ACCEL,
 		LEAVE,
@@ -134,6 +134,7 @@ private:
 
 protected:
 	inline static loopheader_status_t loopStatus(const Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
+	inline static void setLoopStatus(Block* h, loopheader_status_t ls) { ASSERT(LOOP_HEADER(h)); if(ls != ENTER) LH_STATUS.set(h,ls); else LH_STATUS.remove(h); }
 	inline static const Operand* loopIterOpd(const Block* h) { return LH_I.exists(h) ? LH_I.get(h) : new OperandIter(h); }
 	inline static bool isConditional(Block* b) { return b->countOuts() > 1; }
 

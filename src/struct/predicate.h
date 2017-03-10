@@ -42,6 +42,7 @@ public:
 	unsigned int countTempVars() const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	bool update(DAG& dag, const Operand* opd, const Operand* opd_modifier);
+	bool isTautology() const;
 
 	bool operator==(const Predicate& p) const; // semantic equality (I don't like this)
 	inline bool operator!=(const Predicate& p) const { return !(*this == p); }

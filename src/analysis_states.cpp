@@ -41,6 +41,7 @@ void Analysis::States::apply(const States& ss, VarMaker& vm, bool local_sp, bool
  */
 void Analysis::States::appliedTo(const State& s, VarMaker& vm)
 {
+	this->removeTautologies();	
 	States x(this->count());
 	x.push(s);
 	x.apply(*this, vm, false, false); // no debug, no local sp

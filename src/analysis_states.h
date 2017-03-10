@@ -24,6 +24,7 @@ public:
 	void apply(const States& ss, VarMaker& vm, bool local_sp, bool dbg = true);
 	void appliedTo(const State& s, VarMaker& vm);
 	void minimize(VarMaker& vm, bool clean) const;
+	inline void removeTautologies(void) { for(Iter i(this->s); i; i++) s[i].removeTautologies(); }
 	inline void prepareFixPoint(void) { for(Iter i(this->s); i; i++) s[i].prepareFixPoint(); }
 	inline void widening(const Operand* n) { ASSERT(s.count() <= 1); if(s.count() == 1) s[0].widening(n); } // needs max one state
 	void checkForSatisfiableSP() const;
