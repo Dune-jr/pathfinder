@@ -412,6 +412,14 @@ bool Analysis::State::replaceVar(const OperandVar& var, const Operand* expr)
 	return rtn;
 }*/
 
+/**
+ * @brief      Replaces all occurences of a temp var by some expr
+ *
+ * @param      temp_var  The temporary variable
+ * @param      expr      The expression to replace it with
+ *
+ * @return     True if something was replaced, False otherwise
+ */
 bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand* expr)
 {
 	bool rtn = false;
@@ -438,7 +446,10 @@ bool Analysis::State::replaceTempVar(const OperandVar& temp_var, const Operand* 
 	return rtn;
 }
 
-// replaces all occurrences of opdm in all predicates by expr + append "labels"
+/**
+ * @fn bool Analysis::State::replaceMem(const OperandMem& opdm, const Operand* expr, const Path& labels)
+ * @brief replaces all occurrences of opdm in all predicates by expr + append "labels"
+ */
 bool Analysis::State::replaceMem(const OperandMem& opdm, const Operand* expr, const Path& labels)
 {
 	bool rtn = false;
@@ -545,6 +556,7 @@ bool Analysis::State::update(const OperandVar& opd_to_update, const Operand* opd
 /**
  * @fn bool Analysis::State::invalidateAllMemory()
  * @brief      Invalidate all predicates involving memory
+ * @rerturn    True if something was invalidated, False otherwise
  */
 bool Analysis::State::invalidateAllMemory()
 {
@@ -572,7 +584,6 @@ void Analysis::State::updateLabelsWithReplacedConstantsInfo(Path& labels, const 
 {
 	for(Vector<OperandVar>::Iter iter(replaced_vars); iter; iter++)
 		labels += constants.getLabels(*iter);
-		// DBG(color::IRed() << "replaced_vars:" << *iter << ", labels+=" << pathToString(constants.getLabels(*iter)))
 }
 #endif
 
@@ -580,9 +591,9 @@ void Analysis::State::updateLabelsWithReplacedConstantsInfo(Path& labels, const 
  * @brief      warning: must be called with a suppported condition
  *
  * @param      kind       The condition kind
- * @param      opd_left   The operand left
- * @param      opd_right  The operand right
- * @param      taken      The taken
+ * @param      opd_left   The first operand
+ * @param      opd_right  The second operand
+ * @param      taken      Taken branch or not?
  *
  * @return     The conditional predicate.
  */
@@ -673,7 +684,7 @@ Option<Constant> Analysis::State::getConstantValueOfReadOnlyMemCell(const Operan
 /**
  * @brief      Returns an overestimation of the size of a type
  *
- * @param[in]  type  The type
+ * @param      type  The type
  *
  * @return     The size of the type.
  */

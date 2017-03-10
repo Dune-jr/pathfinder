@@ -136,8 +136,8 @@ io::Output& Analysis::State::print(io::Output& out) const
 /**
  * @brief      This function is *this -> s -> s o *this, state composition. Updates current state. Updates path.
  * @param  s   state to apply
+ * @param local_sp This tells us whether we should scale the SP or not
  */
-#warning we shouldn't use ANY predicate relevant to memory coming from a function that doesn't have initial memory... including in lvars! this is an issue
 void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 {
 	// DBG("f="<<this->dumpEverything() << ",\ng = " << s.dumpEverything())
@@ -153,7 +153,6 @@ void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 		if(s.lvars[i] != NULL) // g[i] was modified
 		{
 			ELM_DBGV(1, "\tf°g(" << *i << ") = " << "f(" << *s.lvars[i] << ") = ")
-s.lvars[i]->accept(cc);
 			lv[i] = s.lvars[i]->accept(cc); // needs more info from f...
 			if(dbg_verbose == DBG_VERBOSE_ALL)
 				cout << *lv[i] << endl;
@@ -164,16 +163,20 @@ s.lvars[i]->accept(cc);
 
 	// applying memory
 	// goal is mem = n o m with n = s.mem
-	if(!lvars[context->sp] || !lvars[context->sp]->isAConst() || s.memid.b != NULL)
+	ASSERTP(lvars[context->sp], "weird... should always be set")
+	const bool mem_was_reset = s.memid.b != NULL;
+	const bool sp_was_lost = !lvars[context->sp]->isAConst();
+	const bool wipe_memory = sp_was_lost || mem_was_reset;
+	ASSERTP(!(sp_was_lost && lvars[context->sp]->isConstant()), "more simplifications required: " << *lvars[context->sp])
+	if(wipe_memory)
 	{
-		ASSERTP(lvars[context->sp]->isAConst() || !lvars[context->sp]->isConstant(), "more simplifications required: " << *lvars[context->sp])
 		static CFG* last_fun_warning = NULL;
 		if(s->path.function() != last_fun_warning)
 		{
-			if(s.memid.b == NULL)
-				DBGW("can't use mem data from \"" << s->path.function() << "\" because sp is " << lvars(context->sp))
-			else
+			if(mem_was_reset)
 				DBGW("can't use mem data from \"" << s->path.function() << "\" because mem was reset at " << (Block*)s.memid.b)
+			else
+				DBGW("can't use mem data from \"" << s->path.function() << "\" because sp is " << lvars(context->sp))
 			last_fun_warning = s->path.function();
 		}
 		wipeMemory(vm);
@@ -207,6 +210,8 @@ s.lvars[i]->accept(cc);
 	for(SLList<LabelledPredicate>::Iterator pi(s.labelled_preds); pi; pi++)
 	{
 		Predicate p = pi->pred();
+		if(wipe_memory && p.involvesMemory())
+			continue; // Do not add
 		LabelledPredicate lp = LabelledPredicate(cc.visit(p), pi->labels());
 		DBG(color::IGre() << " + " << lp.pred() << color::Gre() << " {composed from " << p << "}")
 		this->labelled_preds += lp; // then add them
@@ -237,6 +242,8 @@ void Analysis::State::prepareFixPoint()
 			todel.push((*iter).fst);
 	for(Vector<Constant>::Iter i(todel); i; i++)
 		mem.remove(todel[i]);
+
+	DBGG("prepared fixpoint for accel: " << dumpEverything())
 }
 
 /**
@@ -246,6 +253,7 @@ void Analysis::State::prepareFixPoint()
  */
 void Analysis::State::widening(const Operand* n)
 {
+DBGG("start: " << dumpEverything())
 	enum {
 		INIT=false,
 		DONE=true,
@@ -263,6 +271,8 @@ void Analysis::State::widening(const Operand* n)
 			{
 				if(lvars[i]) // i was modified
 				{
+// if(lvars[i]->kind() == ARITH)
+// 	cout << *lvars[i] << endl;
 					if(*lvars[i] == *i) // x = x0
 					{
 						// do nothing
@@ -271,6 +281,7 @@ void Analysis::State::widening(const Operand* n)
 					}
 					else if(lvars[i]->isAffine(*i) && lvars[i]->involvesVariable(*i) == 1) // we do not handle stuff like x=2*x yet... we'd need 2^I anyway, ouch
 					{
+						ASSERTP(false, "finally")
 						AffineEquationState eqstate;
 						lvars[i]->parseAffineEquation(eqstate);
 						ASSERTP(eqstate.spCounter() == 0, "strange case where SP is added at every iteration... if this is not a bug, just scratch")

@@ -100,10 +100,10 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 						break;
 					/* status_b ← ACCEL if status_b = FIX ∧ s ≡ s_b */
 					case FIX: if(s->one().equiv(LH_S(b)))
-					{
-						LH_STATUS(b) = ACCEL;
-						s->prepareFixPoint();
-					}
+						{
+							LH_STATUS(b) = ACCEL;
+							s->prepareFixPoint();
+						}
 						break;
 					/* ... */
 					case ACCEL:

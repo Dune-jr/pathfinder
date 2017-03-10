@@ -47,6 +47,7 @@ Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold
 	gdom = new GlobalDominance(INVOLVED_CFGS(ws), GlobalDominance::EDGE_DOM | GlobalDominance::EDGE_POSTDOM); // no block dom
 	ws->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
 	ws->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
+	// ws->require(CONDITIONAL_RESTRUCTURED_FEATURE);
 
 	context.dfa_state = dfa::INITIAL_STATE(ws); // initial state
 	context.sp = ws->platform()->getSP()->number(); // id of the stack pointer
