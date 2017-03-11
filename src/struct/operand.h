@@ -34,10 +34,10 @@ enum arithoperator_t
 enum operand_kind_t
 {
 	CST,	// Constant value
+	ITER,	// Induction Variable
 	VAR,	// Variable (register or temporary variable, for now)
 	MEM,	// Memory cell
 	TOP,	// Constant of unknown value
-	ITER,	// Induction Variable
 	ARITH,	// Arithmetic Expression
 };
 io::Output& operator<<(io::Output& out, operand_kind_t kind);
@@ -104,7 +104,7 @@ public:
 	virtual bool isComplete() const = 0;
 	virtual bool isConstant() const = 0;
 	virtual bool isLinear(bool only_linear_opr) const = 0;
-	virtual bool isAffine(const OperandVar& opdv) const = 0;
+	virtual bool isAffine(const Operand& opd) const = 0;
 	virtual void parseAffineEquation(AffineEquationState& state) const = 0;
 	virtual Option<Constant> evalConstantOperand() const = 0; // all uses commented out?
 	virtual Option<const Operand*> simplify(DAG& dag) const = 0; // Warning: Option=none does not warrant that nothing has been simplified!
@@ -144,7 +144,7 @@ public:
 		void next();
 		
 	private:
-		inline void check();
+		void check();
 
 		SLList<const Operand*> q;
 		const int flags;
@@ -180,7 +180,7 @@ public:
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return true; }
 	inline bool isLinear(bool only_linear_opr)   const { return true; }
-	inline bool isAffine(const OperandVar& opdv) const { return true; }
+	inline bool isAffine(const Operand& opd) const { return true; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return CST; }
@@ -228,7 +228,7 @@ public:
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return false; }
 	inline bool isLinear(bool only_linear_opr)   const { return true; }
-	inline bool isAffine(const OperandVar& opdv) const { return _addr == opdv.addr(); }
+	inline bool isAffine(const Operand& opd) const { return *this == opd; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return VAR; }
@@ -271,12 +271,12 @@ public:
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return false; }
 	inline bool isLinear(bool only_linear_opr)   const { return true; }
-	inline bool isAffine(const OperandVar& opdv) const { return false; }
+	inline bool isAffine(const Operand& opd) const { return *this == opd; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return MEM; }
 	OperandMem& operator=(const OperandMem& opd);
-	inline bool operator==(const Operand& o) const;
+	inline bool operator==(const Operand& o) const { return (kind() == o.kind()) && (addr() == ((OperandMem&)o).addr()); }
 	bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandMem& o) { return o.print(out); }
 	inline const OperandMem& toMem() const { return *this; }
@@ -311,12 +311,12 @@ public:
 	Option<Constant> evalConstantOperand() const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
-	void parseAffineEquation(AffineEquationState& state) const;
+	void parseAffineEquation(AffineEquationState& state) const { crash(); } // should never happen, I think?
 	inline void markUsedRegisters(BitVector& uses) const { }
 	inline bool isComplete() const { return isIdentified(); }
 	inline bool isConstant() const { return false; }
 	inline bool isLinear(bool only_linear_opr)   const { return true; }
-	inline bool isAffine(const OperandVar& opdv) const { return false; }
+	inline bool isAffine(const Operand& opd) const { return *this == opd; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return TOP; }
@@ -358,8 +358,8 @@ public:
 	inline void markUsedRegisters(BitVector& uses) const { }
 	inline bool isComplete() const { return true; }
 	inline bool isConstant() const { return false; }
-	inline bool isLinear(bool only_linear_opr)   const { return true; }
-	inline bool isAffine(const OperandVar& opdv) const { return false; }
+	inline bool isLinear(bool only_linear_opr) const { return true; }
+	inline bool isAffine(const Operand& opd) const { return *this == opd; }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return ITER; }
@@ -411,8 +411,8 @@ public:
 	inline bool isComplete() const { return _opr != ARITHOPR_CMP && opd1->isComplete() && (isUnary() || opd2->isComplete()); }
 	inline bool isConstant() const { return opd1->isConstant() && (isUnary() || opd2->isConstant()); }
 	bool isLinear(bool only_linear_opr) const;
-	inline bool isAffine(const OperandVar& opdv) const
-		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opdv) && opd2->isAffine(opdv); }
+	inline bool isAffine(const Operand& opd) const
+		{ return ((_opr == ARITHOPR_ADD) || (_opr == ARITHOPR_SUB)) && opd1->isAffine(opd) && opd2->isAffine(opd); }
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return ARITH; }
@@ -430,26 +430,32 @@ private:
 	const Operand* opd2; // unused if operator is unary
 };
 
-// for v1 only
-class AffineEquationState
+// for v1 only // no longer
+class AffineEquationState // WARNING: this only makes sense when we know the equation is affine in one var
 {
 public:
-	AffineEquationState() : _is_negative(false), _delta(0), _sp_counter(0), _var_counter(0) { }
-	inline int delta()       const { return sign()*_delta;     }
-	inline int spCounter()   const { return sign()*_sp_counter;  }
-	inline int varCounter()  const { return sign()*_var_counter; }
-	inline void reverseSign() { _is_negative ^= 1; _delta = -_delta; _sp_counter = -_sp_counter; _var_counter = -_var_counter; }
-	inline void addToDelta(int d) { _delta += d; }
-	inline void onVarFound(const OperandVar& var) { _var_counter++; }
+	AffineEquationState(const Operand& var) : _is_negative(false), _delta(0), _sp_counter(0), _var_counter(0), _var(var) { }
+	inline short delta()       const { return sign()*_delta;     }
+	inline short spCounter()   const { return sign()*_sp_counter;  }
+	inline short varCounter()  const { return sign()*_var_counter; } // this includes mem too now
+	inline void addToDelta(short d) { _delta += d; }
+	inline void onVarFound(const Operand& var) { if(var == _var) _var_counter++; }
 	inline void onSpFound(bool sign = SIGN_POSITIVE) { if(sign == SIGN_POSITIVE) _sp_counter++; else _sp_counter--; }
+	void reverseSign() {
+		_is_negative ^= 1;
+		_delta = -_delta;
+		_sp_counter = -_sp_counter;
+		_var_counter = -_var_counter;
+	}
 private:
 	NONEW;
-	inline int sign() const { if(_is_negative) return -1; else return +1; }
+	inline short sign() const { if(_is_negative) return -1; else return +1; }
 
 	bool _is_negative;
-	int _delta;
-	int _sp_counter;
-	int _var_counter;
+	short _delta;
+	short _sp_counter;
+	short _var_counter;
+	const Operand& _var;
 };
 
 io::Output& operator<<(io::Output& out, arithoperator_t opr);

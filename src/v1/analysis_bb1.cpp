@@ -756,19 +756,19 @@ Option<t::int32> Analysis::State::findStackRelativeValueOfVar(const OperandVar& 
 		// Algorithm 3 (affine): ((?var +- ...) +- ... = (...)
 		if(piter.pred().isAffine(var)) // try and look for an affine case ((.. + ..)-..) = (..-..)
 		{
-			AffineEquationState eqstate;
+			AffineEquationState eqstate(var);
 			piter.pred().leftOperand().parseAffineEquation(eqstate);
 			eqstate.reverseSign();
 			piter.pred().rightOperand().parseAffineEquation(eqstate);
 			if(eqstate.spCounter() == +1 && eqstate.varCounter() == -1) // var = sp + delta
 			{
 				labels += piter.labels();
-				return some(eqstate.delta());
+				return some((t::int32)eqstate.delta());
 			}
 			else if(eqstate.spCounter() == -1 && eqstate.varCounter() == +1) // sp = var + delta
 			{
 				labels += piter.labels();
-				return some(-eqstate.delta()); // var = sp + (-delta)
+				return some((t::int32)-eqstate.delta()); // var = sp + (-delta)
 			}
 			// else algorithm failed (for example var = -sp or var = sp+sp)
 		}

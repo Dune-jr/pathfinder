@@ -66,6 +66,8 @@ public: // these are used in some methods of State like accel
 public:
 	inline bool isValid() const
 		{ return size && thresold; }
+	inline short getSize() const
+		{ return size; }
 	inline short maxRegisters() const
 		{ return thresold; }
 	inline bool isConst(OperandVar var) const

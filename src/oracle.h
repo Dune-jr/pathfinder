@@ -14,6 +14,7 @@ public:
 
 protected:
 	LockPtr<States> join(const Vector<Edge*>& edges) const;
+	LockPtr<States> merge(LockPtr<States>, Block* b) const;
 	bool inD_ip(const otawa::Edge* e) const;
 	IPStats ipcheck(States& ss, Vector<DetailedPath>& infeasible_paths) const;
 

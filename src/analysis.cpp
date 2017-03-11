@@ -76,7 +76,7 @@ int Analysis::version(void) const
 		return 2;
 	if(flags & IS_V3)
 		return 3;
-	return -1;
+	crash();
 }
 
 /**

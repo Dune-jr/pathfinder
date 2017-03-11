@@ -27,34 +27,31 @@ LockPtr<Analysis::States> DefaultAnalysis::join(const Vector<Edge*>& ins) const
 {
 	ASSERTP(ins, "join given empty ingoing edges vector")
 	LockPtr<States> v = vectorOfS(ins);
-	Block* b = ins[0]->target();
-	// loop header or too big state
-	if(LOOP_HEADER(b) || ((flags&MERGE) && v->count() > state_size_limit))
+
+	if((flags&MERGE) && v->count() > state_size_limit) // check for too large states
+		v = merge(v, ins[0]->target());
+	return v;
+}
+
+LockPtr<Analysis::States> DefaultAnalysis::merge(LockPtr<States> v, Block* b) const
+{
+	purgeBottomStates(*v);
+	if(v->count() <= 1)
 	{
-		if(LOOP_HEADER(b) && LH_S.exists(b)) // also merge with the state on the loop header if it exists
-			v->push(LH_S(b));
-		purgeBottomStates(*v);
-		// ASSERTP(v, "Loop Header received only bottom state, case not handled yet. The main algorithm will use s[0] so...")
 		if(v->isEmpty())
-		{
-			DBGG("join returns null vector")
-			return v;
-		}
-		else
-		{
-			State s((Edge*)NULL, context, dag, false); // entry is cleared anyway
-			s.merge(*v, b, *vm); // s <- joining(s0, s1, ..., sn)
-			// if(LOOP_HEADER(b) && version() == 3)
-			// 	s.widening(LH_I(b));
-			LockPtr<States> rtnv(new States(1));
-			rtnv->push(s);
-			if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v->count() > 50)
-				cout << " " << v->count() << " states merged into 1 (from " << ins.count() << " ins)." << endl;
-			return rtnv;
-		}
+			DBGG("merge returns null vector")
+		return v;
 	}
 	else
-		return v; // no joining
+	{
+		State s((Edge*)NULL, context, dag, false); // entry is cleared anyway
+		s.merge(*v, b, *vm); // s <- merging(s0, s1, ..., sn)
+		LockPtr<States> rtnv(new States(1));
+		rtnv->push(s);
+		if(dbg_verbose < DBG_VERBOSE_RESULTS_ONLY && v->count() > 50)
+			cout << " " << v->count() << " states merged into 1." << endl;
+		return rtnv;
+	}
 }
 
 /**

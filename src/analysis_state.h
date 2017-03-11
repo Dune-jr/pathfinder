@@ -22,6 +22,7 @@ using elm::genstruct::SLList;
 // using elm::genstruct::Vector;
 using elm::genstruct::HashTable;
 
+class Widenor;
 class Analysis::State {
 private:
 	typedef HashTable<Constant, const Operand*, ConstantHash> mem_t;
@@ -82,7 +83,6 @@ public:
 	void merge(const States& ss, Block* b, VarMaker& vm);
 	void apply(const State& s, VarMaker& vm, bool local_sp);
 	void prepareFixPoint();
-	void widening(const Operand* n);
 	void finalize(const Operand* n, int bound, bool exact);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e);
@@ -90,6 +90,7 @@ public:
 	void collectTops(VarCollector &bv) const;
 	void removeTautologies();
 	inline void resetSP() { lvars[context->sp] = dag->cst(SP); }
+	void widening(const Operand* n);
 
 	// analysis_bb.cpp
 	void processBB(const BasicBlock *bb, VarMaker& vm, int version_flags);
@@ -118,6 +119,7 @@ private:
 	const Operand* getPtr(t::int32 var_id) const;
 	void updateLabels(const sem::inst& inst);
 
+	// analysis_bb1.cpp
 	LabelledPredicate makeLabelledPredicate(condoperator_t opr, const Operand* opd1, const Operand* opd2, Path& labels) const;
 	bool tryToKeepVar(const OperandVar& var);//, const Predicate*& removed_predicate);
 	bool invalidateVar(const OperandVar& var, bool invalidate_constant_info = true);
@@ -136,18 +138,46 @@ private:
 	bool findValueOfCompVar(const OperandVar& var, Operand const*& opd_left, Operand const*& opd_right, Path& labels);
 	Option<OperandMem> getOperandMem(const OperandVar& var, Path& labels);
 	bool invalidateAllMemory();
-#ifdef V1
-	void updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const;
-#endif
 	// Option<Predicate> getPredicateGeneratedByCondition(sem::inst condition, bool taken, Path& labels);
 	Predicate getConditionalPredicate(sem::cond_t kind, const Operand* opd_left, const Operand* opd_right, bool taken);
 	Option<Constant> getConstantValueOfReadOnlyMemCell(const OperandMem& addr_mem, otawa::sem::type_t type) const;
 	int getSizeOfType(otawa::sem::type_t type) const;
 #ifdef V1
+	void updateLabelsWithReplacedConstantsInfo(Path& labels, const Vector<OperandVar>& replaced_vars) const;
 	inline bool isConstant(const OperandVar& var) const { return constants.isConstant(var); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv) const { return constants.getLabels(opdv); }
 	inline elm::avl::Set<Edge*> getLabels(const OperandVar& opdv1, const OperandVar& opdv2) const { return constants.getLabels(opdv1, opdv2); }
 #endif
+
+	// Widening
+	class WideningProgress {
+	public:		
+		enum { INITIAL_FORM=false, GENERAL_FORM=true };
+		WideningProgress(const LocalVariables& lvars) : vars(lvars.getSize(), (bool)INITIAL_FORM), lv(lvars) { }
+		inline void setVar(short i) { vars.set(i, GENERAL_FORM); }
+		inline void setVar(const OperandVar& var) { setVar(lv.getIndex(var)); }
+		inline void setMem(const OperandMem& mem) { mems.add(mem.addr()); }
+		inline bool operator[](short i) const { return vars[i]; }
+		inline bool operator[](const OperandVar& var) const { return (*this)[lv.getIndex(var)]; }
+		inline bool operator[](const OperandMem& mem) const { return mems.contains(mem.addr()); }
+		inline bool operator[](Pair<Constant, const Operand*> pair) const { return mems.contains(pair.fst); }
+
+		io::Output& printMems(io::Output& out) const {
+			for(Set<Constant>::Iterator i(mems); i; i++)
+				out << *i << ", ";
+			return out;
+		}
+		friend io::Output& operator<<(io::Output& out, const WideningProgress& wp)
+			{ out << "[" << wp.vars << "; "; wp.printMems(out); return out << "]";}
+
+	private:
+		BitVector vars;
+		Set<Constant> mems;
+		const LocalVariables& lv;
+	};
+	Option<const Operand*> widen(Operand const* x, const Operand& x0, const Operand* n, const WideningProgress& wprogress, Widenor& widenor) const;
+	const Operand* widenArithmeticProgression(Operand const* x, const Operand& x0, const Operand* n) const;
+
 
 	// DAG stuff
 	inline const Operand *Cst(const Constant& cst)    { return dag->cst(cst); }

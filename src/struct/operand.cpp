@@ -123,7 +123,7 @@ void Operand::Iter::next()
  */
 inline void Operand::Iter::check()
 {
-	if(q && ! (q.first()->kind() & (1 << q.first()->kind())) ) // item is unwanted
+	if(q && ! (flags & (1 << q.first()->kind())) ) // item is unwanted
 		next();
 }
 
@@ -133,10 +133,7 @@ OperandConst::OperandConst(const Constant& value) : _value(value) { }
 OperandConst::OperandConst() : _value(0) { }
 OperandConst::~OperandConst() { }
 // Operand* OperandConst::copy() const { return new OperandConst(_value); }
-io::Output& OperandConst::print(io::Output& out) const
-{
-	return (out << _value);
-}
+io::Output& OperandConst::print(io::Output& out) const { return out << _value; }
 OperandConst& OperandConst::operator=(const OperandConst& opd) { _value = opd._value; return *this; }
 bool OperandConst::operator<(const Operand& o) const
 {
@@ -215,7 +212,7 @@ const Operand* OperandVar::involvesMemory() const { return NULL; }
 // since the parent has to do the modification, and var has no child, return false
 Option<const Operand*> OperandVar::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
 	{ return (this == opd) ? some(opd_modifier) : none; }
-void OperandVar::parseAffineEquation(AffineEquationState& state) const { state.onVarFound(this->_addr); }
+void OperandVar::parseAffineEquation(AffineEquationState& state) const { state.onVarFound(*this); }
 Option<Constant> OperandVar::evalConstantOperand() const { return none; }
 Option<const Operand*> OperandVar::simplify(DAG& dag) const { return none; }
 const Operand* OperandVar::replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const
@@ -244,8 +241,6 @@ bool OperandMem::operator<(const Operand& o) const
 		return false;
 	return _opdc.value() < o.toMem()._opdc.value();
 }
-bool OperandMem::operator==(const Operand& o) const
-	{ return (kind() == o.kind()) && (addr() == ((OperandMem&)o).addr()); }
 bool OperandMem::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const
 {
 	expr = this; // Assume we are the expr
@@ -260,7 +255,7 @@ const Operand* OperandMem::involvesMemory() const
 Option<const Operand*> OperandMem::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
 	{ return (this == opd) ? some(opd_modifier) : none; }
 void OperandMem::parseAffineEquation(AffineEquationState& state) const
-	{ crash(); } // should never happen
+	{ state.onVarFound(*this); }
 Option<Constant> OperandMem::evalConstantOperand() const
 	{ return none; }
 Option<const Operand*> OperandMem::simplify(DAG& dag) const
@@ -306,7 +301,6 @@ bool OperandTop::getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) 
 }
 Option<const Operand*> OperandTop::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const
 	{ return (this == opd) ? some(opd_modifier) : none; }
-void OperandTop::parseAffineEquation(AffineEquationState& state) const { ASSERT(false); } // should never happen (for Top too?)
 Option<Constant> OperandTop::evalConstantOperand() const { return none; }
 Option<const Operand*> OperandTop::simplify(DAG& dag) const { return none; }
 const Operand* OperandTop::replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const
@@ -314,7 +308,7 @@ const Operand* OperandTop::replaceConstants(DAG& dag, const ConstantVariablesCor
 
 // Operands: Induction variables
 io::Output& OperandIter::print(io::Output& out) const
-	{ return out << "I" << lid; }
+	{ return out << "I" << IntFormat((elm::t::intptr)lid).hex(); }
 
 bool OperandIter::operator<(const Operand& o) const {
 	if(kind() > o.kind())

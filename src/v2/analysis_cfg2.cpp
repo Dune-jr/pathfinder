@@ -59,54 +59,45 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 			) : allIns(b) /* if b ∉ H(G) */
 		);
 
-		/* if ∀e ∈ pred, s_e ≠ nil then */
-		if(allEdgesHaveTrace(pred))
+		if(allEdgesHaveTrace(pred)) /* if ∀e ∈ pred, s_e ≠ nil then */
 		{
-			/* s ← |_|e∈pred s_e */
-			LockPtr<States> s = join(pred);
+			LockPtr<States> s = join(pred); /* s ← |_|e∈pred s_e */
 
-			/* for e ∈ pred */
-			for(Vector<Edge*>::Iter e(pred); e; e++)
-				/* s_e ← nil */
-				EDGE_S.remove(e);
+			for(Vector<Edge*>::Iter e(pred); e; e++) /* for e ∈ pred */
+				EDGE_S.remove(e); /* s_e ← nil */
 			
-			/* succ ← b.outs */
-			bool propagate = true;
-			/* if b ∈ H(G) then */
-			if(LOOP_HEADER(b))
+			bool propagate = true; /* succ ← b.outs */
+			if(LOOP_HEADER(b)) /* if b ∈ H(G) then */
 			{
+				if(loopStatus(b) == FIX)
+					s->push(LH_S(b));
+				s = merge(s, b);
+
 				switch(loopStatus(b))
 				{
 					case ENTER:
+						setLoopStatus(b, FIX); /* status_b ← FIX if status_b = ENTER */
 						LH_S0(b) = s->one();
 						break;
+
 					case FIX:
 						if(s->one().equiv(LH_S(b)))
+						{
+							setLoopStatus(b, ACCEL); /* status_b ← ACCEL if status_b = FIX ∧ s ≡ s_b */
 							s->prepareFixPoint();
+						}
 						break;
+
 					case ACCEL:
+						setLoopStatus(b, LEAVE); /* status_b ← LEAVE if status_b = ACCEL */
 						s->widening(loopIterOpd(b));
 						break;
+
 					case LEAVE:
+						setLoopStatus(b, ENTER); /* status_b ← ENTER if status_b = LEAVE */
 						if(anyEdgeHasTrace(b->ins())) /* if ∃e ∈ b.ins | s_e = nil then */
 							wl.push(b); /* wl ← wl ∪ {b} */
 						propagate = false; /* succ ← {} */
-						break;
-				}
-
-				switch(loopStatus(b)) // update automaton
-				{
-					case ENTER:
-						setLoopStatus(b, FIX); /* status_b ← FIX if status_b = ENTER */
-						break;
-					case FIX: if(s->one().equiv(LH_S(b)))
-						setLoopStatus(b, ACCEL); /* status_b ← ACCEL if status_b = FIX ∧ s ≡ s_b */
-						break;
-					case ACCEL:
-						setLoopStatus(b, LEAVE); /* status_b ← LEAVE if status_b = ACCEL */
-						break;
-					case LEAVE:
-						setLoopStatus(b, ENTER); /* status_b ← ENTER if status_b = LEAVE */
 						break;
 				}
 
@@ -137,7 +128,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 	if(flags&SHOW_PROGRESS)
 		progress->exit(cfg, CFG_S(cfg)->count(), vm->sizes().fst, countIPsOf(cfg));
 	// VarMaker stuff
-	DBG(cfg->name() << ".vm = " << *vm << " (" << vm << ")")
+	DBG(cfg->name() << ".vm = " << *vm << " (" << &vm << ")")
 	DBGG(IPur() << "<==\"" << cfg->name() << "\"")
 	CFG_S(cfg)->minimize(*vm, flags&CLEAN_TOPS); // reduces the VarMaker to the minimum
 	CFG_S(cfg)->removeTautologies();

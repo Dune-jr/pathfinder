@@ -129,6 +129,8 @@ private:
 
 	// virtual pure functions to implement
 	virtual LockPtr<States> join(const Vector<Edge*>& edges) const = 0;
+	virtual LockPtr<States> merge(LockPtr<States> v, Block* b) const = 0;
+
 	virtual bool inD_ip(const otawa::Edge* e) const = 0;
 	virtual IPStats ipcheck(States& s, Vector<DetailedPath>& infeasible_paths) const = 0;
 

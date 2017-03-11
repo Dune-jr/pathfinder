@@ -218,6 +218,18 @@ public:
 	inline const Operand *mem(const OperandMem& opd_mem)
 		{ return mem(opd_mem.addr().value()); }
 
+	const Operand* get(const Operand& opd)
+	{
+		switch(opd.kind())
+		{
+			case CST: return cst(opd.toConst());
+			case VAR: return var(opd.toVar());
+			case MEM: return mem(opd.toMem());
+			case ARITH: return autoOp(opd.toArith().opr(), opd.toArith().left(), opd.toArith().isBinary() ? opd.toArith().right() : NULL);
+			default: crash();
+		}
+	}
+
 private:
 	const Operand *op(arithoperator_t op, const Operand *arg) {
 		Key k(op, arg);

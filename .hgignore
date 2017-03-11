@@ -15,6 +15,9 @@ presentation/*.out
 presentation/*.nav
 presentation/presentation.tex.backup
 
+report
+presentation
+
 .bam
 .depend
 config.lua

@@ -6,6 +6,7 @@
 #include "analysis_states.h"
 #include "compositor.h"
 #include "cfg_features.h"
+#include "widenor.h"
 
 /**
  * @class Analysis::State
@@ -246,6 +247,19 @@ void Analysis::State::prepareFixPoint()
 	DBGG("prepared fixpoint for accel: " << dumpEverything())
 }
 
+/******* widening ********/
+// this function considers everything that isn't x0 to be constant in x
+const Operand* Analysis::State::widenArithmeticProgression(const Operand* x, const Operand& x0, const Operand* n) const
+{
+	AffineEquationState eqstate(x0);
+	x->parseAffineEquation(eqstate);
+	ASSERTP(eqstate.spCounter() == 0, "strange case where SP is added at every iteration... if this is not a bug, just scratch")
+	// const t::int32 a = eqstate.varCounter(), b = eqstate.delta();
+	// x_n+1 = ax_n + b
+	ASSERTP(eqstate.varCounter() == 1, "lvars[" << x0 << "] = " << *x << ": treat case a != 1: " << eqstate.varCounter())
+	return Arith::add(*dag, dag->get(x0), Arith::mul(*dag, n, dag->cst(eqstate.delta()))); // x_n = x0 + b*n
+}
+
 /**
  * @fn void Analysis::State::widening(const Operand* n);
  * @brief this = State after one iteration of a prepared fixpoint state (starting from \=/x, x=x0)
@@ -254,120 +268,152 @@ void Analysis::State::prepareFixPoint()
 void Analysis::State::widening(const Operand* n)
 {
 DBGG("start: " << dumpEverything())
-	enum {
-		INIT=false,
-		DONE=true,
-	};
-	const int max_size = context->max_registers + context->max_tempvars;
-	BitVector steps(max_size, (bool)INIT);
+	WideningProgress wprogress(lvars); // lvars contains size info
 	bool fixpoint;
+	Widenor widenor(*this, NULL, n);
 	do
 	{	// TODO!! should include the memory in that loop too
 		fixpoint = true;
+		DBGG(color::IBlu() << "widening, wprogress = " << wprogress)
 		for(LocalVariables::Iter i(lvars); i; i++)
 		{
-			const int ii = lvars.getIndex(*i);
-			if(steps[ii] != DONE)
+			if(!wprogress[*i])
 			{
 				if(lvars[i]) // i was modified
 				{
-// if(lvars[i]->kind() == ARITH)
-// 	cout << *lvars[i] << endl;
-					if(*lvars[i] == *i) // x = x0
+					if(Option<const Operand*> xn = widen(lvars[i], *i, n, wprogress, widenor))
 					{
-						// do nothing
-						steps.set(ii, DONE);
-						fixpoint = false;
+						DBG("\tgot " << **xn)
+						lvars[i] = *xn;
+						wprogress.setVar(*i); // set a flag that says we have accel'd i
+						if(*xn != Top)
+							fixpoint = false; // a Top wouldn't help handle more predicates
 					}
-					else if(lvars[i]->isAffine(*i) && lvars[i]->involvesVariable(*i) == 1) // we do not handle stuff like x=2*x yet... we'd need 2^I anyway, ouch
-					{
-						ASSERTP(false, "finally")
-						AffineEquationState eqstate;
-						lvars[i]->parseAffineEquation(eqstate);
-						ASSERTP(eqstate.spCounter() == 0, "strange case where SP is added at every iteration... if this is not a bug, just scratch")
-						const t::int32 a = eqstate.varCounter();
-						const t::int32 b = eqstate.delta();
-						// x_n+1 = ax_n + b
-						ASSERTP(a == 1, "lvars[" << *i << "] = " << *lvars[i] << ": treat case != 1: " << a)
-						lvars[i] = Arith::add(*dag, dag->var(*i), Arith::mul(*dag, n, dag->cst(b)));
-						// set a flag that says we have accel'd i
-						steps.set(ii, DONE);
-						fixpoint = false;
-					}
-					else if(lvars[i]->isLinear(true)) // 
-					{
-						bool ready = true;
-						int this_count = 0;
-						for(Operand::Iter j(lvars[i], 0xffff-(1<<CST)-(1<<ARITH)); j && ready; j++) // this should iter on everything but CST and ARITH
-						{
-							switch(j->kind())
-							{
-								case VAR:
-									if(**j == *i)
-										this_count++;
-									else if(steps[j->toVar().addr()] != DONE)
-										ready = false;
-									break;
-								case MEM:
-									ASSERTP(false, "//TODO!!!")
-									break;
-								case TOP:
-								case ITER:
-									ready = false;
-									break;
-								case CST:
-								case ARITH:
-									ASSERTP(false, "shouldn't happen, we flagged this out.\n"
-										"lvars[" << *i << "] = " << *lvars[i] << " : j = " << **j);
-									break;
-							}
-						}
-						ASSERTP(this_count <= 1, "handle multiple this in operand formula")
-						if(ready)
-						{
-							if(this_count == 0)
-							{
-								// easy case, everything on the right is constant. nothing to do
-							}
-							if(this_count == 1)
-							{
-								ASSERTP(false, "//TODO!!!")	
-							}
-							steps.set(ii, DONE);
-						}
-					}
-					else
-					{
-						DBG(color::IRed() << *i << " too complex to accel: " << lvars(*i))
-						lvars[*i] = Top; // I used NULL??
-						steps.set(ii, DONE);
-						//fixpoint = false;
-					}
+					// else failed to widen
 				}
 				else // lvars[i] = i
-					steps.set(ii, DONE); // nothing to do: identity^n = identity	
+				{
+					wprogress.setVar(*i); // nothing to do: identity^n = identity	
+					fixpoint = false;
+				}
+			}
+		}
+		for(mem_t::PairIterator i(mem); i; i++)
+		{
+			OperandMem opdm((*i).fst);
+			if(!wprogress[opdm])
+			{
+				if(Option<const Operand*> xn = widen((*i).snd, opdm, n, wprogress, widenor))
+				{
+					DBG("\tgot " << **xn)
+					mem[opdm.addr()] = *xn;
+					wprogress.setMem(opdm);
+					if(*xn != Top)
+						fixpoint = false; // a Top wouldn't help handle more predicates
+				}
 			}
 		}
 	} while(!fixpoint);
 
 	// now set to Top all those that could not be replaced
-	for(int ii = 0; ii < max_size; ii++)
+	for(LocalVariables::Iter i(lvars); i; i++)
 	{
-		if(!steps[ii])
+		if(!wprogress[*i])
 		{
-			const OperandVar o(lvars.getId(ii));
-			DBG(color::IRed() << "In " << o << ", could not replace variables of: " << lvars(o))
-			lvars[o] = Top;
+			DBG(color::IRed() << "In " << *i << ", could not replace variables of: " << lvars(*i))
+			lvars[*i] = Top;
 		}
 	}
-
-	for(mem_t::PairIterator iter(mem); iter; iter++)
+	for(mem_t::PairIterator i(mem); i; i++)
 	{
-		#warning TODO widening
-		// const Constant addr = (*iter).fst;
+		if(!wprogress[*i])
+		{
+			DBG(color::IRed() << "In " << (*i).fst << ", could not replace variables of: " << *(*i).snd)
+			mem[(*i).fst] = Top;
+		}
 	}
+	#warning do predicates too...
+
 
 	DBGG(IGre() << "done: " << this->dumpEverything())
+}
+
+/**
+ * @brief      Tries to find the general formula for x_n for: x0_i+1 = x
+ *
+ * @param      x      The formula for x0 after one iteration
+ * @param      x0     The variable that was x before iterating
+ * @param      n      The induction variable (that represents I)
+ * @param      wprogress  Describes which localvariables have been turned into general form (x_n = ...)
+ *
+ * @return     None if all dependencies haven't been processed (in wprogress), the x_n otherwise (can be Top)
+ */
+Option<const Operand*> Analysis::State::widen(const Operand* x, const Operand& x0, const Operand* n, const WideningProgress& wprogress, Widenor& widenor) const
+{
+DBGG("widen(x=" << *x << ", x0=" << x0 << ", wprogress=" << wprogress << ")")
+	if(*x == x0) // x = x0
+	{	// nothing to do, this is ID
+		return x;
+	}
+	else if(x->isAffine(x0) && x->involvesOperand(x0) == 1) // we do not handle stuff like x=2*x yet... we'd need 2^I anyway, ouch
+	{
+		ASSERTP(false, "finally an arithmetic progression: " << *x)
+		return widenArithmeticProgression(x, x0, n); // x_n = x0 + b*n
+	}
+	else if(x->isLinear(true)) // x = y + z - k and such
+	{
+		bool ready = true; // checks if all dependencies have been cleared
+		int x0_count = 0;
+		const int nocst_noarith = 0xffff-(1<<CST)-(1<<ARITH);
+		for(Operand::Iter j(x, nocst_noarith); j && ready; j++) // this should iter on everything but CST and ARITH
+		{
+			switch(j->kind())
+			{
+				case VAR:
+					if(**j == x0)
+						x0_count++;
+					else
+						ready &= wprogress[j->toVar()] == WideningProgress::GENERAL_FORM;
+					break;
+				case MEM:
+					if(**j == x0)
+						x0_count++;
+					else 
+						ready &= wprogress[j->toMem()] == WideningProgress::GENERAL_FORM;
+					break;
+				case TOP:
+				case ITER:
+					ready = false;
+					break;
+				case CST:
+				case ARITH:
+					ASSERTP(false, "shouldn't happen, we flagged this out.\n"
+						"lvars[" << x0 << "] = " << *x << " : j = " << **j);
+					break;
+			}
+		}
+
+		if(ready)
+		{
+			widenor.setSelf(&x0); // this will not x0 as a pointer from the DAG
+			x = x->accept(widenor);
+			// at this point everything that isn't x0 is to be considered constant (for ex. if there's ?2 it's the ?2 of the beginning of the loop)
+			// we indeed want the x0_count from BEFORE the replacements
+			if(x0_count == 0) // easy case, everything on the right is constant. nothing to do
+				return x;
+			else if(x0_count == 1)
+				return widenArithmeticProgression(x, x0, n); // x_n = x0 + b*n
+			else
+				ASSERTP(false, "handle multiple this in operand formula")
+		}
+		else
+			return none; // we need to come back here later
+	}
+	else
+	{
+		DBG(color::IRed() << x0 << " too complex to widen: " << *x)
+		return Top;
+	}
 }
 
 /**
