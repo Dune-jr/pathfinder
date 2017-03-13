@@ -22,16 +22,18 @@ CVC4SMT::CVC4SMT(int flags): SMT(flags), smt(&em), variables(em)
 	smt.setOption("rewrite-divk", CVC4::SExpr("true"));
 	// smt.setOption("dump-unsat-cores", CVC4::SExpr("true"));
 	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
-	// 
-	// smt.setOption("dump", "assertions:pre-everything");
-	// smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
+	if(dbg_&0x10)
+	{
+		smt.setOption("dump", "assertions:pre-everything");
+		smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
+	}
 }
 
-// v1: all VARIABLE_PREFIX "?k"
+// v1: all INITIAL_PREFIX "rk"
 // v2: INITIAL: "rk", VARIABLE: "?k". Predicates like "?0 = r0 + 1"
 void CVC4SMT::initialize(const SLList<LabelledPredicate>& labelled_preds)//, mode_t mode = VARIABLE_PREFIX)
 {
-	variables.setMode(VARIABLE_PREFIX);
+	variables.setMode(INITIAL_PREFIX);
 	for(SLList<LabelledPredicate>::Iterator iter(labelled_preds); iter; iter++)
 		exprs.addLast(getExpr(iter->pred()));
 }

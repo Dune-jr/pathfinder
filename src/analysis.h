@@ -53,6 +53,7 @@ public:
 		SP_CRITICAL			 = 1 << 14,
 		CLEAN_TOPS			 = 1 << 15,
 		ASSUME_IDENTICAL_SP	 = 1 << 16,
+		NO_WIDENING			 = 1 << 17,
 	};
 protected:
 	typedef struct
@@ -116,7 +117,7 @@ protected:
 	static Identifier<LockPtr<Analysis::States> > EDGE_S; // Trace on an edge
 	static Identifier<Analysis::State>			  LH_S; // Trace on a loop header
 	static Identifier<Analysis::State>			  LH_S0; // Trace on a loop header
-	static Identifier<const Operand*>			  LH_I; // on lheaders
+	static Identifier<OperandIter*>				  LH_I; // on lheaders
 	static Identifier<loopheader_status_t>		  LH_STATUS; // Fixpt status of a loop header
 	static Identifier<LockPtr<Analysis::States> > CFG_S; // Trace on a CFG
 	static Identifier<LockPtr<VarMaker> > 		  CFG_VARS; // VarMaker on a CFG (useful?)
@@ -137,8 +138,11 @@ private:
 protected:
 	inline static loopheader_status_t loopStatus(const Block* h) { ASSERT(LOOP_HEADER(h)); return LH_STATUS.get(h,ENTER); }
 	inline static void setLoopStatus(Block* h, loopheader_status_t ls) { ASSERT(LOOP_HEADER(h)); if(ls != ENTER) LH_STATUS.set(h,ls); else LH_STATUS.remove(h); }
-	inline static const Operand* loopIterOpd(const Block* h) { return LH_I.exists(h) ? LH_I.get(h) : new OperandIter(h); }
 	inline static bool isConditional(Block* b) { return b->countOuts() > 1; }
+	const Operand* newLoopIterOpd(Block* h) { // WARNING: must only be called once per loop!
+		LH_I(h) = new OperandIter(h); // never deleted
+		return (flags & NO_WIDENING) ? Top : static_cast<const Operand*>(LH_I.get(h));
+	}
 
 	// oracle.cpp
 	Block* insAlias		    (Block* b) const;

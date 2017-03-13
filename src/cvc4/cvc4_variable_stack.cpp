@@ -79,14 +79,16 @@ Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandTop& o)
 
 Expr CVC4VariableStack::getExpr(CVC4::ExprManager& em, const OperandIter& o)
 {
-	const otawa::Block* lid = o.loop();
-	if(Option<Expr> opt_expr = itermap.get(lid))
+	t::intptr k = (t::intptr)o.loop();
+	if(o.isDone())
+		k = ~k;
+	if(Option<Expr> opt_expr = itermap.get(k))
 		return *opt_expr; // already in the stack
 	else
 	{	// not in stack, create it
 		elm::String label = _ << o;
 		Expr expr = em.mkVar(label.chars(), integer);
-		itermap.put(lid, expr);
+		itermap.put(k, expr);
 		return expr;
 	}
 }

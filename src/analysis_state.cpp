@@ -267,7 +267,7 @@ const Operand* Analysis::State::widenArithmeticProgression(const Operand* x, con
  */
 void Analysis::State::widening(const Operand* n)
 {
-DBGG("start: " << dumpEverything())
+DBGG("start: " << dumpEverything())	
 	WideningProgress wprogress(lvars); // lvars contains size info
 	bool fixpoint;
 	Widenor widenor(*this, NULL, n);
@@ -325,14 +325,18 @@ DBGG("start: " << dumpEverything())
 			lvars[*i] = Top;
 		}
 	}
+	SLList<Constant> scratchs;
 	for(mem_t::PairIterator i(mem); i; i++)
 	{
 		if(!wprogress[*i])
 		{
 			DBG(color::IRed() << "In " << (*i).fst << ", could not replace variables of: " << *(*i).snd)
-			mem[(*i).fst] = Top;
+			// mem[(*i).fst] = Top;
+			scratchs += (*i).fst;
 		}
 	}
+	for(SLList<Constant>::Iterator i(scratchs); i; i++)
+		mem[*i] = Top;
 	#warning do predicates too...
 
 	DBGG(IGre() << "done: " << this->dumpEverything())
@@ -415,12 +419,12 @@ DBGG("widen(x=" << color::Cya() << *x << color::RCol() << ", x0=" << x0 << ", wp
  */
 
 /**
- * @brief      use loop bounds to replace all OperandIter "n" by either an exact loop iteration count, or a new Tk with 0<=Tk and Tk<=loop bound predicates
+ * @brief      morph the OperandIter add predicates about it
  * WARNING: in the leave iteration, we may not have i=max until the loop exit edges...
  */
-void Analysis::State::finalize(const Operand* n, int bound, bool exact)
+void Analysis::State::finalizeLoop(OperandIter* n, VarMaker& vm)
 {
-
+	n->finalize();
 }
 
 /**

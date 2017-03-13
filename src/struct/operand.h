@@ -344,10 +344,12 @@ extern OperandTop const* const Top;
 class OperandIter : public Operand
 {
 public:
-	OperandIter(const otawa::Block* loop) : lid(loop) { }
-	OperandIter(const OperandIter& opd) : lid(opd.lid) { }
+	OperandIter(const otawa::Block* loop, bool done = false) : lid(loop), done(done) { }
+	OperandIter(const OperandIter& opd) : lid(opd.lid), done(opd.done) { }
 	
-	const otawa::Block* loop() const { return lid; }
+	inline const otawa::Block* loop() const { return lid; }
+	inline bool isDone() const { return done; }
+	inline void finalize() { done = true; }
 	
 	unsigned int countTempVars() const { return 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const { expr = this; return false; }
@@ -370,8 +372,8 @@ public:
 	inline bool accept(OperandVisitor& visitor) const { return visitor.visit(*this); }
 	inline const Operand* accept(OperandEndoVisitor& visitor) const { return visitor.visit(*this); }
 	inline operand_kind_t kind() const { return ITER; }
-	OperandIter& operator=(const OperandIter& opd) { lid = opd.lid; return *this; }
-	inline bool operator==(const Operand& o) const { return o.kind() == ITER && lid == static_cast<const OperandIter&>(o).lid; }
+	OperandIter& operator=(const OperandIter& opd) { lid = opd.lid; done = opd.done; return *this; }
+	inline bool operator==(const Operand& o) const { return o.kind() == ITER && lid == static_cast<const OperandIter&>(o).lid && done == static_cast<const OperandIter&>(o).done; }
 	bool operator< (const Operand& o) const;
 	friend inline io::Output& operator<<(io::Output& out, const OperandIter& o) { return o.print(out); }
 	inline const OperandIter& toIter() const { return *this; }
@@ -379,6 +381,7 @@ private:
 	io::Output& print(io::Output& out) const;
 
 	const otawa::Block* lid;
+	bool done;
 };
 
 // Arithmetic Expressions

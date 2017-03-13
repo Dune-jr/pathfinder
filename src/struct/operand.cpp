@@ -308,12 +308,16 @@ const Operand* OperandTop::replaceConstants(DAG& dag, const ConstantVariablesCor
 
 // Operands: Induction variables
 io::Output& OperandIter::print(io::Output& out) const
-	{ return out << "I" << IntFormat((elm::t::intptr)lid).hex(); }
+	{ return out << (done?'N':'I') << IntFormat((elm::t::intptr)lid).hex(); }
 
 bool OperandIter::operator<(const Operand& o) const {
 	if(kind() > o.kind())
 		return true;
 	if(kind() < o.kind())
+		return false;
+	if(done < static_cast<const OperandIter&>(o).done)
+		return true;
+	if(done > static_cast<const OperandIter&>(o).done)
 		return false;
 	return lid < static_cast<const OperandIter&>(o).lid;
 }
@@ -665,7 +669,7 @@ bool OperandArith::isLinear(bool only_linear_opr) const
 		case ARITHOPR_DIV:
 		case ARITHOPR_MOD:
 			// return !only_linear_opr && opd2->isConstant();
-			return opd2->isConstant(); // just mod & div should be no problem
+			return !only_linear_opr && opd2->isConstant(); // just mod & div should be no problem // TODO!!! test we don't lose IPs because of that
 
 		// hopeless
 		case ARITHOPR_MULH:

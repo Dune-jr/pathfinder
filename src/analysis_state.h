@@ -83,12 +83,13 @@ public:
 	void merge(const States& ss, Block* b, VarMaker& vm);
 	void apply(const State& s, VarMaker& vm, bool local_sp);
 	void prepareFixPoint();
-	void finalize(const Operand* n, int bound, bool exact);
+	void finalizeLoop(OperandIter* n, VarMaker& vm);
 	bool equiv(const State& s) const;
 	void appendEdge(Edge* e);
 	void removeConstantPredicates();
 	void collectTops(VarCollector &bv) const;
 	void removeTautologies();
+	inline void clearPreds() { labelled_preds.clear(); generated_preds.clear(); }
 	inline void resetSP() { lvars[context->sp] = dag->cst(SP); }
 	void widening(const Operand* n);
 

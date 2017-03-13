@@ -41,7 +41,9 @@ void Analysis::States::apply(const States& ss, VarMaker& vm, bool local_sp, bool
  */
 void Analysis::States::appliedTo(const State& s, VarMaker& vm)
 {
-	this->removeTautologies();	
+	this->removeTautologies();
+	for(States::Iter i(*this); i; i++)
+		(this->s)[i].clearPreds(); // TODO: hack, without this there are fake IPs
 	States x(this->count());
 	x.push(s);
 	x.apply(*this, vm, false, false); // no debug, no local sp

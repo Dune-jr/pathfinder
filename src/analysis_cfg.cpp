@@ -19,7 +19,7 @@ Identifier<Analysis::State>					Analysis::LH_S("Trace on a loop header"); // may
 Identifier<Analysis::loopheader_status_t>	Analysis::LH_STATUS("Fixpt status of a loop (on a loop header)");
 // for non-virtualized CFGs only
 Identifier<Analysis::State>					Analysis::LH_S0("Initial trace on a loop header"); // maybe change to vector
-Identifier<const Operand*>					Analysis::LH_I("Iterator operand for the loop"); // on lheaders
+Identifier<OperandIter*>					Analysis::LH_I("Iterator operand for the loop"); // on lheaders
 Identifier<LockPtr<Analysis::States> >		Analysis::CFG_S("Trace on a CFG");
 Identifier<LockPtr<VarMaker> >				Analysis::CFG_VARS("VarMaker of a CFG"); // VarMaker to be copied, updated, and appended on f° return
 

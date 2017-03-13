@@ -24,16 +24,17 @@ public:
 	void apply(const States& ss, VarMaker& vm, bool local_sp, bool dbg = true);
 	void appliedTo(const State& s, VarMaker& vm);
 	void minimize(VarMaker& vm, bool clean) const;
-	inline void removeTautologies(void) { for(Iter i(this->s); i; i++) s[i].removeTautologies(); }
-	inline void prepareFixPoint(void) { for(Iter i(this->s); i; i++) s[i].prepareFixPoint(); }
+	inline void removeTautologies(void) 			{ for(Iter i(this->s); i; i++) s[i].removeTautologies(); }
+	inline void prepareFixPoint(void) 				{ for(Iter i(this->s); i; i++) s[i].prepareFixPoint(); }
+	void finalizeLoop(OperandIter* n, VarMaker& vm)	{ for(Iter i(this->s); i; i++) s[i].finalizeLoop(n, vm); }
 	inline void widening(const Operand* n) { ASSERT(s.count() <= 1); if(s.count() == 1) s[0].widening(n); } // needs max one state
 	void checkForSatisfiableSP() const;
 
 	inline void resetSP() { for(Iter i(this->s); i; i++) s[i].resetSP(); }
 	inline void onCall(SynthBlock* sb)   { for(Iter i(this->s); i; i++) s[i].onCall(sb); }
 	inline void onReturn(SynthBlock* sb) { for(Iter i(this->s); i; i++) s[i].onReturn(sb); }
-	// inline void onLoopEntry(Block* b)    { for(Iter i(this->s); i; i++) s[i].onLoopEntry(b); }
 	inline void onLoopExit (Block* b)    { for(Iter i(this->s); i; i++) s[i].onLoopExit(b); }
+	// inline void onLoopEntry(Block* b)    { for(Iter i(this->s); i; i++) s[i].onLoopEntry(b); }
 	void onLoopExit (Edge* e) {
 		Block* h = LOOP_EXIT_EDGE(e);
 		for(LoopHeaderIter i(e->source()); i.item() != h; i++) 

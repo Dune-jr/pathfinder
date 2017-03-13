@@ -45,6 +45,7 @@ public:
 		opt_allownonlinearoperators(SwitchOption::Make(*this).cmd("--allow-nonlinear-operators").description("assert linear predicates that use *,/,mod in the SMT solver (unsafe)")),
 		opt_nocleantops  (SwitchOption::Make(*this).cmd("--no-clean-tops").description("do not clean introduced variables Tk (unstable as of early 2017)")),
 		opt_dontassumeidsp(SwitchOption::Make(*this).cmd("--dasp").cmd("--dont-assume-id-sp").description("do not assume sp = SP0 at the end of a function")),
+		opt_nowidening 	 (SwitchOption::Make(*this).cmd("--no-widening").description("Scratch instead of using induction variables")),
 		opt_slice		 (SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
 		opt_dumpoptions	 (SwitchOption::Make(*this).cmd("--dump-options").cmd("--do").description("print the selected options for the analysis")),
 		// opt_virtualize	 (ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
@@ -81,7 +82,7 @@ private:
 	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats;
 	ValueOption<bool> opt_output;
 	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck,
-			     opt_no_initial_data, opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_nocleantops, opt_dontassumeidsp, opt_slice, opt_dumpoptions;
+			     opt_no_initial_data, opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_nocleantops, opt_dontassumeidsp, opt_nowidening, opt_slice, opt_dumpoptions;
 	ValueOption<int> opt_merge, opt_multithreading, opt_x;
 
 	void setFlags(int& analysis_flags, int& merge_thresold, int& nb_cores) {
@@ -102,6 +103,7 @@ private:
 			| (opt_allownonlinearoperators	? Analysis::ALLOW_NONLINEAR_OPRS : 0)
 			| (!opt_nocleantops				? Analysis::CLEAN_TOPS : 0)
 			| (!opt_dontassumeidsp			? Analysis::ASSUME_IDENTICAL_SP : 0)
+			| (opt_nowidening				? Analysis::NO_WIDENING : 0)
 			| (opt_dry						? Analysis::DRY_RUN : 0)
 			| (opt_v1						? Analysis::IS_V1 : 0)
 			| (opt_v2						? Analysis::IS_V2 : 0)
@@ -177,6 +179,7 @@ private:
 		DBGOPT("CLEAN TOPS" 					, analysis_flags&Analysis::CLEAN_TOPS, true)
 		DBGOPT("KEEP UNMINIMIZED PATHS"			, analysis_flags&Analysis::UNMINIMIZED_PATHS, true)
 		DBGOPT("USE INITIAL DATA"				, analysis_flags&Analysis::USE_INITIAL_DATA, true)
+		DBGOPT("NO WIDENING"					, analysis_flags&Analysis::NO_WIDENING, false)
 		DBGOPT("RUN DRY (NO SMT SOLVER)"		, analysis_flags&Analysis::DRY_RUN, false)
 		DBGOPT("RUN V1 A.I."					, analysis_flags&Analysis::IS_V1, false)
 		DBGOPT("RUN V2 A.I."					, analysis_flags&Analysis::IS_V2, false)
