@@ -64,7 +64,7 @@ bool DefaultAnalysis::inD_ip(const otawa::Edge* e) const
 	bool all_leave = true; // enable SMT when on sequential level
 	for(LoopHeaderIter lh(e->source()); lh; lh++)
 	{
-		if(loopStatus(lh) != LEAVE)
+		if(loopStatus(lh) != LEAVE/* && loopStatus(lh) != ACCEL*/) // TODO, add ACCEL?
 		{
 			all_leave = false;
 			break;

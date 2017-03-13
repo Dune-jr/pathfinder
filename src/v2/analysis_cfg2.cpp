@@ -91,6 +91,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 					case ACCEL:
 						setLoopStatus(b, LEAVE); /* status_b ← LEAVE if status_b = ACCEL */
 						s->widening(loopIterOpd(b));
+						s->appliedTo(LH_S0(b), *vm);
 						break;
 
 					case LEAVE:
@@ -113,8 +114,8 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 			{
 				/* s_e ← I*[e](s) */
 				EDGE_S(e) = Analysis::I(e, s);
-				for(LoopExitIterator l(*e); l; l++)
-					EDGE_S(e)->appliedTo(LH_S0(*l), *vm);
+				// for(LoopExitIterator l(*e); l; l++)
+				// 	EDGE_S(e)->appliedTo(LH_S0(*l), *vm);
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 				if(inD_ip(e))
 					ip_stats += ipcheck(*EDGE_S.ref(e), infeasible_paths);

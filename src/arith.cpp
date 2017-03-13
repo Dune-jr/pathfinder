@@ -29,8 +29,17 @@ const Operand* Arith::add(DAG& dag, Constant x, const Operand* y)
 		{
 			if(av) // x + (av + z2)
 				return dag.add(z.right(), dag.cst(x + *av));
-			if(bv) // x + (z1 + bv)
+			else if(bv) // x + (z1 + bv)
 				return dag.add(z.left(), dag.cst(x + *bv));
+			else
+			{
+				elm::Pair<const Operand*, Constant> p = z.extractAdditiveConstant(dag);
+				ASSERTP(p.fst, "all constant should've been handled by evalConstantOperand")
+				if(x+p.snd == 0)
+					return p.fst;
+				else
+					return dag.add(p.fst, dag.cst(x+p.snd));
+			}
 		}
 		else if(z.opr() == ARITHOPR_SUB)
 		{

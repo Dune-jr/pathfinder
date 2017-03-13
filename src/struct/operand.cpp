@@ -501,6 +501,53 @@ Option<Constant> OperandArith::evalConstantOperand() const
 	}
 	return none; // one of the operands is not constant or we failed to evaluate it
 }
+
+/**
+ * @fn elm::Pair<const Operand*, Constant> OperandArith::extractAdditiveConstant(DAG& dag) const;
+ * @brief Extracts a constant from a sum (and removes it from this)
+ * @warning Always true: if x.extract() == (o1, k1), then x = o1 + k1 or x = k1 (o1 NULL)
+ * @return First operand is the new this (can be NULL), second operand is the extracted constant (can be NULL)
+ */
+elm::Pair<const Operand*, Constant> OperandArith::extractAdditiveConstant(DAG& dag) const
+{
+	const Operand *o1, *o2;
+	Constant k1, k2;
+	let(o1, k1) = opd1->extractAdditiveConstant(dag);
+	if(isUnary())
+	{
+		ASSERT(_opr == ARITHOPR_NEG);
+		ASSERTP(o1, "TODO")
+		return pair(dag.autoOp(_opr, o1), -k1);
+	}
+	let(o2, k2) = opd2->extractAdditiveConstant(dag);
+	if(_opr == ARITHOPR_ADD)
+	{
+		const Operand* rtn;
+		if(o1)
+		{
+			if(o2)
+			{
+				if(o1 == opd1 && o2 == opd2) // id
+					rtn = this; // optimize a call to dag
+				else
+					rtn = dag.add(o1, o2);
+			}
+			else // !o2
+				rtn = o1;
+		}
+		else
+		{
+			if(o2) // !o1
+				rtn = o2;
+			else // !o1, !o2
+				rtn = NULL;
+		}
+		return pair(rtn, k1 + k2);
+	}
+	else // TODO! support ARITHOR_SUB too
+		return pair(static_cast<const Operand*>(this), Constant(0));
+}
+
 // Warning: Option=none does not warrant that nothing has been simplified!
 Option<const Operand*> OperandArith::simplify(DAG& dag) const
 {

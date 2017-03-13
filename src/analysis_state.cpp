@@ -283,13 +283,14 @@ DBGG("start: " << dumpEverything())
 				{
 					if(Option<const Operand*> xn = widen(lvars[i], *i, n, wprogress, widenor))
 					{
-						DBG("\tgot " << **xn)
+						DBGG("\tgot " << **xn)
 						lvars[i] = *xn;
 						wprogress.setVar(*i); // set a flag that says we have accel'd i
 						if(*xn != Top)
 							fixpoint = false; // a Top wouldn't help handle more predicates
 					}
 					// else failed to widen
+					else { DBGG("\tfailed") }
 				}
 				else // lvars[i] = i
 				{
@@ -305,7 +306,7 @@ DBGG("start: " << dumpEverything())
 			{
 				if(Option<const Operand*> xn = widen((*i).snd, opdm, n, wprogress, widenor))
 				{
-					DBG("\tgot " << **xn)
+					DBGG("\tgot " << **xn)
 					mem[opdm.addr()] = *xn;
 					wprogress.setMem(opdm);
 					if(*xn != Top)
@@ -334,7 +335,6 @@ DBGG("start: " << dumpEverything())
 	}
 	#warning do predicates too...
 
-
 	DBGG(IGre() << "done: " << this->dumpEverything())
 }
 
@@ -350,16 +350,13 @@ DBGG("start: " << dumpEverything())
  */
 Option<const Operand*> Analysis::State::widen(const Operand* x, const Operand& x0, const Operand* n, const WideningProgress& wprogress, Widenor& widenor) const
 {
-DBGG("widen(x=" << *x << ", x0=" << x0 << ", wprogress=" << wprogress << ")")
+DBGG("widen(x=" << color::Cya() << *x << color::RCol() << ", x0=" << x0 << ", wprogress=" << wprogress << ")")
 	if(*x == x0) // x = x0
 	{	// nothing to do, this is ID
 		return x;
 	}
 	else if(x->isAffine(x0) && x->involvesOperand(x0) == 1) // we do not handle stuff like x=2*x yet... we'd need 2^I anyway, ouch
-	{
-		ASSERTP(false, "finally an arithmetic progression: " << *x)
 		return widenArithmeticProgression(x, x0, n); // x_n = x0 + b*n
-	}
 	else if(x->isLinear(true)) // x = y + z - k and such
 	{
 		bool ready = true; // checks if all dependencies have been cleared
@@ -370,16 +367,11 @@ DBGG("widen(x=" << *x << ", x0=" << x0 << ", wprogress=" << wprogress << ")")
 			switch(j->kind())
 			{
 				case VAR:
-					if(**j == x0)
-						x0_count++;
-					else
-						ready &= wprogress[j->toVar()] == WideningProgress::GENERAL_FORM;
-					break;
 				case MEM:
 					if(**j == x0)
 						x0_count++;
-					else 
-						ready &= wprogress[j->toMem()] == WideningProgress::GENERAL_FORM;
+					else // if false, useless to continue looping
+						ready &= (j->kind()==VAR ? wprogress[j->toVar()] : wprogress[j->toMem()]) == WideningProgress::GENERAL_FORM;
 					break;
 				case TOP:
 				case ITER:
@@ -387,8 +379,7 @@ DBGG("widen(x=" << *x << ", x0=" << x0 << ", wprogress=" << wprogress << ")")
 					break;
 				case CST:
 				case ARITH:
-					ASSERTP(false, "shouldn't happen, we flagged this out.\n"
-						"lvars[" << x0 << "] = " << *x << " : j = " << **j);
+					ASSERTP(false, "shouldn't happen, we flagged this out.\n lvars[" << x0 << "] = " << *x << " : j = " << **j);
 					break;
 			}
 		}

@@ -34,7 +34,7 @@ public:
 	const Operand* visit(const class OperandVar& g)  { return lvars[g] ? lvars[g] : &g; }
 	const Operand* visit(const class OperandMem& g)  { return mem.exists(g.addr()) ? mem[g.addr()] : &g; }
 	const Operand* visit(const class OperandTop& g)  { return &g; } // this will be handled elsewhere by allocating a new top
-	const Operand* visit(const class OperandIter& g) { ASSERTP(false, "OperandIter found by the Compositor"); }
+	const Operand* visit(const class OperandIter& g) { return &g; /*ASSERTP(false, "OperandIter found by the Compositor");*/ }
 	const Operand* visit(const class OperandArith& g)
 		{ return Arith::autoOp(dag, g.opr(), g.leftOperand().accept(*this), g.isBinary() ? g.rightOperand().accept(*this) : NULL); }
 	inline Predicate visit(const Predicate& p) { return Predicate(p.opr(), p.left()->accept(*this), p.right()->accept(*this)); }

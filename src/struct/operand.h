@@ -30,6 +30,7 @@ enum arithoperator_t
 	ARITHOPR_CMP, // (~)   Special operator to be used with CONDOPR_EQ and a register that indicates
                   //       that it contains information over the comparison of two other registers
 };
+io::Output& operator<<(io::Output& out, arithoperator_t opr);
 
 enum operand_kind_t
 {
@@ -93,7 +94,7 @@ public:
 	// virtual Operand* copy() const = 0;
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
 	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const = 0;
-	int involvesOperand(const Operand& opd) const { return this->operator==(opd) ? 1 : 0; } // default case, to be overloaded for recursive classes
+	virtual int involvesOperand(const Operand& opd) const { return this->operator==(opd) ? 1 : 0; } // default case, to be overloaded for recursive classes
 	virtual int involvesVariable(const OperandVar& opdv) const = 0; // TODO! rewrite using involvesOperand, if the int return thing is not critical?
 	virtual Option<Constant> involvesStackBelow(const Constant& stack_limit) const = 0;
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
@@ -107,6 +108,7 @@ public:
 	virtual bool isAffine(const Operand& opd) const = 0;
 	virtual void parseAffineEquation(AffineEquationState& state) const = 0;
 	virtual Option<Constant> evalConstantOperand() const = 0; // all uses commented out?
+	virtual elm::Pair<const Operand*, Constant> extractAdditiveConstant(DAG& dag) const = 0; // First operand is the new this, second operand is the extracted constant, will only extract from sums // TODO: support substraction
 	virtual Option<const Operand*> simplify(DAG& dag) const = 0; // Warning: Option=none does not warrant that nothing has been simplified!
 	virtual const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const = 0;
 	virtual bool accept(OperandVisitor& visitor) const = 0;
@@ -173,6 +175,7 @@ public:
 	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
+	elm::Pair<const Operand*, Constant> extractAdditiveConstant(DAG& dag) const { return Pair<const Operand*, Constant>(NULL, _value); }
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
@@ -186,7 +189,7 @@ public:
 	inline operand_kind_t kind() const { return CST; }
 	inline operator Constant() const { return _value; }
 	OperandConst& operator=(const OperandConst& opd);
-	inline bool operator==(const Operand& o) const { return (o.kind() == kind()) && toConstant() == o.toConstant(); }
+	inline bool operator==(const Operand& o) const { return (kind() == o.kind()) && toConstant() == o.toConstant(); }
 	bool operator< (const Operand& o) const;
 	inline const OperandConst& toConst() const { return *this; }
 	inline const Constant& toConstant() const { return _value; }
@@ -221,6 +224,7 @@ public:
 	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
+	elm::Pair<const Operand*, Constant> extractAdditiveConstant(DAG& dag) const { return Pair<const Operand*, Constant>(this, 0); }
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
@@ -264,6 +268,7 @@ public:
 	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
+	elm::Pair<const Operand*, Constant> extractAdditiveConstant(DAG& dag) const { return Pair<const Operand*, Constant>(this, 0); }
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
@@ -309,6 +314,7 @@ public:
 	inline void collectTops(VarCollector& vc) const { vc.collect(id); }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
+	elm::Pair<const Operand*, Constant> extractAdditiveConstant(DAG& dag) const { return Pair<const Operand*, Constant>(this, 0); }
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const { crash(); } // should never happen, I think?
@@ -352,6 +358,7 @@ public:
 	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { return (this == opd) ? some(opd_modifier) : none; }
 	Option<Constant> evalConstantOperand() const { return none; }
+	elm::Pair<const Operand*, Constant> extractAdditiveConstant(DAG& dag) const { return Pair<const Operand*, Constant>(this, 0); }
 	Option<const Operand*> simplify(DAG& dag) const { return none; }
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const { return this; }
 	void parseAffineEquation(AffineEquationState& state) const { crash(); }
@@ -404,6 +411,7 @@ public:
 	inline void collectTops(VarCollector& vc) const { opd1->collectTops(vc); if(isBinary()) opd2->collectTops(vc); }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
+	elm::Pair<const Operand*, Constant> extractAdditiveConstant(DAG& dag) const;
 	Option<const Operand*> simplify(DAG& dag) const; // Warning: Option=none does not warrant that nothing has been simplified!
 	const Operand* replaceConstants(DAG& dag, const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars) const; // warning: Option=none does not warrant that nothing has been replaced!
 	void parseAffineEquation(AffineEquationState& state) const;
@@ -457,7 +465,5 @@ private:
 	short _var_counter;
 	const Operand& _var;
 };
-
-io::Output& operator<<(io::Output& out, arithoperator_t opr);
 
 #endif
