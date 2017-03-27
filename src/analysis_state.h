@@ -82,6 +82,7 @@ public:
 	void initializeWithDFA();
 	void merge(const States& ss, Block* b, VarMaker& vm);
 	void apply(const State& s, VarMaker& vm, bool local_sp);
+	void applyPredicates(const State& s, OperandEndoVisitor& cc, bool wipe_memory);
 	void prepareFixPoint();
 	void finalizeLoop(OperandIter* n, VarMaker& vm);
 	bool equiv(const State& s) const;

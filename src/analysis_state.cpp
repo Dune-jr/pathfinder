@@ -144,6 +144,17 @@ void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 	// DBG("f="<<this->dumpEverything() << ",\ng = " << s.dumpEverything())
 	Compositor cc(*this, local_sp);
 
+	const bool mem_was_reset = s.memid.b != NULL;
+	bool wipe_memory;
+	{
+		const Operand* new_sp = s.lvars[context->sp]->accept(cc);
+		const bool sp_was_lost = !new_sp || !new_sp->isAConst();
+		wipe_memory = sp_was_lost || mem_was_reset;
+	}
+	applyPredicates(s, cc, wipe_memory);
+	// nothing to do for our predicates actually!
+	//for(MutablePredIterator pi(*this); pi; pi++)
+
 	// applying lvars
 	// this=f, s=g
 	DBG("f = " << *this << ", g = " << s)
@@ -165,9 +176,11 @@ void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 	// applying memory
 	// goal is mem = n o m with n = s.mem
 	// ASSERTP(lvars[context->sp], "weird... should always be set") // this happens when we lose SP within a loop
-	const bool mem_was_reset = s.memid.b != NULL;
-	const bool sp_was_lost = !lvars[context->sp] || !lvars[context->sp]->isAConst();
-	const bool wipe_memory = sp_was_lost || mem_was_reset;
+	{
+		const bool check_wipe_memory = s.memid.b != NULL || !lvars[context->sp] || !lvars[context->sp]->isAConst();
+		ASSERT(check_wipe_memory == wipe_memory) // TODO remove
+	}
+
 	// ASSERTP(!(sp_was_lost && lvars[context->sp]->isConstant()), "more simplifications required: " << *lvars[context->sp])
 	if(wipe_memory)
 	{
@@ -205,7 +218,13 @@ void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 	}
 	lvars = lv;
 	// DBG("f o g = " << color::IBlu() << this->dumpEverything())
-	
+
+	// merge path
+	this->path.apply(s.getDetailedPath());
+}
+
+void Analysis::State::applyPredicates(const State& s, OperandEndoVisitor& cc, bool wipe_memory)
+{
 	// update their predicates then add them to us
 	// be careful about multiplying per negative numbers? or not actually. I think it's a simple substitution
 	for(SLList<LabelledPredicate>::Iterator pi(s.labelled_preds); pi; pi++)
@@ -213,18 +232,14 @@ void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 		Predicate p = pi->pred();
 		if(wipe_memory && p.involvesMemory())
 			continue; // Do not add
-		LabelledPredicate lp = LabelledPredicate(cc.visit(p), pi->labels());
+		LabelledPredicate lp = LabelledPredicate(
+				Predicate(p.opr(), p.left()->accept(cc), p.right()->accept(cc)),
+				pi->labels()
+			);
 		DBG(color::IGre() << " + " << lp.pred() << color::Gre() << " {from " << p << "}")
 		this->labelled_preds += lp; // then add them
 	}
-
-	// nothing to do for our predicates actually
-	//for(MutablePredIterator pi(*this); pi; pi++)
-
-	// merge path
-	this->path.apply(s.getDetailedPath());
 }
-
 
 // loop analysis should go that way: 1) normal parses with merge & fixpt 2) prepare&parse again 3) accel, parse with SMT ON 4) finalize
 /**

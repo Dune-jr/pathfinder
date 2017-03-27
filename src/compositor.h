@@ -12,7 +12,7 @@
 // Compositor: a class for State composition
 class Compositor : public OperandEndoVisitor
 {
-	typedef HashTable<Constant, const Operand*, ConstantHash> mem_t;
+	typedef genstruct::HashTable<Constant, const Operand*, ConstantHash> mem_t;
 public:
 	Compositor(const Analysis::State& s, bool sp_is_local)
 		: dag(s.getDag()), sp(NULL), lvars(s.getLocalVariables()), mem(s.getMemoryTable())
@@ -37,7 +37,7 @@ public:
 	const Operand* visit(const class OperandIter& g) { return &g; /*ASSERTP(false, "OperandIter found by the Compositor");*/ }
 	const Operand* visit(const class OperandArith& g)
 		{ return Arith::autoOp(dag, g.opr(), g.leftOperand().accept(*this), g.isBinary() ? g.rightOperand().accept(*this) : NULL); }
-	inline Predicate visit(const Predicate& p) { return Predicate(p.opr(), p.left()->accept(*this), p.right()->accept(*this)); }
+	// inline Predicate visit(const Predicate& p) { return Predicate(p.opr(), p.left()->accept(*this), p.right()->accept(*this)); }
 
 private:
 	DAG &dag;
