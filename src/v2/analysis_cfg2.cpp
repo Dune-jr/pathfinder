@@ -51,11 +51,11 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 		/* b ← pop(wl) */
 		Block *b = wl.pop();
 		/* pred ← 	b.ins \ B(G) if b ∈ H(G) ∧ status_b = ENTER */
-		/* 			b.ins ∩ B(G) if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
+		/* 			b.ins ∩ B(G) if b ∈ H(G) ∧ status_b ∈ {FIX, ACCEL, LEAVE} */
 		/* 			b.ins 		 if b ∈/ H(G) */
 		const Vector<Edge*> pred(LOOP_HEADER(b) ? (loopStatus(b) == ENTER
 				? nonBackIns(b) /* if b ∈ H(G) ∧ status_b = ENTER */
-				: backIns(b) /* if b ∈ H(G) ∧ status_b ∈ {FIX, LEAVE} */
+				: backIns(b) /* if b ∈ H(G) ∧ status_b ∈ {FIX, ACCEL, LEAVE} */
 			) : allIns(b) /* if b ∉ H(G) */
 		);
 
@@ -70,7 +70,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 			if(LOOP_HEADER(b)) /* if b ∈ H(G) then */
 			{
 				if(loopStatus(b) == FIX)
-					s->push(LH_S(b));
+					s->push(LH_S(b)); /* s ← s ∪ s_b */
 				s = merge(s, b);
 
 				switch(loopStatus(b))
@@ -105,9 +105,9 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 				if(loopStatus(b) == LEAVE) /* if status_b == LEAVE */
 					LH_S.remove(b); /* s_b ← nil */
 				else
-					LH_S(b) = s->one(); // save the status
+					LH_S(b) = s->one(); /* s_b ← nil */
 			}
-			I(b, s); // update s
+			I(b, s); // update s (opti)
 			/* for e ∈ succ \ {EX_h | b ∈ L_h ∧ status_h =/ LEAVE} */
 			const Vector<Edge*> succ(propagate ? outsWithoutUnallowedExits(b) : nullVector<Edge*>());
 			for(Vector<Edge*>::Iter e(succ); e; e++)
@@ -174,6 +174,7 @@ void Analysis2::I(Block* b, LockPtr<States> s)
 	}
 	else if(b->isExit()) // main
 		CFG_S(b->cfg()) = s; // we will never free this, which shouldn't be a problem because it should only be freed at the end of analysis
+		// TODO!!! we need to add all the exits to this, otherwise this is false!
 	else
 		DBGW("not doing anything");
 }

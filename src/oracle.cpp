@@ -61,6 +61,8 @@ LockPtr<Analysis::States> DefaultAnalysis::merge(LockPtr<States> v, Block* b) co
  */
 bool DefaultAnalysis::inD_ip(const otawa::Edge* e) const
 {
+	if(e->source()->isCall())
+		return true; // when we come back from a call, we want to apply because we need to check all applied paths are SAT
 	bool all_leave = true; // enable SMT when on sequential level
 	for(LoopHeaderIter lh(e->source()); lh; lh++)
 	{
@@ -70,7 +72,7 @@ bool DefaultAnalysis::inD_ip(const otawa::Edge* e) const
 			break;
 		}
 	}
-	return all_leave && isConditional(e->source()); //TODOv2: add condition: && isConditional(e->source())
+	return all_leave && isConditional(e->source());
 }
 
 // look for infeasible paths, add them to infeasible_paths, and removes the states from ss

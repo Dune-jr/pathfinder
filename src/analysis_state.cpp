@@ -164,11 +164,11 @@ void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 
 	// applying memory
 	// goal is mem = n o m with n = s.mem
-	ASSERTP(lvars[context->sp], "weird... should always be set")
+	// ASSERTP(lvars[context->sp], "weird... should always be set") // this happens when we lose SP within a loop
 	const bool mem_was_reset = s.memid.b != NULL;
-	const bool sp_was_lost = !lvars[context->sp]->isAConst();
+	const bool sp_was_lost = !lvars[context->sp] || !lvars[context->sp]->isAConst();
 	const bool wipe_memory = sp_was_lost || mem_was_reset;
-	ASSERTP(!(sp_was_lost && lvars[context->sp]->isConstant()), "more simplifications required: " << *lvars[context->sp])
+	// ASSERTP(!(sp_was_lost && lvars[context->sp]->isConstant()), "more simplifications required: " << *lvars[context->sp])
 	if(wipe_memory)
 	{
 		static CFG* last_fun_warning = NULL;
@@ -267,7 +267,8 @@ const Operand* Analysis::State::widenArithmeticProgression(const Operand* x, con
  */
 void Analysis::State::widening(const Operand* n)
 {
-DBGG("start: " << dumpEverything())	
+DBGG("start: " << dumpEverything())
+
 	WideningProgress wprogress(lvars); // lvars contains size info
 	bool fixpoint;
 	Widenor widenor(*this, NULL, n);

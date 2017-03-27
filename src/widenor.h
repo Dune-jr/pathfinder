@@ -36,7 +36,7 @@ public:
 	const Operand* visit(const class OperandVar& g) { 
 		if(g == *self)
 			return &g;
-		return lvars[g]->accept(rollback); // we need to (smartly) replace I by I-1
+		return lvars[g] ? lvars[g]->accept(rollback) : dag.var(g); // we need to (smartly) replace I by I-1
 	}
 	const Operand* visit(const class OperandMem& g)  { 
 		if(g == *self)
