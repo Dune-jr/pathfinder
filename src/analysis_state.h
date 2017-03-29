@@ -81,7 +81,7 @@ public:
 	elm::String dumpEverything() const;
 	void initializeWithDFA();
 	void merge(const States& ss, Block* b, VarMaker& vm);
-	void apply(const State& s, VarMaker& vm, bool local_sp);
+	void apply(const State& s, VarMaker& vm, bool local_sp, bool clear_path = false);
 	void applyPredicates(const State& s, OperandEndoVisitor& cc, bool wipe_memory);
 	void prepareFixPoint();
 	void finalizeLoop(OperandIter* n, VarMaker& vm);
@@ -91,6 +91,7 @@ public:
 	void collectTops(VarCollector &bv) const;
 	void removeTautologies();
 	inline void clearPreds() { labelled_preds.clear(); generated_preds.clear(); }
+	inline void clearPath() { path.clear(); }
 	inline void resetSP() { lvars[context->sp] = dag->cst(SP); }
 	void widening(const Operand* n);
 

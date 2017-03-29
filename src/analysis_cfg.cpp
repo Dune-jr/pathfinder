@@ -153,6 +153,7 @@ DetailedPath Analysis::reorderInfeasiblePath(const Path& ip, const DetailedPath&
 		else
 			ordered_ip.addLast(*full_path_iter);
 	}
+	DBG("reordered");DBGG("\t" << pathToString(ip) << " to");DBGG("\t" << ordered_ip << ", full_path was");DBGG("\t" << full_path)
 	// DBG("reorderInfeasiblePath(...), ip=" << pathToString(ip) << ", " << ICya() << "full_path=[" << full_path << "]" 
 		// << RCol() << ", result=" << ordered_ip);
 	return ordered_ip;

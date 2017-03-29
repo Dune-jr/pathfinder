@@ -5,7 +5,7 @@
 #include "struct/var_maker.h"
 
 // if this has n states and ss has m states, this will explode into a cartesian product of n*m states
-void Analysis::States::apply(const States& ss, VarMaker& vm, bool local_sp, bool dbg)
+void Analysis::States::apply(const States& ss, VarMaker& vm, bool local_sp, bool dbg, bool clear_path)
 {
 	int new_cap, m = this->count(), n = ss.count(), new_length = m * n;
 	ASSERTP(n > 0, "TODO: handle empty states in entry")
@@ -29,7 +29,7 @@ void Analysis::States::apply(const States& ss, VarMaker& vm, bool local_sp, bool
 	Iter si(ss.s);	
 	for(int i = 0; i < n; i++, si++)
 		for(int j = 0; j < m; j++)
-			(*this)[i*m + j].apply(*si, vm, local_sp);
+			(*this)[i*m + j].apply(*si, vm, local_sp, clear_path);
 
 	// this = [x1*i1, x2*i1, x3*i1,  x1*i2, x2*i2, x3*i2, ...
 	ASSERT(s.length() == new_length);
@@ -37,16 +37,17 @@ void Analysis::States::apply(const States& ss, VarMaker& vm, bool local_sp, bool
 
 // TODO: optimize
 /**
- * @brief apply this to s. local_sp is set to false
+ * @brief apply this to s. local_sp is set to false. The state that we'll applied to is cleared
  */
 void Analysis::States::appliedTo(const State& s, VarMaker& vm)
 {
 	this->removeTautologies();
+
 	for(States::Iter i(*this); i; i++)
 		(this->s)[i].clearPreds(); // TODO: hack, without this there are fake IPs
 	States x(this->count());
 	x.push(s);
-	x.apply(*this, vm, false, false); // no debug, no local sp
+	x.apply(*this, vm, false, false, true); // no debug, no local sp, clear path
 	*this = x;
 }
 

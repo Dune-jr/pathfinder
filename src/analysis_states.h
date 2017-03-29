@@ -16,12 +16,13 @@ public:
 	inline bool isEmpty() const { return s.isEmpty(); }
 	inline int count() const { return s.count(); }
 	inline const State& first() const { return s.first(); }
+	inline State& first() { return s[0]; }
 	inline const Vector<State>& states() const { return s; }
 	inline Vector<State>& states() { return s; }
 	inline void push(const Analysis::State& state) { return s.push(state); }
 	inline void remove(const Iter& i) { s.remove(i); }
 
-	void apply(const States& ss, VarMaker& vm, bool local_sp, bool dbg = true);
+	void apply(const States& ss, VarMaker& vm, bool local_sp, bool dbg = true, bool clear_path = false);
 	void appliedTo(const State& s, VarMaker& vm);
 	void minimize(VarMaker& vm, bool clean) const;
 	inline void removeTautologies(void) 			{ for(Iter i(this->s); i; i++) s[i].removeTautologies(); }

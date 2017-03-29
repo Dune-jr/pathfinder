@@ -526,7 +526,7 @@ int Analysis::removeDuplicateIPs()
 			if(infeasible_paths[j] == infeasible_paths[i]) // found a duplicate
 			{
 				bv.set(i, false); // do not include i
-				ASSERTP(false, "it seems like we never hit this point?? rm assert if we do, this should be the case")
+				// ASSERTP(false, "it seems like we never hit this point?? rm assert if we do, this should be the case")
 				break; // do not look any further
 			}
 	const int k = bv.countBits();

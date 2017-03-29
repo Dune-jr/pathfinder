@@ -139,7 +139,7 @@ io::Output& Analysis::State::print(io::Output& out) const
  * @param  s   state to apply
  * @param local_sp This tells us whether we should scale the SP or not
  */
-void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
+void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp, bool clear_path)
 {
 	// DBG("f="<<this->dumpEverything() << ",\ng = " << s.dumpEverything())
 	Compositor cc(*this, local_sp);
@@ -220,6 +220,8 @@ void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp)
 	// DBG("f o g = " << color::IBlu() << this->dumpEverything())
 
 	// merge path
+	if(clear_path)
+		this->path.clear();
 	this->path.apply(s.getDetailedPath());
 }
 
@@ -254,7 +256,7 @@ void Analysis::State::prepareFixPoint()
 	
 	Vector<Constant> todel;
 	for(mem_t::PairIterator iter(mem); iter; iter++)
-		if(!(*iter).snd->isAConst())
+		if(! (*iter).snd->isAConst())
 			todel.push((*iter).fst);
 	for(Vector<Constant>::Iter i(todel); i; i++)
 		mem.remove(todel[i]);
@@ -266,11 +268,12 @@ void Analysis::State::prepareFixPoint()
 // this function considers everything that isn't x0 to be constant in x
 const Operand* Analysis::State::widenArithmeticProgression(const Operand* x, const Operand& x0, const Operand* n) const
 {
+	ASSERT(! x->involves(Top))
 	AffineEquationState eqstate(x0);
-	x->parseAffineEquation(eqstate);
-	ASSERTP(eqstate.spCounter() == 0, "strange case where SP is added at every iteration... if this is not a bug, just scratch")
+	x->parseAffineEquation(eqstate); // contains spcount, varcount, and delta
 	// const t::int32 a = eqstate.varCounter(), b = eqstate.delta();
 	// x_n+1 = ax_n + b
+	ASSERTP(eqstate.spCounter() == 0, "strange case where SP is added at every iteration... if this is not a bug, just scratch")
 	ASSERTP(eqstate.varCounter() == 1, "lvars[" << x0 << "] = " << *x << ": treat case a != 1: " << eqstate.varCounter())
 	return Arith::add(*dag, dag->get(x0), Arith::mul(*dag, n, dag->cst(eqstate.delta()))); // x_n = x0 + b*n
 }
@@ -353,7 +356,6 @@ DBGG("start: " << dumpEverything())
 	}
 	for(SLList<Constant>::Iterator i(scratchs); i; i++)
 		mem[*i] = Top;
-	#warning do predicates too...
 
 	DBGG(IGre() << "done: " << this->dumpEverything())
 }
@@ -370,11 +372,11 @@ DBGG("start: " << dumpEverything())
  */
 Option<const Operand*> Analysis::State::widen(const Operand* x, const Operand& x0, const Operand* n, const WideningProgress& wprogress, Widenor& widenor) const
 {
-DBGG("widen(x=" << color::Cya() << *x << color::RCol() << ", x0=" << x0 << ", wprogress=" << wprogress << ")")
+DBGG("widen(" << x0 << " <- " << color::Cya() << *x << color::RCol() << ", wprogress=" << wprogress << ")")
 	if(*x == x0) // x = x0
-	{	// nothing to do, this is ID
-		return x;
-	}
+		return x; // nothing to do, this is identity
+	else if(x->involves(Top))
+		return Top;
 	else if(x->isAffine(x0) && x->involvesOperand(x0) == 1) // we do not handle stuff like x=2*x yet... we'd need 2^I anyway, ouch
 		return widenArithmeticProgression(x, x0, n); // x_n = x0 + b*n
 	else if(x->isLinear(true)) // x = y + z - k and such
@@ -403,14 +405,17 @@ DBGG("widen(x=" << color::Cya() << *x << color::RCol() << ", x0=" << x0 << ", wp
 					break;
 			}
 		}
+		DBGG("x="<<*x)
 
 		if(ready)
 		{
-			widenor.setSelf(&x0); // this will not x0 as a pointer from the DAG
+			widenor.setSelf(&x0); // this will not consider x0 as a pointer from the DAG
 			x = x->accept(widenor);
 			// at this point everything that isn't x0 is to be considered constant (for ex. if there's ?2 it's the ?2 of the beginning of the loop)
 			// we indeed want the x0_count from BEFORE the replacements
-			if(x0_count == 0) // easy case, everything on the right is constant. nothing to do
+			if(x == Top)
+				return Top;
+			else if(x0_count == 0) // easy case, everything on the right is constant. nothing to do
 				return x;
 			else if(x0_count == 1)
 				return widenArithmeticProgression(x, x0, n); // x_n = x0 + b*n
@@ -528,6 +533,7 @@ void Analysis::State::merge(const States& ss, Block* b, VarMaker& vm)
 	// this->path.merge(stateListToPathVector(sc)); // merge paths as well while keeping some flow info and shrink that in this->path
 	this->path.clear();
 	this->path.fromContext(b);
+DBGG(color::IRed() << "path:" << this->path)
 	if(wipe_memory)
 	{
 		wipeMemory(vm);

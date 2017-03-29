@@ -94,6 +94,7 @@ public:
 	// virtual Operand* copy() const = 0;
 	virtual unsigned int countTempVars() const = 0; // this will count a variable several times if it occurs several times
 	virtual bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const = 0;
+	virtual bool involves(const Operand* opd) const = 0; // uses DAG
 	virtual int involvesOperand(const Operand& opd) const { return this->operator==(opd) ? 1 : 0; } // default case, to be overloaded for recursive classes
 	virtual int involvesVariable(const OperandVar& opdv) const = 0; // TODO! rewrite using involvesOperand, if the int return thing is not critical?
 	virtual Option<Constant> involvesStackBelow(const Constant& stack_limit) const = 0;
@@ -168,6 +169,7 @@ public:
 	
 	unsigned int countTempVars() const { return 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
+	bool involves(const Operand* o) const { return this == o; }
 	inline int involvesVariable(const OperandVar& opdv) const { return 0; }
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
@@ -216,6 +218,7 @@ public:
 	// Operand* copy() const;
 	unsigned int countTempVars() const { return isTempVar() ? 1 : 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
+	bool involves(const Operand* o) const { return this == o; }
 	// int involvesOperand(const Operand& opd) const;
 	inline int involvesVariable(const OperandVar& opdv) const { return (int)(opdv == *this); }
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
@@ -260,6 +263,7 @@ public:
 	// Operand* copy() const { return new OperandMem(*this); }
 	unsigned int countTempVars() const { return 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
+	bool involves(const Operand* o) const { return this == o; }
 	// int involvesOperand(const Operand& opd) const;
 	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
@@ -307,6 +311,7 @@ public:
 	
 	unsigned int countTempVars() const { return 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
+	bool involves(const Operand* o) const { return this == o; }
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
 	inline int involvesVariable(const OperandVar& opdv) const { return 0; }
 	const Operand* involvesMemory() const { return NULL; }
@@ -353,6 +358,7 @@ public:
 	
 	unsigned int countTempVars() const { return 0; }
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const { expr = this; return false; }
+	bool involves(const Operand* o) const { return this == o; }
 	inline int involvesVariable(const OperandVar& opdv) const { return false; }
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const { return none; }
 	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
@@ -405,6 +411,7 @@ public:
 	
 	// Operand* copy() const;
 	unsigned int countTempVars() const;
+	bool involves(const Operand* o) const { return this == o || opd1 == o || opd2 == o; }
 	int involvesOperand(const Operand& opd) const { return opd1->involvesOperand(opd) + opd2->involvesOperand(opd); }
 	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;

@@ -9,6 +9,7 @@
 #include <otawa/cfg/Edge.h>
 #include <elm/util/Option.h>
 #include "cfg_features.h"
+#include "debug.h"
 
 using elm::genstruct::SLList;
 // using elm::genstruct::Vector;
