@@ -22,10 +22,15 @@ CVC4SMT::CVC4SMT(int flags): SMT(flags), smt(&em), variables(em)
 	smt.setOption("rewrite-divk", CVC4::SExpr("true"));
 	// smt.setOption("dump-unsat-cores", CVC4::SExpr("true"));
 	// smt.setOption("produce-proofs", CVC4::SExpr("true"));
+	static int nyu = 0;
 	if(dbg_&0x10)
 	{
-		smt.setOption("dump", "assertions:pre-everything");
-		smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
+		if(!nyu)
+		{
+			nyu++;
+			smt.setOption("dump", "assertions:pre-everything");
+			smt.setOption("dump-to", "dump.log"); // this is actually global to CVC4... meaning setting it once per pathfinder execution is enough
+		}
 	}
 }
 

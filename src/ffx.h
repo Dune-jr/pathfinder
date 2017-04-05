@@ -13,10 +13,17 @@ public:
 	void output(const elm::String& filename, const elm::String& function_name, const elm::String& graph_filename = "");
 
 private:
+	typedef enum
+	{
+		FFX_TAG_LOOP=0,
+		FFX_TAG_CALL=1,
+	} ffx_tag_t;
+
 	void outputSortedInfeasiblePaths(io::Output& FFXFile);
 	void printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip);
 	void writeGraph(io::Output& GFile, const Vector<DetailedPath>& ips);
-	void checkPathValidity(const DetailedPath& ip) const;
+	bool checkPathValidity(const DetailedPath& ip, bool critical) const;
+	static bool lastIsCaller(SLList<ffx_tag_t> open_tags);
 	inline bool edgeAfter(SLList<DetailedPath::FlowInfo>::Iterator iter) const
 		{ for(; iter; iter++) if(iter->isEdge()) return true; return false; }
 	void printInfeasiblePathOldNomenclature(io::Output& FFXFile, const DetailedPath& ip);
@@ -26,12 +33,6 @@ private:
 
 	const Vector<DetailedPath>& infeasible_paths;
 	int indent_level;
-
-	typedef enum
-	{
-		FFX_TAG_LOOP=0,
-		FFX_TAG_CALL=1,
-	} ffx_tag_t;
 };
 
 #endif

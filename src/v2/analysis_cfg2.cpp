@@ -171,6 +171,12 @@ void Analysis2::I(Block* b, LockPtr<States> s)
 		s->onCall(b->toSynth());
 		s->apply(**CFG_S(called_cfg), *vm, true);
 		s->onReturn(b->toSynth());
+		if((flags&MERGE) && (flags&MERGE_AFTER_APPLY) && s->count() > state_size_limit)
+		{
+			// Block::EdgeIter ei(b->outs());
+			// Block* b2 = theOnly(ei)->sink();
+			*s = *merge(s, b);
+		}
 	}
 	else if(b->isExit()) // main
 		CFG_S(b->cfg()) = s; // we will never free this, which shouldn't be a problem because it should only be freed at the end of analysis

@@ -12,6 +12,10 @@ const Operand* Arith::add(DAG& dag, const Operand* a, const Operand* b)
 		return Arith::add(dag, *av, b);
 	else if(bv)
 		return Arith::add(dag, *bv, a);
+	else if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_MUL)
+		return Arith::addmul(dag, b, a->toArith().left(), a->toArith().right());
+	else if(b->kind() == ARITH && b->toArith().opr() == ARITHOPR_MUL)
+		return Arith::addmul(dag, a, b->toArith().left(), b->toArith().right());
 	else //(!av && !bv)
 		return dag.add(a, b);
 }
@@ -52,21 +56,31 @@ const Operand* Arith::add(DAG& dag, Constant x, const Operand* y)
 	return dag.add(y, dag.cst(x));
 }
 
+// x + y * z
+const Operand* Arith::addmul(DAG& dag, const Operand* x, const Operand* a, const Operand* b)
+{
+	if(x == a) // x + x * b
+		return dag.mul(Arith::add(dag, x, dag.cst(1)), b);
+	if(x == b) // x + a * x
+		return dag.mul(a, Arith::add(dag, x, dag.cst(1)));
+	return dag.add(x, dag.mul(a, b));
+}
+
 const Operand* Arith::sub(DAG& dag, const Operand* a, const Operand* b)
 {
 	if(a == Top || b == Top) return Top;
 	Option<Constant> av = a->evalConstantOperand();
 	Option<Constant> bv = b->evalConstantOperand();
-	if(av && bv)
-		return dag.cst(*av-*bv);
-	else if(!av && !bv)
-		return dag.sub(a, b);
-	else if(av) // k - b
-		return Arith::sub(dag, *av, b);
-	else if(bv) // a - k = a+ (-k)
-		return Arith::add(dag, -*bv, a);
-	else if(a == b)
+	if(a == b)
 		return dag.cst(0);
+	else if(av && bv)
+		return dag.cst(*av-*bv);
+	else if(av && !bv) // k - b
+		return Arith::sub(dag, *av, b);
+	else if(!av && bv) // a - k = a+ (-k)
+		return Arith::add(dag, -*bv, a);
+	else if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_MUL)
+		return Arith::submul(dag, a->toArith().left(), a->toArith().right(), b);
 	else
 		return dag.sub(a, b);
 }
@@ -96,6 +110,16 @@ const Operand* Arith::sub(DAG& dag, Constant x, const Operand* y)
 		}
 	}
 	return dag.sub(dag.cst(x), y);
+}
+
+// a * b - x
+const Operand* Arith::submul(DAG& dag, const Operand* a, const Operand* b, const Operand* x)
+{
+	if(x == a) // x*b - x
+		return dag.mul(Arith::sub(dag, x, dag.cst(1)), b);
+	if(x == b) // a*x - x
+		return dag.mul(a, Arith::sub(dag, x, dag.cst(1)));
+	return dag.sub(dag.mul(a, b), x);
 }
 
 const Operand* Arith::mul(DAG& dag, const Operand* a, const Operand* b)
@@ -141,6 +165,16 @@ const Operand* Arith::mul(DAG& dag, const Operand* a, Constant c)
 		}
 		else // give up
 			return dag.mul(a, dag.cst(c));
+	}
+	else if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_ADD)
+	{
+		const OperandArith& aa = a->toArith();
+		return dag.add(Arith::mul(dag, aa.left(), c), Arith::mul(dag, aa.right(), c));
+	}
+	else if(a->kind() == ARITH && a->toArith().opr() == ARITHOPR_SUB)
+	{
+		const OperandArith& aa = a->toArith();
+		return dag.sub(Arith::mul(dag, aa.left(), c), Arith::mul(dag, aa.right(), c));
 	}
 	else if(a->kind() == CST)
 		return dag.cst(a->toConstant() * c);

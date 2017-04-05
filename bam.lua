@@ -82,7 +82,7 @@ elseif config.solver.value == "boolector" then
  	-- lingeling
  	settings.link.flags:Add("-llgl")
  	-- no support yet
-	error("boolector not yet supported")
+	error("boolector not supported")
 else
 	error("invalid solver")
 end

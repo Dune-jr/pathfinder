@@ -39,8 +39,8 @@ public:
 		VIRTUALIZE_CFG		 = 1 <<  0,
 		SLICE_CFG			 = 1 <<  1,
 		USE_INITIAL_DATA 	 = 1 <<  2,
-		MERGE				 = 1 <<  3,
-		UNMINIMIZED_PATHS	 = 1 <<  4,
+		MERGE			 	 = 1 <<  3,
+		MERGE_AFTER_APPLY	 = 1 <<  4,
 		DRY_RUN				 = 1 <<  5,
 		SMT_CHECK_LINEAR	 = 1 <<  6,
 		ALLOW_NONLINEAR_OPRS = 1 <<  7,
@@ -54,6 +54,7 @@ public:
 		CLEAN_TOPS			 = 1 << 15,
 		ASSUME_IDENTICAL_SP	 = 1 << 16,
 		NO_WIDENING			 = 1 << 17,
+		UNMINIMIZED_PATHS	 = 1 << 18,
 	};
 protected:
 	typedef struct

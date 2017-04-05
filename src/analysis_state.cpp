@@ -533,7 +533,6 @@ void Analysis::State::merge(const States& ss, Block* b, VarMaker& vm)
 	// this->path.merge(stateListToPathVector(sc)); // merge paths as well while keeping some flow info and shrink that in this->path
 	this->path.clear();
 	this->path.fromContext(b);
-DBGG(color::IRed() << "path:" << this->path)
 	if(wipe_memory)
 	{
 		wipeMemory(vm);

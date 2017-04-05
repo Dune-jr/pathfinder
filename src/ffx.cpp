@@ -26,12 +26,13 @@ void FFX::output(const elm::String& function_name, const elm::String& ffx_filena
 	io::OutFileStream FFXStream(ffx_filename);
 	io::Output FFXFile(FFXStream);
 
-	for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
-		checkPathValidity(*iter);
+	// for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
+	// 	checkPathValidity(*iter, false); // TODO option to make this critical
 
 	// header
 	FFXFile << indent(  ) << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" << endl;
-	FFXFile << indent(  ) << "<flowfacts>" /*" <!-- pathfinder, " << __DATE__ << " -->"*/ << endl;
+	FFXFile << indent(  ) << "<flowfacts> <!-- pathfinder " << function_name << " " <<  __DATE__ << " -->" << endl;
+	//FFXFile << indent(  ) << "<flowfacts>" /*" <!-- pathfinder, " << __DATE__ << " -->"*/ << endl;
 	// FFXFile << indent(  ) << "<function name=\"" << function_name << "\">" << endl; indent(+1);
 
 	outputSortedInfeasiblePaths(FFXFile);
@@ -67,7 +68,7 @@ void FFX::outputSortedInfeasiblePaths(io::Output& FFXFile)
 	{
 		FFXFile << indent(  ) << "<function name=\"" << i->name() << "\">" << endl; indent(+1);
 		for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
-			if(iter->function() == *i)
+			if(iter->function() == *i && checkPathValidity(*iter, false))
 				printInfeasiblePath(FFXFile, *iter);
 		FFXFile << indent(-1) << "</function>" << endl;
 	}
@@ -81,6 +82,7 @@ void FFX::outputSortedInfeasiblePaths(io::Output& FFXFile)
 void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 {
 	SLList<ffx_tag_t> open_tags;
+	SLList<Block*> caller_q;
 	// int active_loops = 0, active_calls = 0;
 	FFXFile	<< indent(  ) << "<not-all seq=\"true\">" << endl; indent(+1);
 	for(DetailedPath::Iterator iter(ip); iter; iter++)
@@ -129,7 +131,8 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				ASSERT(!(++caller_exit_edges_iter));
 				ASSERTP(!(++citer), "must be at max 1 outedge from caller")*/
 			}
-			else crash();
+			else
+				crash();
 
 
 			if(e->target()->isBasic())
@@ -150,16 +153,38 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 			}
 			else if(e->target()->isExit())
 			{
-				// TODO!! make sure this doesn't make problems with empty <call></call>. function MUST be called even though we remove this edge
-				FFXFile << indent(  ) << "<!-- skipped exit edge of " << e->target()->cfg()->name() << " -->" << endl;
-				continue;
-				CFG::CallerIter citer(e->target()->cfg()->callers());
-				ASSERTP(citer, "exit from main in IP???");
-				Block::EdgeIter caller_exit_edges_iter(citer->outs());
-				ASSERT(caller_exit_edges_iter);
-				target = caller_exit_edges_iter->target();
-				ASSERT(!(++caller_exit_edges_iter));
-				ASSERTP(!(++citer), "max 1 outedge from caller: " << e->target())
+				#if 0 // This doesn't work because there are multiple exit edges and they are meaningful in an infeasible path
+					// TODO: make sure this doesn't make problems with empty <call></call>. function MUST be called even though we remove this edge
+					FFXFile << indent(  ) << "<!-- skipped exit edge of " << e->target()->cfg()->name() << " -->" << endl;
+					continue;
+				#endif
+				FFXFile << indent(  ) << "<!-- adding virtual exit edge of " << e->target()->cfg()->name() << " -->" << endl;
+
+				// make sure the caller we found is in CallerIter
+				Block *caller = NULL;
+				ASSERT(lastIsCaller(open_tags));
+				for(CFG::CallerIter citer(e->target()->cfg()->callers()); citer; citer++)
+				{
+					if(*citer == caller_q.first())
+					{
+						caller = caller_q.first();
+						break;
+					}
+				}
+				ASSERTP(caller, "last caller parsed (" << caller_q.first() << ") not in calliter of " << e->target()->cfg() << " \n\t(ip="<<ip<<")")
+				Block::EdgeIter caller_outs(caller->outs());
+				target = theOnly(caller_outs)->target();
+				DBG("ouputting return edge: " << source << " -> " << target)
+
+				/*
+					CFG::CallerIter citer(e->target()->cfg()->callers());
+					ASSERTP(citer, "exit from main in IP???");
+					Block::EdgeIter caller_exit_edges(citer->outs());
+					ASSERT(caller_exit_edges);
+					target = caller_exit_edges->target();
+					ASSERT(!(++caller_exit_edges));
+					ASSERTP(!(++citer), "max 1 outedge from caller: " << e->target() << " (but " << *citer << " too)")
+				*/
 			}
 
 			FFXFile << indent(  ) << "<edge src=\"0x" << source->address() << "\" dst=\"0x" << target->address()
@@ -187,12 +212,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 				ASSERTP(false,"WARNING: </loop> found when no context is open") // TODO! we should fix this LEx that doesn't have a previous LEn, that's a bug...
 			}
 			ASSERTP(open_tags.first() == FFX_TAG_LOOP, "</loop> found when not directly in loop context");
-/*			while(open_tags.first() != FFX_TAG_LOOP)
-			{
-				FFXFile << indent(-1) << "</call>" << endl;
-				open_tags.removeFirst();
-			}
-*/			FFXFile << indent(-1) << "</iteration>" << endl;
+			FFXFile << indent(-1) << "</iteration>" << endl;
 			if(const BasicBlock* loop_header = iter->getLoopHeader()) // if not NULL, we have info
 				FFXFile << indent(  ) << "</loop> <!-- loop " << loop_header->index() << "-->" << endl;
 			else
@@ -202,6 +222,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		else if(iter->isCall())
 		{
 			SynthBlock* caller = iter->getCaller();
+			caller_q += caller;
 			BasicBlock* callpoint = theOnly(caller->ins())->source()->toBasic(); // TODO add asserts
 			FFXFile << indent( ) << "<call address=\"0x" << callpoint->control()->address() << "\" name=\"" << caller->callee()->name() << "\">"
 				" <!-- call " << caller->cfg() << ":" << caller->index() << " -> " << caller->callee() << " -->" << endl;
@@ -213,6 +234,7 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 		else if(iter->isReturn())
 		{
 			const SynthBlock* caller = iter->getCaller();
+			caller_q.removeFirst();
 			FFXFile << indent(  ) << "</function>" << endl; // alo close function
 			FFXFile << indent(-1) << "</call>"
 				" <!-- return " << caller->cfg() << ":" << caller->index() << " <- " << caller->callee() << " -->" << endl;
@@ -271,7 +293,7 @@ void FFX::writeGraph(io::Output& GFile, const Vector<DetailedPath>& ips)
 		GFile << ++i << " \t" << *iter << endl; // output 24 1 and so on
 }
 
-void FFX::checkPathValidity(const DetailedPath& ip) const
+bool FFX::checkPathValidity(const DetailedPath& ip, bool critical) const
 {
 	Vector<DetailedPath::FlowInfo> v;
 	for(DetailedPath::Iterator iter(ip); iter; iter++)
@@ -286,7 +308,12 @@ void FFX::checkPathValidity(const DetailedPath& ip) const
 			{
 				ASSERTP(v, "path " << ip << " invalid: Loop exit not matching loop entry")
 			    DetailedPath::FlowInfo fi(v.pop());
-				ASSERTP(fi == DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_LOOP_ENTRY, iter->getBasicBlock()), "path " << ip << " invalid: Loop exit not matching loop entry");
+			    if(fi != DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_LOOP_ENTRY, iter->getBasicBlock()))
+			    {
+					ASSERTP(!critical, "path " << ip << " invalid: Loop exit not matching loop entry");
+					cerr << "path " << ip << " invalid: Loop exit not matching loop entry" << endl;
+					return false;
+			    }
 				break;
 			}
 			case DetailedPath::FlowInfo::KIND_CALL: // SynthBlock
@@ -296,10 +323,16 @@ void FFX::checkPathValidity(const DetailedPath& ip) const
 			{
 				ASSERTP(v, "path " << ip << " invalid: Return not matching call")
 			    DetailedPath::FlowInfo fi(v.pop());
-				ASSERTP(fi == DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_CALL, iter->getSynthBlock()), "path " << ip << " invalid: Return not matching call");
+			    if(fi != DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_CALL, iter->getSynthBlock()))
+			    {
+					ASSERTP(!critical, "path " << ip << " invalid: Return not matching call");
+					cerr << "path " << ip << " invalid: Return not matching call" << endl;
+					return false;
+				}
 				break;
 			}
 		}
+	return true;
 }
 
 /**
@@ -366,4 +399,14 @@ elm::String FFX::indent(int indent_increase)
 		for(int i = 0; i < indent_level; i++)
 			str = str + "\t";
 	return str;
+}
+
+/**
+ * @fn bool FFX::lastIsCaller(SLList<ffx_tag_t> open_tags)
+ * @brief      Gets the last caller from a list of open tags.
+ * @param      open_tags  The open tags
+ */
+bool FFX::lastIsCaller(SLList<ffx_tag_t> open_tags)
+{
+	return open_tags && open_tags.first() == FFX_TAG_CALL;
 }

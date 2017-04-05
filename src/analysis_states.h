@@ -31,7 +31,8 @@ public:
 	inline void widening(const Operand* n) { ASSERT(s.count() <= 1); if(s.count() == 1) s[0].widening(n); } // needs max one state
 	void checkForSatisfiableSP() const;
 
-	inline void resetSP() { for(Iter i(this->s); i; i++) s[i].resetSP(); }
+	inline void clearPath() { for(Iter i(this->s); i; i++) s[i].clearPath(); }
+	inline void resetSP()   { for(Iter i(this->s); i; i++) s[i].resetSP(); }
 	inline void onCall(SynthBlock* sb)   { for(Iter i(this->s); i; i++) s[i].onCall(sb); }
 	inline void onReturn(SynthBlock* sb) { for(Iter i(this->s); i; i++) s[i].onReturn(sb); }
 	inline void onLoopExit (Block* b)    { for(Iter i(this->s); i; i++) s[i].onLoopExit(b); }

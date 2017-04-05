@@ -33,6 +33,7 @@ public:
 		opt_graph_output (SwitchOption::Make(*this).cmd("-g").cmd("--graph-output").description("also output as a gnuplot .tsv graph file (requires -o)")),
 		opt_noformattedflowinfo(SwitchOption::Make(*this).cmd("--nffi").cmd("--no-formatted-flowinfo").description("format flowinfo in paths like a list of items instead of pretty-printing it")),
 		opt_automerge	 (SwitchOption::Make(*this).cmd("-a").cmd("--automerge").description("let the algorithm decide when to merge")),
+		opt_applymerge	 (SwitchOption::Make(*this).cmd("--maf").cmd("--merge-after-apply").description("allow the algorithm to merge immediately after applying")),
 		opt_dry			 (SwitchOption::Make(*this).cmd("-d").cmd("--dry").description("dry run (no solver calls)")),
 		opt_v1			 (SwitchOption::Make(*this).cmd("-1").cmd("--v1").description("Run v1 of abstract interpretation (symbolic predicates)")),
 		opt_v2			 (SwitchOption::Make(*this).cmd("-2").cmd("--v2").description("Run v2 of abstract interpretation (smarter structs)")),
@@ -78,10 +79,9 @@ protected:
 	}
 
 private:
-	// option::Manager manager;
 	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats;
 	ValueOption<bool> opt_output;
-	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck,
+	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_applymerge, opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck,
 			     opt_no_initial_data, opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_nocleantops, opt_dontassumeidsp, opt_nowidening, opt_slice, opt_dumpoptions;
 	ValueOption<int> opt_merge, opt_multithreading, opt_x;
 
@@ -90,7 +90,6 @@ private:
 		merge_thresold = getMergeThresold();
 		dbg_flags = 
 			  (opt_deterministic 		? DBG_DETERMINISTIC : 0)
-			| (opt_deterministic 		? DBG_DETERMINISTIC : 0)
 			| (!opt_noipresults 		? DBG_RESULT_IPS : 0)
 			| (!opt_noformattedflowinfo ? DBG_FORMAT_FLOWINFO : 0)
 			| (opt_detailedstats 		? DBG_DETAILED_STATS : 0)
@@ -111,6 +110,7 @@ private:
 			| ((opt_v1||opt_v2)				? Analysis::VIRTUALIZE_CFG : 0)
 			| (!opt_no_initial_data			? Analysis::USE_INITIAL_DATA : 0)
 			| (opt_sp_critical				? Analysis::SP_CRITICAL : 0)
+			| (opt_applymerge				? Analysis::MERGE_AFTER_APPLY : 0)
 			| (nb_cores > 1					? Analysis::MULTITHREADING : 0)
 			| ((opt_merge || opt_automerge)	? Analysis::MERGE : 0)
 			| (true 						? Analysis::POST_PROCESSING : 0)
