@@ -18,9 +18,9 @@ using namespace otawa::sem;
  * @brief      Process a BasicBlock
  *
  * @param[in]  bb             The BasicBlock to parse
- * @param[in]  version_flags  The version flags
+ * @param[in]  flags		  The flags
  */
-void Analysis::State::processBB(const BasicBlock *bb, VarMaker& vm, int version_flags)
+void Analysis::State::processBB(const BasicBlock *bb, VarMaker& vm, int flags)
 {
 	DBG("Processing " << (otawa::Block*)bb << " (" << bb->address() << ") of path " << dumpPath())
 	SLList<LabelledPredicate> generated_preds_before_condition;
@@ -57,7 +57,7 @@ void Analysis::State::processBB(const BasicBlock *bb, VarMaker& vm, int version_
 				generated_preds_taken = generated_preds;
 				generated_preds = generated_preds_before_condition;
 			}
-			if(version_flags & IS_V1)
+			if(flags & IS_V1)
 				processSemInst1(seminsts, last_condition);
 			else if(semp.process(seminsts) != 0)
 			{
@@ -68,7 +68,9 @@ void Analysis::State::processBB(const BasicBlock *bb, VarMaker& vm, int version_
 		// all temporary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();
 	}
-	// if(! (dbg_flags&DBG_DETERMINISTIC))
+	if( !(flags&IS_V1) && (flags&CLAMP_PREDICATE_SIZE) )
+		clampPredicates(vm);
+	// if(! (dbg_flags & DBG_DETERMINISTIC))
 	// 	DBG("dag:" << *dag)
 	if(dbg_verbose == DBG_VERBOSE_ALL)
 	{
@@ -85,7 +87,7 @@ void Analysis::State::processBB(const BasicBlock *bb, VarMaker& vm, int version_
 #endif
 	}
 	DBG(dumpEverything());
-	ASSERTP(!(version_flags & SP_CRITICAL) || lvars(context->sp).isConstant(), "SP value was lost: " << lvars(context->sp) << ", aborting");
+	ASSERTP(!(flags & SP_CRITICAL) || lvars(context->sp).isConstant(), "SP value was lost: " << lvars(context->sp) << ", aborting");
 }
 
 /**
@@ -630,7 +632,8 @@ Predicate Analysis::State::getConditionalPredicate(cond_t kind, const Operand* o
 			opr = CONDOPR_NE;
 			break;
 		default: // NO_COND, ANY_COND, MAX_COND
-			crash(); // invalid condition, exit
+			DBGW("unsupported: " << kind); // invalid condition, exit
+			return Predicate(CONDOPR_EQ, Top, Top); // TODO! hax
 	}
 	if(reverse)
 		return Predicate(opr, opd_right, opd_left);

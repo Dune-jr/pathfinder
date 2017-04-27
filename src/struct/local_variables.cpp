@@ -131,6 +131,7 @@ LocalVariables& LocalVariables::operator=(const LocalVariables& lv)
 			l = new labels_t*[size];
 			array::clear(l, size);
 			u.resize(size);
+			// u = BitVector(size);
 			copy(lv);
 		}
 	}

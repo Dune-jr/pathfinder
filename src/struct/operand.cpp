@@ -59,8 +59,13 @@
  * @return NULL if nothing was found, or the first OperandMem found
  */
 /**
+ * @fn int Operand::count(void) const
+ * @brief Counts the operands
+ * @return The operand count as an integer
+ */
+/**
  * @fn Option<const Operand*> Operand::update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
- * @brief
+ * @brief replaces all opd by opd_modifier
  */
 /**
  * @fn bool Operand::isComplete() const;
@@ -72,11 +77,11 @@
  */
 /**
  * @fn void Operand::parseAffineEquation(AffineEquationState& state) const;
- * @brief
+ * @brief Assuming this is an affine equation, describes it by filling the state given in parameter
  */
 /**
  * @fn Option<Constant> Operand::evalConstantOperand() const;
- * @brief
+ * @brief returns a constant if the operand could be identified to one, none otherwise
  * @warning Deprecated, bound to be removed in the future
  */
 /**

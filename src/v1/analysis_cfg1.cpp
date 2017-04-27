@@ -67,6 +67,9 @@ void Analysis1::processCFG(CFG* cfg, bool use_initial_data)
 			/* if b ∈ H(G) then */
 			if(LOOP_HEADER(b))
 			{
+				if(loopStatus(b) == FIX)
+					s->push(LH_S(b)); /* s ← s ∪ s_b */
+				s = merge(s, b);
 				ASSERT(s->count() <= 1);
 				/* if status_b = LEAVE then */
 				if(loopStatus(b) == LEAVE)
@@ -86,10 +89,14 @@ void Analysis1::processCFG(CFG* cfg, bool use_initial_data)
 					/* status_b ← FIX if status_b = ENTER */
 					case ENTER:
 						LH_STATUS(b) = FIX;
+#ifdef V1
+addLoopStats(b);
+#endif
 						// s->onLoopEntry(b);
 						break;
 					/* status_b ← LEAVE if status_b = FIX ∧ s ≡ s_b */
 					case FIX: if(s->one().equiv(LH_S(b)))
+						#warning This is buggy: we have already set LH_S to s!
 						LH_STATUS(b) = LEAVE;
 						break;
 					/* status_b ← ENTER if status_b = LEAVE */

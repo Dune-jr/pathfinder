@@ -100,6 +100,7 @@ public:
 	virtual Option<Constant> involvesStackBelow(const Constant& stack_limit) const = 0;
 	virtual bool involvesMemoryCell(const OperandMem& opdm) const = 0;
 	virtual const Operand* involvesMemory() const = 0;
+	virtual int count() const { return 1; } // count operands
 	virtual void collectTops(VarCollector& vc) const = 0;
 	virtual Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const = 0;
 	virtual void markUsedRegisters(BitVector &uses) const = 0;
@@ -174,6 +175,7 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
 	const Operand* involvesMemory() const { return NULL; }
+	// int count() const;
 	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
@@ -224,6 +226,7 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
 	const Operand* involvesMemory() const;
+	// int count() const;
 	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
@@ -269,6 +272,7 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	const Operand* involvesMemory() const;
+	// int count() const;
 	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;
@@ -315,6 +319,7 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const { return elm::none; }
 	inline int involvesVariable(const OperandVar& opdv) const { return 0; }
 	const Operand* involvesMemory() const { return NULL; }
+	// int count() const;
 	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
 	inline void collectTops(VarCollector& vc) const { vc.collect(id); }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
@@ -363,6 +368,7 @@ public:
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const { return none; }
 	bool involvesMemoryCell(const OperandMem& opdm) const { return false; }
 	const Operand* involvesMemory() const { return NULL; }
+	// int count() const;
 	inline void collectTops(VarCollector& vc) const { }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const { return (this == opd) ? some(opd_modifier) : none; }
 	Option<Constant> evalConstantOperand() const { return none; }
@@ -412,12 +418,13 @@ public:
 	// Operand* copy() const;
 	unsigned int countTempVars() const;
 	bool involves(const Operand* o) const { return this == o || opd1 == o || opd2 == o; }
-	int involvesOperand(const Operand& opd) const { return opd1->involvesOperand(opd) + opd2->involvesOperand(opd); }
+	int involvesOperand(const Operand& opd) const { return opd1->involvesOperand(opd) + (opd2 ? opd2->involvesOperand(opd) : 0); }
 	inline int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;
 	bool involvesMemoryCell(const OperandMem& opdm) const;
 	bool getIsolatedTempVar(OperandVar& temp_var, Operand const*& expr) const;
 	const Operand* involvesMemory() const;
+	int count() const { return isBinary() ? opd1->count() + opd2->count() : opd1->count(); }
 	inline void collectTops(VarCollector& vc) const { opd1->collectTops(vc); if(isBinary()) opd2->collectTops(vc); }
 	Option<const Operand*> update(DAG& dag, const Operand* opd, const Operand* opd_modifier) const;
 	Option<Constant> evalConstantOperand() const;

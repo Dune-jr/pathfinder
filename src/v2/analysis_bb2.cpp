@@ -341,6 +341,21 @@ void Analysis::State::wipeMemory(VarMaker& vm)
 	}
 }
 
+void Analysis::State::clampPredicates(VarMaker &vm)
+{
+	for(LocalVariables::Iter i(lvars); i; i++)
+		if(lvars[i] && lvars[i]->count() >= 12)
+			lvars[i] = vm.new_top();
+
+	Vector<Constant> toscratch;
+	for(mem_t::PairIterator iter(mem); iter; iter++)
+		if((*iter).snd->count() >= 12)
+			toscratch.push((*iter).fst);
+	for(Vector<Constant>::Iter i(toscratch); i; i++)
+		mem[i] = vm.new_top();
+	// for(MutablePredIterator piter(*this); piter; piter++)
+}
+
 void Analysis::State::updateLabels(const sem::inst& seminst)
 {
 	switch(seminst.op)

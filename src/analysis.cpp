@@ -28,8 +28,13 @@ bool cfg_follow_calls = false; // cfg_features.h
  */
 Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold, int nb_cores)
 	: state_size_limit(merge_thresold), nb_cores(nb_cores), flags(flags)
+#ifdef V1
+	, max_loop_depth(0)
+#endif
 {
 	ws->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
+	if(flags & REDUCE_LOOPS)
+		ws->require(REDUCED_LOOPS_FEATURE, props); // for irregular loops
 	ws->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
 	// MyTransformer t; t.process(ws);
 	if(flags & VIRTUALIZE_CFG) {
@@ -417,23 +422,31 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 		elm::cout << endl;
 	// cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << ipcount-ip_stats.getUnminimizedIPCount() << color::RCol() <<
 	// 		"+" << color::Yel() << ip_stats.getUnminimizedIPCount() << color::RCol() << " => " << color::IRed() << ip_stats.getIPCount() << color::RCol() << endl;
-	if(dbg_flags&DBG_DETAILED_STATS && ipcount > 0)
+	if(dbg_flags&DBG_DETAILED_STATS)
 	{
-		int sum_path_lengths = 0, squaredsum_path_lengths = 0, one_edges = 0;
-		for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
+		if(ipcount > 0)
 		{
-			one_edges += iter->countEdges() == 1;
-			sum_path_lengths += iter->countEdges();
-			squaredsum_path_lengths += iter->countEdges() * iter->countEdges();
+			int sum_path_lengths = 0, squaredsum_path_lengths = 0, one_edges = 0;
+			for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
+			{
+				one_edges += iter->countEdges() == 1;
+				sum_path_lengths += iter->countEdges();
+				squaredsum_path_lengths += iter->countEdges() * iter->countEdges();
+			}
+			float average_length = (float)sum_path_lengths / (float)ipcount;
+			float norm2 = sqrt((float)squaredsum_path_lengths / (float)ipcount);
+		    std::ios_base::fmtflags oldflags = std::cout.flags();
+		    std::streamsize oldprecision = std::cout.precision();
+			std::cout << std::fixed << std::setprecision(2) << " (Average: " << average_length << ", Norm2: " << norm2
+				<< ", #1edge: " << one_edges << "/" << ipcount << ")" << endl;
+			std::cout.flags(oldflags);
+			std::cout.precision(oldprecision);
 		}
-		float average_length = (float)sum_path_lengths / (float)ipcount;
-		float norm2 = sqrt((float)squaredsum_path_lengths / (float)ipcount);
-	    std::ios_base::fmtflags oldflags = std::cout.flags();
-	    std::streamsize oldprecision = std::cout.precision();
-		std::cout << std::fixed << std::setprecision(2) << " (Average: " << average_length << ", Norm2: " << norm2
-			<< ", #1edge: " << one_edges << "/" << ipcount << ")" << endl;
-		std::cout.flags(oldflags);
-		std::cout.precision(oldprecision);
+#ifdef V1
+		std::cout << "Loops count: " << loops.count() << ", max depth: " << max_loop_depth << endl;
+#else
+		std::cout << "[use V1 to get loop stats]" << endl;
+#endif
 	}
 }
 

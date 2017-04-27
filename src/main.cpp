@@ -34,6 +34,7 @@ public:
 		opt_noformattedflowinfo(SwitchOption::Make(*this).cmd("--nffi").cmd("--no-formatted-flowinfo").description("format flowinfo in paths like a list of items instead of pretty-printing it")),
 		opt_automerge	 (SwitchOption::Make(*this).cmd("-a").cmd("--automerge").description("let the algorithm decide when to merge")),
 		opt_applymerge	 (SwitchOption::Make(*this).cmd("--maf").cmd("--merge-after-apply").description("allow the algorithm to merge immediately after applying")),
+		opt_clamppreds	 (SwitchOption::Make(*this).cmd("--cp").cmd("--clamp_predicates").description("clamp predicates size (12 operands max as of Apr. 2017)")),
 		opt_dry			 (SwitchOption::Make(*this).cmd("-d").cmd("--dry").description("dry run (no solver calls)")),
 		opt_v1			 (SwitchOption::Make(*this).cmd("-1").cmd("--v1").description("Run v1 of abstract interpretation (symbolic predicates)")),
 		opt_v2			 (SwitchOption::Make(*this).cmd("-2").cmd("--v2").description("Run v2 of abstract interpretation (smarter structs)")),
@@ -47,6 +48,7 @@ public:
 		opt_nocleantops  (SwitchOption::Make(*this).cmd("--no-clean-tops").description("do not clean introduced variables Tk (unstable as of early 2017)")),
 		opt_dontassumeidsp(SwitchOption::Make(*this).cmd("--dasp").cmd("--dont-assume-id-sp").description("do not assume sp = SP0 at the end of a function")),
 		opt_nowidening 	 (SwitchOption::Make(*this).cmd("--no-widening").description("Scratch instead of using induction variables")),
+		opt_reduce		 (SwitchOption::Make(*this).cmd("--reduce").description("reduce irregular loops")),
 		opt_slice		 (SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
 		opt_dumpoptions	 (SwitchOption::Make(*this).cmd("--dump-options").cmd("--do").description("print the selected options for the analysis")),
 		// opt_virtualize	 (ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
@@ -81,8 +83,8 @@ protected:
 private:
 	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats;
 	ValueOption<bool> opt_output;
-	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_applymerge, opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck,
-			     opt_no_initial_data, opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_nocleantops, opt_dontassumeidsp, opt_nowidening, opt_slice, opt_dumpoptions;
+	SwitchOption opt_graph_output, opt_noformattedflowinfo, opt_automerge, opt_applymerge, opt_clamppreds, opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck,
+			     opt_no_initial_data, opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_nocleantops, opt_dontassumeidsp, opt_nowidening, opt_reduce, opt_slice, opt_dumpoptions;
 	ValueOption<int> opt_merge, opt_multithreading, opt_x;
 
 	void setFlags(int& analysis_flags, int& merge_thresold, int& nb_cores) {
@@ -96,6 +98,7 @@ private:
 		;
 		analysis_flags =
 			  (opt_slice					? Analysis::SLICE_CFG : 0)
+			| (opt_reduce					? Analysis::REDUCE_LOOPS : 0)
 			| (opt_progress					? Analysis::SHOW_PROGRESS : 0)
 			| (!opt_nolinearcheck			? Analysis::SMT_CHECK_LINEAR : 0)
 			| (!opt_nounminimized			? Analysis::UNMINIMIZED_PATHS : 0)
@@ -111,6 +114,7 @@ private:
 			| (!opt_no_initial_data			? Analysis::USE_INITIAL_DATA : 0)
 			| (opt_sp_critical				? Analysis::SP_CRITICAL : 0)
 			| (opt_applymerge				? Analysis::MERGE_AFTER_APPLY : 0)
+			| (opt_clamppreds				? Analysis::CLAMP_PREDICATE_SIZE : 0)
 			| (nb_cores > 1					? Analysis::MULTITHREADING : 0)
 			| ((opt_merge || opt_automerge)	? Analysis::MERGE : 0)
 			| (true 						? Analysis::POST_PROCESSING : 0)
@@ -172,6 +176,7 @@ private:
 		DBGOPT("DISPLAY DETAILED STATS"			, dbg_flags&DBG_DETAILED_STATS, false)
 		cout << "Analysis:" << endl;
 		DBGOPT("VIRTUALIZE"						, analysis_flags&Analysis::VIRTUALIZE_CFG, true)
+		DBGOPT("REDUCE LOOPS"					, analysis_flags&Analysis::REDUCE_LOOPS, false)
 		DBGOPT("SLICE"							, analysis_flags&Analysis::SLICE_CFG, false)
 		DBGOPT("DISPLAY PROGRESS"				, analysis_flags&Analysis::SHOW_PROGRESS, false)
 		DBGOPT("CHECK LINEARITY BEFORE SMT CALL", analysis_flags&Analysis::SMT_CHECK_LINEAR, true)
@@ -181,6 +186,8 @@ private:
 		DBGOPT("USE INITIAL DATA"				, analysis_flags&Analysis::USE_INITIAL_DATA, true)
 		DBGOPT("NO WIDENING"					, analysis_flags&Analysis::NO_WIDENING, false)
 		DBGOPT("RUN DRY (NO SMT SOLVER)"		, analysis_flags&Analysis::DRY_RUN, false)
+		DBGOPT("MERGE AFTER APPLYING A FUNCTION", analysis_flags&Analysis::MERGE_AFTER_APPLY, false)
+		DBGOPT("CLAMP PREDICATE SIZE"			, analysis_flags&Analysis::CLAMP_PREDICATE_SIZE, false)
 		DBGOPT("RUN V1 A.I."					, analysis_flags&Analysis::IS_V1, false)
 		DBGOPT("RUN V2 A.I."					, analysis_flags&Analysis::IS_V2, false)
 		DBGOPT("RUN V3 A.I."					, analysis_flags&Analysis::IS_V3, false)

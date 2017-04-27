@@ -38,23 +38,25 @@ public:
 	{
 		VIRTUALIZE_CFG		 = 1 <<  0,
 		SLICE_CFG			 = 1 <<  1,
-		USE_INITIAL_DATA 	 = 1 <<  2,
-		MERGE			 	 = 1 <<  3,
-		MERGE_AFTER_APPLY	 = 1 <<  4,
-		DRY_RUN				 = 1 <<  5,
-		SMT_CHECK_LINEAR	 = 1 <<  6,
-		ALLOW_NONLINEAR_OPRS = 1 <<  7,
-		SHOW_PROGRESS		 = 1 <<  8,
-		POST_PROCESSING		 = 1 <<  9,
-		MULTITHREADING		 = 1 << 10,
-		IS_V1				 = 1 << 11,
-		IS_V2				 = 1 << 12,
-		IS_V3				 = 1 << 13,
-		SP_CRITICAL			 = 1 << 14,
-		CLEAN_TOPS			 = 1 << 15,
-		ASSUME_IDENTICAL_SP	 = 1 << 16,
-		NO_WIDENING			 = 1 << 17,
-		UNMINIMIZED_PATHS	 = 1 << 18,
+		REDUCE_LOOPS		 = 1 <<  2,
+		USE_INITIAL_DATA 	 = 1 <<  3,
+		MERGE			 	 = 1 <<  4,
+		MERGE_AFTER_APPLY	 = 1 <<  5,
+		DRY_RUN				 = 1 <<  6,
+		SMT_CHECK_LINEAR	 = 1 <<  7,
+		ALLOW_NONLINEAR_OPRS = 1 <<  8,
+		SHOW_PROGRESS		 = 1 <<  9,
+		POST_PROCESSING		 = 1 << 10,
+		MULTITHREADING		 = 1 << 11,
+		IS_V1				 = 1 << 12,
+		IS_V2				 = 1 << 13,
+		IS_V3				 = 1 << 14,
+		SP_CRITICAL			 = 1 << 15,
+		CLEAN_TOPS			 = 1 << 16,
+		ASSUME_IDENTICAL_SP	 = 1 << 17,
+		NO_WIDENING			 = 1 << 18,
+		UNMINIMIZED_PATHS	 = 1 << 19,
+		CLAMP_PREDICATE_SIZE = 1 << 20,
 	};
 protected:
 	typedef struct
@@ -113,6 +115,12 @@ protected:
 	IPStats ip_stats;
 	Analysis::Progress* progress;
 	int state_size_limit, nb_cores, flags; // read by inherited class
+
+#ifdef V1
+	avl::Set<Block*> loops; int max_loop_depth; // TODO!!!
+	inline void addLoopStats(Block* b) { loops.add(b); int x = 0; for(LoopHeaderIter i(b); i; i++) x++;
+		if(x > max_loop_depth) max_loop_depth = x; }
+#endif
 
 	// static Identifier<Analysis::States> EDGE_S; // Trace on an edge
 	static Identifier<LockPtr<Analysis::States> > EDGE_S; // Trace on an edge

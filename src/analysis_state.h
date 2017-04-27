@@ -121,6 +121,7 @@ private:
 	inline void setMemoryInitPoint(const otawa::Block* b, short id) { memid = memid_t(b, id); }
 	const Operand* getPtr(t::int32 var_id) const;
 	void updateLabels(const sem::inst& inst);
+	void clampPredicates(VarMaker &vm);
 
 	// analysis_bb1.cpp
 	LabelledPredicate makeLabelledPredicate(condoperator_t opr, const Operand* opd1, const Operand* opd2, Path& labels) const;

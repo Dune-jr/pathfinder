@@ -147,8 +147,9 @@ void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp, bool cl
 	const bool mem_was_reset = s.memid.b != NULL;
 	bool wipe_memory;
 	{
-		const Operand* new_sp = s.lvars[context->sp]->accept(cc);
-		const bool sp_was_lost = !new_sp || !new_sp->isAConst();
+		ASSERT(s.isValid())
+		bool sp_was_lost = !s.lvars[context->sp];
+		sp_was_lost = sp_was_lost || !s.lvars[context->sp]->accept(cc)->isAConst();
 		wipe_memory = sp_was_lost || mem_was_reset;
 	}
 	applyPredicates(s, cc, wipe_memory);
