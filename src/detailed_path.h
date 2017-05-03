@@ -31,6 +31,7 @@ public:
 	
 	// SLList methods
 	inline void clear() { _path.clear(); }
+	void addBefore (const Iterator &pos, const FlowInfo &value);
 	void addLast(Edge* e);
 	inline void addLast(const FlowInfo& fi) { _path.addLast(fi); }
 	inline bool contains(const FlowInfo &fi) const { return _path.contains(fi); }

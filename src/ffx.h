@@ -19,6 +19,7 @@ private:
 		FFX_TAG_CALL=1,
 	} ffx_tag_t;
 
+	void sanitizeCallReturns(void);
 	void outputSortedInfeasiblePaths(io::Output& FFXFile);
 	void printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip);
 	void writeGraph(io::Output& GFile, const Vector<DetailedPath>& ips);
@@ -31,7 +32,7 @@ private:
 	bool nextElementisCall(const DetailedPath::Iterator& iter, CFG* cfg);
 	elm::String indent(int indent_increase = 0);
 
-	const Vector<DetailedPath>& infeasible_paths;
+	Vector<DetailedPath> infeasible_paths;
 	int indent_level;
 };
 

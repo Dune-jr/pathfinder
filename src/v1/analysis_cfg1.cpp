@@ -15,6 +15,7 @@ using namespace elm::io;
 */
 void Analysis1::processCFG(CFG* cfg, bool use_initial_data)
 {
+#ifdef V1
 	ASSERT(flags&VIRTUALIZE_CFG);
 	
 	WorkingList wl;
@@ -89,9 +90,7 @@ void Analysis1::processCFG(CFG* cfg, bool use_initial_data)
 					/* status_b ← FIX if status_b = ENTER */
 					case ENTER:
 						LH_STATUS(b) = FIX;
-#ifdef V1
-addLoopStats(b);
-#endif
+						addLoopStats(b); // TODO!
 						// s->onLoopEntry(b);
 						break;
 					/* status_b ← LEAVE if status_b = FIX ∧ s ≡ s_b */
@@ -125,6 +124,9 @@ addLoopStats(b);
 	DBGG(IPur() << "\"" << cfg->name() << "\"==>")
 	// vm->clean(*CFG_S(cfg));
 	CFG_VARS(cfg) = LockPtr<VarMaker>(vm);
+#else
+	crash();
+#endif
 }
 
 /**

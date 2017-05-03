@@ -35,6 +35,7 @@ void FFX::output(const elm::String& function_name, const elm::String& ffx_filena
 	//FFXFile << indent(  ) << "<flowfacts>" /*" <!-- pathfinder, " << __DATE__ << " -->"*/ << endl;
 	// FFXFile << indent(  ) << "<function name=\"" << function_name << "\">" << endl; indent(+1);
 
+	sanitizeCallReturns();
 	outputSortedInfeasiblePaths(FFXFile);
 	// for(Vector<DetailedPath>::Iter iter(infeasible_paths); iter; iter++)
 	// 	printInfeasiblePath(FFXFile, *iter);
@@ -55,7 +56,48 @@ void FFX::output(const elm::String& function_name, const elm::String& ffx_filena
 		if(dbg_verbose < DBG_VERBOSE_NONE)
 			cout << "graph output to " + graph_filename << endl;
 	}
+}
 
+void FFX::sanitizeCallReturns(void)
+{
+	for(Vector<DetailedPath>::Iter ip(infeasible_paths); ip; ip++)
+	{
+		Vector<CFG*> caller_q;
+		Vector<Option<SynthBlock*> > callers;
+			caller_q.push(ip->function());
+			callers.push(elm::none);
+		for(DetailedPath::Iterator iter(ip); iter; iter++)
+		{
+			if(iter->isEdge())
+			{
+				if(caller_q.last() != iter->getEdge()->source()->cfg())
+				{
+					CFG* cfg = iter->getEdge()->source()->cfg();
+					ASSERT(caller_q.contains(cfg));
+					while(caller_q.last() != cfg) // TODO! hax
+					{
+						DBG("added missing return edge of " << caller_q.last() << " : " << callers.last())
+						infeasible_paths[ip].addBefore(iter, DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_RETURN, callers.last()));
+						caller_q.pop();
+						callers.pop();
+					}
+				}
+				// ASSERTP(false, "edge doesn't match queue, queue is " << caller_q << "," << endl << 
+					// << caller_q.last() << " =/= " << iter->getEdge()->source()->cfg() << ", ip=" << *ip)
+			}
+			else if(iter->isCall())
+			{
+				caller_q.push(iter->getCaller()->callee());
+				callers.push(iter->getCaller());
+			}
+			else if(iter->isReturn())
+			{
+				ASSERT(caller_q.last() == iter->getCaller()->callee())
+				caller_q.pop();
+				callers.pop();
+			}
+		}
+	}
 }
 
 void FFX::outputSortedInfeasiblePaths(io::Output& FFXFile)
@@ -163,9 +205,13 @@ void FFX::printInfeasiblePath(io::Output& FFXFile, const DetailedPath& ip)
 
 				// make sure the caller we found is in CallerIter
 				Block *caller = NULL;
-				DBGW("check this case before skipping it!! ip = " << ip)
-				continue;
-				ASSERTP(lastIsCaller(open_tags), "!lastIsCaller(" << open_tags << "), ip=" << ip);
+
+				if(!lastIsCaller(open_tags)) // TOdo!!! this is bad no?
+				{
+					DBGW("caller not found in CallIter, skipping! ip = " << ip)
+					continue;
+				}
+				// ASSERTP(lastIsCaller(open_tags), "!lastIsCaller(" << open_tags << "), ip=" << ip);
 				for(CFG::CallerIter citer(e->target()->cfg()->callers()); citer; citer++)
 				{
 					if(*citer == caller_q.first())
@@ -328,8 +374,9 @@ bool FFX::checkPathValidity(const DetailedPath& ip, bool critical) const
 			    DetailedPath::FlowInfo fi(v.pop());
 			    if(fi != DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_CALL, iter->getSynthBlock()))
 			    {
-					ASSERTP(!critical, "path " << ip << " invalid: Return not matching call");
-					cerr << "path " << ip << " invalid: Return not matching call" << endl;
+					cerr << "path " << ip << " invalid: Return " << DetailedPath::FlowInfo(DetailedPath::FlowInfo::KIND_CALL, iter->getSynthBlock())
+						 << " not matching call: " << fi << endl;
+					ASSERT(!critical && false);
 					return false;
 				}
 				break;

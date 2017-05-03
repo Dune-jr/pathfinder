@@ -43,6 +43,9 @@ DetailedPath::DetailedPath(const DetailedPath& dp) : _path(dp._path), fun(dp.fun
 void DetailedPath::addLast(Edge* e)
 	{ _path.addLast(FlowInfo(FlowInfo::KIND_EDGE, e)); }
 
+void DetailedPath::addBefore(const Iterator &pos, const FlowInfo &value)
+	{ _path.addBefore(pos, value); }
+
 /**
  * @fn void DetailedPath::removeLast(void);
  * Remove the last item from the list.
