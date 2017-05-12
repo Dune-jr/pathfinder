@@ -91,11 +91,11 @@
  */
 /**
  * @fn const Operand* Operand::replaceConstants(const ConstantVariablesCore& constants, Vector<OperandVar>& replaced_vars);
- * @brief
+ * @brief Replace variables that can be replaced by constants in this, using constants, and add the replaced vars to the list replaced_vars
  */
 /**
  * @fn bool Operand::accept(OperandVisitor& visitor) const;
- * @brief
+ * @brief Calls visit(*this) of visitor
  */
 /**
  * @fn operand_kind_t Operand::kind() const;

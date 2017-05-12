@@ -91,7 +91,7 @@ public:
 		inline bool isLoopExit() const { return _kind == KIND_LOOP_EXIT; }
 		inline bool isCall() const { return _kind == KIND_CALL; }
 		inline bool isReturn() const { return _kind == KIND_RETURN; }
-		inline Edge* getEdge() const { ASSERT(isEdgeKind()); return (Edge*)_identifier; } // TODO! remove the ASSERTs?
+		inline Edge* getEdge() const { ASSERT(isEdgeKind()); return (Edge*)_identifier; }
 		inline BasicBlock* getBasicBlock() const { ASSERT(isBasicBlockKind()); return (BasicBlock*)_identifier; }
 		inline SynthBlock* getSynthBlock() const { ASSERT(isSynthBlockKind()); return (SynthBlock*)_identifier; }
 		inline BasicBlock* getLoopHeader() const { return getBasicBlock(); }

@@ -314,7 +314,7 @@ String Analysis::printFixPointStatus(Block* b)
 
 
 /**
- * @fn static bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set);
+ * @fn static bool isSubPath(const OrderedPath& included_path, const Path& path_set);
  * @brief Checks if 'included_path' is a part of the set of paths "path_set", that is if 'included_path' includes all the edges in the Edge set of path_set
  * @return true if it is a subpath
 */
@@ -327,7 +327,7 @@ bool Analysis::isSubPath(const OrderedPath& included_path, const Path& path_set)
 }
 
 /**
- * @fn elm::String Analysis::pathToString(const Path& path);
+ * @fn elm::String pathToString(const Path& path);
  * @brief Get pretty printing for any unordered Path (Set of Edge*)
  * 
  * @param path Path to parse
@@ -354,6 +354,7 @@ elm::String Analysis::pathToString(const Path& path)
 }
 
 /**
+ * @fn elm::String orderedPathToString(const OrderedPath& path)
  * @brief Get pretty printing for any OrderedPath (SLList of Edge*)
  * 
  * @param path OrderedPath to parse
@@ -460,6 +461,12 @@ void Analysis::printInfeasiblePaths() const
 		}
 }
 
+/**
+ * @fn int Analysis::countIPsOf(CFG* cfg) const;
+ * @brief      Counts the number of infeasible paths in the scope of the CFG cfg.
+ * @param      cfg   The control flow graphs
+ * @return     Number of ips found
+ */
 int Analysis::countIPsOf(CFG* cfg) const
 {
 	int rtn = 0;
@@ -524,9 +531,9 @@ int Analysis::simplifyUsingDominance(Option<Edge*> (*f)(GlobalDominance* gdom, E
 }
 
 /**
- * @fn int Analysis::removeDuplicateIPs();
+ * @fn int removeDuplicateIPs(void);
  * @brief Look for infeasible paths that share the same ordered list of edges and remove duplicates 
- * @rtn the amount of infeasible paths that were removed
+ * @return the amount of infeasible paths that were removed
  */
 int Analysis::removeDuplicateIPs()
 {
@@ -552,6 +559,11 @@ int Analysis::removeDuplicateIPs()
 	return k - n;
 }
 
+/**
+ * @fn void Analysis::postProcessResults(CFG *cfg);
+ * @brief      Posts processes results by removing useless infeasible paths or edges within infeasible paths.
+ * @param      cfg   The CFG to process
+ */
 void Analysis::postProcessResults(CFG *cfg)
 {
 	if(! (flags&POST_PROCESSING))
@@ -575,10 +587,10 @@ void Analysis::postProcessResults(CFG *cfg)
 }
 
 /**
+ * @fn void Analysis::purgeBottomStates(States& sc) const;
  * @brief Remove all bottom states from a Collection of States
  */
 // template<template< class _ > class C>
-// void Analysis::purgeBottomStates(C<Analysis::State>& sc) const
 void Analysis::purgeBottomStates(States& sc) const
 {
 	for(States::Iter i(sc); i; )

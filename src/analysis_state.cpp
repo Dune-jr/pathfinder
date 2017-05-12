@@ -362,6 +362,7 @@ DBGG("start: " << dumpEverything())
 }
 
 /**
+ * @fn Option<const Operand*> Analysis::State::widen(const Operand* x, const Operand& x0, const Operand* n, const WideningProgress& wprogress, Widenor& widenor) const;
  * @brief      Tries to find the general formula for x_n for: x0_i+1 = x
  *
  * @param      x      The formula for x0 after one iteration
@@ -373,7 +374,7 @@ DBGG("start: " << dumpEverything())
  */
 Option<const Operand*> Analysis::State::widen(const Operand* x, const Operand& x0, const Operand* n, const WideningProgress& wprogress, Widenor& widenor) const
 {
-DBGG("widen(" << x0 << " <- " << color::Cya() << *x << color::RCol() << ", wprogress=" << wprogress << ")")
+	DBGG("widen(" << x0 << " <- " << color::Cya() << *x << color::RCol() << ", wprogress=" << wprogress << ")")
 	if(*x == x0) // x = x0
 		return x; // nothing to do, this is identity
 	else if(x->involves(Top))
@@ -406,7 +407,7 @@ DBGG("widen(" << x0 << " <- " << color::Cya() << *x << color::RCol() << ", wprog
 					break;
 			}
 		}
-		DBGG("x="<<*x)
+		DBGG("x=" << *x)
 
 		if(ready)
 		{
@@ -442,7 +443,7 @@ DBGG("widen(" << x0 << " <- " << color::Cya() << *x << color::RCol() << ", wprog
 
 /**
  * @brief      morph the OperandIter add predicates about it
- * WARNING: in the leave iteration, we may not have i=max until the loop exit edges...
+ * @warning    in the leave iteration, we may not have i=max until the loop exit edges...
  */
 void Analysis::State::finalizeLoop(OperandIter* n, VarMaker& vm)
 {
@@ -450,9 +451,8 @@ void Analysis::State::finalizeLoop(OperandIter* n, VarMaker& vm)
 }
 
 /**
+ * @fn void Analysis::State::merge(const States& ss, Block* b, VarMaker& vm);
  * @brief merge all states into one (a bit brutal). Does not take in account current state. Should not be called with an empty list
- *
- * @param cl Collection of States to process (accepts SLList, Vector etc.)
  */
 void Analysis::State::merge(const States& ss, Block* b, VarMaker& vm)
 {

@@ -19,9 +19,6 @@
  	#error "no SMT solver"
 #endif
 
-/**
- * actually... this is some sort of widening
- */
 // note: we do this one time too much because the join when we leave is useless... maybe optimize that in the algorithm some day, it's a bit hard to do it cleanly
 LockPtr<Analysis::States> DefaultAnalysis::join(const Vector<Edge*>& ins) const
 {

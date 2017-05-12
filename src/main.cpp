@@ -81,7 +81,8 @@ protected:
 	}
 
 private:
-				 opt_graph_output, opt_nffi		 , opt_automerge, opt_applymerge, opt_clamppreds, opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck,
+	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats,
+				 opt_graph_output, opt_nffi, opt_automerge, opt_applymerge, opt_clamppreds, opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck,
 			     opt_no_initial_data, opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_nocleantops, opt_dontassumeidsp, opt_nowidening, opt_reduce, opt_slice, opt_dumpoptions;
 	ValueOption<bool> opt_output;
 	ValueOption<int> opt_merge, opt_multithreading, opt_x;
@@ -90,8 +91,9 @@ private:
 		nb_cores = getNumberofCores();
 		merge_thresold = getMergeThresold();
 		dbg_flags = 
+			  (opt_deterministic 		? DBG_DETERMINISTIC : 0)
 			| (!opt_noipresults 		? DBG_RESULT_IPS : 0)
-			| (!opt_nffi		  ? DBG_FORMAT_FLOWINFO : 0)
+			| (!opt_nffi 				? DBG_FORMAT_FLOWINFO : 0)
 			| (opt_detailedstats 		? DBG_DETAILED_STATS : 0)
 		;
 		analysis_flags =
@@ -103,7 +105,6 @@ private:
 			| (opt_allownonlinearoperators	? Analysis::ALLOW_NONLINEAR_OPRS : 0)
 			| (!opt_nocleantops				? Analysis::CLEAN_TOPS : 0)
 			| (!opt_dontassumeidsp			? Analysis::ASSUME_IDENTICAL_SP : 0)
-	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats,
 			| (opt_nowidening				? Analysis::NO_WIDENING : 0)
 			| (opt_dry						? Analysis::DRY_RUN : 0)
 			| (opt_v1						? Analysis::IS_V1 : 0)
@@ -113,7 +114,6 @@ private:
 			| (!opt_no_initial_data			? Analysis::USE_INITIAL_DATA : 0)
 			| (opt_sp_critical				? Analysis::SP_CRITICAL : 0)
 			| (opt_applymerge				? Analysis::MERGE_AFTER_APPLY : 0)
-			  (opt_deterministic 			? DBG_DETERMINISTIC : 0)
 			| (opt_clamppreds				? Analysis::CLAMP_PREDICATE_SIZE : 0)
 			| (nb_cores > 1					? Analysis::MULTITHREADING : 0)
 			| ((opt_merge || opt_automerge)	? Analysis::MERGE : 0)
@@ -229,71 +229,3 @@ void simpleCFGparse(CFG* cfg)
 		}
 	}
 }
-/*
-void testSimplify()
-{
-	OperandConst zero  = OperandConst(0);
-	OperandConst one   = OperandConst(1);
-	OperandConst two   = OperandConst(2);
-	OperandConst three = OperandConst(3);
-	OperandVar t1 = OperandVar(-1);
-	OperandArith e11 = OperandArith(ARITHOPR_NEG, t1);
-	// OperandArith e12 = OperandArith(ARITHOPR_SUB, two, three);
-	OperandArith e1 = OperandArith(ARITHOPR_ADD, t1, e11);
-
-	DBG("zero: "  << zero)
-	DBG("one: "   << one)
-	DBG("two: "   << two)
-	DBG("three: " << three)
-	DBG("e1: "    << e1)
-	if(Option<Operand*> o = e1.simplify())
-		DBG("e1 simplified: " << **o)
-}
-
-void testPredicates()
-{
-	OperandConst oprconst = OperandConst(2);
-	OperandVar oprvar = OperandVar(0x4000);
-	OperandArith e1 = OperandArith(ARITHOPR_MUL, oprconst, oprvar); // e1 := 2 * @0x4000
-	Predicate p1 = Predicate(CONDOPR_EQ, oprvar, e1); // p1 := @0x4000 = e1
-	Predicate p2 = Predicate(CONDOPR_LE, oprconst, oprvar); // p2 := 2 <= @0x4000
-	
-	DBG("--- Pretty printing of predicates ---")
-	DBG("p1:\t" << p1)
-	DBG("p2:\t" << p2 << io::endl)
-	
-	DBG("--- Equality over predicates ---")
-	DBG("p1 = p1:\t" << DBG_TEST(p1 == p1, true))
-	DBG("p2 = p2:\t" << DBG_TEST(p2 == p2, true))
-	DBG("p1 = p2:\t" << DBG_TEST(p1 == p2, false) << io::endl)
-}
-
-void testOperands()
-{
-	DBG("--- Equality over Operands  ---")
-	OperandConst o1 = OperandConst(12);
-	OperandConst o1bis = OperandConst(12);
-	OperandConst o2 = OperandConst(16);
-	OperandVar o3 = OperandVar(0x1004);
-	OperandVar o4 = OperandVar(0x1008);
-	DBG("o1 = o1:\t" << DBG_TEST(o1 == o1, true))
-	DBG("o1 = o1':\t" << DBG_TEST(o1 == o1bis, true))
-	DBG("o1 = o2:\t" << DBG_TEST(o1 == o2, false))
-	DBG("o1 = o3:\t" << DBG_TEST(o1 == o3, false))
-	DBG("o3 = o1:\t" << DBG_TEST(o3 == o1, false))
-	DBG("o3 = o3:\t" << DBG_TEST(o3 == o3, true))
-	DBG("o3 = o4:\t" << DBG_TEST(o3 == o4, false) << io::endl)
-	
-	OperandArith oae = OperandArith(ARITHOPR_MUL, o1, o2);
-	OperandArith oaebis = OperandArith(ARITHOPR_MUL, o1, o2);
-	DBG("o1*o2:\t" << oae)
-	OperandArith oae2 = OperandArith(ARITHOPR_MUL, o2, o2);
-	OperandArith oae3 = OperandArith(ARITHOPR_MUL, o2, o1);
-	OperandArith oae4 = OperandArith(ARITHOPR_ADD, o1, o2);
-	DBG("oae = oae:\t"  << DBG_TEST(oae == oae, true))
-	DBG("oae = oae':\t"  << DBG_TEST(oae == oaebis, true))
-	DBG("oae = oae2:\t" << DBG_TEST(oae == oae2, false))
-	DBG("oae = oae3:\t" << DBG_TEST(oae == oae3, false))
-	DBG("oae = oae4:\t" << DBG_TEST(oae == oae4, false))
-}
-*/
