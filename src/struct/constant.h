@@ -1,7 +1,7 @@
 #ifndef _CONSTANT_H
 #define _CONSTANT_H
 
-#include <elm/util/HashKey.h>
+#include <elm/hash.h>
 #include <elm/int.h> // elm::t::int32
 #include <elm/io.h> // elm::io
 

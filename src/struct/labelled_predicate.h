@@ -30,6 +30,10 @@ public:
 		{ _labels.addAll(labels); }
 	inline void collectTops(VarCollector& vc) const
 		{ _pred.leftOperand().collectTops(vc); _pred.rightOperand().collectTops(vc); }
+	inline bool involves(const Operand* o) const
+		{ return _pred.involves(o); }
+	inline int involvesOperand(const Operand* o) const
+		{ return _pred.involvesOperand(*o); }
 
 	LabelledPredicate& operator=(const LabelledPredicate& lp);
 	bool operator==(const LabelledPredicate& lp) const;

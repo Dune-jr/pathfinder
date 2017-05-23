@@ -50,7 +50,6 @@ public:
 		opt_reduce		 (SwitchOption::Make(*this).cmd("--reduce").description("reduce irregular loops")),
 		opt_slice		 (SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
 		opt_dumpoptions	 (SwitchOption::Make(*this).cmd("--dump-options").cmd("--do").description("print the selected options for the analysis")),
-		// opt_virtualize	 (ValueOption<bool>::Make(*this).cmd("-z").cmd("--virtualize").description("virtualize the CFG (default: true)").def(true)),
 		opt_output 		 (ValueOption<bool>::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file").def(false)),
 		opt_merge 		 (ValueOption<int>::Make(*this).cmd("-m").cmd("--merge").description("merge when exceeding X states at a control point").def(0)),
 		opt_multithreading(ValueOption<int>::Make(*this).cmd("-j").description("enable multithreading on the given amount of cores (0/1=no multithreading, -1=autodetect)").def(0)),
@@ -81,23 +80,25 @@ protected:
 	}
 
 private:
-	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, opt_detailedstats,
-				 opt_graph_output, opt_nffi, opt_automerge, opt_applymerge, opt_clamppreds, opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck,
-			     opt_no_initial_data, opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_nocleantops, opt_dontassumeidsp, opt_nowidening, opt_reduce, opt_slice, opt_dumpoptions;
+	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, 
+				opt_detailedstats, opt_graph_output, opt_nffi, opt_automerge, opt_applymerge, opt_clamppreds,
+				opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck, opt_no_initial_data,
+				opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_nocleantops,
+				opt_dontassumeidsp, opt_nowidening, opt_reduce, opt_slice, opt_dumpoptions;
 	ValueOption<bool> opt_output;
 	ValueOption<int> opt_merge, opt_multithreading, opt_x;
 
 	void setFlags(int& analysis_flags, int& merge_thresold, int& nb_cores) {
 		nb_cores = getNumberofCores();
 		merge_thresold = getMergeThresold();
-		dbg_flags = 
-			  (opt_deterministic 		? DBG_DETERMINISTIC : 0)
-			| (!opt_noipresults 		? DBG_RESULT_IPS : 0)
-			| (!opt_nffi 				? DBG_FORMAT_FLOWINFO : 0)
-			| (opt_detailedstats 		? DBG_DETAILED_STATS : 0)
+		dbg_flags = 0
+			| (opt_deterministic 			? DBG_DETERMINISTIC : 0)
+			| (!opt_noipresults 			? DBG_RESULT_IPS : 0)
+			| (!opt_nffi 					? DBG_FORMAT_FLOWINFO : 0)
+			| (opt_detailedstats 			? DBG_DETAILED_STATS : 0)
 		;
-		analysis_flags =
-			  (opt_slice					? Analysis::SLICE_CFG : 0)
+		analysis_flags = 0
+			| (opt_slice					? Analysis::SLICE_CFG : 0)
 			| (opt_reduce					? Analysis::REDUCE_LOOPS : 0)
 			| (opt_progress					? Analysis::SHOW_PROGRESS : 0)
 			| (!opt_nolinearcheck			? Analysis::SMT_CHECK_LINEAR : 0)
@@ -110,7 +111,7 @@ private:
 			| (opt_v1						? Analysis::IS_V1 : 0)
 			| (opt_v2						? Analysis::IS_V2 : 0)
 			| (opt_v3						? Analysis::IS_V3 : 0)
-			| ((opt_v1||opt_v2)				? Analysis::VIRTUALIZE_CFG : 0)
+			| ((opt_v1||opt_v2)				? Analysis::VIRTUALIZE_CFG : 0) // TODO remove
 			| (!opt_no_initial_data			? Analysis::USE_INITIAL_DATA : 0)
 			| (opt_sp_critical				? Analysis::SP_CRITICAL : 0)
 			| (opt_applymerge				? Analysis::MERGE_AFTER_APPLY : 0)
@@ -141,18 +142,20 @@ private:
 	int getNumberofCores() {
 		if(opt_multithreading.get() == -1) { // autodetect
 			// int nb_cores = AUTODETECT();
-			int nb_cores = 4;
-			DBG("Autodetected " << nb_cores << " cores. (TODO)")
+			int nb_cores = 4; // hardcoded for now
+			DBG("Using " << nb_cores << " cores. (TODO: Autodetection)")
 			return nb_cores;
 		}
-		return opt_multithreading.get(); // either no multithreading (=0/1) or the amount of desired cores
+		else
+			return opt_multithreading.get(); // either no multithreading (=0/1) or the amount of desired cores
 	}
 	int getMergeThresold() {
 		if(opt_merge)
 			return opt_merge.get();
-		if(opt_automerge)
+		else if(opt_automerge)
 			return 250; // 250 is good 
-		return 0;
+		else
+			return 0;
 	}
 	void dumpOptions(int analysis_flags, int merge_thresold, int nb_cores) {
 		#define DBGPREFIX(str) "\t-" << elm::io::StringFormat(str).width(30) << ": " 

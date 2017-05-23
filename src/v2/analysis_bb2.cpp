@@ -5,8 +5,8 @@
 #include <otawa/sem/PathIter.h>
 #include <otawa/sem/inst.h>
 #include "../analysis_state.h"
-#include "../arith.h"
 #include "../debug.h"
+#include "../struct/arith.h"
 #include "../struct/DAG.h"
 #include "../struct/operand.h"
 #include "analysis_sem2.h"
@@ -20,7 +20,7 @@ using namespace otawa::sem;
  * @return 	    0 by default, 1 if memory needs to be wiped
  */
 int Analysis::State::SemanticParser::process(const sem::PathIter& inst)
-{		
+{
 	const t::int16 &a = inst.a(), &b = inst.b(), &d = inst.d();
 	const t::int32 &cst = inst.cst();
 	const t::int16 &reg = inst.reg(), &addr = inst.addr();
@@ -61,7 +61,7 @@ int Analysis::State::SemanticParser::process(const sem::PathIter& inst)
 		case BRANCH:
 			break;
 		case IF:
-		case CONT:
+		case CONT: // TODO!!! this doesn't work when there is a sequence of if in the program!
 		{
 			const OperandVar sr = OperandVar(lastCond().sr());
 			const Operand& opd = lvars[sr] ? *lvars[sr] : sr;

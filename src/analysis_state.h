@@ -10,6 +10,7 @@
 #include <otawa/sem/PathIter.h>
 #include "analysis.h"
 #include "detailed_path.h"
+#include "loop_bound.h"
 #include "pretty_printing.h"
 #include "struct/constant_variables.h"
 #include "struct/labelled_predicate.h"
@@ -18,9 +19,8 @@
 
 using namespace otawa;
 using otawa::sem::PathIter;
-using elm::genstruct::SLList;
-// using elm::genstruct::Vector;
 using elm::genstruct::HashTable;
+using elm::genstruct::SLList;
 
 class Widenor;
 class Analysis::State {
@@ -94,6 +94,7 @@ public:
 	inline void clearPath() { path.clear(); }
 	inline void resetSP() { lvars[context->sp] = dag->cst(SP); }
 	void widening(const Operand* n);
+	LoopBound getLoopBound(const Operand* oi) const;
 
 	// analysis_bb.cpp
 	void processBB(const BasicBlock *bb, VarMaker& vm, int version_flags);

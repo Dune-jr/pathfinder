@@ -2,7 +2,7 @@
  * General analysis::state methods
  */
 
-#include "arith.h"
+#include "struct/arith.h"
 #include "analysis_states.h"
 #include "compositor.h"
 #include "cfg_features.h"
@@ -286,7 +286,7 @@ const Operand* Analysis::State::widenArithmeticProgression(const Operand* x, con
  */
 void Analysis::State::widening(const Operand* n)
 {
-DBGG("start: " << dumpEverything())
+	DBG("Starting widening with: " << dumpEverything())
 
 	WideningProgress wprogress(lvars); // lvars contains size info
 	bool fixpoint;
@@ -303,14 +303,15 @@ DBGG("start: " << dumpEverything())
 				{
 					if(Option<const Operand*> xn = widen(lvars[i], *i, n, wprogress, widenor))
 					{
-						DBGG("\tgot " << **xn)
+						DBG("\tgot " << **xn)
 						lvars[i] = *xn;
 						wprogress.setVar(*i); // set a flag that says we have accel'd i
 						if(*xn != Top)
 							fixpoint = false; // a Top wouldn't help handle more predicates
 					}
 					// else failed to widen
-					else { DBGG("\tfailed") }
+					else
+						{ DBG("\tfailed") }
 				}
 				else // lvars[i] = i
 				{
@@ -326,7 +327,7 @@ DBGG("start: " << dumpEverything())
 			{
 				if(Option<const Operand*> xn = widen((*i).snd, opdm, n, wprogress, widenor))
 				{
-					DBGG("\tgot " << **xn)
+					DBG("\tgot " << **xn)
 					mem[opdm.addr()] = *xn;
 					wprogress.setMem(opdm);
 					if(*xn != Top)
@@ -358,7 +359,7 @@ DBGG("start: " << dumpEverything())
 	for(SLList<Constant>::Iterator i(scratchs); i; i++)
 		mem[*i] = Top;
 
-	DBGG(IGre() << "done: " << this->dumpEverything())
+	DBGG(Blu() << "Widening done, resulting in: " << this->dumpEverything())
 }
 
 /**
@@ -374,7 +375,7 @@ DBGG("start: " << dumpEverything())
  */
 Option<const Operand*> Analysis::State::widen(const Operand* x, const Operand& x0, const Operand* n, const WideningProgress& wprogress, Widenor& widenor) const
 {
-	DBGG("widen(" << x0 << " <- " << color::Cya() << *x << color::RCol() << ", wprogress=" << wprogress << ")")
+	DBG("widen(" << x0 << " <- " << color::Cya() << *x << color::RCol() << ", wprogress=" << wprogress << ")")
 	if(*x == x0) // x = x0
 		return x; // nothing to do, this is identity
 	else if(x->involves(Top))
@@ -407,7 +408,7 @@ Option<const Operand*> Analysis::State::widen(const Operand* x, const Operand& x
 					break;
 			}
 		}
-		DBGG("x=" << *x)
+		DBG("x = " << *x)
 
 		if(ready)
 		{
@@ -542,6 +543,40 @@ void Analysis::State::merge(const States& ss, Block* b, VarMaker& vm)
 		else
 			setMemoryInitPoint(b, 0); // this isn't in the case of an optional merge that wipes memory
 	}
+}
+
+LoopBound Analysis::State::getLoopBound(const Operand* oi) const
+{
+	for(PredIterator pi(*this); pi; pi++)
+		if(pi->involvesOperand(oi) == 1)
+		{
+			const Predicate& p = pi->pred();
+			if(p.right()->isAConst())
+			{
+				int k = p.right()->toConstant().val();
+				if(p.left() == oi) // if it's just N <(=) 19
+				{
+					if(p.opr() == CONDOPR_LE)
+						return LoopBound(k+1);
+					else if(p.opr() == CONDOPR_LT)
+						return LoopBound(k);
+				}
+				else if(p.leftOperand().kind() == ARITH && p.leftOperand().toArith().opr() == ARITHOPR_ADD) // if it's N___ + 1 < 19
+				{
+					ASSERTP(p.leftOperand().toArith().right() != oi, "handle that case")
+					if(p.leftOperand().toArith().left() == oi && p.leftOperand().toArith().rightOperand().isAConst())
+					{
+						k -= p.leftOperand().toArith().rightOperand().toConstant().val();
+						if(p.opr() == CONDOPR_LE)
+							return LoopBound(k+1);
+						else if(p.opr() == CONDOPR_LT)
+							return LoopBound(k);
+					}
+				}
+			}
+			DBGG("Complex Loop bound: " << *pi)
+		}
+	return LoopBound();
 }
 
 void Analysis::State::collectTops(VarCollector& vc) const

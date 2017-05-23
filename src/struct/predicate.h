@@ -33,6 +33,7 @@ public:
 	inline bool isComplete() const { return _opd1->isComplete() && _opd2->isComplete(); }
 	inline bool isConstant() const { return _opd1->isConstant() && _opd2->isConstant(); }
 	inline bool isLinear(bool only_linear_opr) const { return _opd1->isLinear(only_linear_opr) && _opd2->isLinear(only_linear_opr); }
+	inline bool involves(const Operand* opd) const { return _opd1->involves(opd) || _opd2->involves(opd); }
 	int involvesOperand(const Operand& opd) const;
 	int involvesVariable(const OperandVar& opdv) const;
 	Option<Constant> involvesStackBelow(const Constant& stack_limit) const;

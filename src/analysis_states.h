@@ -2,6 +2,7 @@
 #define _ANALYSIS_STATES_H
 
 #include "analysis_state.h"
+#include "loop_bound.h"
 
 class Analysis::States : public elm::Lock {
 public:
@@ -29,6 +30,7 @@ public:
 	inline void prepareFixPoint(void) 				{ for(Iter i(this->s); i; i++) s[i].prepareFixPoint(); }
 	void finalizeLoop(OperandIter* n, VarMaker& vm)	{ for(Iter i(this->s); i; i++) s[i].finalizeLoop(n, vm); }
 	inline void widening(const Operand* n) { ASSERT(s.count() <= 1); if(s.count() == 1) s[0].widening(n); } // needs max one state
+	void printLoopBoundOf(const Operand *oi) const;
 	void checkForSatisfiableSP() const;
 
 	inline void clearPath() { for(Iter i(this->s); i; i++) s[i].clearPath(); }

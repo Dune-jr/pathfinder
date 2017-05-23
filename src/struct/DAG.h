@@ -1,12 +1,13 @@
 #ifndef DAG_H
 #define DAG_H
 
-#include <elm/util/array.h>
+#include <elm/array.h>
 #include <elm/types.h>
 #include <elm/genstruct/HashTable.h>
 #include <elm/genstruct/quicksort.h>
 #include <elm/io/Output.h>
 #include <otawa/program.h>
+#include "arith.h"
 #include "predicate.h"
 
 // using namespace elm;
@@ -131,7 +132,7 @@ class DAG {
 				arg2->accept(*this);
 				break;
 			default:
-				ASSERT(false);
+				crash();
 				break;
 			}
 			genstruct::quicksort<Pair<bool, const Operand *>, genstruct::Vector, Compare>(args);
@@ -172,99 +173,26 @@ public:
 		array::set(vars, tmp_cnt + var_cnt, null<Operand>());
 	}
 
-	~DAG(void) {
-		for(int i = 0; i < tmp_cnt + var_cnt; i++)
-			delete vars[i];
-		delete [] vars;
-		for(cst_map_t::Iterator cst(cst_map); cst; cst++)
-			delete *cst;
-		for(op_map_t::Iterator op(op_map); op; op++)
-			delete *op;
-		for(pred_map_t::Iterator pred(pred_map); pred; pred++)
-			delete *pred;
-	}
+	~DAG(void);
 
-	const Operand *var(int v) {
-		ASSERT(0 <= v + tmp_cnt && v + tmp_cnt < tmp_cnt + var_cnt);
-		if(!vars[v + tmp_cnt])
-			vars[v + tmp_cnt] = new OperandVar(v);
-		return vars[v + tmp_cnt];
-	}
+	const Operand *var(int v);
 	inline const Operand *var(const OperandVar& opdv)
 		{ return var(opdv.addr()); }
-
-	const Operand *cst(const Constant& cst) {
-		Operand *r = cst_map.get(cst, 0);
-		if(!r) {
-			r = new OperandConst(cst);
-			cst_map.put(cst, r);
-		}
-		return r;
-	}
-
-	const Operand *mem(const OperandConst *addr) {
-		// ASSERT(addr);
-		Key k(ARITHOPR_MEM, addr);
-		Operand *r = op_map.get(k, 0);
-		if(!r) {
-			r = new OperandMem(*addr);
-			op_map.put(k, r);
-		}
-		return r;
-	}
+	const Operand *cst(const Constant& cst);
+	const Operand *mem(const OperandConst *addr);
 	inline const Operand *mem(const Constant& cst)
 		{ return mem(static_cast<const OperandConst*>(this->cst(cst))); }
-
 	inline const Operand *mem(const OperandMem& opd_mem)
 		{ return mem(opd_mem.addr().value()); }
-
-	const Operand* get(const Operand& opd)
-	{
-		switch(opd.kind())
-		{
-			case CST: return cst(opd.toConst());
-			case VAR: return var(opd.toVar());
-			case MEM: return mem(opd.toMem());
-			case ARITH: return autoOp(opd.toArith().opr(), opd.toArith().left(), opd.toArith().isBinary() ? opd.toArith().right() : NULL);
-			default: crash();
-		}
-	}
+	const Operand* get(const Operand& opd);
 
 private:
-	const Operand *op(arithoperator_t op, const Operand *arg) {
-		Key k(op, arg);
-		Operand *r = op_map.get(k, 0);
-		if(!r) {
-			r = new OperandArith(op, arg);
-			op_map.put(k, r);
-		}
-		return r;
-	}
-
-	const Operand *op(arithoperator_t op, const Operand *arg1, const Operand *arg2) {
-		// ASSERTP(arg1 && arg2, arg1 << arg2);
-		Key k(op, arg1, arg2);
-		Operand *r = op_map.get(
-			k, 0);
-		if(!r) {
-			// DBG(color::IBlu() << "k=" << *k.argument1() << (arithoperator_t)k.operation() << *k.argument2() << " not in " << *this)
-			r = new OperandArith(op, arg1, arg2);
-			op_map.put(k, r);
-		}
-		return r;
-	}
-
+	const Operand *op(arithoperator_t op, const Operand *arg);
+	const Operand *op(arithoperator_t op, const Operand *arg1, const Operand *arg2);
 	// unused
-	const Operand *assocOp(arithoperator_t _op, const Operand *arg1, const Operand *arg2) {
-		return op(_op, arg1, arg2);
-	}
-
-	const Operand *comOp(arithoperator_t _op, const Operand *arg1, const Operand *arg2) {
-		if(*arg2 < *arg1)
-			return op(_op, arg2, arg1);
-		else
-			return op(_op, arg1, arg2);
-	}
+	const Operand *assocOp(arithoperator_t _op, const Operand *arg1, const Operand *arg2)
+		{ return op(_op, arg1, arg2); }
+	const Operand *comOp(arithoperator_t _op, const Operand *arg1, const Operand *arg2);
 
 public:
 	// inline const Operand *neg (const Operand *arg) { return op(ARITHOPR_NEG, arg); }
@@ -282,31 +210,17 @@ public:
 	inline const Operand *div (const Operand *arg1, const Operand *arg2) { return op(ARITHOPR_DIV, arg1, arg2); }
 	inline const Operand *mod (const Operand *arg1, const Operand *arg2) { return op(ARITHOPR_MOD, arg1, arg2); }
 	inline const Operand *cmp (const Operand *arg1, const Operand *arg2) { return op(ARITHOPR_CMP, arg1, arg2); }
-
 	// accepts non-binary calls with NULL second argument
-	const Operand *autoOp(arithoperator_t op, const Operand *arg1, const Operand *arg2) {
-		// ASSERTP(arg1 && arg2, arg1 << arg2);
-		switch(op) {
-			case ARITHOPR_ADD: return add(arg1, arg2);
-			case ARITHOPR_SUB: return sub(arg1, arg2);
-			case ARITHOPR_MUL: return mul(arg1, arg2);
-			case ARITHOPR_MULH: return mulh(arg1, arg2);
-			case ARITHOPR_DIV: return div(arg1, arg2);
-			case ARITHOPR_MOD: return mod(arg1, arg2);
-			case ARITHOPR_CMP: return cmp(arg1, arg2);
-			case ARITHOPR_NEG: return neg(arg1);
-			default: elm::crash();
-		}
-	}
+	const Operand *autoOp(arithoperator_t op, const Operand *arg1, const Operand *arg2);
+	const Operand *autoOp(arithoperator_t op, const Operand *arg1);
 
-	const Operand *autoOp(arithoperator_t op, const Operand *arg1) {
-		switch(op) {
-			case ARITHOPR_NEG: return neg(arg1);
-			default: elm::crash();
-		}
-	}
+	inline const Operand* smart_add(const Operand* arg1, const Operand* arg2) { return Arith::add(*this, arg1, arg2); }
+	inline const Operand* smart_sub(const Operand* arg1, const Operand* arg2) { return Arith::sub(*this, arg1, arg2); }
+	inline const Operand* smart_mul(const Operand* arg1, const Operand* arg2) { return Arith::mul(*this, arg1, arg2); }
+	inline const Operand* smart_div(const Operand* arg1, const Operand* arg2) { return Arith::div(*this, arg1, arg2); }
+	inline const Operand *smart_autoOp(arithoperator_t op, const Operand *arg1, const Operand *arg2) { return Arith::autoOp(*this, op, arg1, arg2); }
 
-	inline Predicate *pred(condoperator_t _op, const Operand *left, const Operand *right) {
+	Predicate *pred(condoperator_t _op, const Operand *left, const Operand *right) {
 		Pred k(_op, left, right);
 		Predicate *p = pred_map.get(k, 0);
 		if(!p) {
@@ -316,7 +230,7 @@ public:
 		return p;
 	}
 
-	inline Predicate *comPred(condoperator_t _op, const Operand *left, const Operand *right) {
+	Predicate *comPred(condoperator_t _op, const Operand *left, const Operand *right) {
 		if(left > right)
 			return pred(_op, right, left);
 		else
@@ -332,23 +246,7 @@ public:
 
 	friend io::Output& operator<<(io::Output& out, const DAG& dag) { return dag.print(out); }
 private:
-	io::Output& print(io::Output& out) const {
-		bool first = true;
-		out << "DAG\n\t-> cst:  ";
-		for(cst_map_t::PairIterator i(cst_map); i; i++, first = false)
-			out << (first?"":",  ") << (*i).fst;
-			// for(int i = 0; i < int(sizeof(Constant)); i++)
-			// 	out << io::hex(((unsigned char *)&c)[i]).pad('0').right().width(2) << " ";
-		first = true;
-		out << "\n\t-> op:   ";
-		for(op_map_t::PairIterator i(op_map); i; i++, first = false)
-			out << (first?"":",  ") << *(*i).snd;
-		first = true;
-		out << "\n\t-> pred: ";
-		for(pred_map_t::PairIterator i(pred_map); i; i++, first = false)
-			out << (first?"":",  ") << *(*i).snd;
-		return out;
-	}
+	io::Output& print(io::Output& out) const;
 
 	int tmp_cnt, var_cnt;
 	Operand **vars;

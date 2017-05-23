@@ -199,7 +199,7 @@ public:
 	inline const Constant& toConstant() const { return _value; }
 	friend inline io::Output& operator<<(io::Output& out, const OperandConst& o) { return o.print(out); }
 private:
-	NONEW;
+	// NONEW;
 	io::Output& print(io::Output& out) const;
 
 	Constant _value;
@@ -248,7 +248,7 @@ public:
 	friend inline io::Output& operator<<(io::Output& out, const OperandVar& o) { return o.print(out); }
 	inline const OperandVar& toVar() const { return *this; }
 private:
-	NONEW;
+	// NONEW;
 	io::Output& print(io::Output& out) const;
 	t::int32 _addr;
 };
@@ -294,7 +294,7 @@ public:
 	friend inline io::Output& operator<<(io::Output& out, const OperandMem& o) { return o.print(out); }
 	inline const OperandMem& toMem() const { return *this; }
 private:
-	NONEW;
+	// NONEW;
 	io::Output& print(io::Output& out) const;
 
 	OperandConst _opdc;
@@ -447,7 +447,7 @@ public:
 	friend inline io::Output& operator<<(io::Output& out, const OperandArith& o) { return o.print(out); }
 	inline const OperandArith& toArith() const { return *this; }
 private:
-	NONEW;
+	// NONEW;
 	io::Output& print(io::Output& out) const;
 	
 	arithoperator_t _opr;
@@ -473,7 +473,7 @@ public:
 		_var_counter = -_var_counter;
 	}
 private:
-	NONEW;
+	// NONEW;
 	inline short sign() const { if(_is_negative) return -1; else return +1; }
 
 	bool _is_negative;

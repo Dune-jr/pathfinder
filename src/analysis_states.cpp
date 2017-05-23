@@ -2,6 +2,7 @@
  * Collection of States
  */
 #include "analysis_states.h"
+#include "loop_bound.h"
 #include "struct/var_maker.h"
 
 // if this has n states and ss has m states, this will explode into a cartesian product of n*m states
@@ -80,3 +81,15 @@ void Analysis::States::checkForSatisfiableSP(void) const
 	}
 }
 
+void Analysis::States::printLoopBoundOf(const Operand *oi) const
+{
+	LoopBound n;
+	for(Iter i(this->s); i; i++)
+		if(LoopBound lb = s[i].getLoopBound(oi))
+		{
+			ASSERTP(!n || n == lb, "Loop bounds not matching!  " << n << " =/=" << lb)
+			n = lb;
+		}
+	if(n)
+		DBGG(IRed << "Loop bound found for " << oi->toIter().loop()->toBasic()->address() << ": " << n)
+}

@@ -15,6 +15,7 @@
 // using namespace elm;
 using otawa::sgraph::DiGraph;
 using otawa::sgraph::Vertex;
+using otawa::graph::GenGraph;
 
 io::Output& operator<<(io::Output& out, Vertex* b); // TODO
 
@@ -65,7 +66,7 @@ private:
 template<class Vertex, class Edge>
 class RPOGen {
 public:
-	RPOGen(otawa::GenGraph<Vertex, Edge>* g, Vertex* entry) { process(g, entry); }
+	RPOGen(GenGraph<Vertex, Edge>* g, Vertex* entry) { process(g, entry); }
 	const genstruct::SLList<Vertex*>& toList() const { return O; }
 	bool ordered(Vertex* a, Vertex* b) const { // test a <= b
 		for(Iterator i(O); i; i++) {
@@ -79,7 +80,7 @@ public:
 	typedef typename genstruct::SLList<Vertex*>::Iterator Iterator;
 
 private:
-	void process(otawa::GenGraph<Vertex, Edge> *g, Vertex* entry) {
+	void process(GenGraph<Vertex, Edge> *g, Vertex* entry) {
 		/* O ← [] */ // order
 		O.clear();
 		/* S ← [ε] */ // stack
@@ -96,7 +97,7 @@ private:
 				D.push(v);
 			/* if ∃ (v, w) ∈ E, w ∉ D then */
 			bool all_done = true;
-			for(typename otawa::GenGraph<Vertex, Edge>::OutIterator e(v); e; e++) {
+			for(typename GenGraph<Vertex, Edge>::OutIterator e(v); e; e++) {
 				Vertex* ee = g->sinkOf(e);
 				if(! D.contains(ee)) {
 					all_done = false;
@@ -120,7 +121,7 @@ private:
 template<class Vertex, class Edge>
 class BlockDominanceGen {
 public:
-	BlockDominanceGen(otawa::GenGraph<Vertex, Edge> *g, Vertex* entry) : rpo(g, entry) {
+	BlockDominanceGen(GenGraph<Vertex, Edge> *g, Vertex* entry) : rpo(g, entry) {
 		process(g, entry);
 	}
 	Vertex* idom(Vertex* v) {
@@ -129,11 +130,11 @@ public:
 	}
 
 private:
-	void process(otawa::GenGraph<Vertex, Edge> *g, Vertex* entry) {
+	void process(GenGraph<Vertex, Edge> *g, Vertex* entry) {
 		DominanceProblem(g, entry);
 	}
 
-	void DominanceProblem(otawa::GenGraph<Vertex, Edge> *g, Vertex* entry) {
+	void DominanceProblem(GenGraph<Vertex, Edge> *g, Vertex* entry) {
 		/* for all nodes, b // initialize the dominators array */
 			/* doms[b] ← Undefined */
 		doms.clear();
@@ -152,7 +153,7 @@ private:
 				/* new idom ← first (processed) predecessor of b // (pick one) */
 				Vertex* new_idom = NULL;
 				/* for all other predecessors, p, of b */
-				for(typename otawa::GenGraph<Vertex, Edge>::InIterator pe(b); pe; pe++) {
+				for(typename GenGraph<Vertex, Edge>::InIterator pe(b); pe; pe++) {
 					/* if doms[p] != Undefined // i.e., if doms[p] already calculated */
 					if(doms.exists(pe->source()))
 						/* new idom ← intersect(p, new idom) */

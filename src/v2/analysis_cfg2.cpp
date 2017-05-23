@@ -105,7 +105,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 				if(loopStatus(b) == LEAVE) /* if status_b == LEAVE */
 					LH_S.remove(b); /* s_b ← nil */
 				else
-					LH_S(b) = s->one(); /* s_b ← nil */
+					LH_S(b) = s->one(); /* s_b ← s */
 			}
 			I(b, s); // update s (opti)
 			/* for e ∈ succ \ {EX_h | b ∈ L_h ∧ status_h =/ LEAVE} */
@@ -116,6 +116,10 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 				EDGE_S(e) = Analysis::I(e, s);
 				for(LoopExitIterator l(*e); l; l++)
 					EDGE_S(e)->finalizeLoop(LH_I(*l), *vm);
+
+				if(BACK_EDGE(e) && loopStatus(e->target()) == LEAVE)
+					s->printLoopBoundOf(LH_I(e->target()));
+
 				/* ips ← ips ∪ ipcheck(s_e , {(h, status_h ) | b ∈ L_h }) */
 				if(inD_ip(e))
 					ip_stats += ipcheck(*EDGE_S.ref(e), infeasible_paths);
@@ -131,6 +135,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 	// VarMaker stuff
 	DBG(cfg->name() << ".vm = " << *vm << " (" << &vm << ")")
 	DBGG(IPur() << "<==\"" << cfg->name() << "\"")
+	ASSERT(!(*CFG_S(cfg)).isNull());
 	CFG_S(cfg)->minimize(*vm, flags&CLEAN_TOPS); // reduces the VarMaker to the minimum
 	CFG_S(cfg)->removeTautologies();
 	CFG_VARS(cfg) = vm;
@@ -173,12 +178,10 @@ void Analysis2::I(Block* b, LockPtr<States> s)
 		s->onReturn(b->toSynth());
 		if((flags&MERGE) && (flags&MERGE_AFTER_APPLY) && s->count() > state_size_limit)
 			*s = *merge(s, b);
-			// Block::EdgeIter ei(b->outs());
-			// Block* b2 = theOnly(ei)->sink();
 	}
 	else if(b->isExit()) // main
 		CFG_S(b->cfg()) = s; // we will never free this, which shouldn't be a problem because it should only be freed at the end of analysis
 		// TODO!!! we need to add all the exits to this, otherwise this is false!
 	else
-		DBGW("not doing anything");
+		crash();
 }

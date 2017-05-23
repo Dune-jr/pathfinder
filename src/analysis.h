@@ -26,7 +26,7 @@
 using namespace otawa;
 using elm::genstruct::SLList;
 
-class Analysis {
+class Analysis {//: public otawa::Processor {
 public:
 	typedef SLList<Edge*> OrderedPath;
 	typedef elm::avl::Set<Edge*> Path;
@@ -93,18 +93,23 @@ protected:
 	};
 
 public:
-	// Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold);
 	Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold, int nb_cores);
 	virtual ~Analysis();
 	const Vector<DetailedPath>& run(const WorkSpace* ws);
 	const Vector<DetailedPath>& run(CFG *cfg);
 	inline const Vector<DetailedPath>& infeasiblePaths() const { return infeasible_paths; }
-	
 	int version() const;
-	static elm::String pathToString(const Path& path);
-	static elm::String orderedPathToString(const OrderedPath& path);
+
+	// --- otawa::Processor BEGIN ---
+// 	Analysis(AbstractRegistration& _reg = reg);
+// 	static p::declare reg;
+// 	virtual void configure(const PropList &props);
 
 protected:
+// 	virtual void processWorkSpace(WorkSpace *fw);
+// 	virtual void cleanup(WorkSpace *ws);
+	// --- otawa::Processor END ---
+
 	class Progress;
 	class Progressv1;
 	class Progressv2;
@@ -116,11 +121,6 @@ protected:
 	Analysis::Progress* progress;
 	int state_size_limit, nb_cores, flags; // read by inherited class
 
-#ifdef V1
-	avl::Set<Block*> loops; int max_loop_depth; // TODO!!!
-	inline void addLoopStats(Block* b) { loops.add(b); int x = 0; for(LoopHeaderIter i(b); i; i++) x++;
-		if(x > max_loop_depth) max_loop_depth = x; }
-#endif
 
 	// static Identifier<Analysis::States> EDGE_S; // Trace on an edge
 	static Identifier<LockPtr<Analysis::States> > EDGE_S; // Trace on an edge
@@ -171,6 +171,14 @@ protected:
 	static Vector<Edge*> outsWithoutUnallowedExits(Block* b);
 	static bool isAllowedExit(Edge* exit_edge);
 	static elm::String printFixPointStatus(Block* b);
+	static elm::String pathToString(const Path& path);
+	static elm::String pathToString(const OrderedPath& path);
+
+#ifdef V1 // TODO: make a clean version
+	avl::Set<Block*> loops;
+	int max_loop_depth;
+	void addLoopStats(Block* b);
+#endif
 	
 	// analysis_cfg.cpp
 	void processProg(CFG* cfg);

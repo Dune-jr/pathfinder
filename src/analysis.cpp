@@ -354,13 +354,13 @@ elm::String Analysis::pathToString(const Path& path)
 }
 
 /**
- * @fn elm::String orderedPathToString(const OrderedPath& path)
+ * @fn elm::String pathToString(const OrderedPath& path)
  * @brief Get pretty printing for any OrderedPath (SLList of Edge*)
  * 
  * @param path OrderedPath to parse
  * @return String representing the path
  */
-elm::String Analysis::orderedPathToString(const OrderedPath& path)
+elm::String Analysis::pathToString(const OrderedPath& path)
 {
 	elm::String str;
 	bool first = true;
@@ -600,3 +600,20 @@ void Analysis::purgeBottomStates(States& sc) const
 		else i++;
 	}
 }
+
+#ifdef V1
+/**
+ * @fn void Analysis::addLoopStats(Block* b);
+ * @brief      This function adds loops from a block b to the overall loop statistics
+ * @param      b     The Block
+ */
+void Analysis::addLoopStats(Block* b)
+{
+	loops.add(b);
+	int x = 0;
+	for(LoopHeaderIter i(b); i; i++)
+		x++;
+	if(x > max_loop_depth)
+		max_loop_depth = x;
+}
+#endif
