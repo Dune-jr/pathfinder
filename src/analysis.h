@@ -17,6 +17,7 @@
 #include <otawa/prop/Identifier.h>
 #include "detailed_path.h"
 #include "dom/GlobalDominance.h"
+#include "features.h"
 #include "pretty_printing.h"
 #include "struct/DAG.h"
 #include "struct/operand.h"
@@ -26,31 +27,29 @@
 using namespace otawa;
 using elm::genstruct::SLList;
 
-class Analysis {//: public otawa::Processor {
+class Analysis {
 public:
 	typedef SLList<Edge*> OrderedPath;
 	typedef elm::avl::Set<Edge*> Path;
 	class State; // Abstract state corresponding to a set of paths at one point of the program
 	class States; // Collection of State representing an abstract state at one point of the program
 	class SPEquals;
+	// static Identifier<int> ANALYSIS_FLAGS, NB_CORES, MERGE_THRESOLD;
 
 	enum // flags
 	{
-		VIRTUALIZE_CFG		 = 1 <<  0,
-		SLICE_CFG			 = 1 <<  1,
-		REDUCE_LOOPS		 = 1 <<  2,
-		USE_INITIAL_DATA 	 = 1 <<  3,
-		MERGE			 	 = 1 <<  4,
-		MERGE_AFTER_APPLY	 = 1 <<  5,
-		DRY_RUN				 = 1 <<  6,
-		SMT_CHECK_LINEAR	 = 1 <<  7,
-		ALLOW_NONLINEAR_OPRS = 1 <<  8,
-		SHOW_PROGRESS		 = 1 <<  9,
-		POST_PROCESSING		 = 1 << 10,
-		MULTITHREADING		 = 1 << 11,
-		IS_V1				 = 1 << 12,
-		IS_V2				 = 1 << 13,
-		IS_V3				 = 1 << 14,
+		VERSION				 = 0b11, // must occupy the 2 first bits
+		VIRTUALIZE_CFG		 = 1 <<  2,
+		SLICE_CFG			 = 1 <<  3,
+		REDUCE_LOOPS		 = 1 <<  4,
+		USE_INITIAL_DATA 	 = 1 <<  5,
+		MERGE			 	 = 1 <<  6,
+		MERGE_AFTER_APPLY	 = 1 <<  7,
+		DRY_RUN				 = 1 <<  8,
+		SMT_CHECK_LINEAR	 = 1 <<  9,
+		ALLOW_NONLINEAR_OPRS = 1 << 10,
+		SHOW_PROGRESS		 = 1 << 11,
+		POST_PROCESSING		 = 1 << 12,
 		SP_CRITICAL			 = 1 << 15,
 		CLEAN_TOPS			 = 1 << 16,
 		ASSUME_IDENTICAL_SP	 = 1 << 17,
@@ -74,8 +73,24 @@ protected:
 		LEAVE,
 	} loopheader_status_t; // Fixpoint status of the loop header, for annotation
 
-	class IPStats
-	{
+	// just a reference on the INFEASIBLE_PATHS identifier
+	class InfeasiblePaths {
+	public:
+		InfeasiblePaths() : ips(NULL) { }
+		inline void init(CFG* cfg) { INFEASIBLE_PATHS(cfg) = Vector<DetailedPath>(); ips = &INFEASIBLE_PATHS.ref(cfg); }
+		inline operator const Vector<DetailedPath>&() const { return *ips; }
+		inline operator Vector<DetailedPath>&() { return *ips; }
+		inline InfeasiblePaths& operator=(const Vector<DetailedPath>& x) { *ips = x; return *this; }
+
+		// Vector methods
+		inline int count(void) const { return ips->count(); }
+		inline DetailedPath& get(const Vector<DetailedPath>::Iter& i) { return ips->get(i); }
+		inline const DetailedPath& operator[](int i) const { return (*ips)[i]; }
+	private:
+		Vector<DetailedPath>* ips;
+	};
+
+	class IPStats {
 	public:
 		IPStats() : ip_count(0), unminimized_ip_count(0) { }
 		IPStats(int ip_count, int unminimized_ip_count) : ip_count(ip_count), unminimized_ip_count(unminimized_ip_count) { }
@@ -93,22 +108,23 @@ protected:
 	};
 
 public:
-	Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold, int nb_cores);
+	// Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold, int nb_cores);
+	Analysis();
 	virtual ~Analysis();
-	const Vector<DetailedPath>& run(const WorkSpace* ws);
-	const Vector<DetailedPath>& run(CFG *cfg);
-	inline const Vector<DetailedPath>& infeasiblePaths() const { return infeasible_paths; }
-	int version() const;
-
-	// --- otawa::Processor BEGIN ---
-// 	Analysis(AbstractRegistration& _reg = reg);
-// 	static p::declare reg;
-// 	virtual void configure(const PropList &props);
 
 protected:
-// 	virtual void processWorkSpace(WorkSpace *fw);
-// 	virtual void cleanup(WorkSpace *ws);
+	const Vector<DetailedPath>& run(const WorkSpace* ws);
+	const Vector<DetailedPath>& run(CFG *cfg);
+	// inline const Vector<DetailedPath>& infeasiblePaths() const { return infeasible_paths; }
+
+	// --- otawa::Processor BEGIN ---
+	virtual void configure(const PropList &props);
+	virtual void processWorkSpace(WorkSpace *ws);
 	// --- otawa::Processor END ---
+
+	// shortcuts
+	int version() const;
+	inline bool multithreaded() const { return nb_cores > 1; }
 
 	class Progress;
 	class Progressv1;
@@ -119,10 +135,9 @@ protected:
 	LockPtr<VarMaker> vm;
 	IPStats ip_stats;
 	Analysis::Progress* progress;
+	InfeasiblePaths infeasible_paths;
 	int state_size_limit, nb_cores, flags; // read by inherited class
 
-
-	// static Identifier<Analysis::States> EDGE_S; // Trace on an edge
 	static Identifier<LockPtr<Analysis::States> > EDGE_S; // Trace on an edge
 	static Identifier<Analysis::State>			  LH_S; // Trace on a loop header
 	static Identifier<Analysis::State>			  LH_S0; // Trace on a loop header
@@ -131,8 +146,6 @@ protected:
 	static Identifier<LockPtr<Analysis::States> > CFG_S; // Trace on a CFG
 	static Identifier<LockPtr<VarMaker> > 		  CFG_VARS; // VarMaker on a CFG (useful?)
 
-	// WorkingList wl;
-	Vector<DetailedPath> infeasible_paths;
 private:
 	GlobalDominance* gdom;
 	elm::sys::StopWatch sw;

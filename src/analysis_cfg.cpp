@@ -30,7 +30,7 @@ Identifier<LockPtr<VarMaker> >				Analysis::CFG_VARS("VarMaker of a CFG"); // Va
 void Analysis::processProg(CFG* cfg)
 {
 	/* ips ← {} */
-	infeasible_paths.clear();
+	infeasible_paths.init(cfg);
 	/* ... */
 	processCFG(cfg, flags&USE_INITIAL_DATA);
 	DBGG(IGre() << "Reached end of program.")

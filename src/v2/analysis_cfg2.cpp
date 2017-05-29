@@ -12,6 +12,16 @@
 
 using namespace elm::io;
 
+// for otawa::Processor
+p::feature otawa::INFEASIBLE_PATHS_FEATURE("otawa::pathfinder::INFEASIBLE_PATHS_FEATURE", new Maker<Analysis2>());
+p::declare Analysis2::reg = p::init("otawa::pathfinder::pathfinder", Version(2, 0, 0))
+	.maker<Analysis2>()
+	.require(dfa::INITIAL_STATE_FEATURE)
+	.require(COLLECTED_CFG_FEATURE)
+	.require(LOOP_HEADERS_FEATURE)
+	.require(LOOP_INFO_FEATURE)
+	.provide(INFEASIBLE_PATHS_FEATURE);
+
 /**
  * @fn void Analysis2::processCFG(Block* entry);
  * @brief Runs the analysis with no virtualization
@@ -130,7 +140,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 	}
 /* end */
 	// Pretty printing
-	if(flags&SHOW_PROGRESS)
+	if(flags & SHOW_PROGRESS)
 		progress->exit(cfg, CFG_S(cfg)->count(), vm->sizes().fst, countIPsOf(cfg));
 	// VarMaker stuff
 	DBG(cfg->name() << ".vm = " << *vm << " (" << &vm << ")")

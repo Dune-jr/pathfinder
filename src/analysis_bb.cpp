@@ -57,7 +57,7 @@ void Analysis::State::processBB(const BasicBlock *bb, VarMaker& vm, int flags)
 				generated_preds_taken = generated_preds;
 				generated_preds = generated_preds_before_condition;
 			}
-			if(flags & IS_V1)
+			if((flags & VERSION) == 1)
 				processSemInst1(seminsts, last_condition);
 			else if(semp.process(seminsts) != 0)
 			{
@@ -68,7 +68,7 @@ void Analysis::State::processBB(const BasicBlock *bb, VarMaker& vm, int flags)
 		// all temporary variables are freed at the end of any assembly instruction, so invalidate them
 		invalidateTempVars();
 	}
-	if( !(flags&IS_V1) && (flags&CLAMP_PREDICATE_SIZE) )
+	if( !((flags&VERSION) == 1) && (flags&CLAMP_PREDICATE_SIZE) )
 		clampPredicates(vm);
 	// if(! (dbg_flags & DBG_DETERMINISTIC))
 	// 	DBG("dag:" << *dag)

@@ -20,52 +20,22 @@
 #include "smt.h"
 #include "dom/GlobalDominance.h"
 
-bool cfg_follow_calls = false; // cfg_features.h
+bool cfg_follow_calls = false; // for cfg_features.h
+Identifier<int> otawa::ANALYSIS_FLAGS("otawa::pathfinder::ANALYSIS_FLAGS", -1);
+Identifier<int> otawa::MERGE_THRESOLD("otawa::pathfinder::MERGE_THRESOLD", 0);
+Identifier<int> otawa::NB_CORES("otawa::pathfinder::NB_CORES", 0);
+
+Identifier<Vector<DetailedPath> > otawa::INFEASIBLE_PATHS("otawa::pathfinder::INFEASIBLE_PATHS", Vector<DetailedPath>()); // on a CFG
 
 /**
  * @class Analysis
  * @brief Perform an infeasible path analysis on a CFG 
  */
-Analysis::Analysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold, int nb_cores)
-	: state_size_limit(merge_thresold), nb_cores(nb_cores), flags(flags)
+Analysis::Analysis()
 #ifdef V1
-	, max_loop_depth(0)
+	: max_loop_depth(0)
 #endif
-{
-	ws->require(dfa::INITIAL_STATE_FEATURE, props); // dfa::INITIAL_STATE
-	if(flags & REDUCE_LOOPS)
-		ws->require(REDUCED_LOOPS_FEATURE, props); // for irregular loops
-	ws->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
-	// MyTransformer t; t.process(ws);
-	if(flags & VIRTUALIZE_CFG) {
-		cfg_follow_calls = true;
-		ws->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
-	}
-#ifdef OSLICE
-	if(flags & SLICE_CFG) {
-		// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
-		// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
-		ws->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
-		ws->require(oslice::SLICER_FEATURE, props);
-	}
-#endif
-	gdom = new GlobalDominance(INVOLVED_CFGS(ws), GlobalDominance::EDGE_DOM | GlobalDominance::EDGE_POSTDOM); // no block dom
-	ws->require(LOOP_HEADERS_FEATURE, props); // LOOP_HEADER, BACK_EDGE
-	ws->require(LOOP_INFO_FEATURE, props); // LOOP_EXIT_EDGE
-	// ws->require(CONDITIONAL_RESTRUCTURED_FEATURE);
-
-	context.dfa_state = dfa::INITIAL_STATE(ws); // initial state
-	context.sp = ws->platform()->getSP()->number(); // id of the stack pointer
-	context.max_tempvars = (short)ws->process()->maxTemp(); // maximum number of tempvars used
-	context.max_registers = (short)ws->platform()->regCount(); // count of registers
-	dag = new DAG(context.max_tempvars, context.max_registers);
-	// vm will be initialized on CFG init
-
-	ASSERT(version() > 0)
-#ifndef V1
-	ASSERTP(version() > 1, "program was not built with v1 support")
-#endif
-}
+	{ }
 
 Analysis::~Analysis()
 {
@@ -73,15 +43,62 @@ Analysis::~Analysis()
 	delete dag;
 }
 
+void Analysis::configure(const PropList &props)
+{
+	flags = ANALYSIS_FLAGS(props);
+	state_size_limit = MERGE_THRESOLD(props);
+	nb_cores = NB_CORES(props);
+
+	ASSERTP(flags != -1, "flags must be set!")
+	ASSERT(version() > 0)
+#ifndef V1
+	ASSERTP(version() > 1, "program was not built with v1 support")
+#endif
+}
+
+
+void Analysis::processWorkSpace(WorkSpace *ws)
+{
+	/*ws->require(dfa::INITIAL_STATE_FEATURE); // dfa::INITIAL_STATE
+	if(flags & REDUCE_LOOPS)
+		ws->require(REDUCED_LOOPS_FEATURE); // for irregular loops
+	ws->require(COLLECTED_CFG_FEATURE); // INVOLVED_CFGS
+	if(flags & VIRTUALIZE_CFG) {
+		cfg_follow_calls = true;
+		ws->require(VIRTUALIZED_CFG_FEATURE); // inline calls
+	}
+#ifdef OSLICE
+	if(flags & SLICE_CFG) {
+		// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
+		// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
+		ws->require(oslice::COND_BRANCH_COLLECTOR_FEATURE);
+		ws->require(oslice::SLICER_FEATURE);
+	}
+#endif
+	*/
+	ASSERTP(INVOLVED_CFGS(ws) && INVOLVED_CFGS(ws)->count() > 0, "no CFGs found");
+	gdom = new GlobalDominance(INVOLVED_CFGS(ws), GlobalDominance::EDGE_DOM | GlobalDominance::EDGE_POSTDOM); // no block dominance
+	context.dfa_state = dfa::INITIAL_STATE(ws); // initial state
+	context.sp = ws->platform()->getSP()->number(); // id of the stack pointer
+	context.max_tempvars = (short)ws->process()->maxTemp(); // maximum number of tempvars used
+	context.max_registers = (short)ws->platform()->regCount(); // count of registers
+	dag = new DAG(context.max_tempvars, context.max_registers);
+	// vm will be initialized on CFG init
+
+	run(ws);
+}
+
+
 int Analysis::version(void) const
 {
-	if(flags & IS_V1)
-		return 1;
-	if(flags & IS_V2)
-		return 2;
-	if(flags & IS_V3)
-		return 3;
-	crash();
+	return flags & VERSION;
+	// if(flags & IS_V1)
+	// 	return 1;
+	// if(flags & IS_V2)
+	// 	return 2;
+	// if(flags & IS_V3)
+	// 	return 3;
+	// crash();
 }
 
 /**
@@ -90,7 +107,6 @@ int Analysis::version(void) const
   */
 const Vector<DetailedPath>& Analysis::run(const WorkSpace* ws)
 {
-	ASSERTP(INVOLVED_CFGS(ws)->count() > 0, "no CFG found"); // make sure we have at least one CFG
 	return run(INVOLVED_CFGS(ws)->get(0));
 }
 
@@ -100,7 +116,8 @@ const Vector<DetailedPath>& Analysis::run(const WorkSpace* ws)
   */
 const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 {
-	if(flags&SHOW_PROGRESS) progress = (flags&Analysis::IS_V3) ? (Progress*)new Progressv2() : (Progress*)new Progressv1(cfg);
+	if(flags&SHOW_PROGRESS) progress = (version() == 3) ? (Progress*)new Progressv2() : (Progress*)new Progressv1(cfg);
+	DBG("Analysis V" << version())
 	DBG("Using SMT solver: " << (flags&DRY_RUN ? "(none)" : SMT::printChosenSolverInfo()))
 	DBG("Stack pointer identified to " << context.sp)
 
@@ -120,7 +137,7 @@ const Vector<DetailedPath>& Analysis::run(CFG *cfg)
 	postProcessResults(cfg);
 	printResults((end-start)*1000/CLOCKS_PER_SEC, (t2-t1)/1000);
 	if(flags&SHOW_PROGRESS) delete progress;
-	return infeasiblePaths();
+	return infeasible_paths;
 }
 
 /**
@@ -403,7 +420,7 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 		 << color::Yel() << ip_stats.getUnminimizedIPCount() << color::RCol() << " unmin, implicitly "
 		 << color::IRed() << ip_stats.getIPCount() << color::RCol() << ").";
 
-	if(! (dbg_flags&DBG_DETERMINISTIC))
+	if(! (dbg_flags & DBG_DETERMINISTIC))
 	{	// print execution time
 		if(dbg_verbose == DBG_VERBOSE_ALL)
 			cout << " (" << (real_time_ms>=1000 ? (float(real_time_ms)/float(1000)) : real_time_ms) << (real_time_ms>=1000 ? "s" : "ms") << ")" << color::RCol() << endl;
@@ -423,7 +440,7 @@ void Analysis::printResults(int exec_time_ms, int real_time_ms) const
 		elm::cout << endl;
 	// cout << "Minimized+Unminimized => Total w/o min. : " << color::On_Bla() << color::IGre() << ipcount-ip_stats.getUnminimizedIPCount() << color::RCol() <<
 	// 		"+" << color::Yel() << ip_stats.getUnminimizedIPCount() << color::RCol() << " => " << color::IRed() << ip_stats.getIPCount() << color::RCol() << endl;
-	if(dbg_flags&DBG_DETAILED_STATS)
+	if(dbg_flags & DBG_DETAILED_STATS)
 	{
 		if(ipcount > 0)
 		{

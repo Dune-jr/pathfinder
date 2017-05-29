@@ -2,7 +2,6 @@
  * Standard implementation of the Analysis
  */
 
-// #include <elm/sys/Thread.h> // multithreading
 #include "analysis_states.h"
 #include "cfg_features.h"
 #include "debug.h"
@@ -89,7 +88,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 	Vector<Option<Path*> > sv_paths;
 	Vector<Analysis::State> new_sv(state_count); // safer to do it this way than remove on the fly (i think more convenient later too)
 
-	if(flags&Analysis::MULTITHREADING && state_count >= nb_cores)
+	if(multithreaded() && state_count >= nb_cores)
 	{	// with multithreading
 		const int nb_threads = nb_cores;
 		DBGG("1) Initializing " << nb_threads << " threads")
@@ -137,7 +136,7 @@ Analysis::IPStats DefaultAnalysis::ipcheck(States& ss, Vector<DetailedPath>& inf
 		for(States::Iter si(ss.states()); si; si++)
 		{	// SMT call
 			chosen_smt_t smt(flags);
-			const Option<Path*> infeasible_path = (flags&IS_V1) ? smt.seekInfeasiblePaths(*si) : smt.seekInfeasiblePathsv2(*si);
+			const Option<Path*> infeasible_path = (version() == 1) ? smt.seekInfeasiblePaths(*si) : smt.seekInfeasiblePathsv2(*si);
 			sv_paths.addLast(infeasible_path);
 			if(!infeasible_path)
 				new_sv.addLast(*si); // only add feasible states to new_sv

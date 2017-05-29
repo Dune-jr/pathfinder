@@ -97,7 +97,7 @@ public:
 	LoopBound getLoopBound(const Operand* oi) const;
 
 	// analysis_bb.cpp
-	void processBB(const BasicBlock *bb, VarMaker& vm, int version_flags);
+	void processBB(const BasicBlock *bb, VarMaker& vm, int flags);
 	void processSemInst1(const otawa::sem::inst& inst, const sem::inst& last_condition);
 	int  processSemInst2(SemanticParser& semp);
 	int invalidateStackBelow(const Constant& stack_limit);

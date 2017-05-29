@@ -9,6 +9,17 @@
 
 using namespace elm::io;
 
+// for otawa::Processor
+p::feature otawa::OLD_INFEASIBLE_PATHS_FEATURE("otawa::pathfinder::OLD_INFEASIBLE_PATHS_FEATURE", new Maker<Analysis1>());
+p::declare Analysis1::reg = p::init("otawa::pathfinder::pathfinder", Version(2, 0, 0))
+	.maker<Analysis1>()
+	.require(dfa::INITIAL_STATE_FEATURE)
+	.require(VIRTUALIZED_CFG_FEATURE)
+	.require(COLLECTED_CFG_FEATURE)
+	.require(LOOP_HEADERS_FEATURE)
+	.require(LOOP_INFO_FEATURE)
+	.provide(OLD_INFEASIBLE_PATHS_FEATURE);
+
 /**
  * @fn void Analysis::processCFG(Block* entry);
  * @brief Runs the analysis starting from the CFG entry entry

@@ -6,8 +6,9 @@
 #include <otawa/app/Application.h>
 #include "v1/analysis1.h"
 #include "v2/analysis2.h"
-#include "ffx.h"
 #include "debug.h"
+#include "ffx.h"
+#include "features.h"
 #include "oracle.h"
 
 using namespace otawa;
@@ -19,7 +20,7 @@ int dbg_ = 0;
 	
 class Pathfinder: public Application {
 public:
-	Pathfinder(void): Application("Pathfinder", Version(1, 0, 0), "An infeasible path detection analysis", "J. Ruiz"),
+	Pathfinder(void): Application("Pathfinder", Version(2, 0, 0), "An infeasible path detection analysis", "J. Ruiz"),
 		opt_s0 			 (SwitchOption::Make(*this).cmd("-V").cmd("--vv").cmd("--s0").cmd("--nosilent").description("run with maximal output")),
 		opt_s1 			 (SwitchOption::Make(*this).cmd("-s").cmd("--s1").description("only display results")),
 		opt_s2	  		 (SwitchOption::Make(*this).cmd("-S").cmd("--s2").cmd("--fullsilent").description("run with zero output")),
@@ -58,25 +59,50 @@ public:
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception)
 	{
-		int analysis_flags, merge_thresold, nb_cores;
+		int analysis_flags = getAnalysisParameters();
+		int nb_cores = getNumberofCores();
+		int merge_thresold = getMergeThresold();
 		initializeLoggingOptions();
-		setFlags(analysis_flags, merge_thresold, nb_cores);
+		setDebugFlags();
 		if(opt_dumpoptions)
 			dumpOptions(analysis_flags, merge_thresold, nb_cores);
 
-		Analysis* analysis =
-			((analysis_flags & Analysis::IS_V1) || (analysis_flags & Analysis::IS_V2))
-			? (Analysis*)new Analysis1(workspace(), props, analysis_flags, merge_thresold, nb_cores)  // v1, v2
-			: (Analysis*)new Analysis2(workspace(), props, analysis_flags, merge_thresold, nb_cores); // v3
-		analysis->run(workspace()); // TODO: make that default for (workspace) overloard fnct
+		if(analysis_flags & Analysis::REDUCE_LOOPS)
+		{
+			workspace()->require(REDUCED_LOOPS_FEATURE, props); // for irregular loops
+			workspace()->require(COLLECTED_CFG_FEATURE, props); // INVOLVED_CFGS
+		}
+		if(analysis_flags & Analysis::VIRTUALIZE_CFG)
+		{
+			cfg_follow_calls = true;
+			workspace()->require(VIRTUALIZED_CFG_FEATURE, props); // inline calls
+		}
+#ifdef OSLICE
+		if(analysis_flags & Analysis::SLICE_CFG)
+		{
+			// oslice::SLICING_CFG_OUTPUT_PATH(props) = "slicing.dot";
+			// oslice::SLICED_CFG_OUTPUT_PATH(props) = "sliced.dot";
+			workspace()->require(oslice::COND_BRANCH_COLLECTOR_FEATURE, props);
+			workspace()->require(oslice::SLICER_FEATURE, props);
+		}
+#endif
+		ANALYSIS_FLAGS(props) = analysis_flags;
+		MERGE_THRESOLD(props) = merge_thresold;
+		NB_CORES(props) = nb_cores;
+	
+		if((analysis_flags & Analysis::VERSION) < 3)
+			workspace()->require(OLD_INFEASIBLE_PATHS_FEATURE, props);
+		else
+			workspace()->require(INFEASIBLE_PATHS_FEATURE, props);
 
+		// TODO!! move this inside the analysis
 		// outputing to .ffx
 		if(opt_output.get())
 		{
-			FFX ffx_output(analysis->infeasiblePaths());
+			// FFX ffx_output(analysis->infeasiblePaths());
+			FFX ffx_output(INFEASIBLE_PATHS(INVOLVED_CFGS(workspace())->get(0)));
 			ffx_output.output(elm::String(entry), entry + "_ips.ffx", opt_graph_output ? entry + "_ips.tsv" : "");
 		}
-		delete analysis;
 	}
 
 private:
@@ -88,16 +114,18 @@ private:
 	ValueOption<bool> opt_output;
 	ValueOption<int> opt_merge, opt_multithreading, opt_x;
 
-	void setFlags(int& analysis_flags, int& merge_thresold, int& nb_cores) {
-		nb_cores = getNumberofCores();
-		merge_thresold = getMergeThresold();
+	void setDebugFlags(void) {
 		dbg_flags = 0
 			| (opt_deterministic 			? DBG_DETERMINISTIC : 0)
 			| (!opt_noipresults 			? DBG_RESULT_IPS : 0)
 			| (!opt_nffi 					? DBG_FORMAT_FLOWINFO : 0)
 			| (opt_detailedstats 			? DBG_DETAILED_STATS : 0)
 		;
-		analysis_flags = 0
+		if(opt_x)
+			dbg_ = opt_x.get();
+	}
+	int getAnalysisParameters(void) {
+		int analysis_flags = 0
 			| (opt_slice					? Analysis::SLICE_CFG : 0)
 			| (opt_reduce					? Analysis::REDUCE_LOOPS : 0)
 			| (opt_progress					? Analysis::SHOW_PROGRESS : 0)
@@ -108,21 +136,20 @@ private:
 			| (!opt_dontassumeidsp			? Analysis::ASSUME_IDENTICAL_SP : 0)
 			| (opt_nowidening				? Analysis::NO_WIDENING : 0)
 			| (opt_dry						? Analysis::DRY_RUN : 0)
-			| (opt_v1						? Analysis::IS_V1 : 0)
-			| (opt_v2						? Analysis::IS_V2 : 0)
-			| (opt_v3						? Analysis::IS_V3 : 0)
+			// | (opt_v1						? Analysis::IS_V1 : 0)
+			// | (opt_v2						? Analysis::IS_V2 : 0)
+			// | (opt_v3						? Analysis::IS_V3 : 0)
 			| ((opt_v1||opt_v2)				? Analysis::VIRTUALIZE_CFG : 0) // TODO remove
 			| (!opt_no_initial_data			? Analysis::USE_INITIAL_DATA : 0)
 			| (opt_sp_critical				? Analysis::SP_CRITICAL : 0)
 			| (opt_applymerge				? Analysis::MERGE_AFTER_APPLY : 0)
 			| (opt_clamppreds				? Analysis::CLAMP_PREDICATE_SIZE : 0)
-			| (nb_cores > 1					? Analysis::MULTITHREADING : 0)
 			| ((opt_merge || opt_automerge)	? Analysis::MERGE : 0)
 			| (true 						? Analysis::POST_PROCESSING : 0)
 		;
-		if(opt_x)
-			dbg_ = opt_x.get();
 		ASSERTP(opt_v1 + opt_v2 + opt_v3 == 1, "One analysis must be selected (-1, -2 or -3).")
+		analysis_flags |= (0b01 * bool(opt_v1) + 0b10 * bool(opt_v2) + 0b11 * bool(opt_v3));
+		return analysis_flags;
 	}
 	void initializeLoggingOptions() {
 		// high verbose numbers are more silent. TODO: that is counterintuitive
@@ -173,35 +200,28 @@ private:
 		for(int i = 3; i >= 1; i--)
 			cout << (i>dbg_verbose ? "=" : " ");
 		cout << "]" << color::RCol() << endl;
-		DBGOPT("DISPLAY TIME & NON-DTMSTIC INFO", !(dbg_flags&DBG_DETERMINISTIC), true)
-		DBGOPT("DISPLAY RESULT INF. PATHS"		, dbg_flags&DBG_RESULT_IPS, true)
-		DBGOPT("PRETTY PRINTING FOR FLOWINFO"	, dbg_flags&DBG_FORMAT_FLOWINFO, true)
-		DBGOPT("DISPLAY DETAILED STATS"			, dbg_flags&DBG_DETAILED_STATS, false)
+		DBGOPT("DISPLAY TIME & NON-DTMSTIC INFO", !(dbg_flags & DBG_DETERMINISTIC), true)
+		DBGOPT("DISPLAY RESULT INF. PATHS"		, dbg_flags & DBG_RESULT_IPS, true)
+		DBGOPT("PRETTY PRINTING FOR FLOWINFO"	, dbg_flags & DBG_FORMAT_FLOWINFO, true)
+		DBGOPT("DISPLAY DETAILED STATS"			, dbg_flags & DBG_DETAILED_STATS, false)
 		cout << "Analysis:" << endl;
-		DBGOPT("VIRTUALIZE"						, analysis_flags&Analysis::VIRTUALIZE_CFG, true)
-		DBGOPT("REDUCE LOOPS"					, analysis_flags&Analysis::REDUCE_LOOPS, false)
-		DBGOPT("SLICE"							, analysis_flags&Analysis::SLICE_CFG, false)
-		DBGOPT("DISPLAY PROGRESS"				, analysis_flags&Analysis::SHOW_PROGRESS, false)
-		DBGOPT("CHECK LINEARITY BEFORE SMT CALL", analysis_flags&Analysis::SMT_CHECK_LINEAR, true)
-		DBGOPT("ALLOW NONLINEAR OPERATORS (unsafe)", analysis_flags&Analysis::ALLOW_NONLINEAR_OPRS, false)
-		DBGOPT("CLEAN TOPS" 					, analysis_flags&Analysis::CLEAN_TOPS, true)
-		DBGOPT("KEEP UNMINIMIZED PATHS"			, analysis_flags&Analysis::UNMINIMIZED_PATHS, true)
-		DBGOPT("USE INITIAL DATA"				, analysis_flags&Analysis::USE_INITIAL_DATA, true)
-		DBGOPT("NO WIDENING"					, analysis_flags&Analysis::NO_WIDENING, false)
-		DBGOPT("RUN DRY (NO SMT SOLVER)"		, analysis_flags&Analysis::DRY_RUN, false)
-		DBGOPT("MERGE AFTER APPLYING A FUNCTION", analysis_flags&Analysis::MERGE_AFTER_APPLY, false)
-		DBGOPT("CLAMP PREDICATE SIZE"			, analysis_flags&Analysis::CLAMP_PREDICATE_SIZE, false)
-		DBGOPT("RUN V1 A.I."					, analysis_flags&Analysis::IS_V1, false)
-		DBGOPT("RUN V2 A.I."					, analysis_flags&Analysis::IS_V2, false)
-		DBGOPT("RUN V3 A.I."					, analysis_flags&Analysis::IS_V3, false)
+		DBGOPT("VIRTUALIZE"						, analysis_flags & Analysis::VIRTUALIZE_CFG, true)
+		DBGOPT("REDUCE LOOPS"					, analysis_flags & Analysis::REDUCE_LOOPS, false)
+		DBGOPT("SLICE"							, analysis_flags & Analysis::SLICE_CFG, false)
+		DBGOPT("DISPLAY PROGRESS"				, analysis_flags & Analysis::SHOW_PROGRESS, false)
+		DBGOPT("CHECK LINEARITY BEFORE SMT CALL", analysis_flags & Analysis::SMT_CHECK_LINEAR, true)
+		DBGOPT("ALLOW NONLINEAR OPERATORS (unsafe)", analysis_flags & Analysis::ALLOW_NONLINEAR_OPRS, false)
+		DBGOPT("CLEAN TOPS" 					, analysis_flags & Analysis::CLEAN_TOPS, true)
+		DBGOPT("KEEP UNMINIMIZED PATHS"			, analysis_flags & Analysis::UNMINIMIZED_PATHS, true)
+		DBGOPT("USE INITIAL DATA"				, analysis_flags & Analysis::USE_INITIAL_DATA, true)
+		DBGOPT("NO WIDENING"					, analysis_flags & Analysis::NO_WIDENING, false)
+		DBGOPT("RUN DRY (NO SMT SOLVER)"		, analysis_flags & Analysis::DRY_RUN, false)
+		DBGOPT("MERGE AFTER APPLYING A FUNCTION", analysis_flags & Analysis::MERGE_AFTER_APPLY, false)
+		DBGOPT("CLAMP PREDICATE SIZE"			, analysis_flags & Analysis::CLAMP_PREDICATE_SIZE, false)
+		cout << DBGPREFIX("A.I. VERSION") << color::ICya() << (analysis_flags & Analysis::VERSION) << color::RCol() << endl;
 		cout << DBGPREFIX("MERGING THRESOLD");
-		if(analysis_flags&Analysis::MERGE)
+		if(analysis_flags & Analysis::MERGE)
 			cout << color::IRed() << merge_thresold << color::RCol() << endl;
-		else
-			cout << color::IGre() << "NONE" << color::RCol() << endl;
-		cout << DBGPREFIX("MULTITHREADING");
-		if(analysis_flags&Analysis::MULTITHREADING)
-			cout << color::IRed() << "x" << nb_cores << color::RCol() << endl;
 		else
 			cout << color::IGre() << "NONE" << color::RCol() << endl;
 		cout << "=============================================" << endl;

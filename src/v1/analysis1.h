@@ -3,11 +3,21 @@
 
 #include "../oracle.h"
 
-class Analysis1 : public DefaultAnalysis
+class Analysis1 : public DefaultAnalysis, public otawa::Processor
 {
+	using Analysis::flags;
+	using Analysis::progress;
+
+	// otawa::Processor inherited methods
 public:
-	Analysis1(WorkSpace *ws, PropList &props, int flags, int merge_thresold, int nb_cores)
-		: DefaultAnalysis(ws, props, flags, merge_thresold, nb_cores) { }
+	Analysis1(AbstractRegistration& _reg = reg) : DefaultAnalysis(), otawa::Processor(_reg) { }
+	virtual void configure(const PropList &props) { Processor::configure(props); Analysis::configure(props); }
+	static p::declare reg;
+
+protected:
+	virtual void processWorkSpace(WorkSpace *ws) { Analysis::processWorkSpace(ws); }
+
+	// some private methods
 private:
 	void processCFG(CFG* cfg, bool use_initial_data);
 	void I(Block* b, LockPtr<States> s);

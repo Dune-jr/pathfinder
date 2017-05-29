@@ -9,8 +9,7 @@
 class DefaultAnalysis : public Analysis
 {
 public:
-	DefaultAnalysis(WorkSpace *ws, PropList &props, int flags, int merge_thresold, int nb_cores)
-		: Analysis(ws, props, flags, merge_thresold, nb_cores) { }
+	DefaultAnalysis() : Analysis() { }
 
 protected:
 	LockPtr<States> join(const Vector<Edge*>& edges) const;
