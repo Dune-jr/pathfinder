@@ -27,7 +27,7 @@ public:
 	};
 
 	GlobalDominance(const otawa::CFGCollection *cfgs, int flags) {
-		for(otawa::CFGCollection::Iterator cfg(cfgs); cfg; cfg++) {
+		for(otawa::CFGCollection::Iter cfg(cfgs); cfg; cfg++) {
 			DBG("Computing dominance for CFG: " << cfg->name())
 
 			if(flags&BLOCK_DOM) {

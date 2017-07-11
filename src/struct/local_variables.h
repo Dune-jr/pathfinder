@@ -3,6 +3,7 @@
 
 // #include <elm/avl/Set.h>
 #include <elm/data/SortedList.h> // ListSet
+#include <elm/data/ListSet.h>
 #include <elm/util/BitVector.h>
 #include <otawa/cfg/Edge.h>
 #include "constant.h"
@@ -73,7 +74,7 @@ public:
 	inline bool isConst(OperandVar var) const
 		{ Operand const* k = (*this)[var]; return k && k->kind() == CST; }
 	inline const labels_t& labels(OperandVar var) const
-		{ return l[getIndex(var)] ? *l[getIndex(var)] : labels_t::null; }
+		{ return l[getIndex(var)] ? *l[getIndex(var)] : Single<labels_t>::_; }
 	inline void label(OperandVar var, Edge* e)
 		{ label(getIndex(var), e); }
 	inline void label(OperandVar var, const labels_t& labs)
