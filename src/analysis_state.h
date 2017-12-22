@@ -25,7 +25,7 @@ using elm::genstruct::SLList;
 class Widenor;
 class Analysis::State {
 private:
-	typedef HashTable<Constant, const Operand*, ConstantHash> mem_t;
+	typedef elm::genstruct::HashTable<Constant, const Operand*, ConstantHash> mem_t;
 
 	const context_t* context;
 	// v2

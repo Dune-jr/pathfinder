@@ -28,7 +28,7 @@ public:
 	
 private:
 	virtual void initialize(const SLList<LabelledPredicate>& labelled_preds) = 0;
-	virtual void initialize(const LocalVariables& lv, const HashTable<Constant, const Operand*, ConstantHash>& mem, DAG& dag) = 0;
+	virtual void initialize(const LocalVariables& lv, const genstruct::HashTable<Constant, const Operand*, ConstantHash>& mem, DAG& dag) = 0;
 	virtual bool checkPredSat() = 0;
 	virtual bool retrieveUnsatCore(Analysis::Path& path, const SLList<LabelledPredicate>& labelled_preds, std::basic_string<char>& unsat_core_output) = 0;
 

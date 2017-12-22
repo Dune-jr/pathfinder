@@ -106,7 +106,7 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 
 					case LEAVE:
 						setLoopStatus(b, ENTER); /* status_b ← ENTER if status_b = LEAVE */
-						if(anyEdgeHasTrace(b->ins())) /* if ∃e ∈ b.ins | s_e = nil then */
+						if(anyEdgeHasTrace(b->ins())) /* if ∃e ∈ b.ins | s_e =/ nil then */
 							wl.push(b); /* wl ← wl ∪ {b} */
 						propagate = false; /* succ ← {} */
 						break;

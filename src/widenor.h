@@ -25,7 +25,7 @@ private:
 // this assumes all variables & memory involved are already general expr
 class Widenor : public OperandEndoVisitor
 {
-	typedef HashTable<Constant, const Operand*, ConstantHash> mem_t;
+	typedef genstruct::HashTable<Constant, const Operand*, ConstantHash> mem_t;
 public:
 	// self is the operand that should not be replaced, n is the OperandIter
 	Widenor(const Analysis::State& s, const Operand* self, const Operand* n)

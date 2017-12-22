@@ -2,6 +2,7 @@
 #define _OPERAND_H
 
 #include <otawa/cfg/Edge.h>
+#include <elm/genstruct/SLList.h>
 #include <elm/genstruct/Vector.h>
 #include <elm/io/Output.h>
 #include <elm/util/BitVector.h>

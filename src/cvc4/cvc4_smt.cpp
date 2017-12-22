@@ -44,7 +44,7 @@ void CVC4SMT::initialize(const SLList<LabelledPredicate>& labelled_preds)//, mod
 }
 
 // static int saved_useless_asserts = 0;
-void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, const Operand*, ConstantHash>& mem, DAG& dag)
+void CVC4SMT::initialize(const LocalVariables& lv, const genstruct::HashTable<Constant, const Operand*, ConstantHash>& mem, DAG& dag)
 {
 	variables.setMode(INITIAL_PREFIX);
 	BitVector used_regs(lv.maxRegisters(), false);
@@ -77,7 +77,7 @@ void CVC4SMT::initialize(const LocalVariables& lv, const HashTable<Constant, con
 	// saved_useless_asserts += v.count();
 #endif
 
-	for(HashTable<Constant, const Operand*, ConstantHash>::PairIterator iter(mem); iter; iter++)
+	for(genstruct::HashTable<Constant, const Operand*, ConstantHash>::PairIterator iter(mem); iter; iter++)
 	{
 #ifndef DONT_REMOVE_USELESS_ASSERTS
 		if(v.contains(dag.mem((*iter).fst))) // useless assert
