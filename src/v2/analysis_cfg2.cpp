@@ -151,7 +151,10 @@ void Analysis2::processCFG(CFG* cfg, bool use_initial_data)
 	CFG_VARS(cfg) = vm;
 	vm = vm_backup;
 	// Check all sp are valid
-	ASSERTP(elm::forall(States::Iter(**CFG_S(cfg)), SPCanEqual(), static_cast<const OperandConst*>(dag->cst(SP))), context.sp << " is definitely not SP+0. " << Dim() << "(" << cfg->name() << ")" << RCol());
+	//ASSERTP(elm::forall(States::Iter(**CFG_S(cfg)), SPCanEqual(), static_cast<const OperandConst*>(dag->cst(SP))), context.sp << " is definitely not SP+0. " << Dim() << "(" << cfg->name() << ")" << RCol());
+		for(States::Iter i(**CFG_S(cfg)); i; i++)
+			ASSERTP(SPCanEqual()(*i, static_cast<const OperandConst*>(dag->cst(SP))),
+				context.sp << " is definitely not SP+0. " << Dim() << "(" << cfg->name() << ")" << RCol())
 	// Reset SP if it got scratch'd
 	if(flags&ASSUME_IDENTICAL_SP)
 		CFG_S(cfg)->resetSP();
