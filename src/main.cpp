@@ -21,10 +21,10 @@ int dbg_ = 0;
 class Pathfinder: public Application {
 public:
 	Pathfinder(void): Application("Pathfinder", Version(2, 0, 0), "An infeasible path detection analysis", "J. Ruiz"),
-		opt_s0 			 (SwitchOption::Make(*this).cmd("-V").cmd("--vv").cmd("--s0").cmd("--nosilent").description("run with maximal output")),
-		opt_s1 			 (SwitchOption::Make(*this).cmd("-s").cmd("--s1").description("only display results")),
-		opt_s2	  		 (SwitchOption::Make(*this).cmd("-S").cmd("--s2").cmd("--fullsilent").description("run with zero output")),
-		opt_progress	 (SwitchOption::Make(*this).cmd("-p").cmd("--progress").description("display analysis progress (forces -s or +)")),
+		opt_s0 			 (SwitchOption::Make(*this).cmd("-V").cmd("--vv").cmd("--s0").description("high verbose, run with maximal output")),
+		opt_s1 			 (SwitchOption::Make(*this).cmd("-s").cmd("--s1").description("low verbose, only display results")),
+		opt_s2	  		 (SwitchOption::Make(*this).cmd("-S").cmd("--s2").description("zero verbose, run with no output")),
+		opt_progress	 (SwitchOption::Make(*this).cmd("-p").cmd("--progress").description("display analysis progress (forces --s1 or +)")),
 		opt_src_info	 (SwitchOption::Make(*this).cmd("-i").cmd("--src-info").description("print file/line number info")),
 		opt_nocolor		 (SwitchOption::Make(*this).cmd("--nc").cmd("--no-color").cmd("--no-colors").description("do not use colors")),
 		opt_nolinenumbers(SwitchOption::Make(*this).cmd("--nl").cmd("--no-line-nb").description("do not number lines of the output")),
@@ -38,7 +38,7 @@ public:
 		opt_dry			 (SwitchOption::Make(*this).cmd("-d").cmd("--dry").description("dry run (no solver calls)")),
 		opt_v1			 (SwitchOption::Make(*this).cmd("-1").cmd("--v1").description("Run v1 of abstract interpretation (symbolic predicates)")),
 		opt_v2			 (SwitchOption::Make(*this).cmd("-2").cmd("--v2").description("Run v2 of abstract interpretation (smarter structs)")),
-		opt_v3			 (SwitchOption::Make(*this).cmd("-3").cmd("--v3").description("Run v3 of abstract interpretation (no inlining)")),
+		opt_v3			 (SwitchOption::Make(*this).cmd("-3").cmd("--v3").description("Run v3 of abstract interpretation (contextual, modular analysis with composable states)")),
 		opt_deterministic(SwitchOption::Make(*this).cmd("-D").cmd("--deterministic").description("Ensure deterministic output (two executions give the same output)")),
 		opt_nolinearcheck(SwitchOption::Make(*this).cmd("--no-linear-check").description("do not check for predicates linearity before submitting to SMT solver")),
 		opt_no_initial_data(SwitchOption::Make(*this).cmd("--nid").cmd("--no-initial-data").description("Do not include initial data from FFX (multitask mode)")),
@@ -53,8 +53,8 @@ public:
 		opt_dumpoptions	 (SwitchOption::Make(*this).cmd("--dump-options").cmd("--do").description("print the selected options for the analysis")),
 		opt_output 		 (ValueOption<bool>::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file").def(false)),
 		opt_merge 		 (ValueOption<int>::Make(*this).cmd("-m").cmd("--merge").description("merge when exceeding X states at a control point").def(0)),
-		opt_multithreading(ValueOption<int>::Make(*this).cmd("-j").description("enable multithreading on the given amount of cores (0/1=no multithreading, -1=autodetect)").def(0)),
-		opt_x 			 (ValueOption<int>::Make(*this).cmd("-x").description("(for internal debugging)").def(0)) { }
+		opt_multithreading(ValueOption<int>::Make(*this).cmd("-j").description("(unstable) enable multithreading on the given amount of cores (0/1=no multithreading, -1=autodetect)").def(0)),
+		opt_x 			 (ValueOption<int>::Make(*this).cmd("-x").description("(internal) flags for debugging of SMT solving").def(0)) { }
 
 protected:
 	virtual void work(const string &entry, PropList &props) throw (elm::Exception)
