@@ -1,5 +1,5 @@
 /*
- *	
+ *	Defines operands
  *
  *	This file is part of OTAWA
  *	Copyright (c) 2006-2018, IRIT UPS.
@@ -19,9 +19,6 @@
  *	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
  
-/*
- * Defines our operands
- */
 #include <elm/io/Output.h>
 #include "operand.h"
 #include "DAG.h"
@@ -31,22 +28,27 @@
 
 /**
  * @class Operand
+ * @author Jordy Ruiz 
  * @brief Abstract class for any operand of a Predicate
  */
 /**
  * @class OperandConst
+ * @author Jordy Ruiz 
  * @brief A constant operand, which can be relative to SP0
  */
 /**
  * @class OperandVar
+ * @author Jordy Ruiz 
  * @brief A variable in the program analysis, which can be a register or a temporary variable
  */
 /**
  * @class OperandMem
+ * @author Jordy Ruiz 
  * @brief A memory cell, identified by its address (absolute or relative to SP0)
  */
 /**
  * @class OperandArith
+ * @author Jordy Ruiz 
  * @brief An operand composed of (an)other operand(s) and a binary or unary operator
  */
 
@@ -695,7 +697,7 @@ bool OperandArith::isLinear(bool only_linear_opr) const
 		case ARITHOPR_DIV:
 		case ARITHOPR_MOD:
 			// return !only_linear_opr && opd2->isConstant();
-			return !only_linear_opr && opd2->isConstant(); // just mod & div should be no problem // TODO!!! test we don't lose IPs because of that
+			return !only_linear_opr && opd2->isConstant(); // just mod & div should be no problem // TODO! test we don't lose IPs because of that
 
 		// hopeless
 		case ARITHOPR_MULH:
@@ -707,6 +709,7 @@ bool OperandArith::isLinear(bool only_linear_opr) const
 
 /**
  * @class AffineEquationState
+ * @author Jordy Ruiz 
  * @brief Provide tools to analyse affine equations.
  * For a given variable var, try to find an integer constant &Delta; such that var = +-SP + &Delta; 
  */

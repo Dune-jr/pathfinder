@@ -28,6 +28,7 @@
 
 /**
  * @class Constant
+ * @author Jordy Ruiz 
  * @brief A constant of the abstract interpretation analysis. Can be relative to SP0 (the initial value of the stack pointer)
  */
 const Constant SP(0, CONSTANT_PLUS_SP);

@@ -24,11 +24,13 @@
 
 /**
  * @class ConstantVariablesCore
+ * @author Jordy Ruiz 
  * @brief Core class (incomplete methods) of ConstantVariables.
  * Contains accessible information on constant variables of the abstract interpretation analysis
  */
 /**
  * @class ConstantVariablesCore::LabelledValue
+ * @author Jordy Ruiz 
  * @brief Constant value labelled by a list of edges and an updated flag
  */
 ConstantVariablesCore::ConstantVariablesCore() : tempvars(NULL), registers(NULL), _max_tempvars(0), _max_registers(0) { }

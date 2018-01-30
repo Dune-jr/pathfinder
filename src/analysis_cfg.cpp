@@ -1,5 +1,9 @@
 /*
- *	
+ *	Macro analysis: skeleton of the analysis algorithm, defines the way we parse the CFG 
+ *  	WARNING: there are three versions
+ *  	(i)   v1: cfg1, bb1, virtualized		-1z 1
+ *  	(ii)  v2: cfg1, bb2, virtualized		-2z 1
+ *  	(iii) v3: cfg2, bb2, non virtualized	-2z 0
  *
  *	This file is part of OTAWA
  *	Copyright (c) 2006-2018, IRIT UPS.
@@ -20,7 +24,7 @@
  */
  
 /*
- * Macro analysis: skeleton of the analysis algorithm, defines the way we parse the CFG 
+ * 
  */
 /**
  * Warning: there are three versions
@@ -44,9 +48,11 @@ Identifier<OperandIter*>					Analysis::LH_I("Iterator operand for the loop"); //
 Identifier<LockPtr<Analysis::States> >		Analysis::CFG_S("Trace on a CFG");
 Identifier<LockPtr<VarMaker> >				Analysis::CFG_VARS("VarMaker of a CFG"); // VarMaker to be copied, updated, and appended on f° return
 
+
 /**
+ * @fn void Analysis::processProg(CFG* cfg)
  * @brief       Runs the analysis on a whole program
- * @param entry Entry block of the program to analyse
+ * @param cfg   Entry CFG
  */
 void Analysis::processProg(CFG* cfg)
 {

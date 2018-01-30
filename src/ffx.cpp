@@ -26,6 +26,7 @@
 // TODO! do so that when there is NO LEx after a LEn, we use iteration=*
 /**
  * @class FFX
+ * @author Jordy Ruiz 
  * @brief File output module of the infeasible path analysis 
  */
 /**

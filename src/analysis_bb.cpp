@@ -40,6 +40,7 @@ using namespace otawa::sem;
  *
  * @param[in]  bb             The BasicBlock to parse
  * @param[in]  flags		  The flags
+ * @param[in]  vm    		  The var maker
  */
 void Analysis::State::processBB(const BasicBlock *bb, VarMaker& vm, int flags)
 {

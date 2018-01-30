@@ -24,6 +24,7 @@
 
 /**
  * @class LabelledPredicate
+ * @author Jordy Ruiz 
  * @brief Predicate labelled with a list of CFG Edges
  */
 LabelledPredicate::LabelledPredicate(const Predicate& pred, const Set<Edge*>& labels)

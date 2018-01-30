@@ -31,6 +31,7 @@
 
 /**
  * @class Analysis::State
+ * @author Jordy Ruiz 
  * @brief Abstract state of a set of path of the program
  */
 const Analysis::State bottom(true);
@@ -158,7 +159,9 @@ io::Output& Analysis::State::print(io::Output& out) const
 /**
  * @brief      This function is *this -> s -> s o *this, state composition. Updates current state. Updates path.
  * @param  s   state to apply
+ * @param  vm  The VarMaker
  * @param local_sp This tells us whether we should scale the SP or not
+ * @param clear_path Clear the path of the state
  */
 void Analysis::State::apply(const State& s, VarMaker& vm, bool local_sp, bool clear_path)
 {
@@ -457,6 +460,7 @@ Option<const Operand*> Analysis::State::widen(const Operand* x, const Operand& x
 }
 
 /**
+ * @fn void Analysis::State::setMemoryInitPoint(const otawa::Block* b, short id);
  * @brief      Sets the memory initial point (what the right operands will refer to).
  *
  * @param      b   The block
@@ -466,6 +470,8 @@ Option<const Operand*> Analysis::State::widen(const Operand* x, const Operand& x
 /**
  * @brief      morph the OperandIter add predicates about it
  * @warning    in the leave iteration, we may not have i=max until the loop exit edges...
+ * @param      n   The operand describing the loop in question
+ * @param      vm  The VarMaker
  */
 void Analysis::State::finalizeLoop(OperandIter* n, VarMaker& vm)
 {

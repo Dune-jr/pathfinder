@@ -1,5 +1,5 @@
 /*
- *	
+ *	Interfacing with the SMT solver
  *
  *	This file is part of OTAWA
  *	Copyright (c) 2006-2018, IRIT UPS.
@@ -18,16 +18,14 @@
  *	along with OTAWA; if not, write to the Free Software 
  *	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
- 
-/*
- * Interfacing with the SMT solver
- */
+
 #include <elm/genstruct/SLList.h>
 #include "smt.h"
 #include "debug.h"
 
 /**
  * @class SMT
+ * @author Jordy Ruiz
  * @brief Interface with the SMT solver
  */
 SMT::SMT(int flags) : flags(flags) { }

@@ -1,5 +1,5 @@
 /*
- *	
+ *	V1 of micro analysis: defines how we parse a BasicBlock (class used for -1)
  *
  *	This file is part of OTAWA
  *	Copyright (c) 2006-2018, IRIT UPS.
@@ -18,10 +18,6 @@
  *	along with OTAWA; if not, write to the Free Software 
  *	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
- 
-/*
- * V1 of micro analysis: defines how we parse a BasicBlock
- */
 
 #include <otawa/sem/PathIter.h>
 #include <otawa/sem/inst.h>
@@ -35,6 +31,7 @@ using namespace otawa::sem;
 
 /**
   * @brief processes a semantic instruction (v1)
+  * @param inst	          Instruction to process
   * @param last_condition If we are in a conditional segment, the sem inst corresponding to the conditional instruction, NOP otherwise
   */
 void Analysis::State::processSemInst1(const sem::inst& inst, const sem::inst& last_condition)

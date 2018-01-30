@@ -27,6 +27,7 @@
 
 /**
  * @class LoopHeaderIter
+ * @author Jordy Ruiz 
  * @brief Iterates on the enclosing loops of a Block, including those of caller CFGs (only works with a virtualized CFG!)
  */
 /**

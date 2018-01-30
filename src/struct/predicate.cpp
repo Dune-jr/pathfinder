@@ -29,6 +29,7 @@
 
 /**
  * @class Predicate
+ * @author Jordy Ruiz 
  * @brief A predicate of the abstract analysis
  */
 Predicate::Predicate() :_opr(0), _opd1(NULL), _opd2(NULL) { }

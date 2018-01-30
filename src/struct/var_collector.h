@@ -1,5 +1,5 @@
 /*
- *	
+ *	Collects lambdas (named tops)
  *
  *	This file is part of OTAWA
  *	Copyright (c) 2006-2018, IRIT UPS.

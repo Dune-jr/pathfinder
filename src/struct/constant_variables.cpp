@@ -24,6 +24,7 @@
 
 /**
  * @class ConstantVariables
+ * @author Jordy Ruiz 
  * @brief Contains accessible information on constant variables of the abstract interpretation analysis
  */
 

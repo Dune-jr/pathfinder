@@ -27,18 +27,22 @@ extern bool cfg_follow_calls;
 
 /**
  * @class DetailedPath
+ * @author Jordy Ruiz 
  * @brief A path enriched with flowfact information such as loops, calls, etc.
  */
 /**
  * @class DetailedPath::Iterator
+ * @author Jordy Ruiz 
  * @brief Iterator on all the compounds of the DetailedPath
  */
 /**
  * @class DetailedPath::FlowInfo
+ * @author Jordy Ruiz 
  * @brief Flowfact information around the path, such as loops, calls, etc.
  */
 /**
  * @class DetailedPath::EdgeIterator
+ * @author Jordy Ruiz 
  * @brief Iterator only on the actual edges of the DetailedPath
  */
 

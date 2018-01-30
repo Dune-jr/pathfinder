@@ -81,6 +81,7 @@ protected:
 
 /**
   * @class Progress
+  * @author Jordy Ruiz 
   * @brief call tree with progress.
   * example:
   *	getbit         :   5/9   (55 %)
