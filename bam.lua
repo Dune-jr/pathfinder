@@ -58,6 +58,7 @@ if config.v1.value then
 	settings.cc.flags:Add("-D V1")
 end
 settings.cc.flags:Add("-O" .. config.O.value)
+settings.cc.flags:Add("-std=c++11")
 settings.cc.flags:Add("-Wno-maybe-uninitialized")
 
 -- OTAWA

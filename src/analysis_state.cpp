@@ -601,7 +601,10 @@ LoopBound Analysis::State::getLoopBound(const Operand* oi) const
 					}
 				}
 			}
-			DBGG("Complex Loop bound: " << *pi)
+			if(dbg_flags & DBG_ONLY_LOOP_BOUNDS)
+				elm::cout << "Complex Loop bound: " << *pi << endl;
+			else
+				DBGG("Complex Loop bound: " << *pi)
 		}
 	return LoopBound();
 }

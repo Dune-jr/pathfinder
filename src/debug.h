@@ -53,7 +53,8 @@ enum
 	DBG_PREANALYSIS	    = 1 << 6,
 	// DBG_PROGRESS	    = 1 << 7,
 	DBG_FORMAT_FLOWINFO = 1 << 8,
-	DBG_DETAILED_STATS  = 1 << 9
+	DBG_DETAILED_STATS  = 1 << 9,
+	DBG_ONLY_LOOP_BOUNDS  = 1 << 10,
 };
 extern int dbg_flags;
 

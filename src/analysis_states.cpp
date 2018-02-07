@@ -112,5 +112,10 @@ void Analysis::States::printLoopBoundOf(const Operand *oi) const
 			n = lb;
 		}
 	if(n)
-		DBGG(IRed << "Loop bound found for " << oi->toIter().loop()->toBasic()->address() << ": " << n)
+	{
+		if(dbg_flags & DBG_ONLY_LOOP_BOUNDS)
+			elm::cout << "Loop bound found for " << oi->toIter().loop()->toBasic()->address() << ": " << n << endl;
+		else
+			DBGG(IRed << "Loop bound found for " << oi->toIter().loop()->toBasic()->address() << ": " << n)
+	}
 }

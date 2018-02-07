@@ -41,7 +41,7 @@ int dbg_ = 0;
 	
 class Pathfinder: public Application {
 public:
-	Pathfinder(void): Application("Pathfinder", Version(2, 0, 0), "An infeasible path detection analysis", "J. Ruiz"),
+	Pathfinder(void): Application("Pathfinder", Version(2, 0, 1), "An infeasible path detection analysis", "J. Ruiz"),
 		opt_s0 			 (SwitchOption::Make(*this).cmd("-V").cmd("--vv").cmd("--s0").description("high verbose, run with maximal output")),
 		opt_s1 			 (SwitchOption::Make(*this).cmd("-s").cmd("--s1").description("low verbose, only display results")),
 		opt_s2	  		 (SwitchOption::Make(*this).cmd("-S").cmd("--s2").description("zero verbose, run with no output")),
@@ -52,11 +52,12 @@ public:
 		opt_noipresults	 (SwitchOption::Make(*this).cmd("--nir").cmd("--no-ip-results").description("do not print the list of IPs found")),
 		opt_detailedstats(SwitchOption::Make(*this).cmd("--ds").cmd("--detailed-stats").description("display detailed stats, including average length of infeasible_paths found")),
 		opt_graph_output (SwitchOption::Make(*this).cmd("-g").cmd("--graph-output").description("also output as a gnuplot .tsv graph file (requires -o)")),
-		opt_nffi		 (SwitchOption::Make(*this).cmd("--nffi").cmd("--no-formatted-flowinfo").description("format flowinfo in paths like a list of items instead of pretty-printing it")),
+		opt_nffi		 (SwitchOption::Make(*this).cmd("--nffi").cmd("--no-formatted-flowinfo").description("(debugging) format flowinfo in paths like a list of items instead of pretty-printing it")),
 		opt_automerge	 (SwitchOption::Make(*this).cmd("-a").cmd("--automerge").description("let the algorithm decide when to merge")),
-		opt_applymerge	 (SwitchOption::Make(*this).cmd("--maf").cmd("--merge-after-apply").description("allow the algorithm to merge immediately after applying")),
-		opt_clamppreds	 (SwitchOption::Make(*this).cmd("--cp").cmd("--clamp_predicates").description("clamp predicates size (12 operands max as of Apr. 2017)")),
+		opt_applymerge	 (SwitchOption::Make(*this).cmd("--maf").cmd("--merge-after-apply").description("(optimization) allow the algorithm to merge immediately after applying")),
+		opt_clamppreds	 (SwitchOption::Make(*this).cmd("--cp").cmd("--clamp_predicates").description("(optimization) clamp predicates size (12 operands max)")),
 		opt_dry			 (SwitchOption::Make(*this).cmd("-d").cmd("--dry").description("dry run (no solver calls)")),
+		opt_onlyloopbounds   (SwitchOption::Make(*this).cmd("-l").cmd("--loop-bounds").description("ONLY print loop bounds (no infeasible paths)")),
 		opt_v1			 (SwitchOption::Make(*this).cmd("-1").cmd("--v1").description("Run v1 of abstract interpretation (symbolic predicates)")),
 		opt_v2			 (SwitchOption::Make(*this).cmd("-2").cmd("--v2").description("Run v2 of abstract interpretation (smarter structs)")),
 		opt_v3			 (SwitchOption::Make(*this).cmd("-3").cmd("--v3").description("Run v3 of abstract interpretation (contextual, modular analysis with composable states)")),
@@ -70,7 +71,7 @@ public:
 		opt_dontassumeidsp(SwitchOption::Make(*this).cmd("--dasp").cmd("--dont-assume-id-sp").description("do not assume sp = SP0 at the end of a function")),
 		opt_nowidening 	 (SwitchOption::Make(*this).cmd("--no-widening").description("Scratch instead of using induction variables")),
 		opt_reduce		 (SwitchOption::Make(*this).cmd("--reduce").description("reduce irregular loops")),
-		opt_slice		 (SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow")),
+		opt_slice		 (SwitchOption::Make(*this).cmd("--slice").description("slice away instructions that do not impact the control flow (warning: removes infeasible paths)")),
 		opt_dumpoptions	 (SwitchOption::Make(*this).cmd("--dump-options").cmd("--do").description("print the selected options for the analysis")),
 		opt_output 		 (ValueOption<bool>::Make(*this).cmd("-o").cmd("--output").description("output the result of the analysis to a FFX file").def(false)),
 		opt_merge 		 (ValueOption<int>::Make(*this).cmd("-m").cmd("--merge").description("merge when exceeding X states at a control point").def(0)),
@@ -107,6 +108,7 @@ protected:
 			workspace()->require(oslice::SLICER_FEATURE, props);
 		}
 #endif
+
 		ANALYSIS_FLAGS(props) = analysis_flags;
 		MERGE_THRESOLD(props) = merge_thresold;
 		NB_CORES(props) = nb_cores;
@@ -129,7 +131,7 @@ protected:
 private:
 	SwitchOption opt_s0, opt_s1, opt_s2, opt_progress, opt_src_info, opt_nocolor, opt_nolinenumbers, opt_noipresults, 
 				opt_detailedstats, opt_graph_output, opt_nffi, opt_automerge, opt_applymerge, opt_clamppreds,
-				opt_dry, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck, opt_no_initial_data,
+				opt_dry, opt_onlyloopbounds, opt_v1, opt_v2, opt_v3, opt_deterministic, opt_nolinearcheck, opt_no_initial_data,
 				opt_sp_critical, opt_nounminimized, opt_allownonlinearoperators, opt_nocleantops,
 				opt_dontassumeidsp, opt_nowidening, opt_reduce, opt_slice, opt_dumpoptions;
 	ValueOption<bool> opt_output;
@@ -141,6 +143,7 @@ private:
 			| (!opt_noipresults 			? DBG_RESULT_IPS : 0)
 			| (!opt_nffi 					? DBG_FORMAT_FLOWINFO : 0)
 			| (opt_detailedstats 			? DBG_DETAILED_STATS : 0)
+			| (opt_onlyloopbounds			? DBG_ONLY_LOOP_BOUNDS : 0)
 		;
 		if(opt_x)
 			dbg_ = opt_x.get();
@@ -157,6 +160,7 @@ private:
 			| (!opt_dontassumeidsp			? Analysis::ASSUME_IDENTICAL_SP : 0)
 			| (opt_nowidening				? Analysis::NO_WIDENING : 0)
 			| (opt_dry						? Analysis::DRY_RUN : 0)
+			| (opt_onlyloopbounds			? Analysis::DRY_RUN : 0) // dry run when only looking for loop bounds
 			// | (opt_v1						? Analysis::IS_V1 : 0)
 			// | (opt_v2						? Analysis::IS_V2 : 0)
 			// | (opt_v3						? Analysis::IS_V3 : 0)
@@ -180,6 +184,8 @@ private:
 		if(opt_s2) dbg_verbose = 3;
 		if(opt_progress)
 			dbg_verbose = max(dbg_verbose, 2); // minimum 2	
+		if(opt_onlyloopbounds)
+			dbg_verbose = 3;
 		elm::log::Debug::setDebugFlag(dbg_verbose == DBG_VERBOSE_ALL || dbg_verbose == DBG_VERBOSE_MINIMAL);
 		elm::log::Debug::setVerboseLevel(dbg_verbose == DBG_VERBOSE_ALL ? 1 : 0);
 		elm::log::Debug::setColorFlag(! opt_nocolor);
@@ -225,6 +231,7 @@ private:
 		DBGOPT("DISPLAY RESULT INF. PATHS"		, dbg_flags & DBG_RESULT_IPS, true)
 		DBGOPT("PRETTY PRINTING FOR FLOWINFO"	, dbg_flags & DBG_FORMAT_FLOWINFO, true)
 		DBGOPT("DISPLAY DETAILED STATS"			, dbg_flags & DBG_DETAILED_STATS, false)
+		DBGOPT("DISPLAY LOOP BOUNDS"			, dbg_flags & DBG_ONLY_LOOP_BOUNDS, false)
 		cout << "Analysis:" << endl;
 		DBGOPT("VIRTUALIZE"						, analysis_flags & Analysis::VIRTUALIZE_CFG, true)
 		DBGOPT("REDUCE LOOPS"					, analysis_flags & Analysis::REDUCE_LOOPS, false)

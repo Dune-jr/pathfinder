@@ -1,5 +1,5 @@
 /*
- *	
+ *	Smart arith module
  *
  *	This file is part of OTAWA
  *	Copyright (c) 2006-2018, IRIT UPS.
@@ -22,6 +22,12 @@
 #include "arith.h"
 #include "DAG.h"
 #include "../debug.h"
+
+/**
+ * @class Arith
+ * @author Jordy Ruiz
+ * @brief Handles simplifications of arithmetic expressions, using integer algebraic properties
+ */
 
 // this is minimal and a bit unoptimized
 const Operand* Arith::add(DAG& dag, const Operand* a, const Operand* b)

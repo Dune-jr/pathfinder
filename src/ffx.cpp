@@ -18,7 +18,7 @@
  *	along with OTAWA; if not, write to the Free Software 
  *	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
- 
+
 #include "debug.h"
 #include "ffx.h"
 #include "pretty_printing.h"

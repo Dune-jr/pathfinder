@@ -1,5 +1,5 @@
 /*
- *	
+ *	Smart arith module
  *
  *	This file is part of OTAWA
  *	Copyright (c) 2006-2018, IRIT UPS.
@@ -17,10 +17,6 @@
  *	You should have received a copy of the GNU General Public License
  *	along with OTAWA; if not, write to the Free Software 
  *	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- */
- 
-/**
- * Smart arith module
  */
 
 #ifndef _ARITH_H
