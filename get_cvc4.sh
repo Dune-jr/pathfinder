@@ -1,5 +1,5 @@
 #build routine to install cvc4 in ./CVC4
-echo "Warning: this will install antlr3 (and thus install java)."
+echo "Warning: this will install antlr3 (and thus java)."
 read -p "Press [Enter] to continue ..."
 echo ""
 

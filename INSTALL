@@ -6,9 +6,10 @@
     Get it at http://otawa.fr/
  * an SMT solver
     You can get CVC4 with an automated script (admin install):
-	    ./get_cvc4
+        ./get_cvc4.sh
     You may want to try a local install with
         ./get_cvc4_local/all.sh
+    PathFinder is also compatible with Z3 (https://github.com/Z3Prover/z3/releases)
 	
 
 === INSTALL ===
