@@ -412,7 +412,7 @@ bool FFX::checkPathValidity(const DetailedPath& ip, bool critical) const
  */
 void FFX::printInfeasiblePathOldNomenclature(io::Output& FFXFile, const DetailedPath& ip)
 {
-#ifdef v1
+#ifdef V1
 	// control-constraint header
 	FFXFile	<< "\t\t<control-constraint>" << endl
 			<< "\t\t\t<le>" << endl
